@@ -5,7 +5,7 @@
 
 | ID | Date | Decision | Rationale | Status | Affects |
 |---|---|---|---|---|---|
-| D-000 | — | **Plan approved: development may begin** | Gate required by the user's operating rules | **Pending** | all |
+| D-000 | 2026-10-24 | **Plan approved: development may begin**, starting with the architecture (M0). Proposed decisions are working defaults until the user changes them. Inputs (Q-005 Fusil backend, APK route, Batch 3/5) are collected later | User: "lets begin building… only the architecture… afterwards we can do the things u want inputs from me" | **Accepted** | all |
 | D-001 | 2026-10-24 | Documentation first. No application code until D-000 is Accepted | User instruction | Accepted | all |
 | D-002 | 2026-10-24 | Deliverable is a finished-UI prototype using mock data only. No backend or real integrations | User instruction | Accepted | 07, 11, 13 |
 | D-003 | 2026-10-24 | Source precedence: Agreement > Accepted decisions > Flow diagrams > Proposals | The agreement is the contractual scope. Diagrams express UX intent | Proposed | 02 |
@@ -29,7 +29,7 @@
 | D-021 | 2026-10-24 | **Shared mock API server** (Node, in-memory, seeded, JSON snapshot persistence) serves both apps. Demo controls (reset, clock, failure rate, persona login) live on the server | User choice. Cross-app hand-offs (member applies on phone → accountant sees it on web) must be real in demos | **Accepted** (implementation details in `07` are Proposed) | 07, 11, 13 |
 | D-022 | 2026-10-24 | Mobile demo distribution: **Android APK only** | User choice | **Accepted** | 14, 15 |
 | D-023 | 2026-10-24 | MVP scope: Staff web 36 pages + 6 overlays + 5 dashboard variants + 8 report templates. Member mobile 19 screens (55 total). Mock API server | User chose MVP (Q-001). Recount after D-019 | **Superseded by D-036** | 05, 14 |
-| D-024 | 2026-10-24 | Workspaces monorepo (tool: see D-038): `apps/admin-console`, `apps/member-app`, `apps/mock-api`, `packages/{domain,types,api-client,mock-data,design-tokens}` | Required to share one domain engine across two apps and the server | Proposed | 07 |
+| D-024 | 2026-10-24 | Workspaces monorepo (tool: see D-038): `apps/admin-console`, `apps/member-app`, `apps/mock-api`, `packages/{domain,types,api-client,mock-data,design-tokens}` | Required to share one domain engine across two apps and the server | **Accepted** (built in M0) | 07 |
 | D-025 | 2026-10-24 | Libraries: mock API = Hono on Node. Mobile = Expo Router, NativeWind (tokens shared with web Tailwind), TanStack Query, RHF + Zod. Mobile E2E = Maestro. Unit tests = Vitest (packages, web), Jest + RNTL (mobile) | Lightweight, TypeScript-first, consistent with the web stack | Proposed | 07, 15 |
 | D-026 | 2026-10-24 | **Membership "join" flow in the Member App** with a stage tracker (no queue number): apply → DDO certify → office review → Secretary → President → share payment → General No. allotted → member mode | User request (digitise F1, "join waitlist"). Stage tracker chosen | **Accepted** | 03, 04, 05, 06, 08, 10, 11, 16 |
 | D-027 | 2026-10-24 | **Sequential Secretary → President sign-off** for loan sanction and FD acceptance (separate logins) | Paper forms carry both signatures. User choice | **Accepted** | 03, 06, 10 |
@@ -44,3 +44,7 @@
 | D-036 | 2026-10-24 | MVP scope recount: Admin Console 38 pages + 9 overlays + 5 dashboards + 8 reports + 9 printables. Member App 25 screens. **63 screens total** | Membership flow, FD request, form printables added | **Accepted** (follows D-026) | 05, 14 |
 | D-037 | 2026-10-24 | Roles: Loan Approver split into **Secretary (R3a)** and **President (R3b)**. R4 becomes **Cashier / Disbursement Officer**. New **R7 Applicant** | Forms show Secretary, President and cashier signatures | Proposed (Q-509) | 03 |
 | D-038 | 2026-10-24 | Use **npm workspaces** instead of pnpm. Root scripts: `npm run demo`, `npm test`, `npm run build:apk` | pnpm isn't installed. npm ships with Node (v12.2 present) and supports workspaces. Expo supports npm monorepos | **Accepted** | 07, CLAUDE.md, BUILD-CHECKLIST |
+| D-039 | 2026-10-24 | Member App styling: **React Native StyleSheet + shared tokens** (`@tgs/design-tokens`) instead of NativeWind. Supersedes the NativeWind part of D-025 | Fewer moving parts in an npm monorepo with Tailwind v4 on the web. One token source still drives both apps | **Accepted** (M0) | 07, 12 |
+| D-040 | 2026-10-24 | Version baseline: Expo SDK 58 · React Native 0.88 · React 19.3.0 (pinned for both apps via root `overrides`) · TypeScript 6.0 · React Router 8 · Vite 8 · Tailwind 4.3 · TanStack Query 5 · Hono 4 · Vitest 5 · lucide 1.x | Current versions at build time. One React copy across the monorepo (Expo monorepo guidance) | **Accepted** (M0) | 07 |
+| D-041 | 2026-10-24 | Workspace packages ship **TypeScript source** (`main: src/index.ts`), with no build step. Vite, Metro and tsx compile them directly | Simplest setup that all three runtimes support | **Accepted** (M0) | 07 |
+

@@ -10,9 +10,9 @@
 
 | | |
 |---|---|
-| **Current step** | B. Pre-build gate |
-| **Next action** | User: reply "plan approved" + Fusil backend answer (Q-005) + APK route (EAS cloud or local) |
-| **Blockers** | D-000 not yet Accepted |
+| **Current step** | C. M0 Foundation ✅ done on branch `m0-foundation` → next **M1 Brain + data** |
+| **Next action** | User: review M0 (run `npm run demo` + `npm run dev:app`), push/merge the branch, answer Q-005 (Fusil backend) before M1 data model work. Then start M1 |
+| **Blockers** | None for M1 start. Q-005 is a risk for data-model alignment |
 | **Last updated** | 2026-10-24 |
 
 ---
@@ -26,7 +26,7 @@
 - [x] Screen count: **63 screens** (38 console + 25 app) → doc 05
 
 ## B. Pre-build gate ⏳
-- [ ] **Plan approved** → log D-000 as Accepted and accept the "Proposed" decisions (decisions-log)
+- [x] **Plan approved** → D-000 Accepted 2026-10-24 (proposed decisions = working defaults)
 - [ ] Q-005: does Fusil already have a backend/API? (yes → align docs 08/11 first)
 - [ ] APK route chosen: EAS cloud (Expo account) **or** local build (JDK 17 + Android SDK)
 - [ ] Society questions sent: Batch 3 + Batch 5 (`docs/open-questions.md`)
@@ -36,7 +36,7 @@
 ## C. Build milestones (details in `docs/14-implementation-plan.md`)
 Each milestone ends with its exit test passing. Tick the box only then.
 
-- [ ] **M0 Foundation:** monorepo · mock API (health, login, `/me`, demo endpoints) · console shell + login · app shell + Welcome/Login/Offline · **first APK reaches the laptop server**
+- [x] **M0 Foundation:** monorepo · mock API (health, login, `/me`, demo endpoints) · console shell + login · app shell + Welcome/Login/Offline/Demo settings · Android bundle verified. **Still open: first real APK on a phone** (needs an Expo account → `npm run build:apk`) — tracked in M10 if not done earlier
 - [ ] **M1 Brain + data:** 15 domain functions with tests (incl. agreement examples) · seed data generator · store
 - [ ] **M2 Settings:** loan products + workflow config · deposit schemes · insurance · departments/DDOs · users · permissions · templates
 - [ ] **M3 Members & Joining:** member master + profile · transfers · mandates · **join flow on the phone → DDO → office → Secretary → President → General No.**
@@ -71,3 +71,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | Date | What happened | Next |
 |---|---|---|
 | 2026-10-24 | Planning docs 00–16 created. Batch 1 + form decisions taken. Checklist + learning guide added | Plan approval (B) |
+| 2026-10-24 | **M0 built** on branch `m0-foundation`: npm-workspaces monorepo, 5 packages, Hono mock API (29 tests), Admin Console shell (React Router 8, Tailwind 4), Member App shell (Expo SDK 58, Expo Router). Typecheck + tests + console build + Android export + expo-doctor all green | Review M0, answer Q-005, start M1 |

@@ -1,0 +1,24 @@
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+
+# mock API runtime snapshot
+apps/mock-api/.data/
+
+# Expo / React Native
+.expo/
+apps/member-app/android/
+apps/member-app/ios/
+*.apk
+*.aab
+
+# editors / OS
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

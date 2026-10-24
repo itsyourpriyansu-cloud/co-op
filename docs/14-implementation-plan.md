@@ -53,7 +53,7 @@ flowchart LR
 
 | Milestone | Status | Notes |
 |---|---|---|
-| M0 | Not started | Awaiting plan approval (D-000) |
+| M0 | ✅ Done 2026-10-24 (branch `m0-foundation`) | Real APK on a phone still to do (needs an Expo account). Console visual check by the user pending |
 | M1 | Not started | |
 | M2 | Not started | |
 | M3 | Not started | |
