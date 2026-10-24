@@ -7,7 +7,11 @@ import {
   type Health,
   type ISODate,
   type Me,
+  type DashboardSummary,
+  type DatasetSample,
+  type DatasetSummary,
   type Persona,
+  type Scenario,
   type ServiceErrorBody,
   type ServiceErrorCode,
   type Session,
@@ -112,6 +116,12 @@ export function createApiClient(options: ApiClientOptions) {
       setClock: (today: ISODate | null) => request<DemoState>('POST', '/__demo/clock', { today }),
       setFailureRate: (rate: number) =>
         request<DemoState>('POST', '/__demo/failure-rate', { rate }),
+      scenarios: () => request<Scenario[]>('GET', '/__demo/scenarios'),
+      dataset: () => request<DatasetSummary>('GET', '/__demo/dataset'),
+      sample: () => request<DatasetSample>('GET', '/__demo/sample'),
+    },
+    dashboard: {
+      summary: () => request<DashboardSummary>('GET', '/dashboard/summary'),
     },
   };
 }

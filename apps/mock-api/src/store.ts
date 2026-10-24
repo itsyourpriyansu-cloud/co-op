@@ -2,28 +2,19 @@
 // Every route reads/writes `store.db`, then calls `store.save()`.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createSeed, type Seed } from '@tgs/mock-data';
-import type { DemoState, ISODate, SessionUser } from '@tgs/types';
+import { createSeed, SEED_VERSION, type Dataset } from '@tgs/mock-data';
+import type { DemoState, SessionUser } from '@tgs/types';
 
-export interface Db extends Seed {
+export interface Db extends Dataset {
   demo: DemoState;
   /** token → session user. Survives restarts via the snapshot. */
   sessions: Record<string, SessionUser>;
 }
 
-export function realToday(): ISODate {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 function freshDb(latencyMs: [number, number]): Db {
   const seed = createSeed();
-  return {
-    ...seed,
-    demo: { today: realToday(), failureRate: 0, latencyMs, seedVersion: seed.version },
-    sessions: {},
-  };
+  // The demo clock starts at the dataset's anchor date so ages, retirements and cycles agree.
+  return { ...seed, demo: { today: seed.today, failureRate: 0, latencyMs, seedVersion: seed.version }, sessions: {} };
 }
 
 export interface StoreOptions {
@@ -53,7 +44,7 @@ export class Store {
   save(): void {
     if (!this.options.persist) return;
     clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => this.flush(), 250);
+    this.saveTimer = setTimeout(() => this.flush(), 500);
   }
 
   flush(): void {
@@ -67,7 +58,7 @@ export class Store {
     try {
       const db = JSON.parse(readFileSync(this.file, 'utf8')) as Db;
       // Older seed shape → reseed (docs/07 §6).
-      return db.demo?.seedVersion === createSeed().version ? db : undefined;
+      return db.demo?.seedVersion === SEED_VERSION ? db : undefined;
     } catch {
       return undefined;
     }

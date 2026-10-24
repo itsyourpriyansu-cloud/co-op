@@ -14,7 +14,8 @@ import {
 } from '@tgs/types';
 import { fail, ServiceError } from './errors';
 import { permissionsFor } from './permissions';
-import { realToday, Store } from './store';
+import { Store } from './store';
+import { dashboardSummary, datasetSample, datasetSummary } from './summary';
 
 type Env = { Variables: { session: SessionUser; token: string } };
 
@@ -119,7 +120,8 @@ export function createApp({ store, version }: AppOptions) {
       fail('VALIDATION_ERROR', 'Date must be YYYY-MM-DD.', {
         fieldErrors: { today: 'Use YYYY-MM-DD' },
       });
-    store.db.demo.today = today ?? realToday();
+    // null → back to the dataset's anchor date (docs/20).
+    store.db.demo.today = today ?? store.db.today;
     store.save();
     return c.json(store.db.demo);
   });
@@ -130,6 +132,18 @@ export function createApp({ store, version }: AppOptions) {
     store.db.demo.failureRate = rate;
     store.save();
     return c.json(store.db.demo);
+  });
+
+  // Scenario catalog + dataset counts power the State Explorer (docs/20).
+  api.get('/__demo/scenarios', (c) => c.json(store.db.scenarios));
+  api.get('/__demo/dataset', (c) => c.json(datasetSummary(store.db)));
+  api.get('/__demo/sample', (c) => c.json(datasetSample(store.db)));
+
+  // Role-aware KPIs (scoped to the DDO's department). Full dashboards arrive in M9.
+  api.get('/dashboard/summary', requireSession, (c) => {
+    const user = c.get('session');
+    if (channelForRole(user.role) !== 'console') fail('FORBIDDEN', 'Dashboard is for staff.');
+    return c.json(dashboardSummary(store.db, user));
   });
 
   app.route(API_PREFIX, api);
