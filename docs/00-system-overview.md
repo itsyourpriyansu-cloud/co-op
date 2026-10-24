@@ -61,4 +61,4 @@
 | Settings | Products, schemes, rates, workflow config, users, templates | Rates (read-only), preferences |
 
 ## 4. Document map
-`01` discovery · `02` requirements · `03` roles · `04` journeys · `05` **screen count** · `06` screen specs · `07` architecture · `08` data model · `09` business rules · `10` workflows · `11` API · `12` **design direction & system** · `13` mock data · `14` plan · `15` tests · `16` **paper forms → digital mapping** · `decisions-log` · `open-questions` · `glossary`
+`01` discovery · `02` requirements · `03` roles · `04` journeys · `05` **screen count** · `06` screen specs · `07` architecture · `08` data model · `09` business rules · `10` workflows · `11` API · `12` **design direction & system** · `13` mock data · `14` plan · `15` tests · `16` **paper forms → digital mapping** · `17` member sitemap review · `decisions-log` · `open-questions` · `glossary`

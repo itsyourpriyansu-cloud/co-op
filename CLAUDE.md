@@ -19,7 +19,7 @@ A **clickable, finished-UI prototype backed only by mock data** of a Co-operativ
   1. **Admin Console** (desktop web, React + Vite): Super Admin, Accountant, Secretary, President, Cashier/Disbursement, DDO
   2. **Member App** (Expo React Native, **Android APK**): applicants (join the society + track) and members. **Members use only the app. Staff use only the console** (D-033)
   3. **Mock API server** (Node + Hono, in-memory, seeded) shared by both apps, so cross-app hand-offs are real in demos
-- Scope accepted: **MVP = 38 console pages + 25 app screens (63) + 9 decision drawers + 8 report templates + 9 printable form twins** (D-036).
+- Scope accepted: **MVP = 38 console pages + 29 app screens (67) + 11 decision drawers + 8 report templates + 9 printable form twins** (D-046).
 - Start with `docs/00-system-overview.md` for the one-page structure.
 
 ## 2. Current phase & gate
@@ -57,6 +57,7 @@ Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock A
 | One-page structure (start here) | `docs/00-system-overview.md` | same |
 | Understanding the product | `docs/01-product-discovery.md`, `docs/glossary.md` | — |
 | Digitising any paper form / field | `docs/16-paper-forms-digitization.md` | same + 08 |
+| Member App structure vs Envizon sitemap | `docs/17-member-sitemap-review.md` | same |
 | Checking whether something is in scope | `docs/02-requirements-register.md` | register + decisions-log |
 | Roles & access | `docs/03-roles-permissions.md` | same |
 | Navigation, journeys, states | `docs/04-experience-architecture.md` | same |

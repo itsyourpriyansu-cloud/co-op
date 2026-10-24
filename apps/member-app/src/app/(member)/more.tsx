@@ -6,8 +6,10 @@ import {
   ChevronRight,
   FlaskConical,
   Handshake,
+  KeyRound,
   LifeBuoy,
   LogOut,
+  Percent,
   Settings,
   UserRound,
   type LucideIcon,
@@ -16,13 +18,16 @@ import { AppText, Card, Screen } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { c, space, touchTarget } from '@/theme';
 
+// The sitemap's "Settings / Index" (docs/17, docs/06 v0.4).
 const items: Array<{ icon: LucideIcon; label: string; milestone: string }> = [
-  { icon: UserRound, label: 'My profile & agreements', milestone: 'M3' },
-  { icon: Handshake, label: 'Surety requests', milestone: 'M5' },
+  { icon: UserRound, label: 'Profile & agreements', milestone: 'M3' },
+  { icon: KeyRound, label: 'Change password', milestone: 'M8' },
+  { icon: Percent, label: 'Interest rates', milestone: 'M8' },
   { icon: Calculator, label: 'Calculators', milestone: 'M8' },
+  { icon: Handshake, label: 'Surety requests', milestone: 'M5' },
   { icon: Bell, label: 'Notifications', milestone: 'M8' },
+  { icon: Settings, label: 'Notification settings', milestone: 'M8' },
   { icon: LifeBuoy, label: 'Help & support', milestone: 'M8' },
-  { icon: Settings, label: 'Settings', milestone: 'M8' },
 ];
 
 export default function More() {

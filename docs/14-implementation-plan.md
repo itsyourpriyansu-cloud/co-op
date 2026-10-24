@@ -71,3 +71,5 @@ flowchart LR
 - M6 exit: J-16 (FD via app) passes, with the FDR visible on the phone.
 - M7 adds demand **certification** (BR-030).
 - M9 adds the 9 printable form twins (ST-52).
+### v0.4 notes (doc 17)
+- M3 adds MB-19 edit profile + ST-18 change requests. M6 adds loan against FD (MB-09 → MB-05). M7 adds MB-18 report a payment + ST-47 verification. M8 adds MB-16 interest rates + MB-17 change password and arranges the More tab as the sitemap's Settings / Index.

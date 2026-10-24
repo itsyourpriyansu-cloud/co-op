@@ -149,3 +149,11 @@ At submit, one request per surety → surety opens MB-07 → sees the loan summa
 
 ## 8. Existing member activation
 Staff-created or seeded member → MJ-01 "I'm a member" → MA-02 (General No./Employee ID + registered mobile → OTP → set password) → if no recovery mandate is on file, prompt to review and sign it [P] → MB-01.
+## 9. Member-reported payment (D-043)
+`REPORTED` (member, MB-18) → cashier ST-47 → `VERIFIED` (receipt created, BR-011 allocation, member notified) | `REJECTED` (reason, member notified). A report never changes balances until it is verified.
+
+## 10. Profile change request (D-044)
+Contact fields: saved immediately (mobile after OTP), audit entry. Certified fields: `PENDING` → (DDO certifies first if employment/pay, Q-121) → Accountant `APPROVED` (master updated, ServiceEvent if department/designation) | `REJECTED`.
+
+## 11. Loan against FD (D-045)
+MB-09 → MB-05 (Deposit loan, security = FD) → normal loan lifecycle (§1, product config) → on disbursement the FD is set `pledgedToLoanId` → released when the loan closes.

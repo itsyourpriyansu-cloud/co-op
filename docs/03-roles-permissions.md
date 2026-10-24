@@ -56,6 +56,10 @@ Legend: **F** full · **V** view · **A** stage action · **—** none · *own* 
 | Recovery posting | F | F | — | — | — | — | — | — |
 | Receipts: create (cash/bank) | F | F | — | — | **F** | — | — | — |
 | Payments/statements: view | V | V | V | V | V | — | V *own* (read-only) | — |
+| Payment report: submit (D-043) | — | — | — | — | — | — | **F** *own* | — |
+| Payment report: verify / reject | V | A | — | — | **A** | — | — | — |
+| Profile: edit contact / request change (D-044) | — | — | — | — | — | — | **F** *own* | — |
+| Profile change request: decide | V | **A** | — | — | — | Certify *dept* (employment/pay) | — | — |
 | Reports | V | V | V | V | V | — | — | — |
 | Settings: edit | **F** | — (Q-108) | — | — | — | — | — | — |
 | Settings: view rates | V | V | V | V | V | V | V | V (share value, fees) |

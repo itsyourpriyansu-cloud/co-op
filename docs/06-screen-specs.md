@@ -1,6 +1,6 @@
 # 06 · Screen Specifications
 
-> Version 0.3 · 2026-10-24 (member screens are now native mobile, D-019)
+> Version 0.4 · 2026-10-24 (member screens are now native mobile, D-019)
 > One block per screen: **Purpose · Content · Actions · States/Rules · Acceptance ref**.
 > Global states (loading, empty, error, permission) from `04-experience-architecture.md` §6 apply to all screens and are not repeated here.
 > Field lists marked [A] are contractual. Fields marked [P] are proposed and need approval.
@@ -283,3 +283,34 @@ Particulars card (F2 columns a–l) + existing guarantees (item 10) + undertakin
 
 ### MB-15 Open FD request
 Steps: Amount → Period & payout → Holders (me / joint / minor) → Nominee → Rules & sign → Submitted (payment instructions + status). Status chips: Requested · Payment received · Awaiting acceptance · Active.
+---
+
+## v0.4 ADDENDUM: Member sitemap (doc 17)
+
+### More tab = "Settings / Index" [SM]
+Sections: **Account**: Profile (MB-02), Edit profile (MB-19), Change password (MB-17). **Money**: Interest rates (MB-16), Calculators (MB-11), Surety requests (MB-07). **App**: Notifications (MB-12), Notification settings (MB-14), Help & support (MB-13). Sign out. No General/Permissions items (D-033).
+
+### MB-16 Interest rates
+Two sections: Loan products (name, rate % p.a., max amount, max instalments) and FD rates (tenure slab → rate, payout options). "Effective from" date. Read-only. Links to the calculators with the rate pre-filled.
+
+### MB-17 Change password
+Current password → new password (strength meter, rules) → confirm → success toast, other sessions signed out [P].
+
+### MB-18 Report a payment (D-043)
+Fields: amount* (+ words), paid on* (≤ today), mode* (Bank transfer / UPI / Cheque deposit), reference no.* (UTR/cheque no.), towards (Dues · Share capital · FD request link), screenshot (optional, Q-120). Shows the society's account details (settings). Submit → status **Reported** → **Verified** (receipt created, allocation per BR-011) or **Rejected** (reason). Listed in MB-10 with its status chip.
+
+### MB-19 Edit profile (D-044)
+- **Edit directly:** email, present address, photo. Mobile changes via an OTP to the new number.
+- **Request a change** (form: field, new value, reason, supporting document): name, father's name, DOB, department, designation, DOJ/DOR, nominee, pay profile. Pending requests show on MB-02 with status. Approved changes write to Member Master with an audit entry.
+
+### MB-09 Deposit details: Loan against FD (D-045)
+Action **"Take a loan against this FD"** (only ACTIVE FDs not already pledged): shows the maximum = margin % × FD balance (BR-015) → opens MB-05 with the Deposit/Share Capital loan, the amount capped, and the security = this FD. While the loan is active, the FD is marked **Pledged** (no premature closure).
+
+### MB-04 Loan tracker labels [SM + D-027]
+Submitted → Surety confirmation → Validation by Accountant → Validation by DDO → Loan assessment → **Sanction (Secretary ✓ · President ✓)** → Disbursement. Steps skipped for a product (D-030) are hidden, not shown as done.
+
+### ST-18 Profile change-request drawer
+Current vs requested value side by side, reason, document preview → Approve (writes the master, audit) / Reject (reason). Employment and pay fields route to the member's DDO to certify first (Q-121).
+
+### ST-47 Verify reported payment drawer
+Reported details + screenshot → cashier searches the bank statement reference (manual in the prototype) → **Verify** (creates a receipt in ST-45 with the same allocation preview) / **Reject** (reason, member notified).

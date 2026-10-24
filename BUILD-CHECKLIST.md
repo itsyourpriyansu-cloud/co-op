@@ -72,3 +72,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 |---|---|---|
 | 2026-10-24 | Planning docs 00–16 created. Batch 1 + form decisions taken. Checklist + learning guide added | Plan approval (B) |
 | 2026-10-24 | **M0 built** on branch `m0-foundation`: npm-workspaces monorepo, 5 packages, Hono mock API (29 tests), Admin Console shell (React Router 8, Tailwind 4), Member App shell (Expo SDK 58, Expo Router). Typecheck + tests + console build + Android export + expo-doctor all green | Review M0, answer Q-005, start M1 |
+| 2026-10-24 | Member sitemap reviewed (doc 17): on track. Adopted rates/password screens, loan against FD, payment reports (cashier verifies), profile edit + change requests. MVP = 67 screens (D-046) | Review M0, Q-005, start M1 |
