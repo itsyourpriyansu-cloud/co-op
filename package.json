@@ -1,42 +1,44 @@
-{
-  "name": "tgseccsl",
-  "private": true,
-  "type": "module",
-  "description": "TGSECCSL society management: Admin Console (web), Member App (Android) and Mock API",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "scripts": {
-    "demo": "concurrently -k -n api,console -c cyan,magenta \"npm run dev -w @tgs/mock-api\" \"npm run dev -w @tgs/admin-console\"",
-    "dev:api": "npm run dev -w @tgs/mock-api",
-    "dev:console": "npm run dev -w @tgs/admin-console",
-    "dev:app": "npm run start -w @tgs/member-app",
-    "build:console": "npm run build -w @tgs/admin-console",
-    "build:apk": "npm run build:apk -w @tgs/member-app",
-    "tokens": "npm run build -w @tgs/design-tokens",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
-  },
-  "overrides": {
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "devDependencies": {
-    "@types/node": "^26.6.5",
-    "concurrently": "^10.0.6",
-    "prettier": "^3.9.10",
-    "tsx": "^4.23.15",
-    "typescript": "~6.0.3",
-    "vitest": "^5.0.5"
-  },
-  "dependencies": {
-    "@juspay/blend-design-system": "^0.0.38"
-  }
+﻿{
+    "name":  "tgseccsl",
+    "private":  true,
+    "type":  "module",
+    "description":  "TGSECCSL society management: Admin Console (web), Member App (Android) and Mock API",
+    "workspaces":  [
+                       "apps/*",
+                       "packages/*"
+                   ],
+    "scripts":  {
+                    "demo":  "concurrently -k -n api,console -c cyan,magenta \"npm run dev -w @tgs/mock-api\" \"npm run dev -w @tgs/admin-console\"",
+                    "dev:api":  "npm run dev -w @tgs/mock-api",
+                    "dev:console":  "npm run dev -w @tgs/admin-console",
+                    "dev:app":  "npm run start -w @tgs/member-app",
+                    "build:console":  "npm run build -w @tgs/admin-console",
+                    "build:apk":  "npm run build:apk -w @tgs/member-app",
+                    "tokens":  "npm run build -w @tgs/design-tokens",
+                    "test":  "vitest run",
+                    "test:watch":  "vitest",
+                    "typecheck":  "npm run typecheck --workspaces --if-present",
+                    "format":  "prettier --write .",
+                    "format:check":  "prettier --check .",
+                    "e2e":  "playwright test"
+                },
+    "overrides":  {
+                      "react":  "19.3.0",
+                      "react-dom":  "19.3.0"
+                  },
+    "engines":  {
+                    "node":  "\u003e=22"
+                },
+    "devDependencies":  {
+                            "@playwright/test":  "^1.64.1",
+                            "@types/node":  "^26.6.5",
+                            "concurrently":  "^10.0.6",
+                            "prettier":  "^3.9.10",
+                            "tsx":  "^4.23.15",
+                            "typescript":  "~6.0.3",
+                            "vitest":  "^5.0.5"
+                        },
+    "dependencies":  {
+                         "@juspay/blend-design-system":  "^0.0.38"
+                     }
 }

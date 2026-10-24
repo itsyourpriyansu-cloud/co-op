@@ -1,4 +1,10 @@
 // @tgs/domain: pure business logic shared by the mock API (authoritative) and both apps (previews).
-// Business-rule modules (docs/09) arrive in M1: members/, loans/, deposits/, collections/, membership/.
+// Every function maps to a rule in docs/09; PLACEHOLDER behaviour is parameterised, never hidden.
 export * from './money';
 export * from './dates';
+export * from './rules';
+export * from './members';
+export * from './loans';
+export * from './deposits';
+export * from './collections';
+export * from './membership';

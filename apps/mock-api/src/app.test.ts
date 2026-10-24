@@ -83,6 +83,27 @@ describe('mock API foundation', () => {
     expect(await res.json()).toMatchObject({ code: 'NETWORK' });
   });
 
+  it('serves the scenario catalog and dataset counts', async () => {
+    const scenarios = (await (await app.request('/api/v1/__demo/scenarios')).json()) as Array<{ id: string }>;
+    expect(scenarios.some((s) => s.id === 'SC-PERSONA-TOPUP')).toBe(true);
+    const dataset = (await (await app.request('/api/v1/__demo/dataset')).json()) as { counts: Record<string, number> };
+    expect(dataset.counts.members).toBe(605);
+  });
+
+  it('scopes the dashboard summary to the DDO department and blocks members', async () => {
+    const admin = (await login('stf-admin', 'console')).session;
+    const ddo = (await login('stf-ddo-fin', 'console')).session;
+    const get = async (token: string) =>
+      (await app.request('/api/v1/dashboard/summary', { headers: { Authorization: `Bearer ${token}` } })).json() as Promise<{ activeMembers: number; myQueue: number; collectionRate: number }>;
+    const all = await get(admin.token);
+    const fin = await get(ddo.token);
+    expect(fin.activeMembers).toBeLessThan(all.activeMembers);
+    expect(fin.myQueue).toBeGreaterThanOrEqual(3); // 2 loans + Ravi's membership application
+    expect(all.collectionRate).toBeGreaterThan(0.8);
+    const member = (await login('mem-1101', 'app')).session;
+    expect((await app.request('/api/v1/dashboard/summary', { headers: { Authorization: `Bearer ${member.token}` } })).status).toBe(403);
+  });
+
   it('validates the demo clock and resets state', async () => {
     expect((await app.request('/api/v1/__demo/clock', json({ today: '24-10-2026' }))).status).toBe(
       400,

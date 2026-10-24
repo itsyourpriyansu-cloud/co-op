@@ -3,10 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router/dom';
 import { isApiError } from '@tgs/api-client';
-import '@fontsource-variable/inter';
+// Inter variable with the optical-size axis (renders the Display cut at large sizes, docs/18 §4).
+import '@fontsource-variable/inter/opsz.css';
+import '@juspay/blend-design-system/style.css';
 import './index.css';
 import { AuthProvider } from './app/auth';
 import { router } from './app/router';
+import { AppThemeProvider } from './app/theme';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,7 +28,9 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <AppThemeProvider>
+          <RouterProvider router={router} />
+        </AppThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,
