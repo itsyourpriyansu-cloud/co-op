@@ -1,17 +1,24 @@
-{
-  "name": "@tgs/design-tokens",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Colours, type, spacing tokens for web + app (doc 12)",
-  "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
-  "exports": {
-    ".": "./src/index.ts",
-    "./tokens.css": "./css/tokens.css"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit -p .",
-    "build": "tsx scripts/build-css.ts"
-  }
+﻿{
+    "name":  "@tgs/design-tokens",
+    "version":  "0.1.0",
+    "private":  true,
+    "description":  "Colours, type, spacing tokens for web + app (doc 12)",
+    "type":  "module",
+    "main":  "src/index.ts",
+    "types":  "src/index.ts",
+    "exports":  {
+                    ".":  "./src/index.ts",
+                    "./tokens.css":  "./css/tokens.css",
+                    "./tailwind.css":  "./css/tailwind.css"
+                },
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit -p .",
+                    "build":  "tsx scripts/build-css.ts"
+                },
+    "devDependencies":  {
+                            "@juspay/blend-design-system":  "^0.0.38"
+                        },
+    "dependencies":  {
+                         "@tgs/types":  "*"
+                     }
 }
