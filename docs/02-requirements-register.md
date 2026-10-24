@@ -145,3 +145,13 @@
 | REQ-113 | Demand sheet certified by a society officer before sending | PF F6 | C | P1 | ST-42 |
 | REQ-114 | Printable twins of every form in the original layout + letterhead (Regd. No. P-929) | P (D-032) | P | P1 | ST-52 |
 | REQ-115 | Gratuity recovery request letter at retirement/death | PF F5 F6 | U (Q-513) | P2 | — |
+## Member sitemap (SM, added v0.4, see doc 17)
+
+| ID | Requirement | Source | Status | Prio | Screens |
+|---|---|---|---|---|---|
+| REQ-120 | Interest rates index for members | SM | C | P1 | MB-16 |
+| REQ-121 | Change password | SM | C | P1 | MB-17 |
+| REQ-122 | Member reports a payment, cashier verifies | SM (Payment Edit/New) + D-043 | C | P1 | MB-18, ST-47 |
+| REQ-123 | Profile settings / edit: contact direct, certified fields by request | SM + D-044 | C | P1 | MB-19, ST-18 |
+| REQ-124 | Loan against FD from FD details | SM + D-045 | C | P1 | MB-09, MB-05 |
+| REQ-125 | Email / WhatsApp from member dashboard | SM | U (Q-119) | P1 (contact links) | MB-13 |

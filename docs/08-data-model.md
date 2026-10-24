@@ -1,6 +1,6 @@
 ﻿# 08 · Data Model
 
-> Version 0.3 · 2026-10-24
+> Version 0.4 · 2026-10-24
 > Entities for the mock store and TypeScript types. Fields tagged [A] are contractual, [P] proposed, `?` optional. All money values are stored as **integer paise** [P] to avoid floating-point errors, and displayed as ₹.
 > 22 entities in MVP (26 with the P2 accounting entities).
 
@@ -192,3 +192,15 @@ Caste categories (Q-406) · Nominee relations · Document types (Q-403) · Disbu
 `kind: SECRETARY_DEPT | EXTERNAL_OFFICE`, `address?` (for out-of-Secretariat transfers, Q-512).
 
 **Entity count:** 22 (v0.2) + ApplicantAccount, MembershipApplication, RecoveryMandate, ApprovalSignature = **26 MVP** (SignatureRecord, PayProfile and FD holders are embedded value objects).
+## 5. v0.4 additions (Member sitemap, doc 17)
+
+### PaymentReport [D-043]
+`id, memberId, amount, paidOn, mode: BANK_TRANSFER | UPI | CHEQUE_DEPOSIT, reference, towards: DUES | SHARE_CAPITAL | FD_REQUEST, linkedEntityId?, screenshotDocId?, status: REPORTED | VERIFIED | REJECTED, verifiedBy?, verifiedAt?, receiptId?, rejectReason?, createdAt`
+
+### ProfileChangeRequest [D-044]
+`id, memberId, fields[] {field, oldValue, newValue}, reason, documentId?, route: OFFICE | DDO_THEN_OFFICE, status: PENDING | APPROVED | REJECTED, decidedBy?, decidedAt?, remarks?, createdAt`
+
+### DepositAccount: new field [D-045]
+`pledgedToLoanId?`. A pledged FD cannot be closed early.
+
+**Entity count:** 26 + PaymentReport, ProfileChangeRequest = **28 MVP**.

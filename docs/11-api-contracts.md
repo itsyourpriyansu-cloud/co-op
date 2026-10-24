@@ -167,3 +167,16 @@ calculateFdMaturity(principal: Paise, annualRate: number, months: number, compou
 
 ### demand (updated)
 `POST /demand-sheets/:id/certify` → sheet (CERTIFIED). `markSent` now requires CERTIFIED (BR-030).
+## 5. v0.4 additions (doc 17)
+| Function | REST | Input → Output |
+|---|---|---|
+| `paymentReports.create` (member) | POST /me/payment-reports | `{ amount, paidOn, mode, reference, towards, linkedEntityId?, screenshot? }` → `PaymentReport` |
+| `paymentReports.listMine` | GET /me/payment-reports | → `PaymentReport[]` |
+| `paymentReports.list` (staff) | GET /payment-reports?status= | → `Paged<PaymentReport>` |
+| `paymentReports.verify` / `reject` | POST /payment-reports/:id/verify · /reject | `{ remarks? }` → report (+ receipt on verify) |
+| `profile.updateContact` | PATCH /me/profile/contact | `{ email?, presentAddress?, photo? }` → member |
+| `profile.changeMobile` | POST /me/profile/mobile (OTP via `sign.request` flow) | → member |
+| `profile.requestChange` | POST /me/profile/change-requests | `{ fields[], reason, document? }` → `ProfileChangeRequest` |
+| `profileRequests.list` / `decide` (staff) | GET /profile-change-requests · POST /profile-change-requests/:id/decision | `{ approve: boolean, remarks? }` |
+| `auth.changePassword` | POST /me/password | `{ current, next }` → `{ ok }` |
+| `rates.list` | GET /rates | → `{ loanProducts[], fdSlabs[], effectiveFrom }` |

@@ -1,0 +1,53 @@
+@import 'tailwindcss';
+@import '@tgs/design-tokens/tokens.css';
+
+/* Map the shared tokens (docs/12) onto Tailwind utilities: bg-primary, text-muted, border-border … */
+@theme inline {
+  --color-primary: var(--tgs-primary);
+  --color-primary-foreground: var(--tgs-primary-foreground);
+  --color-primary-subtle: var(--tgs-primary-subtle);
+  --color-accent: var(--tgs-accent);
+  --color-accent-foreground: var(--tgs-accent-foreground);
+  --color-background: var(--tgs-background);
+  --color-surface: var(--tgs-surface);
+  --color-border: var(--tgs-border);
+  --color-text: var(--tgs-text);
+  --color-muted: var(--tgs-text-muted);
+  --color-success: var(--tgs-success);
+  --color-warning: var(--tgs-warning);
+  --color-danger: var(--tgs-danger);
+  --color-info: var(--tgs-info);
+  --radius-sm: var(--tgs-radius-sm);
+  --radius-md: var(--tgs-radius-md);
+  --radius-lg: var(--tgs-radius-lg);
+  --font-sans:
+    'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Telugu', sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-text font-sans antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  /* Money and IDs line up in tables (docs/12 §4). */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  :focus-visible {
+    outline: 2px solid var(--tgs-primary);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0ms !important;
+      animation-duration: 0ms !important;
+    }
+  }
+}

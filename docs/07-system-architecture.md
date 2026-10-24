@@ -42,7 +42,7 @@ co-op/
       src/app/              router, providers, StaffShell, route guards
       src/features/         members, loans, deposits, collections, reports, settings, workqueue, notifications, auth
       src/components/ui/    shadcn primitives + composites
-    member-app/          Expo (React Native) + TS + Expo Router + NativeWind
+    member-app/          Expo SDK 58 (React Native) + TS + Expo Router + StyleSheet/tokens (D-039)
       app/                  file-based routes: (auth)/, (tabs)/home, loans, deposits, payments, more/…
       src/features/         same feature names as web where applicable
       src/components/       RN components built on shared tokens

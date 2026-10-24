@@ -31,7 +31,7 @@
 | Q-104 | Sureties: how many per loan type? Eligibility (active member, service left, max loans guaranteed)? Does the surety confirm in the app, or does staff record a signed form? | Placeholder BR-014. In-app confirmation | S | M4, M5 | **Partly answered (F2):** sureties sign the joint recovery undertaking. The form captures pay, shares, retirement and existing surety obligations. Count and limits still open (Q-504) |
 | Q-105 | Should members self-register at all? What is "Preference Signup"? | Activation only (D-009) | E/S | M8 | **Answered: activation only → D-009**. Preference Signup split out to Q-116 |
 | Q-106 | Loan types: the agreement lists Ordinary, Salary, Education, Deposit/Share Capital. The diagrams list Ordinary, Educational, Other. Is "Other" = Salary + Deposit/Share Capital? Any more types? | 4 types as tabs + Top-ups | S | M4 | **Partly answered:** Ordinary & Education share one form. Salary loan has its own form. Deposit/Share Capital loan form not seen |
-| Q-107 | Member "Payment / Index → Edit → New": what can a member do here? | Read-only statements (D-010) | E | M8 | Open |
+| Q-107 | Member "Payment / Index → Edit → New": what can a member do here? | Read-only statements (D-010) | E | M8 | **Answered → D-043** (view + report a payment, cashier verifies) |
 | Q-108 | Settings editing rights: Admin only, or also the Accountant (diagram p3 says "Accountant Only")? Should members see rates? | Admin edits. Others view rates read-only | S | M2 | Open |
 | Q-109 | Why does the FD List lead to Loan Sanction (Approver) and Loan Disbursement (Disbursement)? Does FD opening/closure need approval, or does this represent Deposit loans? | Treat as Deposit/Share Capital loans | E | M6 | **Answered by F4:** FD acceptance needs Secretary + President sign-off (D-027) |
 | Q-110 | Top-up allowed only for Ordinary loans, or also Salary/Education? Minimum repaid instalments before a top-up? | Ordinary only | S | M5 | Open |
@@ -93,3 +93,12 @@
 | Q-512 | Deputation / transfer outside the Secretariat: how are recoveries handled (external pay officer)? | Department master supports "External office" with an address. Demand letter printed | S | M7 | Open |
 | Q-513 | Retirement/death: should the system generate the gratuity recovery request to the department? | P2 printable letter | S | P2 | Open |
 | Q-514 | Current baselines: average days from loan application to disbursement, and membership application to approval, on paper | Needed for UX targets (`12` §9) | S | M10 | Open |
+## Batch 6: From the Member sitemap review (doc 17)
+
+| ID | Question | Proposal | Owner | Blocks | Status |
+|---|---|---|---|---|---|
+| Q-117 | Which profile fields can a member edit directly? | Contact edit + request the rest | E | M3 | **Answered → D-044** |
+| Q-118 | FD branch "Loan Details → Loan Requirements": loan against FD? | Yes | E | M6 | **Answered → D-045** |
+| Q-119 | Dashboard → Email → WhatsApp: what is it for (contact the society, share statements, alerts)? | "Contact society" in Help + notification channels in settings | E | M8 | Open |
+| Q-120 | Reported payments: which bank account/UPI details does the society publish for members? Is a screenshot mandatory? | Society account details in settings. Screenshot optional, reference mandatory | S | M7 | Open |
+| Q-121 | Profile change requests: who approves (Accountant? DDO for employment fields?) | Accountant approves contact/nominee. DDO certifies employment/pay changes | S | M3 | Open |

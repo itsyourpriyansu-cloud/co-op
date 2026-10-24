@@ -19,7 +19,7 @@ A **clickable, finished-UI prototype backed only by mock data** of a Co-operativ
   1. **Admin Console** (desktop web, React + Vite): Super Admin, Accountant, Secretary, President, Cashier/Disbursement, DDO
   2. **Member App** (Expo React Native, **Android APK**): applicants (join the society + track) and members. **Members use only the app. Staff use only the console** (D-033)
   3. **Mock API server** (Node + Hono, in-memory, seeded) shared by both apps, so cross-app hand-offs are real in demos
-- Scope accepted: **MVP = 38 console pages + 25 app screens (63) + 9 decision drawers + 8 report templates + 9 printable form twins** (D-036).
+- Scope accepted: **MVP = 38 console pages + 29 app screens (67) + 11 decision drawers + 8 report templates + 9 printable form twins** (D-046).
 - Start with `docs/00-system-overview.md` for the one-page structure.
 
 ## 2. Current phase & gate
@@ -31,13 +31,13 @@ A **clickable, finished-UI prototype backed only by mock data** of a Co-operativ
 | 3 System Architecture | v0.3, awaiting review |
 | 4 Context Engineering | v0.3 (this file + docs/) |
 | 5 Implementation Planning | v0.3, awaiting review |
-| **Build** | **BLOCKED until the "Plan approved" decision is logged in `docs/decisions-log.md`** |
+| **Build** | **M0 Foundation done (branch `m0-foundation`)**. Plan approved (D-000). Next: M1 (see `BUILD-CHECKLIST.md`) |
 
 Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock API, digital membership join with stage tracker, Secretary → President sign-off, FDs for members + joint/minor, share payment by counter or first demand. Still open: Batch 1 Q-004..Q-011 and Batch 5 (forms) Q-501..Q-514 (see `docs/open-questions.md`).
 
 ## 3. Hard rules for every Claude session
 
-1. **No application code** until the decisions log contains an *Accepted* "Plan approved" entry.
+1. **Build milestone by milestone** (`docs/14`). Plan approved (D-000). Never start M(n+1) before M(n)'s exit test passes.
 2. **Prototype scope = finished UI + mock data.** No real backend, database, authentication, payment gateway, email, WhatsApp or SMS. Every integration is simulated and visibly behaves like the real thing.
 3. **Never invent business logic.** Rules come only from `docs/09-business-rules.md`. If a rule is `UNKNOWN`, implement it as a **configurable setting** that has the placeholder default listed there. Do not hard-code the guess. Log any new assumption in `docs/open-questions.md`.
 4. **Source precedence:** Agreement (A) and paper forms (PF) > Accepted decisions (decisions-log) > Flow diagrams (F) > Proposals (P). Conflicts are tracked as `CONFLICT` in `docs/02-requirements-register.md`.
@@ -57,6 +57,7 @@ Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock A
 | One-page structure (start here) | `docs/00-system-overview.md` | same |
 | Understanding the product | `docs/01-product-discovery.md`, `docs/glossary.md` | — |
 | Digitising any paper form / field | `docs/16-paper-forms-digitization.md` | same + 08 |
+| Member App structure vs Envizon sitemap | `docs/17-member-sitemap-review.md` | same |
 | Checking whether something is in scope | `docs/02-requirements-register.md` | register + decisions-log |
 | Roles & access | `docs/03-roles-permissions.md` | same |
 | Navigation, journeys, states | `docs/04-experience-architecture.md` | same |
@@ -82,7 +83,7 @@ DDO = Drawing & Disbursing Officer · CRD / SRDS / RRF = deposit/fund heads name
 |---|---|---|
 | Monorepo | **npm workspaces** (built into Node, no extra install): `apps/{admin-console,member-app,mock-api}`, `packages/{domain,types,api-client,mock-data,design-tokens}`. Demo = `npm run demo` | D-024 (Proposed), D-038 (Accepted) |
 | Admin Console | React 18 + TypeScript + Vite · React Router · TanStack Query/Table · React Hook Form + Zod · Tailwind + shadcn/ui · Recharts · date-fns · Vitest · Playwright | D-008 (Accepted) |
-| Member App | Expo (React Native) + TypeScript · Expo Router · NativeWind · TanStack Query · RHF + Zod · expo-secure-store · Jest + RNTL · Maestro · Android APK via EAS/Gradle | D-019, D-020, D-022 (Accepted), D-025 (libs Proposed) |
+| Member App | Expo SDK 58 (React Native 0.88) + TypeScript · Expo Router (`src/app/`) · StyleSheet + shared tokens (D-039) · TanStack Query · expo-secure-store · lucide-react-native · Jest + RNTL · Maestro · Android APK via EAS | D-019, D-020, D-022, D-039, D-040 |
 | Mock API | Node + Hono · in-memory store + JSON snapshot · demo endpoints (reset, clock, failure rate, personas) | D-021 (Accepted), D-025 (Proposed) |
 
 ## 7. Conventions (apply once the build is approved)
@@ -95,3 +96,18 @@ DDO = Drawing & Disbursing Officer · CRD / SRDS / RRF = deposit/fund heads name
 - Business data comes only from the mock API. Apps may call `packages/domain` for live previews, but the server's result is authoritative.
 - Screen ID prefixes: `AU-`/`SYS-`/`ST-` = Admin Console. `MJ-` (joining) / `MA-` (auth) / `MB-` (member) = Member App.
 - Icons: Lucide only (`lucide-react` / `lucide-react-native`). Font: Inter. Tokens from `packages/design-tokens` (`docs/12`).
+
+## 8. Codebase map (M0)
+
+```
+apps/mock-api        Hono server: src/app.ts (routes), store.ts (in-memory + snapshot), permissions.ts (docs/03), errors.ts
+apps/admin-console   Vite + React: src/app (auth, router, guards, shell), src/config/navigation.ts, src/pages, src/components/ui
+apps/member-app      Expo Router: src/app (_layout, welcome, login, offline, demo-settings, (member)/ tabs, (applicant)/tracker), src/lib, src/components
+packages/types       roles, entities, API envelope (docs/08, 11)
+packages/domain      money (Indian format, amount in words) + dates. Business rules go here from M1 (docs/09)
+packages/api-client  createApiClient(): the only way the apps talk to the API
+packages/mock-data   fictional personas, departments, society profile (docs/13)
+packages/design-tokens  src/index.ts → css/tokens.css (npm run tokens)
+```
+Expo note: Expo changes every SDK. Before touching an Expo API, read `apps/member-app/AGENTS.md` and the SDK 58 docs. Always add native packages with `npx expo install` inside `apps/member-app`.
+

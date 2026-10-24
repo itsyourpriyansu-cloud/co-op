@@ -1,6 +1,6 @@
 ﻿# 05 · Screen Inventory: How Many Things We Build
 
-> Version 0.3 · 2026-10-24 · Accepted MVP (D-036), incl. the membership join flow (D-026) and paper-form digitisation (doc 16)
+> Version 0.4 · 2026-10-24 · Accepted MVP (D-036), incl. the membership join flow (D-026) and paper-form digitisation (doc 16)
 > Complexity: **S** simple · **M** standard · **L** complex. Columns: **Lean** = loan-lifecycle demo · **MVP** = accepted · **Full** = everything
 > Source: A agreement · F flow diagram · PF paper form · P proposal
 
@@ -11,9 +11,9 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | Build item | Lean | **MVP (accepted)** | Full |
 |---|---|---|---|
 | Admin Console pages | 14 | **38** | 40 |
-| Member App screens | 12 | **25** | 25 |
-| **Total screens** | 26 | **63** | 65 |
-| Overlays (decision drawers / dialogs with business logic) | 6 | **9** | 9 |
+| Member App screens | 12 | **29** | 29 |
+| **Total screens** | 26 | **67** | 69 |
+| Overlays (decision drawers / dialogs with business logic) | 6 | **11** | 11 |
 | Dashboard role variants (console) | 3 | **5** (Admin, Accountant, Secretary/President, Cashier, DDO) | 5 |
 | Report templates | 0 | **8** | 22 |
 | Printables (receipt, sanction letter, defaulter notice, demand sheet, membership form, Ordinary/Education loan form, Salary loan form, FD form + FDR, recovery agreement) | 1 | **9** | 10 (+ gratuity letter) |
@@ -51,6 +51,7 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | ST-10 | Member index | R1–R5 | F | M | ✓ | ✓ |
 | ST-11 | Member create / edit (incl. pay profile) | R1, R2 | A F | L | ✓ | ✓ |
 | ST-12 | Member profile (Overview · Service · Pay profile · Shares · Deposits · Loans · Surety for · Insurance · Ledger · Documents · Agreements) | R1–R5 | A F PF | L | ✓ | ✓ |
+| ⧉ ST-18 | Profile change-request drawer (approve/reject member-requested changes, D-044) | R2, R5 (employment/pay) | SM | S | | ✓ |
 | ⧉ ST-13 | Department transfer dialog (incl. "outside Secretariat", flags mandate for the new DDO) | R1, R2 | A PF | S | ✓ | ✓ |
 
 ### Loans (4 pages + 5 overlays)
@@ -84,6 +85,7 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | ST-44 | Payments / receipts index | R1–R4 | F | M | ✓ |
 | ST-45 | New receipt (cash with **denomination counter** / bank transfer. Heads incl. share capital) | R1, R2, R4 | F PF | M | ✓ |
 | ST-46 | Receipt detail | R1–R4 | F | S | ✓ |
+| ⧉ ST-47 | Verify member-reported payment drawer (match bank reference → create receipt, or reject with reason, D-043). ST-44 gets a "Reported by members" tab | R4, R2 | SM | S | ✓ |
 
 ### Reports & prints (3)
 | ID | Screen | Roles | Cx | Lean | MVP |
@@ -105,7 +107,7 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | ST-67 | Departments & DDOs (incl. external offices) | | ✓ |
 | ST-68 | Audit log | | P2 |
 
-**Admin Console MVP = 5 + 3 + 5 + 4 + 3 + 7 + 3 + 8 = 38 pages** (Full adds ST-04, ST-68 = 40). Overlays: ST-13, 16, 17, 24–28, 33 = **9**.
+**Admin Console MVP = 5 + 3 + 5 + 4 + 3 + 7 + 3 + 8 = 38 pages** (Full adds ST-04, ST-68 = 40). Overlays: ST-13, 16, 17, 18, 24–28, 33, 47 = **11**.
 
 ## 3. Member App (Android)
 
@@ -131,22 +133,26 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | ID | Screen | Src | Cx | Lean | MVP |
 |---|---|---|---|---|---|
 | MB-01 | Home | A F | M | ✓ | ✓ |
-| MB-02 | Profile (+ pay profile, documents, **my agreements**) | A PF | M | ✓ | ✓ |
+| MB-02 | Profile (+ pay profile, documents, **my agreements**, pending change requests) | A PF | M | ✓ | ✓ |
+| MB-19 | **Edit profile**: contact details direct (mobile via OTP) + "Request a change" for certified fields (D-044) | SM | M | | ✓ |
 | MB-03 | My loans | F | S | ✓ | ✓ |
 | MB-04 | Loan details (stage tracker, schedule, sureties) | F | M | ✓ | ✓ |
 | MB-05 | Apply for loan (product-specific: F2 Ordinary/Education with sureties, F3 Salary loan) | F PF | L | ✓ | ✓ |
 | MB-06 | Top-up request | A F | M | ✓ | ✓ |
 | MB-07 | Surety requests (auto-filled particulars + undertaking + Sign with OTP) | F PF | M | ✓ | ✓ |
 | MB-08 | My deposits | A | S | | ✓ |
-| MB-09 | Deposit details + FDR | A PF | S | | ✓ |
+| MB-09 | Deposit details + FDR + **"Take a loan against this FD"** (D-045) | A PF SM | S | | ✓ |
 | MB-15 | **Open FD request** (F4: amount, period, payout, joint/minor, nominee, rules, sign) | PF | M | | ✓ |
-| MB-10 | Payments & statements | F | M | | ✓ |
+| MB-10 | Payments & statements (read-only) + reported payments with status | F SM | M | | ✓ |
+| MB-18 | **Report a payment** (amount, date, mode, reference, screenshot → cashier verifies, D-043) | SM | S | | ✓ |
 | MB-11 | Calculators | A | M | ✓ | ✓ |
 | MB-12 | Notifications | F | S | ✓ | ✓ |
 | MB-13 | Help & support | F | S | | ✓ |
-| MB-14 | Settings | F | S | | ✓ |
+| MB-14 | Settings / Notifications (channel preferences) | F SM | S | | ✓ |
+| MB-16 | **Interest rates** (loan products + FD slabs, read-only) | SM | S | | ✓ |
+| MB-17 | **Change password** | SM | S | | ✓ |
 
-**Member App MVP = 6 + 4 + 15 = 25 screens.**
+**Member App MVP = 6 + 4 + 19 = 29 screens.** (Member mode 15 + MB-16, 17, 18, 19)
 
 ## 4. Traceability: sources → screens
 
@@ -156,6 +162,7 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | F2 Ordinary/Education loan form | MB-05, MB-07, ST-21, ST-23..27, ST-52 print |
 | F3 Salary loan form | MB-05 (salary variant), ST-21, ST-26 (office use), ST-27, ST-52 print |
 | F4 FD form | MB-15, MB-09, ST-30, ST-31, ST-33, ST-45, ST-52 FDR print |
+| Member sitemap [SM] (doc 17) | MB-01…MB-19. More tab = "Settings / Index" |
 | F5/F6 Agreements | MJ-04 (sign), ST-16 (agree), ST-12/MB-02 Agreements tab, ST-13 (transfer), ST-52 print |
 | Flow-diagram nodes | Loans list → ST-20 · Loan Review → ST-24 · DDO / DDO Manual → ST-25 · Assessment → ST-26 · Sanction/Approval → ST-27 · Disbursement → ST-28 · FD List → ST-30 · Payments → ST-44..46 · Member Index → ST-10..12 · Reports → ST-50..52 · Settings → ST-60..67 · Signup → MJ-01/MA-02 · Preference Signup → unresolved (Q-116) |
 | Agreement-only items | CRD/SRDS/Savings (ST-30..32), Insurance (ST-66), Demand (ST-40..43), Calculators (MB-11), Reports (ST-51) |

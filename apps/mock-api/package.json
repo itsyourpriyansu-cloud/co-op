@@ -1,0 +1,19 @@
+{
+  "name": "@tgs/mock-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared mock backend for the Admin Console and Member App (doc 07 §6, doc 11)",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@tgs/domain": "*",
+    "@tgs/mock-data": "*",
+    "@tgs/types": "*",
+    "hono": "^4.13.13"
+  }
+}
