@@ -34,7 +34,7 @@ import {
   addSnackbarV2,
 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { amountInWords, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { amountInWords, daysBetweenDates, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import { ROLE_LABELS, type LoanDetail, type Role } from '@tgs/types';
 import { Money } from '@/components/Money';
 import { Panel } from '@/components/Panel';
@@ -270,7 +270,8 @@ export function LoanDetailPage() {
   const notFound = isApiError(q.error) && q.error.status === 404;
   const blocking = d?.checks.filter((c) => !c.pass && c.severity === 'block').length ?? 0;
   const lastEvent = l?.events.at(-1);
-  const daysInStage = lastEvent ? Math.max(0, Math.round((Date.now() - Date.parse(lastEvent.at)) / 86_400_000)) : 0;
+  // D-065: measured against the demo date, not the laptop's clock.
+  const daysInStage = lastEvent && demoState.data ? daysBetweenDates(lastEvent.at, demoState.data.today) : 0;
 
   return (
     <>

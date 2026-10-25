@@ -12,6 +12,7 @@ import {
   type Session,
   type SessionUser,
 } from '@tgs/types';
+import { bindDemoClock } from './clock';
 import { fail, ServiceError } from './errors';
 import { permissionsFor } from './permissions';
 import { Store } from './store';
@@ -40,6 +41,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function createApp({ store, version, corsOrigins }: AppOptions) {
   const app = new Hono<Env>();
+  // D-065: server timestamps follow this store's demo date.
+  bindDemoClock(() => store.db.demo.today);
 
   app.use('*', cors(corsOrigins?.length ? { origin: corsOrigins } : undefined));
 

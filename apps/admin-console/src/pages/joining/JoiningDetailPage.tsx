@@ -33,7 +33,7 @@ import {
   addSnackbarV2,
 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { formatDisplayDate, formatDisplayDateTime } from '@tgs/domain';
+import { daysBetweenDates, formatDisplayDate, formatDisplayDateTime } from '@tgs/domain';
 import { ROLE_LABELS, type MembershipAction, type MembershipDetail, type Role, type WorkflowEvent } from '@tgs/types';
 import { Money } from '@/components/Money';
 import { Panel } from '@/components/Panel';
@@ -283,7 +283,10 @@ export function JoiningDetailPage() {
   const d = q.data;
   const notFound = isApiError(q.error) && (q.error.status === 404 || q.error.status === 403);
   const app = d?.application;
-  const daysInStage = app ? Math.max(0, Math.round((Date.now() - Date.parse(app.events.at(-1)?.at ?? app.submittedOn ?? '')) / 86_400_000)) : 0;
+  // D-065: measured against the demo date, not the laptop's clock.
+  const demoState = useQuery({ queryKey: ['demo-state'], queryFn: api.demo.state });
+  const stageStart = app?.events.at(-1)?.at ?? app?.submittedOn;
+  const daysInStage = stageStart && demoState.data ? daysBetweenDates(stageStart, demoState.data.today) : 0;
   const checksFailing = d ? d.checks.filter((c) => !c.pass).length : 0;
 
   return (

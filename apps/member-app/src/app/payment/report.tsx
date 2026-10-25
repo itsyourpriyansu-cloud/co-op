@@ -93,7 +93,7 @@ export default function ReportPayment() {
               <Button text="Remove" size="sm" buttonType="secondary" subType="inline" leftSlot={X} onPress={() => setScreenshot(undefined)} />
             </View>
           ) : (
-            <Button text="Attach a screenshot (optional)" buttonType="secondary" leftSlot={ImagePlus} fullWidth onPress={() => setScreenshot(`payment-${new Date().toISOString().slice(0, 10)}.jpg`)} />
+            <Button text="Attach a screenshot (optional)" buttonType="secondary" leftSlot={ImagePlus} fullWidth onPress={() => setScreenshot('payment-screenshot.jpg')} />
           )}
 
           <Section title="Where to pay">

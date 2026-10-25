@@ -15,6 +15,7 @@ import type {
   SessionUser,
   WorkflowEvent,
 } from '@tgs/types';
+import { nowIso } from './clock';
 import { fail } from './errors';
 import { AGREEMENTS, REQUIRED_DOCUMENTS, TEXT_VERSION } from './joining-reference';
 import { demoAct } from './membership';
@@ -25,7 +26,6 @@ type Env = { Variables: { session: SessionUser; token: string } };
 const DEMO_OTP = '123456';
 const OTP_TTL_SECONDS = 300;
 
-const nowIso = () => new Date().toISOString();
 
 interface PendingOtp {
   purpose: 'signup' | 'sign';
@@ -179,6 +179,11 @@ export function registerJoining(api: Hono<Env>, store: Store, requireSession: Mi
     if (!app) return fail('NOT_FOUND', 'Start with the eligibility check.');
     if (app.status !== 'DRAFT' && app.status !== 'INFO_REQUESTED') fail('INVALID_TRANSITION', 'This application has been submitted and can no longer be edited.');
     const patch = await c.req.json<MembershipForm>();
+    // D-065: the server stamps uploads with the demo date; a re-sent document keeps its first stamp.
+    if (patch.documents) {
+      const before = app.form?.documents ?? [];
+      patch.documents = patch.documents.map((d) => ({ ...d, uploadedAt: before.find((b) => b.type === d.type && b.fileName === d.fileName)?.uploadedAt ?? nowIso() }));
+    }
     app.form = mergeForm(app.form, patch);
     store.save();
     return c.json(app);

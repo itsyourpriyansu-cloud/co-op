@@ -85,3 +85,11 @@ export function formatDuration(totalMonths: number): string {
   if (months || !years) parts.push(`${months} ${months === 1 ? 'mth' : 'mths'}`);
   return sign + parts.join(' ');
 }
+
+/** Whole days from `from` to `to` (ISO dates or date-times; only the date part counts), never negative. */
+export function daysBetweenDates(from: string, to: ISODate): number {
+  const a = parseISODate(from.slice(0, 10));
+  const b = parseISODate(to.slice(0, 10));
+  return Math.max(0, Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86_400_000));
+}
+

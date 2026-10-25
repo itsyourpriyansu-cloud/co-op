@@ -1,6 +1,7 @@
 // Helpers shared by every route module: permission checks, audit entries, notifications.
 import type { Hono, MiddlewareHandler } from 'hono';
 import type { AppNotification, NotificationChannel, Permission, SessionUser } from '@tgs/types';
+import { nowIso } from './clock';
 import { fail } from './errors';
 import { permissionsFor } from './permissions';
 import type { Store } from './store';
@@ -9,7 +10,8 @@ export type Env = { Variables: { session: SessionUser; token: string } };
 export type Api = Hono<Env>;
 export type Guard = MiddlewareHandler<Env>;
 
-export const nowIso = () => new Date().toISOString();
+/** Business timestamps follow the demo date (D-065). */
+export { nowIso };
 
 export function can(user: SessionUser, permission: Permission): boolean {
   return permissionsFor(user.role).includes(permission);

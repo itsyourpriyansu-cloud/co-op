@@ -29,6 +29,7 @@ import {
   type SessionUser,
   type StaffSignOff,
 } from '@tgs/types';
+import { nowIso } from './clock';
 import { fail } from './errors';
 import { AGREEMENTS, REQUIRED_DOCUMENTS } from './joining-reference';
 import { permissionsFor } from './permissions';
@@ -43,7 +44,6 @@ export interface Actor {
   departmentId?: string;
 }
 
-const nowIso = () => new Date().toISOString();
 const daysBetween = (from: ISODate, to: ISODate) => Math.max(0, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000));
 
 // ---- who acts next ------------------------------------------------------------------------------
