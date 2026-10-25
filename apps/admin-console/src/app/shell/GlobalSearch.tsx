@@ -70,7 +70,7 @@ export function GlobalSearch() {
         if (!wrap.current?.contains(e.relatedTarget as Node)) setOpen(false);
       }}
     >
-      <SearchInputV2 value={q} placeholder="Search members, loans, FDs, receipts…  (Ctrl K)" leftSlot={<Search size={16} aria-hidden />} onChange={(e) => (setQ(e.target.value), setOpen(true))} aria-label="Search members, loans, deposits and receipts" aria-expanded={show} aria-controls={listId} />
+      <SearchInputV2 value={q} placeholder="Search members, loans, FDs, receipts…  (Ctrl K)" leftSlot={<Search size={16} aria-hidden />} onChange={(e) => (setQ(e.target.value), setOpen(true))} role="combobox" aria-autocomplete="list" aria-label="Search members, loans, deposits and receipts" aria-expanded={show} aria-controls={listId} />
       {show && (
         <div id={listId} role="listbox" aria-label="Search results" className="absolute left-0 right-0 top-full z-[1200] mt-1 max-h-[70vh] overflow-y-auto rounded-card border border-line bg-surface p-2 shadow-raised">
           {res.isLoading ? (

@@ -60,7 +60,7 @@ export function TextField({ label, required, hint, error, prefix, suffix, editab
         <TextInput
           {...input}
           editable={editable}
-          accessibilityLabel={label}
+          accessibilityLabel={input.accessibilityLabel ?? label}
           placeholderTextColor={color.text.disabled}
           onFocus={(e) => {
             setFocused(true);

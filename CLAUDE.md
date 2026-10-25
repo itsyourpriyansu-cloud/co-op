@@ -3,7 +3,7 @@
 > **Every Claude session must read this file first, then `BUILD-CHECKLIST.md` → "Resume here"**, then the docs listed under "Doc map" for the current step.
 > At the end of every session, follow the **Session ritual** in `BUILD-CHECKLIST.md` (tick boxes, update "Resume here", add a session-log line).
 > Plain-language guide for humans: `LEARN-THE-APP.md`.
-> Version: 0.3 (draft) · Last updated: 2026-10-25 · Owner: Envizon Studio
+> Version: 0.4 (draft) · Last updated: 2026-10-25 · Owner: Envizon Studio
 
 ---
 
@@ -31,7 +31,7 @@ A **clickable, finished-UI prototype backed only by mock data** of a Co-operativ
 | 3 System Architecture | v0.3, awaiting review |
 | 4 Context Engineering | v0.3 (this file + docs/) |
 | 5 Implementation Planning | v0.3, awaiting review |
-| **Build** | **M0–M10 done (demo scope)** on branch `m0-foundation` (Settings, Joining + Members, Loans core + workflow, Deposits, Demand & collections, Member app completion, Dashboards + notifications + reports, a11y / states polish + global search + demo script; D-053 … D-064). Demo-only, localhost now, Azure later (D-054). Deferred until asked: signed APK, device test, hosting. Presenting: `DEMO-SCRIPT.md` |
+| **Build** | **M0–M10 done (demo scope)** on branch `m0-foundation` (Settings, Joining + Members, Loans core + workflow, Deposits, Demand & collections, Member app completion, Dashboards + notifications + reports, a11y / states polish + global search + demo script; D-053 … D-064). **Demo-ready (D-065, D-066):** demo clock, full Playwright suite in `tests/e2e/` (journeys, cross-app, a11y, states, screen sizes, the whole demo script), `npm run demo:prod` on :5180. Demo-only, localhost now, Azure later (D-054). Deferred until asked: signed APK, device test, hosting. Presenting: `DEMO-SCRIPT.md`; society questions: `docs/client-questions.md` |
 
 Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock API, digital membership join with stage tracker, Secretary → President sign-off, FDs for members + joint/minor, share payment by counter or first demand. Still open: Batch 1 Q-004..Q-011 and Batch 5 (forms) Q-501..Q-514 (see `docs/open-questions.md`).
 
@@ -62,7 +62,9 @@ Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock A
 | Roles & access | `docs/03-roles-permissions.md` | same |
 | Navigation, journeys, states | `docs/04-experience-architecture.md` | same |
 | "How many things do we build?" | `docs/05-screen-inventory.md` | same |
-| Building a screen | `docs/06-screen-specs.md` (incl. v0.3 addendum), `docs/16`, `docs/12-design-system.md` (layout, icons, imagery, metrics) | specs if a gap is found |
+| Building a screen | `docs/06-screen-specs.md` (incl. v0.3 addendum), `docs/16`, `docs/12-design-system.md` (layout, icons, imagery, metrics), `docs/18` (tokens + components as built), `docs/19` (patterns + the ten states) | specs if a gap is found |
+| Demo data states / demo controls | `docs/20-scenario-catalog.md` | same |
+| Testing end to end | `tests/e2e/`, `docs/15` §1 | same |
 | App structure, folders, services | `docs/07-system-architecture.md` | same |
 | Entities / TypeScript types | `docs/08-data-model.md` | same |
 | Any calculation or validation | `docs/09-business-rules.md` | same + open-questions |

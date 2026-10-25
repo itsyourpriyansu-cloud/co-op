@@ -1,6 +1,6 @@
 # 15 · Test Plan & Acceptance Criteria
 
-> Version 0.4 · 2026-10-25 (two apps + shared mock API) · §5 status updated in M10
+> Version 0.5 · 2026-10-25 (two apps + shared mock API) · §1 "as built" column and §5 updated for demo-ready (D-066)
 
 ## 1. Test layers
 
@@ -10,11 +10,11 @@
 | Mock API tests | Vitest + Hono `app.request` | Every endpoint: happy path, validation, FORBIDDEN scoping (DDO, member), state machine (valid/invalid), idempotency | Each milestone's endpoints |
 | Component tests (web) | Vitest + Testing Library | Forms, EligibilityPanel, AllocationBreakdown, DataTable states | Key composites |
 | Component tests (mobile) | Jest + React Native Testing Library | Wizard steps, OTP input, surety accept/decline, offline state | Key screens |
-| E2E web | Playwright | Staff journeys J-03…J-13 | Each milestone |
-| E2E mobile | Maestro flows on an Android emulator | J-01, J-02, J-07, J-14, activation | M4, M5, M8 |
-| **Cross-app journey** | Script: Maestro (phone) + Playwright (web) against one mock-api instance, or an API-level script for CI | Phone apply → surety on phone → web stages → phone shows ACTIVE | M5, M10 |
-| Visual / responsive | Playwright at 1440 / 1024 (web). Emulator screenshots at 360×800 and 412×915 (mobile) | All P1 screens | M10 |
-| Accessibility | axe-core (web) + keyboard pass. TalkBack pass on key mobile journeys | All P1 screens | M10 |
+| E2E web | Playwright | Staff journeys J-03…J-13 | Each milestone · **as built:** `tests/e2e/console-smoke`, `journeys-console` (`npm run e2e:console`) |
+| E2E mobile | Maestro flows on an Android emulator | J-01, J-02, J-07, J-14, activation | M4, M5, M8 · **as built:** Playwright on the Expo web build at 412×915 (`journeys-phone`, `npm run e2e:phone`). Maestro waits for an APK |
+| **Cross-app journey** | Script: Maestro (phone) + Playwright (web) against one mock-api instance, or an API-level script for CI | Phone apply → surety on phone → web stages → phone shows ACTIVE | M5, M10 · **as built:** `cross-app.spec.ts` (two browser contexts, one API) and `demo-script.spec.ts` (`npm run e2e:demo`) |
+| Visual / responsive | Playwright at 1440 / 1024 (web). Emulator screenshots at 360×800 and 412×915 (mobile) | All P1 screens | M10 · **as built:** `screens.spec.ts` at 1366×768, 1280×800, collapsed sidebar, print, phone 360×740 |
+| Accessibility | axe-core (web) + keyboard pass. TalkBack pass on key mobile journeys | All P1 screens | M10 · **as built:** `a11y-console` (light + dark) and `a11y-phone`, no critical/serious. TalkBack waits for an APK |
 | Device test | Release APK on at least 2 physical Android phones (one low-end, Android 10+) | Install, login, J-01, offline | M10 |
 
 ## 2. Mandatory domain test cases

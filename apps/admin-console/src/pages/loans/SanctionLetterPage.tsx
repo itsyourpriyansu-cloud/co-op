@@ -32,7 +32,7 @@ export function SanctionLetterPage() {
         empty={{ icon: FileSearch, title: 'No sanction letter yet', description: 'The letter is generated when the President signs the sanction.', action: { label: 'Back to the loan', onClick: () => navigate(`/loans/${id}`) } }}
       >
         {d && l && sheet && (
-          <article className="mx-auto max-w-3xl rounded-card border border-line bg-white px-10 py-10 text-[#111] shadow-raised print:border-0 print:shadow-none">
+          <article data-theme="light" className="mx-auto max-w-3xl rounded-card border border-line bg-surface px-10 py-10 text-[#111] shadow-raised print:border-0 print:shadow-none">
             <header className="flex items-center gap-5 border-b-2 border-[#111] pb-5">
               <Seal size={72} />
               <div>

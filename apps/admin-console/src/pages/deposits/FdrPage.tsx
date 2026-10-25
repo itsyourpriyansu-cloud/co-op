@@ -27,7 +27,7 @@ export function FdrPage() {
       </div>
       <ViewState state={q.isLoading ? 'loading' : !dep?.fdrNo ? 'empty' : 'ready'} layout="detail" empty={{ icon: FileSearch, title: 'No FDR yet', description: 'The receipt is issued when the President accepts the deposit.' }}>
         {d && dep && (
-          <article className="mx-auto max-w-3xl rounded-card border-4 border-double border-[#1b3a6b] bg-white px-10 py-8 text-[#111] shadow-raised print:shadow-none">
+          <article data-theme="light" className="mx-auto max-w-3xl rounded-card border-4 border-double border-[#1b3a6b] bg-surface px-10 py-8 text-[#111] shadow-raised print:shadow-none">
             <header className="flex items-center gap-5 border-b-2 border-[#1b3a6b] pb-4">
               <Seal size={64} />
               <div className="flex-1">

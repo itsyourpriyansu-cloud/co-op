@@ -100,7 +100,8 @@ export function Skeleton({ height = 16, width = '100%', radius: r = radius.sm }:
     loop.start();
     return () => loop.stop();
   }, [v]);
-  return <Animated.View style={{ height, width, borderRadius: r, backgroundColor: color.bg.surfaceSunken, opacity: v }} />;
+  // testID lets the e2e suite wait until a screen has finished loading.
+  return <Animated.View testID="skeleton" style={{ height, width, borderRadius: r, backgroundColor: color.bg.surfaceSunken, opacity: v }} />;
 }
 
 const styles = StyleSheet.create({

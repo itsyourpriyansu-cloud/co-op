@@ -51,7 +51,11 @@ export function NewReceiptPage() {
   const [counts, setCounts] = useState<Counts>({});
   const [reference, setReference] = useState('');
   const [remarks, setRemarks] = useState('');
-  const [date, setDate] = useState('2026-10-24');
+  // D-065: the receipt date defaults to (and may not pass) the demo date, not a fixed day.
+  const demo = useQuery({ queryKey: ['demo-state'], queryFn: api.demo.state });
+  const today = demo.data?.today ?? '';
+  const [picked, setDate] = useState<string>();
+  const date = picked ?? today;
   const owed = dues.data ? (purpose === 'DUES' ? dues.data.totalArrears : dues.data.shareCapitalDue) : 0;
   const amt = Number.isFinite(amount) ? amount : owed;
 
@@ -122,7 +126,7 @@ export function NewReceiptPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <MoneyField label="Amount" name="amount" value={amt} onChange={setAmount} errors={errors} hint={amt > 0 ? amountInWords(amt) : undefined} required />
-                  <TextInputV2 label="Date received" type="date" value={date} max="2026-10-24" onChange={(e) => setDate(e.target.value)} error={errors.date ? { show: true, message: errors.date } : undefined} />
+                  <TextInputV2 label="Date received" type="date" value={date} max={today || undefined} onChange={(e) => setDate(e.target.value)} error={errors.date ? { show: true, message: errors.date } : undefined} />
                 </div>
                 {mode === 'CASH' && amt > 0 && (
                   <div>

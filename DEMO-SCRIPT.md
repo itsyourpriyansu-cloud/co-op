@@ -2,15 +2,43 @@
 
 > For whoever presents the prototype to the society (Secretary, President, office staff) or to Fusil.
 > Everything is fictional demo data. Nothing is sent by SMS, WhatsApp or email.
-> Version 1.0 · 2026-10-25 · M10 (D-064) · Act 3 rehearsed end to end in the browser on 25 Oct 2026
+> Version 1.1 · 2026-10-25 · Demo-ready (D-065, D-066) · The whole script is played by `tests/e2e/demo-script.spec.ts` (`npm run e2e:demo`)
 
 ## Before you start (5 min, once)
 
 1. In the repo folder: `npm install` (first time only).
-2. Start the API and the Admin Console: `npm run demo`. The console opens on http://localhost:5173 (if another project uses 5173: `npm run dev -w @tgs/admin-console -- --port 5180`).
-3. Start the Member App preview: in `apps/member-app`, run `npx expo start --web --port 8090` and open http://localhost:8090 in a narrow window (or the browser's phone mode, about 412 px wide).
+2. Start the API and the Admin Console. Pick one:
+   - **Production mode (recommended for presenting):** `npm run demo:prod`. It builds the console (about a minute), then serves the built version at http://localhost:5180 with the API on :4000. It is faster and quieter than dev mode. Run it again after any code change.
+   - **Dev mode (while changing code):** `npm run demo`. Same addresses, and it reloads on every save.
+   The console always uses port **5180** (`CONSOLE_PORT` to change it). Port 5173 is left free for other projects.
+3. Start the Member App preview: `npm run dev:web` (Expo web on http://localhost:8090). Open it in a narrow window, or in the browser's phone mode at about 412 px wide.
 4. Put the two windows side by side: **console on the left, phone on the right**.
 5. Reset the data: console top bar → amber **Demo** tag → **Reset demo data**. Do this again before every new audience.
+   You can also reset from a terminal:
+   ```bash
+   curl -X POST http://localhost:4000/api/v1/__demo/reset
+   ```
+6. Optional check (about 3 min, it resets the data at the end): `npm run e2e:demo` plays this whole script in a robot browser and fails if any step breaks. Run it with the servers above already running.
+
+### On a real Android phone (optional, no APK needed)
+
+The phone and the laptop must be on the **same Wi-Fi**.
+
+1. **Find the laptop's address.** `npm run demo` prints it, for example `For the phone (same Wi-Fi), use: http://192.168.1.20:4000`. The API already listens on every network card (`HOST=0.0.0.0`).
+2. **Let the phone through the Windows firewall (once).** When Windows asks whether Node.js may use the network, allow **Private networks**. Or, in an administrator PowerShell, open ports 4000 (API) and 8081 (the app bundler):
+   ```bash
+   netsh advfirewall firewall add rule name="TGSECCSL demo" dir=in action=allow protocol=TCP localport=4000,8081 profile=private
+   ```
+   The Wi-Fi network must be set to *Private* in Windows.
+3. **Start the app for Expo Go.** In `apps/member-app` (PowerShell):
+   ```bash
+   $env:EXPO_PUBLIC_API_URL="http://192.168.1.20:4000"; npx expo start
+   ```
+   Then scan the QR code with the **Expo Go** app. It must support SDK 58.
+4. **Or set the server inside the app.** Long-press the logo on the Welcome screen → **Demo settings** → *Server address* → **Test & save**.
+5. **CORS** does not matter for the phone app; it only applies to browsers. If the console is opened from another computer, `CORS_ORIGIN` on the API can list allowed origins. By default any origin is allowed.
+
+> Not verified: this path has not been tried on a physical phone yet (no device was available on 25 Oct 2026). The browser preview (step 3) is the tested path. Try the phone route once at the venue before the audience arrives.
 
 | Who | How to sign in |
 |---|---|
@@ -34,30 +62,33 @@ Members: **Lakshmi Devi** 1101 (running loan, top-up example) · **Ramaiah Chary
 
 ## Act 2 · Joining the society (5 min) — phone → console → phone
 
-1. Phone: **Welcome → Become a member → Continue as Divya S**. Walk the wizard (personal, address, employment, shares & nominee, documents, declarations) and **Sign with OTP** `123456`. The tracker shows *Department verification*.
-2. Console as Suresh: **Joining** → Divya's application → *Print form* shows the paper F1 twin. Then use **Act as …** for each stage: Accountant → DDO certificate (items 1–7 + salary mandate) → office review → Secretary → President (choose share payment) → Cashier.
+1. Phone: **Welcome → Become a member → Continue as Divya S**. Walk the wizard (personal, address, employment, shares & nominee, documents, declarations) and **Sign & submit** with OTP `123456`. The tracker shows *Application received · In the queue*.
+2. Console as Suresh: **Joining** → Divya's application. *Print form* shows the paper F1 twin. Then:
+   - **His own steps use his own buttons:** **Send to DDO** (the drawer lists the checks) → *Send to Kiran Kumar*. Later, **Recommend** → *Recommend*.
+   - **The other stages use Act as …:** the DDO certificate (items 1–7 + salary mandate), Secretary, President (chooses the share payment), Cashier.
+   - It ends at *Member · General No. …*.
 3. Phone: Divya's tracker moves with every step; at the end she gets her **General No.** and the app switches to the member home.
 
 ## Act 3 · A loan from application to money (7 min) — phone ↔ console
 
 1. Phone, sign in as **Ramaiah (1102)** → More → **Calculators**: the months are capped because he retires soon (rule BR-002). Sign out.
 2. Phone, sign in as **Lakshmi (1101)** → **Apply loan**. Ordinary is greyed out (she already has one running — the agreement's top-up example lives on her Loans tab). Choose **Education Loan** → pay details are pre-filled → ₹1,50,000 for her daughter's B.Tech (student, institution, course) → sureties: search **Sravani** and **1104** (Mahesh). Eligibility is checked live. **Sign with OTP** → *Confirm & submit*.
-3. Phone, sign out → sign in as **Sravani (1103)**: Home shows *"… asked you to be a surety"*. Open it → **Agree & sign with OTP**. Do the same as **Mahesh (1104)**.
+3. Phone, sign out → sign in as **Sravani (1103)**: Home → *Waiting for you* shows the surety request (*"… asked you to be a surety"*, or *"2 surety requests"* because she already had one waiting). Open it → pick **Lakshmi Devi** if a list shows → **Agree & sign with OTP** → *Confirm & sign*. Do the same as **Mahesh (1104)**.
 4. Console (any staff; Anitha is quickest) → **Loans** → the new application → press **Act as …** six times: Accountant review → DDO certificate on items 1–5 → Accountant assessment (office-use sheet: EMI, share deposit, net payable) → Secretary → President → Cashier disburses. Stop at the assessment to show the sheet, and at the end show **Sanction letter** and **Print form** (F2 twin with the sureties).
 5. Phone as Lakshmi: the loan is **Active**, every step dated and named, with the monthly instalment.
 
 ## Act 4 · Fixed deposit (3 min) — phone → console → phone
 
 1. Phone as Lakshmi → **Open FD** → amount, period (rate comes from the slab), payout → sign with OTP.
-2. Console as **Venkat (Cashier)**: Work Queue → the FD → record **cash with denominations** (the counter must match the amount) → **Act as** Secretary → **Act as** President.
+2. Console as **Venkat (Cashier)**: **Deposits → FD requests** → Lakshmi's request → **Record payment** → **cash with denominations** (the counter must match the amount) → **Act as** Secretary → **Act as** President.
 3. Console: **FDR** print. Phone: the FD card shows the FDR number and maturity.
 
 ## Act 5 · Month end: demand and recovery (5 min) — console → phone
 
 1. Console as Suresh → **Demand Sheets** → *Generate* the departments still missing for October.
 2. Open a sheet → **Certify** → **Send to DDO** (simulated email) → **Enter recovery** → *Import DDO statement* (two members come back short) → watch the **allocation waterfall** (RRF, insurance, CRD, interest, principal) → *Post*.
-3. Phone as **Mahesh (1104)** → **Payments**: the short month shows exactly how it was applied, in the same order as the console. He taps **Report a payment** (UPI, UTR).
-4. Console as Venkat → **Payments → Reported by members** → *Verify* → a receipt is created. Phone: *Nothing unpaid*.
+3. Phone as **Mahesh (1104)** → **Payments**: the short month shows exactly how it was applied, in the same order as the console. He taps **Report a payment**: the amount is filled in; enter the date paid (the demo date, `24/10/2026`) and a UTR → **Send for verification**. It shows on his Payments tab as reported.
+4. Console as Venkat → **Payments → Reported by members** → *Verify* → tick *I found this credit in the society's bank statement* → **Verify & create receipt**. A receipt is created. Phone: *Nothing unpaid*.
 
 ## Act 6 · Reports, notices and messages (5 min) — console → phone
 
@@ -69,7 +100,7 @@ Members: **Lakshmi Devi** 1101 (running loan, top-up example) · **Ramaiah Chary
 
 ## Act 7 · Settings and the member account (2 min)
 
-1. Console as **Anitha (Super Admin)** → **Settings → Rates**: change the Ordinary loan rate 11% → 13%. Phone → More → **Interest rates** / **Calculators**: the instalment changes. (Change it back.)
+1. Console as **Anitha (Super Admin)** → **Settings → Loan products** → Ordinary Loan → **Edit** → *Interest rate* 13 → **Save product** (the drawer previews the new EMI). Phone → More → **Interest rates** / **Calculators**: the instalment changes. (Change it back.)
 2. Phone, signed out → **Sign in → First time here? → Activate**: tap the demo card (General No. 1003), send code `123456`, choose a password — the strength meter refuses one with the General No. in it. He lands on his home screen.
 
 ---

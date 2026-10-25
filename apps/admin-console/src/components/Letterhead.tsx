@@ -23,5 +23,5 @@ export function Letterhead() {
 
 /** White paper frame used on screen and in print. */
 export function PrintSheet({ children, wide }: { children: ReactNode; wide?: boolean }) {
-  return <article className={`mx-auto rounded-card border border-line bg-white px-10 py-8 text-[#111] shadow-raised print:border-0 print:px-0 print:shadow-none ${wide ? 'max-w-6xl' : 'max-w-3xl'}`}>{children}</article>;
+  return <article data-theme="light" className={`mx-auto rounded-card border border-line bg-surface px-10 py-8 text-[#111] shadow-raised print:border-0 print:px-0 print:shadow-none ${wide ? 'max-w-6xl' : 'max-w-3xl'}`}>{children}</article>;
 }

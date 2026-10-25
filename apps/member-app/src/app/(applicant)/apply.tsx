@@ -186,19 +186,21 @@ function PersonalStep({ form, update, errors }: StepProps) {
 // ---- Step 2 · Address --------------------------------------------------------------------------
 function AddressFields({ prefix, value, onChange, errors }: { prefix: 'present' | 'permanent'; value: Record<string, string | undefined>; onChange: (v: Record<string, string>) => void; errors: Record<string, string> }) {
   const e = (k: string) => errors[`address.${prefix}.${k}`];
+  // Both address blocks can be on screen at once: name each field with its section for screen readers.
+  const a11y = (field: string) => `${prefix === 'present' ? 'Present' : 'Permanent'} address: ${field}`;
   return (
     <View style={styles.fields}>
-      <TextField label="House no. and street" required value={value.line1 ?? ''} onChangeText={(v) => onChange({ line1: v })} error={e('line1')} />
-      <TextField label="Area / landmark (optional)" value={value.line2 ?? ''} onChangeText={(v) => onChange({ line2: v })} />
+      <TextField label="House no. and street" accessibilityLabel={a11y('House no. and street')} required value={value.line1 ?? ''} onChangeText={(v) => onChange({ line1: v })} error={e('line1')} />
+      <TextField label="Area / landmark (optional)" accessibilityLabel={a11y('Area / landmark (optional)')} value={value.line2 ?? ''} onChangeText={(v) => onChange({ line2: v })} />
       <View style={styles.row2}>
         <View style={{ flex: 1 }}>
-          <TextField label="City / town" required value={value.city ?? ''} onChangeText={(v) => onChange({ city: v })} error={e('city')} />
+          <TextField label="City / town" accessibilityLabel={a11y('City / town')} required value={value.city ?? ''} onChangeText={(v) => onChange({ city: v })} error={e('city')} />
         </View>
         <View style={{ flex: 1 }}>
-          <TextField label="PIN code" required={prefix === 'present'} value={value.pincode ?? ''} onChangeText={(v) => onChange({ pincode: v.replace(/\D/g, '').slice(0, 6) })} keyboardType="number-pad" error={e('pincode')} />
+          <TextField label="PIN code" accessibilityLabel={a11y('PIN code')} required={prefix === 'present'} value={value.pincode ?? ''} onChangeText={(v) => onChange({ pincode: v.replace(/\D/g, '').slice(0, 6) })} keyboardType="number-pad" error={e('pincode')} />
         </View>
       </View>
-      <TextField label="District" value={value.district ?? ''} onChangeText={(v) => onChange({ district: v })} />
+      <TextField label="District" accessibilityLabel={a11y('District')} value={value.district ?? ''} onChangeText={(v) => onChange({ district: v })} />
     </View>
   );
 }

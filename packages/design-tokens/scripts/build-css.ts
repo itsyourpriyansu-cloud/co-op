@@ -60,6 +60,12 @@ ${indent(colorVars(semanticColors.dark), 4)}
 ${indent(colorVars(semanticColors.dark), 2)}
   color-scheme: dark;
 }
+
+/* Paper twins (FDR, letters, receipts, printed forms) stay light in either theme. */
+:root [data-theme='light'] {
+${indent(colorVars(semanticColors.light), 2)}
+  color-scheme: light;
+}
 `;
 
 // ---- Tailwind mapping: utilities named by role (bg-surface, text-fg-secondary, border-line, rounded-card…)

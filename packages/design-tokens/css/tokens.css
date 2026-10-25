@@ -266,3 +266,68 @@
   --tgs-chart-7: #FFA2A2;
   color-scheme: dark;
 }
+
+/* Paper twins (FDR, letters, receipts, printed forms) stay light in either theme. */
+:root [data-theme='light'] {
+  --tgs-bg-canvas: #F5F7FA;
+  --tgs-bg-surface: #FFFFFF;
+  --tgs-bg-surface-subtle: #FCFCFD;
+  --tgs-bg-surface-muted: #F2F4F8;
+  --tgs-bg-surface-sunken: #ECEFF3;
+  --tgs-bg-inverse: #181B25;
+  --tgs-bg-overlay: rgba(14, 18, 27, 0.48);
+  --tgs-text-primary: #222530;
+  --tgs-text-secondary: #525866;
+  --tgs-text-tertiary: #666C79;
+  --tgs-text-disabled: #99A0AE;
+  --tgs-text-inverse: #FFFFFF;
+  --tgs-text-link: #0561E2;
+  --tgs-text-on-brand: #FFFFFF;
+  --tgs-border-subtle: #ECEFF3;
+  --tgs-border-default: #E1E4EA;
+  --tgs-border-strong: #CACFD8;
+  --tgs-border-focus: #2B7FFF;
+  --tgs-border-brand: #BEDBFF;
+  --tgs-brand-solid: #0561E2;
+  --tgs-brand-hover: #1447E6;
+  --tgs-brand-pressed: #193CB8;
+  --tgs-brand-subtle: #EFF6FF;
+  --tgs-brand-subtle-hover: #DBEAFE;
+  --tgs-brand-border: #BEDBFF;
+  --tgs-brand-text: #1447E6;
+  --tgs-status-success-fg: #008236;
+  --tgs-status-success-bg: #F0FDF4;
+  --tgs-status-success-border: #B9F8CF;
+  --tgs-status-success-solid: #00A63E;
+  --tgs-status-warning-fg: #CA3500;
+  --tgs-status-warning-bg: #FFF7ED;
+  --tgs-status-warning-border: #FFD6A8;
+  --tgs-status-warning-solid: #FF6900;
+  --tgs-status-danger-fg: #C10007;
+  --tgs-status-danger-bg: #FEF2F2;
+  --tgs-status-danger-border: #FFC9C9;
+  --tgs-status-danger-solid: #E7000B;
+  --tgs-status-info-fg: #1447E6;
+  --tgs-status-info-bg: #EFF6FF;
+  --tgs-status-info-border: #BEDBFF;
+  --tgs-status-info-solid: #0561E2;
+  --tgs-status-neutral-fg: #2B303B;
+  --tgs-status-neutral-bg: #F2F4F8;
+  --tgs-status-neutral-border: #E1E4EA;
+  --tgs-status-neutral-solid: #717784;
+  --tgs-status-approval-fg: #8200DB;
+  --tgs-status-approval-bg: #FAF5FF;
+  --tgs-status-approval-border: #E9D4FF;
+  --tgs-status-approval-solid: #AD46FF;
+  --tgs-money-credit: #008236;
+  --tgs-money-debit: #C10007;
+  --tgs-money-neutral: #222530;
+  --tgs-chart-1: #2B7FFF;
+  --tgs-chart-2: #AD46FF;
+  --tgs-chart-3: #FF8904;
+  --tgs-chart-4: #00C951;
+  --tgs-chart-5: #EFB100;
+  --tgs-chart-6: #99A0AE;
+  --tgs-chart-7: #FF6467;
+  color-scheme: light;
+}

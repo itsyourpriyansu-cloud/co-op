@@ -57,6 +57,11 @@
 [role='tab'][data-state='inactive'] span {
   color: var(--tgs-text-tertiary);
 }
+/* Blend's dark theme fills "attentive" primary tags with primary-500 behind white text (3.8:1).
+   Darken that fill by a quarter so the "You / Certify / Decide" markers pass AA (D-066). */
+[data-theme='dark'] .tgs-tag-attentive [data-tag] {
+  background-color: color-mix(in srgb, var(--tgs-brand-solid) 75%, black) !important;
+}
 /* Blend checkbox labels lose contrast in dark mode; use the primary text role in both modes. */
 [data-element='checkbox-label'][data-status='enabled'] {
   color: var(--tgs-text-primary) !important;

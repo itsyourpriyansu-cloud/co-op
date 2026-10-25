@@ -75,7 +75,7 @@ export function RoleDashboardView({ d, summary }: { d: RoleDashboard; summary?: 
           const Icon = TILE_ICON[t.key] ?? Inbox;
           const card = <StatCardV2 title={t.label} value={tileValue(t)} variant={StatCardV2Variant.NUMBER} titleIcon={<Icon size={16} />} subtitle={t.sub ?? ' '} />;
           return t.link ? (
-            <button key={t.key} type="button" onClick={() => navigate(t.link!)} className={cn('h-full rounded-card text-left transition hover:-translate-y-0.5 focus-visible:outline-2 [&>*]:h-full', t.tone && TONE_TEXT[t.tone])} aria-label={`${t.label}: ${tileValue(t)}`}>
+            <button key={t.key} type="button" onClick={() => navigate(t.link!)} className={cn('h-full rounded-card text-left transition hover:-translate-y-0.5 focus-visible:outline-2 [&>*]:h-full', t.tone && TONE_TEXT[t.tone])}>
               {card}
             </button>
           ) : (

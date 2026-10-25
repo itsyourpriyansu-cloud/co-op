@@ -18,12 +18,13 @@ Every entry has the same sections: **Built** (screens by ID) · **Key files** ·
 | 9 | [M8 Member app completion (phone)](08-member-app.md) | Done | 2026-10-25 |
 | 10 | [M9 Dashboards, notifications & reports (console)](09-insight.md) | Done | 2026-10-25 |
 | 11 | [M10 Polish: a11y, states, search, demo script](10-polish.md) | Done (demo scope) | 2026-10-25 |
+| 12 | [Demo-ready: clock, e2e suite, screen sizes, prod mode, docs](11-demo-ready.md) | Done | 2026-10-25 |
 
 ## How to resume
-1. `npm install` (once) → `npm run demo` (mock API :4000 + console :5173; the user's other project may hold 5173, then use `npm run dev -w @tgs/admin-console -- --port 5180`) → `npm run dev:app` or `npx expo start --web --port 8090` in `apps/member-app` for the phone preview.
+1. `npm install` (once) → `npm run demo` (mock API :4000 + console :5180; `npm run demo:prod` for the built console) → `npm run dev:web` for the phone preview on :8090 (or `npm run dev:app` for Expo Go). Port 5173 belongs to the user's other project: never use or kill it.
 2. `npm run typecheck` and `npx vitest run` must be green before and after your change.
-3. Demo data: `POST http://localhost:4000/api/v1/__demo/reset` restores the seed. Demo OTP is always `123456`.
-4. Visual checks were done with headless Playwright scripts (kept outside the repo). Do not run the Playwright e2e suite unless the user asks (they test at the end).
+3. Demo data: `POST http://localhost:4000/api/v1/__demo/reset` restores the seed. Demo OTP is always `123456`, password `Society@2026`.
+4. End-to-end: `npx playwright test` (all), `npm run e2e:console`, `npm run e2e:phone`, `npm run e2e:demo` (the whole DEMO-SCRIPT). It reuses running servers, or starts them. For the fastest runs, start the API with `MOCK_LATENCY=0`. Reset the demo data after a run.
 
 ## Working rules the user gave (also in memory)
 - Demo only: localhost now, **Azure later** → keep every URL/port/origin in env vars (D-054).

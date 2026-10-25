@@ -71,7 +71,7 @@ function BoardCard({ row, onOpen }: { row: MembershipRow; onOpen: () => void }) 
           <p className="truncate text-label text-fg group-hover:text-brand-text">{row.name}</p>
           <p className="truncate text-caption text-fg-tertiary">{row.designation}</p>
         </div>
-        {row.waitingOnMe && <TagV2 text="You" size={TagV2Size.XS} color={TagV2Color.PRIMARY} type={TagV2Type.ATTENTIVE} subType={TagV2SubType.ROUNDED} />}
+        {row.waitingOnMe && <span className="tgs-tag-attentive contents"><TagV2 text="You" size={TagV2Size.XS} color={TagV2Color.PRIMARY} type={TagV2Type.ATTENTIVE} subType={TagV2SubType.ROUNDED} /></span>}
       </div>
       <p className="truncate text-caption text-fg-secondary">{row.departmentName}</p>
       <div className="flex items-center justify-between gap-2 border-t border-line-subtle pt-2.5">
@@ -178,7 +178,7 @@ export function JoiningPage() {
       minWidth: '200px',
       type: ColumnType.REACT_ELEMENT, isSortable: false,
       renderCell: (_v, r) =>
-        r.waitingOnMe ? <TagV2 text="You" size={TagV2Size.XS} color={TagV2Color.PRIMARY} type={TagV2Type.ATTENTIVE} subType={TagV2SubType.ROUNDED} /> : <span className="text-caption text-fg-secondary">{r.waitingOn ?? (r.allottedGeneralNo ? `General No. ${r.allottedGeneralNo}` : '—')}</span>,
+        r.waitingOnMe ? <span className="tgs-tag-attentive contents"><TagV2 text="You" size={TagV2Size.XS} color={TagV2Color.PRIMARY} type={TagV2Type.ATTENTIVE} subType={TagV2SubType.ROUNDED} /></span> : <span className="text-caption text-fg-secondary">{r.waitingOn ?? (r.allottedGeneralNo ? `General No. ${r.allottedGeneralNo}` : '—')}</span>,
     },
     { field: 'daysInStage', header: 'In stage', type: ColumnType.REACT_ELEMENT, isSortable: false, renderCell: (_v, r) => (r.status === 'ACTIVE' || r.status === 'REJECTED' ? <span className="text-caption text-fg-tertiary">—</span> : <AgeChip days={r.daysInStage} />) },
     { field: 'flags', header: 'Flags', type: ColumnType.REACT_ELEMENT, isSortable: false, renderCell: (_v, r) => <Flags row={r} /> },

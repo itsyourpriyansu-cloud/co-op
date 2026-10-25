@@ -1,6 +1,6 @@
 # 14 · Implementation Plan
 
-> Phase 5 · Version 0.2 · 2026-10-24 · Applies to the **accepted MVP** (D-023): Admin Console 36 pages, Member App 19 screens, shared mock API.
+> Phase 5 · Version 0.3 · 2026-10-25 (status: demo-ready) · Applies to the **accepted MVP** (D-023): Admin Console 36 pages, Member App 19 screens, shared mock API.
 > Gate: no milestone starts before D-000 "Plan approved" is Accepted in `decisions-log.md`.
 > Milestones are **vertical slices**: each one delivers the API endpoints, the web screens and the mobile screens for one module, so cross-app journeys work as soon as the module is done.
 
@@ -64,6 +64,7 @@ flowchart LR
 | M8 | ✅ Done 2026-10-25 | MA-01 real sign-in, MA-02 activation, MA-03 forgot password, MB-01 live home, MB-11 calculators, MB-12 notifications, MB-13 help & support, MB-14 settings, MB-17 change password. J-14 passed live (a seeded member who never activated activates and signs in). See build-history/08 |
 | M9 | ✅ Done 2026-10-25 | ST-01 five dashboard variants, ST-03 notifications + simulated composer + member questions, ST-50 catalogue, ST-51 viewer with 8 reports (CSV + print), ST-52 defaulter notice and F1–F6 form twins. J-13 passed (report totals reconcile with the ledgers). See build-history/09 |
 | M10 | ✅ Done 2026-10-25 (demo scope) | a11y pass (axe WCAG 2.2 AA clean, console light + dark, phone), state audit with the failure switch (console guard fix), topbar global search, M3–M5 visual check, DEMO-SCRIPT.md with Act 3 rehearsed. Signed APK, device test and hosting deferred until asked (D-054). See build-history/10 |
+| Demo-ready | ✅ Done 2026-10-25 | Demo clock (D-065). Playwright suite as the acceptance gate (D-066): console routes, J-03…J-14, cross-app AC-X01, axe light + dark + phone, error states, screen sizes, the whole DEMO-SCRIPT. `npm run demo:prod` on :5180. Six real bugs fixed (see build-history/11). Real phone over Wi-Fi documented, not verified on a device |
 
 ### v0.3 notes
 - M3 also delivers **J-15 (join)** and **J-19 (DDO certify)** across both apps. Exit: an applicant joins on the phone → DDO, office, Secretary and President act on the web → the share payment is recorded → the phone switches to member mode with a General No.

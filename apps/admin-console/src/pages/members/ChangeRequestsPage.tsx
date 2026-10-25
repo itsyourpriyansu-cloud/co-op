@@ -240,7 +240,7 @@ export function ChangeRequestsPage() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    {r.myAction && <TagV2 text={r.myAction === 'certify' ? 'Certify' : 'Decide'} size={TagV2Size.XS} color={TagV2Color.PRIMARY} type={TagV2Type.ATTENTIVE} subType={TagV2SubType.ROUNDED} />}
+                    {r.myAction && <span className="tgs-tag-attentive contents"><TagV2 text={r.myAction === 'certify' ? 'Certify' : 'Decide'} size={TagV2Size.XS} color={TagV2Color.PRIMARY} type={TagV2Type.ATTENTIVE} subType={TagV2SubType.ROUNDED} /></span>}
                     <StatusTag entity="changeRequest" status={r.status} size={TagV2Size.XS} />
                   </div>
                 </div>

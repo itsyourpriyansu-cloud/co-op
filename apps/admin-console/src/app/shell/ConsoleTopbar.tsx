@@ -100,7 +100,7 @@ export function ConsoleTopbar() {
         <div className="relative">
           <ButtonV2 buttonType={ButtonV2Type.SECONDARY} subType={ButtonV2SubType.ICON_ONLY} size={ButtonV2Size.SMALL} leftSlot={icon(Bell)} aria-label={bellCount ? `Notifications, ${bellCount} new` : 'Notifications'} onClick={() => navigate(notifyCount.data?.unread || !notifyCount.data?.openQuestions ? '/notifications' : '/notifications?tab=questions')} />
           {bellCount > 0 && (
-            <span className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-danger-solid px-1 text-[10px] font-semibold leading-none text-white" aria-hidden>
+            <span className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-danger-solid px-1 text-[10px] font-semibold leading-none text-on-brand" aria-hidden>
               {bellCount > 9 ? '9+' : bellCount}
             </span>
           )}

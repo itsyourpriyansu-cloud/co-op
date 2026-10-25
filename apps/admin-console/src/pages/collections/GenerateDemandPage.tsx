@@ -89,7 +89,15 @@ export function GenerateDemandPage() {
                   {preview.data.rows.map((r) => (
                     <tr key={r.departmentId} className={r.alreadyGenerated ? 'text-fg-tertiary' : 'text-body'}>
                       <td className="px-5 py-3">
-                        {!r.alreadyGenerated && <Checkbox checked={picked.includes(r.departmentId)} onCheckedChange={(v) => setPicked((p) => (v === true ? [...p, r.departmentId] : p.filter((x) => x !== r.departmentId)))} size={CheckboxSize.SMALL} />}
+                        {!r.alreadyGenerated && (
+                          <>
+                            {/* Blend's Checkbox takes no aria-label; a hidden <label for> names it for screen readers. */}
+                            <label htmlFor={`gen-${r.departmentId}`} className="sr-only">
+                              Generate for {r.departmentName}
+                            </label>
+                            <Checkbox id={`gen-${r.departmentId}`} checked={picked.includes(r.departmentId)} onCheckedChange={(v) => setPicked((p) => (v === true ? [...p, r.departmentId] : p.filter((x) => x !== r.departmentId)))} size={CheckboxSize.SMALL} />
+                          </>
+                        )}
                       </td>
                       <td className="px-2 py-3">
                         <p className={r.alreadyGenerated ? 'text-label' : 'text-label text-fg'}>{r.departmentName}</p>

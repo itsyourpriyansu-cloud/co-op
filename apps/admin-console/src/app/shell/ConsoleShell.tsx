@@ -78,9 +78,9 @@ export function ConsoleShell() {
       activeItem={navItemFor(pathname)?.id ?? null}
       sidebarCollapseKey="/"
     >
-      <main className="mx-auto w-full max-w-[1440px] px-6 py-6">
+      <div className="mx-auto w-full max-w-[1440px] px-6 py-6">
         <Outlet />
-      </main>
+      </div>
     </SidebarV2>
   );
 }

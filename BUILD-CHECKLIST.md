@@ -10,8 +10,8 @@
 
 | | |
 |---|---|
-| **Current step** | C. **M0–M10 done (demo scope).** The prototype is complete: both apps, all MVP screens, reports and printables, a11y pass, demo script. On branch `m0-foundation`, uncommitted |
-| **Next action** | Commit when the user says so. Then, only when asked: APK build (`npm run build:apk`, needs an Expo account), Azure hosting (all URLs are env vars, D-054), the Playwright e2e run, or changes from the society's answers (`docs/open-questions.md`) |
+| **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
+| **Next action** | Before a demo: `npm run demo:prod` + `npm run dev:web`, then `npm run e2e:demo` (optional) and reset. Only when asked: APK build (`npm run build:apk`, needs an Expo account), Azure hosting (all URLs are env vars, D-054), a real-phone try-out over Wi-Fi, or changes from the society's answers (`docs/client-questions.md`) |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
 | **Last updated** | 2026-10-25 |
 
@@ -29,7 +29,7 @@
 - [x] **Plan approved** → D-000 Accepted 2026-10-24 (proposed decisions = working defaults)
 - [x] ~~Q-005: does Fusil already have a backend/API?~~ Skipped: demo only (D-054)
 - [ ] APK route chosen: EAS cloud (Expo account) **or** local build (JDK 17 + Android SDK). **Deferred until the user asks (D-054)**
-- [ ] Society questions sent: Batch 3 + Batch 5 (`docs/open-questions.md`)
+- [ ] Society questions sent: plain-language list ready in `docs/client-questions.md` (from Batch 1–6, `docs/open-questions.md`)
 - [ ] Back sides of the Membership and Ordinary-loan forms requested
 - [ ] Machine setup: Node + npm ✅ (already installed, no pnpm needed, D-038) · `git init` · Expo Go on an Android phone · (local route: JDK 17 + `ANDROID_HOME` + adb)
 
@@ -47,10 +47,11 @@ Each milestone ends with its exit test passing. Tick the box only then.
 - [x] **M8 App completion:** activation · forgot password · home · calculators · notifications · help · settings ✅ (docs/build-history/08-member-app.md, D-062)
 - [x] **M9 Reports & dashboards:** 5 dashboards · 8 reports · 9 printable form twins ✅ (docs/build-history/09-insight.md, D-063)
 - [x] **M10 Polish & release (demo scope):** every state designed · WCAG 2.2 AA · demo script ✅ (docs/build-history/10-polish.md, D-064). **Deferred until asked:** signed APK, physical-device test, hosting (D-054)
+- [x] **Demo-ready:** demo clock (D-065) · Playwright suite as the acceptance gate · a11y / paper / port bugs fixed · `demo:prod` · docs 18–20, client questions (D-066, docs/build-history/11-demo-ready.md)
 
 ## D. Demo & hand-over
 - [ ] Usability test: 5 members + 3 staff. Record task success, time, SUS (targets in `docs/12` §9)
-- [ ] Client demo run (script in `docs/15` §4)
+- [ ] Client demo run (script in `DEMO-SCRIPT.md`; rehearsed automatically by `npm run e2e:demo`)
 - [ ] Placeholder values replaced by the society's answers. All questions closed or parked
 - [ ] Hand-over notes for the production backend team
 

@@ -89,7 +89,7 @@ describe('J-13 reports', () => {
     expect(df.groups.flatMap((g) => g.rows).every((r) => Number(r.cycles) >= 2)).toBe(true);
     const rt = (await run('retirement', 'withinMonths=6', acc)).body;
     expect(rt.groups[0]!.rows.every((r) => String(r.dor) <= '2027-04-30')).toBe(true);
-  });
+  }, 30_000); // runs all 8 reports over the full ledger; slow on a busy machine
 
   it('a DDO-scoped run is impossible (no reports.view) but department filters narrow the rows', async () => {
     const acc = await login('stf-accountant');
