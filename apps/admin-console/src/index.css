@@ -62,6 +62,15 @@
 [data-theme='dark'] .tgs-tag-attentive [data-tag] {
   background-color: color-mix(in srgb, var(--tgs-brand-solid) 75%, black) !important;
 }
+/* Blend's EmptyState passes its unitless line-height tokens (28, 20) straight to CSS, where they mean
+   "28 x the font size": a 560px title and a page-tall description on every empty / error / no-results
+   state. Restore the token ratios (20/28 title, 14/20 body) (D-066). */
+[data-empty-state] h2 {
+  line-height: 1.4 !important;
+}
+[data-empty-state] h2 + div {
+  line-height: 1.43 !important;
+}
 /* Blend checkbox labels lose contrast in dark mode; use the primary text role in both modes. */
 [data-element='checkbox-label'][data-status='enabled'] {
   color: var(--tgs-text-primary) !important;
