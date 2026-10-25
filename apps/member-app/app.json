@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "TGSECCSL Member",
+    "name": "TGSECCSL",
     "slug": "tgseccsl-member",
     "version": "0.1.0",
     "scheme": "tgseccsl",
@@ -13,7 +13,7 @@
     "android": {
       "package": "in.tgseccsl.member",
       "adaptiveIcon": {
-        "backgroundColor": "#0F5E6E",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -33,6 +33,16 @@
           "android": {
             "usesCleartextTraffic": true
           }
+        }
+      ],
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF"
         }
       ]
     ],

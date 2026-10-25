@@ -1,6 +1,6 @@
 # 03 · Roles & Permissions
 
-> Version 0.3 · 2026-10-24 · Roles from the flow diagrams [F] and the paper forms [PF]. Action-level permissions are **[P]** (D-016, D-037).
+> Version 0.4 · 2026-10-25 · Roles from the flow diagrams [F] and the paper forms [PF]. Action-level permissions are **[P]** (D-016, D-037).
 > Platform rule (D-033): R1–R5 use the **Admin Console** (desktop web) only. R6–R7 use the **Member App** (Android) only.
 
 ## 1. Roles
@@ -77,3 +77,11 @@ Legend: **F** full · **V** view · **A** stage action · **—** none · *own* 
 - The permission map lives on the API (`role → module → actions[]`) and is enforced server-side. ST-62 edits it.
 - `GET /me` returns effective permissions. The console's route guards and `<Can action>` checks, and the app's mode (applicant vs member), are driven by it.
 - Denied console routes → SYS-01. The app never shows features outside the user's mode.
+
+## M9 additions (D-063)
+
+| Permission | Who | What |
+|---|---|---|
+| `messages.send` | Super Admin, Accountant | ST-03 simulated message composer (SMS / WhatsApp / Email to members) |
+| `support.reply` | Super Admin, Accountant | ST-03 Member questions: reply to and close MB-13 questions |
+| `reports.view` | Super Admin, Accountant, Secretary, President, Cashier (not DDO) | ST-50…52 reports and printables (unchanged) |

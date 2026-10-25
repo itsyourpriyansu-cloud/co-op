@@ -1,6 +1,6 @@
-﻿# 08 · Data Model
+# 08 · Data Model
 
-> Version 0.4 · 2026-10-24
+> Version 0.5 · 2026-10-24
 > Entities for the mock store and TypeScript types. Fields tagged [A] are contractual, [P] proposed, `?` optional. All money values are stored as **integer paise** [P] to avoid floating-point errors, and displayed as ₹.
 > 22 entities in MVP (26 with the P2 accounting entities).
 
@@ -204,3 +204,9 @@ Caste categories (Q-406) · Nominee relations · Document types (Q-403) · Disbu
 `pledgedToLoanId?`. A pledged FD cannot be closed early.
 
 **Entity count:** 26 + PaymentReport, ProfileChangeRequest = **28 MVP**.
+
+## v0.5 as built (M3b members module, D-057)
+- `ServiceEvent {id, memberId, type: JOINED|TRANSFERRED|DESIGNATION_CHANGED|RETIREMENT_DATE_CHANGED|PROFILE_UPDATED|RETIRED, date, summary, effectiveCycle?, byName?}`.
+- `RecoveryMandate {id, memberId, departmentId, status: AGREED|PENDING_NEW_DDO|SUPERSEDED, signedOn, agreedOn?, agreedByName?}`: one current (non-superseded) mandate per member.
+- `ProfileChangeRequest {id, memberId, fields[{field, oldValue, newValue}], reason, documentName?, route: OFFICE|DDO_THEN_OFFICE, status, createdAt, ddoCertified?, decidedByName?, decidedAt?, remarks?}`. `ProfileField` = name, fatherName, dob, designation, doj, dor, nominee.name, nominee.relation, payProfile.scaleOfPay, payProfile.grossSalary.
+- `TransferEvent` gained `id, effectiveDate?, remarks?, recordedAt?, recordedByName?`. Seed version 7.

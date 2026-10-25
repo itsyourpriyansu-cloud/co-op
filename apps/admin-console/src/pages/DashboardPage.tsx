@@ -1,4 +1,5 @@
-// ST-01 Admin Dashboard (docs/04 §5): KPIs, what needs attention, pipeline, collections, risks.
+// ST-01 Dashboard (docs/04 §5). Super Admin: KPIs, attention, pipeline, collections, risks. Every other
+// role gets its own variant (RoleDashboardView, D-063).
 import { ArrowRight, Banknote, CalendarClock, HandCoins, Inbox, PiggyBank, UserPlus, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
@@ -25,9 +26,11 @@ import { ROLE_LABELS, type DashboardSummary, type LoanStatus, type MembershipSta
 import { useAuth } from '@/app/auth';
 import { Money } from '@/components/Money';
 import { PageHeader } from '@/components/PageHeader';
+import { Panel } from '@/components/Panel';
 import { StatusTag } from '@/components/StatusTag';
 import { Illustration, ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
+import { RoleDashboardView } from './dashboard/RoleDashboardView';
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 
@@ -40,23 +43,7 @@ function daysBetween(from: string, to: string): number {
   return Math.max(0, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000));
 }
 
-/** Card with a title row, used by every dashboard panel. */
-function Panel({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="flex h-full flex-col rounded-card border border-line bg-surface shadow-raised">
-      <header className="flex items-start justify-between gap-3 border-b border-line-subtle px-5 py-4">
-        <div className="min-w-0">
-          <h2 className="text-card-title text-fg">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-caption text-fg-tertiary">{subtitle}</p>}
-        </div>
-        {action}
-      </header>
-      <div className="flex-1 px-5 py-4">{children}</div>
-    </section>
-  );
-}
-
-function NeedsAttention({ s }: { s: DashboardSummary }) {
+function NeedsAttention({ s, onOpen }: { s: DashboardSummary; onOpen: (path: string) => void }) {
   if (s.needsAction.length === 0)
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -71,7 +58,13 @@ function NeedsAttention({ s }: { s: DashboardSummary }) {
         const waited = daysBetween(item.since, s.asOf);
         const late = waited > 7 ? 'text-danger-fg' : waited > 3 ? 'text-warning-fg' : 'text-fg-tertiary';
         return (
-          <li key={item.id} className="grid grid-cols-[36px_1fr_auto] items-center gap-3 py-3">
+          <li
+            key={item.id}
+            className={`grid grid-cols-[36px_1fr_auto] items-center gap-3 py-3 ${item.kind === 'membership' ? '-mx-2 cursor-pointer rounded-control px-2 hover:bg-surface-subtle' : ''}`}
+            {...(item.kind === 'membership'
+              ? { role: 'link', tabIndex: 0, onClick: () => onOpen(`/joining/${item.id}`), onKeyDown: (e: React.KeyboardEvent) => e.key === 'Enter' && onOpen(`/joining/${item.id}`) }
+              : {})}
+          >
             <div className="flex size-9 items-center justify-center rounded-control bg-brand-subtle text-brand-text">
               {item.kind === 'loan' ? <HandCoins size={18} strokeWidth={1.75} aria-hidden /> : <UserPlus size={18} strokeWidth={1.75} aria-hidden />}
             </div>
@@ -99,10 +92,13 @@ export function DashboardPage() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const summary = useQuery({ queryKey: ['dashboard-summary', session?.user.id], queryFn: api.dashboard.summary });
+  const role = useQuery({ queryKey: ['dashboard-role', session?.user.id], queryFn: api.dashboard.role, refetchInterval: 20_000 });
   if (!session) return null;
   const firstName = session.user.name.split(' ')[0];
   const s = summary.data;
   const delta = s ? s.collectionRate - s.collectionRatePrev : 0;
+  // Role variants count everything in the Work Queue (loans, deposits, sheets, payments, joining…).
+  const myQueue = role.data && role.data.variant !== 'ADMIN' ? role.data.queue.reduce((a, q) => a + q.count, 0) : (s?.myQueue ?? 0);
   const pipelineMax = s ? Math.max(1, ...s.pipeline.map((r) => r.count)) : 1;
   const inFlight = s ? s.pipeline.reduce((a, r) => a + r.count, 0) : 0;
   const inFlightAmount = s ? s.pipeline.reduce((a, r) => a + r.amount, 0) : 0;
@@ -112,11 +108,14 @@ export function DashboardPage() {
       <PageHeader
         title={`${greeting()}, ${firstName}`}
         description={s ? `${ROLE_LABELS[session.user.role]}${session.user.departmentId ? ' · your department only' : ''} · data as of ${formatDisplayDate(s.asOf)} · current cycle ${formatCycle(s.currentCycle)}` : ROLE_LABELS[session.user.role]}
-        meta={s && s.myQueue > 0 ? <TagV2 text={`${s.myQueue} waiting on you`} color={TagV2Color.WARNING} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} size={TagV2Size.SM} /> : undefined}
+        meta={myQueue > 0 ? <TagV2 text={`${myQueue} waiting on you`} color={TagV2Color.WARNING} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} size={TagV2Size.SM} /> : undefined}
         actions={<ButtonV2 text="Reports" buttonType={ButtonV2Type.SECONDARY} size={ButtonV2Size.SMALL} onClick={() => navigate('/reports')} />}
       />
 
-      <ViewState state={summary.isLoading ? 'loading' : summary.isError ? 'error' : 'ready'} layout="stats" onRetry={() => void summary.refetch()}>
+      {role.data && role.data.variant !== 'ADMIN' ? (
+        <RoleDashboardView d={role.data} {...(s ? { summary: s } : {})} />
+      ) : (
+      <ViewState state={summary.isLoading || role.isLoading ? 'loading' : summary.isError ? 'error' : 'ready'} layout="stats" onRetry={() => void summary.refetch()}>
         {s && (
           <div className="flex flex-col gap-6">
             {/* KPIs */}
@@ -146,7 +145,7 @@ export function DashboardPage() {
                   subtitle={session.user.role === 'SUPER_ADMIN' ? 'Oldest items in flight across all stages' : 'Oldest items waiting on you'}
                   action={<ButtonV2 text="Open work queue" buttonType={ButtonV2Type.PRIMARY} subType={ButtonV2SubType.INLINE} size={ButtonV2Size.SMALL} rightSlot={{ slot: <ArrowRight size={14} /> }} onClick={() => navigate('/queue')} />}
                 >
-                  <NeedsAttention s={s} />
+                  <NeedsAttention s={s} onOpen={navigate} />
                 </Panel>
               </div>
               <Panel title="Collections" subtitle="Recovered vs demand, last 6 cycles">
@@ -255,6 +254,7 @@ export function DashboardPage() {
           </div>
         )}
       </ViewState>
+      )}
     </>
   );
 }

@@ -31,8 +31,7 @@ export function allocateRecovery(components: DemandComponent[], recovered: Paise
   for (const { c, index } of ordered) {
     const unpaid = c.amount - c.allocated;
     const take = Math.min(unpaid, remaining);
-    const target = allocated[index];
-    if (target) target.allocated += take;
+    allocated[index]!.allocated += take; // same length as components
     remaining -= take;
   }
   const totalDemand = components.reduce((s, c) => s + c.amount - c.allocated, 0);
@@ -42,6 +41,22 @@ export function allocateRecovery(components: DemandComponent[], recovered: Paise
     unallocated: remaining,
     short: Math.max(0, totalDemand - recovered),
   };
+}
+
+/**
+ * BR-011 across cycles (D-061): a counter or reported payment against dues settles the oldest short
+ * cycle first, and inside each cycle follows the recovery priority. Inputs are not mutated.
+ */
+export function allocateArrears(arrears: Array<{ key: string; components: DemandComponent[] }>, amount: Paise) {
+  let remaining = amount;
+  const cycles = arrears.map((a) => {
+    const before = a.components.reduce((s, c) => s + c.allocated, 0);
+    const r = allocateRecovery(a.components, remaining);
+    const applied = r.components.reduce((s, c) => s + c.allocated, 0) - before;
+    remaining -= applied;
+    return { key: a.key, components: r.components, applied };
+  });
+  return { cycles, unallocated: remaining };
 }
 
 /** BR-008: ₹1,000 for loanees, ₹200 otherwise, only in the collection cycle (frequency placeholder, Q-306). */
@@ -59,4 +74,16 @@ export function validateDenominations(counts: Partial<Record<Denomination, numbe
   return total === amount
     ? { ...pass('BR-029', 'Notes counted match the amount.'), total }
     : { ...fail('BR-029', `Notes counted (₹${total / 100}) do not match the amount (₹${amount / 100}).`), total };
+}
+
+/** A fewest-notes split of `amount` (prefill for the cashier's counter). Any remainder below ₹10 is left out. */
+export function denominationsFor(amount: Paise): Partial<Record<Denomination, number>> {
+  let rest = Math.floor(amount / 100);
+  const out: Partial<Record<Denomination, number>> = {};
+  for (const d of DENOMINATIONS) {
+    const n = Math.floor(rest / d);
+    if (n) out[d] = n;
+    rest -= n * d;
+  }
+  return out;
 }

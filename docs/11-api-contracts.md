@@ -1,6 +1,6 @@
 # 11 · Service / API Contracts
 
-> Version 0.3 · 2026-10-24 · Status: **[P] HTTP contracts served by `apps/mock-api` (D-021)** and consumed by both apps through `packages/api-client`.
+> Version 0.9 · 2026-10-25 · Status: **[P] HTTP contracts served by `apps/mock-api` (D-021)** and consumed by both apps through `packages/api-client`.
 > These are **not** the production backend API. Production endpoints must come from the backend owner (Q-005). If Fusil has an existing API, these contracts are adapted to it before M1.
 
 ## 1. Conventions
@@ -180,3 +180,106 @@ calculateFdMaturity(principal: Paise, annualRate: number, months: number, compou
 | `profileRequests.list` / `decide` (staff) | GET /profile-change-requests · POST /profile-change-requests/:id/decision | `{ approve: boolean, remarks? }` |
 | `auth.changePassword` | POST /me/password | `{ current, next }` → `{ ok }` |
 | `rates.list` | GET /rates | → `{ loanProducts[], fdSlabs[], effectiveFrom }` |
+
+## 6. As built (M3, joining): staff endpoints (D-053)
+
+Served by `apps/mock-api/src/membership.ts`, called through `api.applications.*`. The §4 `transitions` design became one endpoint per action.
+
+| Client call | REST | Notes |
+|---|---|---|
+| `applications.list()` | GET /membership/applications | `MembershipList`: rows (stage, days in stage, docs, flags, `waitingOnMe`, `waitingOn`), counts, scope. DDO → own department. Drafts hidden |
+| `applications.get(id)` | GET /membership/applications/:id | `MembershipDetail`: application + department + `actions` for the caller + checks + share amount + agreements + `demoActAs` |
+| `applications.act(id, action, input)` | POST /membership/applications/:id/actions/:action | action ∈ sendToDdo · certify · forward · approve · returnToApplicant · reject · recordSharePayment · activate. 403 wrong role/department, 409 wrong stage, 400 with `fieldErrors` (remarks ≥ 10 chars for return/reject, all 7 items + `mandateAgreed` for certify, `sharePaymentRoute` for President, reference for UPI/cheque) |
+| `applications.demoAct(id)` | POST /membership/applications/:id/demo-act | Demo only (`demo.control`): completes the stage as its owner |
+| `demo.membership.advance/requestInfo/reject` | POST /__demo/membership/:id/… | Phone tracker demo buttons; same code path as above |
+
+Hosting: the API reads `PORT`, `HOST`, `MOCK_*` and `CORS_ORIGIN` (see `apps/mock-api/.env.example`). The console reads `VITE_API_URL`, the app `EXPO_PUBLIC_API_URL` (D-054).
+
+## Members module as built (M3b, D-057)
+
+| Endpoint | Who | Notes |
+|---|---|---|
+| `GET /members?q&departmentId&status&retiringWithinMonths&hasActiveLoan&mandatePending&page&pageSize&sort` | staff (`members.view`) | `MemberList` (paged rows + counts + scope). DDO scoped. Mobiles masked |
+| `GET /members/:id` | staff | `MemberDetail` (loans, guarantees, deposits, ledger, service events, mandate, documents, change requests, `can`). `:id` may be the General No. Full mobile only for Super Admin / Accountant |
+| `POST /members`, `PUT /members/:id` | `members.edit` | `MemberInput`; `VALIDATION_ERROR` with `fieldErrors` (incl. duplicate Employee ID / mobile). PUT refuses department changes |
+| `POST /members/:id/transfers` | `members.edit` | `TransferInput` → `MemberDetail` with `upcomingTransfer.effectiveCycle` (BR-010) and mandate `PENDING_NEW_DDO` |
+| `POST /members/:id/mandate/agree` | DDO of the department (demo users for DDOs without a login) | BR-028 |
+| `GET /profile-change-requests` | staff (DDO: own department, DDO route only) | `ChangeRequestList` with `myAction`, `waitingOn` |
+| `POST /profile-change-requests/:id/certify` `{approve, remarks?}` | DDO | Employment / pay route only |
+| `POST /profile-change-requests/:id/decision` `{approve, remarks?}` | `members.decideChanges` (Accountant) | 409 until the DDO has certified |
+| `GET /me/profile` · `PATCH /me/profile/contact` · `POST /me/profile/mobile` + `/mobile/verify` · `GET|POST /me/profile/change-requests` | member | MB-02 / MB-19 |
+| `GET /reference/rates` | any signed-in user | MB-16 (M2) |
+
+## Loans core as built (M4, D-058)
+
+| Endpoint | Who | Notes |
+|---|---|---|
+| `GET /loans?product&group&departmentId&q&page&pageSize` | staff (`loans.view`) | `LoanList`; member drafts hidden; DDO scoped |
+| `GET /loans/:id` | staff | `LoanDetail` (stages, sureties, live checks, preview, role actions) |
+| `GET /members/:id/loan-context` | staff | `LoanContext` for ST-21 |
+| `POST /loans` `{memberId, …LoanRequestInput, submit}` | `loans.create` | Office entry from the signed paper form, no OTP |
+| `GET /members/search?q=` | staff, members | `MemberPick[]`, eligible sureties first |
+| `POST /loans/assess`, `POST /loans/surety-preview` | staff, members | Live eligibility for an unsaved form |
+| `GET /me/loans`, `GET /me/loans/context`, `GET /me/loans/:id` | member | MB-03 / MB-04 / MB-05 |
+| `POST /me/loans`, `PUT /me/loans/:id`, `DELETE /me/loans/:id` | member | Drafts |
+| `POST /me/loans/:id/sign/request`, `POST /me/loans/:id/submit {otpRef, otp}` | member | Sign with OTP → `SURETY_PENDING` or `ACCOUNTANT_REVIEW` (D-030) |
+
+## Loan workflow as built (M5, D-059)
+
+| Endpoint | Who | Notes |
+|---|---|---|
+| `GET /work-queue` | staff | `WorkQueue`: loans, joining, change requests, DDO mandates waiting on the user |
+| `GET /loans/:id/sanction-preview?amount&instalments` | staff | `SanctionPreview` (ST-26) |
+| `POST /loans/:id/actions/:action` `LoanActionInput` | stage owner (`loanActionsFor`) | forward · returnToMember · reject · ddoCertify · ddoRecordManual · sendForSanction · secretarySign · presidentSign · sendBack · disburse |
+| `POST /loans/:id/demo-act` | staff with `demo.control` | Completes the stage as its owner (incl. all pending sureties) |
+| `GET /me/surety-requests` | member | `SuretyRequests` (requests, guaranteeing) |
+| `POST /me/surety-requests/:loanId/sign/request`, `/accept {otpRef, otp}`, `/decline {reason}` | named surety | J-02 |
+| `POST /me/loans/:id/sureties/replace {oldId, newId}` | applicant | While `SURETY_PENDING` |
+| `POST /me/loans/:id/withdraw {reason?}` | applicant | Before sanction |
+
+## 8. As built (M7, collections, D-061)
+
+Served by `apps/mock-api/src/collections.ts`, called through `api.demand.*`, `api.receipts.*`, `api.myPayments.*`.
+
+| Client call | REST | Notes |
+|---|---|---|
+| `demand.overview(cycle?)` | GET /demand | One row per department (status incl. NOT_GENERATED), totals, `canGenerate`, DDO scoped |
+| `demand.preview(cycle, ids)` / `generate` | GET /demand/preview · POST /demand/generate | Current or next cycle only; Accountant only |
+| `demand.sheet(id)` / `act` / `demoAct` | GET /demand/sheets/:id · POST …/actions/:action · POST …/demo-act | certify → sendToDdo → postRecovery `{ recovered: {memberId: paise} }` (missing = full; more than demand = 400) |
+| `receipts.list/get/create` | GET/POST /receipts · GET /receipts/:id | Tabs ALL · SALARY_RECOVERY · COUNTER, search, paging; create = DUES (arrears) or SHARE_CAPITAL; CASH needs matching denominations (BR-029) |
+| `receipts.dues(memberId)` | GET /members/:id/dues | Unpaid by month and head (priority order) + first-demand shares |
+| `receipts.reports/verify/reject` | GET /payment-reports · POST …/:id/verify · POST …/:id/reject | Verify creates a BANK_TRANSFER receipt linked to the report; reject needs a reason ≥ 10 chars |
+| `myPayments.get/receipt/report` | GET /me/payments · GET /me/receipts/:id · POST /me/payments/reports | MB-10 / MB-18 |
+
+## 9. As built (M8, member account, D-062)
+
+Served by `apps/mock-api/src/account.ts`, called through `api.auth.*`, `api.account.*`, `api.demo.activationSample`.
+
+| Client call | REST | Notes |
+|---|---|---|
+| `auth.memberLogin(login, password)` | POST /auth/member-login | General No. or Employee ID. Errors: fieldErrors.login / .password, 403 inactive, 422 ruleId NOT_ACTIVATED |
+| `auth.startActivation(employeeId, mobile)` | POST /auth/activate/start | Mobile must match the Member Master; 422 ALREADY_ACTIVE → AccountOtp `{otpRef, mobileMasked, name, demoOtp}` |
+| `auth.startReset(login)` | POST /auth/forgot/start | 422 NOT_ACTIVATED for members who never activated |
+| `auth.verifyOtp(otpRef, otp)` | POST /auth/otp/verify | One use; → `{passwordToken}` (10 min) |
+| `auth.setPassword(token, password)` | POST /auth/password/set | D-062 rule; activation → `{activated: true, session}`, reset → `{activated: false}`; signs out old sessions |
+| `auth.checkPassword(password, login?)` | POST /auth/password/check | Same result as the phone meter |
+| `account.changePassword(current, next)` | POST /me/password | Keeps this session, signs out the others → `{signedOutOtherSessions}` |
+| `account.home()` | GET /me/home | MB-01 snapshot: member, shares, deposits (+ next maturity), active loans with next due, this month's demand, unpaid, action cards, unread count |
+| `account.notifications / readNotification / readAllNotifications` | GET /me/notifications · POST …/:id/read · POST …/read-all | Newest first, `alsoSentVia` from preferences |
+| `account.preferences / savePreferences` | GET/PUT /me/preferences | Channels SMS / WHATSAPP / EMAIL; EMAIL needs an email on the profile |
+| `account.support / createTicket` | GET /me/support · POST /me/support/tickets | Office contacts, FAQs, the member's tickets with messages; new ticket gets an auto-reply |
+| `demo.activationSample()` | GET /__demo/activation-sample | First active member who has not activated (demo card on MA-02) |
+
+## 10. As built (M9, dashboards · notifications · reports, D-063)
+
+Served by `apps/mock-api/src/insight.ts` + `reports.ts`, called through `api.dashboard.role`, `api.reports.*`, `api.notifications.*`.
+
+| Client call | REST | Notes |
+|---|---|---|
+| `dashboard.role()` | GET /dashboard/role | `RoleDashboard`: variant, tiles, queue by stage (from the Work Queue), oldest items, done this month, demand status (Accountant / DDO), recent list |
+| `reports.catalogue()` | GET /reports | 20 report defs (8 MVP tables + defaulter notice + locked P2/accounting) and filter options (cycles, departments, products, defaulterCycles). `reports.view` (not DDO) |
+| `reports.run(id, filters)` | GET /reports/:id?cycle&departmentId&minCycles&from&to&memberId&product&withinMonths | `ReportResult`: columns, groups with subtotals, totals, links. Unknown/locked = 404, missing member / bad range = 400 |
+| `reports.defaulterNotice(member)` | GET /print/defaulter-notice/:memberIdOrGeneralNo | Unpaid months, total, ref no., text from template `defaulter.notice`, pay-to |
+| `notifications.list / count / read / readAll` | GET /notifications · GET /notifications/count · POST …/:id/read · POST …/read-all | The signed-in staff user's in-app notifications; count adds open member questions for `support.reply` |
+| `notifications.preview / send / messages` | POST /messages/preview · POST /messages · GET /messages | `messages.send`. Audience MEMBER / DEPARTMENT / DEFAULTERS / RETIRING; send → in-app notification per recipient + `OutboxMessage` (DELIVERED_SIMULATED) |
+| `notifications.tickets / reply` | GET /support/tickets · POST /support/tickets/:id/reply `{text, close}` | `support.reply`. Reply → ANSWERED + member notification (link `/account/help`); close → CLOSED; replying to a closed one = 409 |

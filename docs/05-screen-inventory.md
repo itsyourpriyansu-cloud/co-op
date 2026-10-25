@@ -1,4 +1,4 @@
-﻿# 05 · Screen Inventory: How Many Things We Build
+# 05 · Screen Inventory: How Many Things We Build
 
 > Version 0.4 · 2026-10-24 · Accepted MVP (D-036), incl. the membership join flow (D-026) and paper-form digitisation (doc 16)
 > Complexity: **S** simple · **M** standard · **L** complex. Columns: **Lean** = loan-lifecycle demo · **MVP** = accepted · **Full** = everything

@@ -44,8 +44,9 @@ export function formatINRCompact(paise: Paise): string {
   return formatINR(paise);
 }
 
+/** Input always comes from toFixed(), so it has a decimal point: "18.60" → "18.6", "5.00" → "5". */
 function trimZeros(s: string): string {
-  return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
+  return s.replace(/\.?0+$/, '');
 }
 
 const ONES = [
@@ -73,9 +74,10 @@ const ONES = [
 const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
 function belowHundred(n: number): string {
-  if (n < 20) return ONES[n] ?? '';
-  const tens = TENS[Math.floor(n / 10)] ?? '';
-  const ones = ONES[n % 10] ?? '';
+  // n < 100, so every index is in range.
+  if (n < 20) return ONES[n]!;
+  const tens = TENS[Math.floor(n / 10)]!;
+  const ones = ONES[n % 10]!;
   return ones ? `${tens} ${ones}` : tens;
 }
 

@@ -1,103 +1,111 @@
+// MJ-01 Welcome: two clear paths (D-026). Long-press the logo for Demo settings (MA-05).
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { ChevronRight, UserPlus, UserRound, type LucideIcon } from 'lucide-react-native';
+import { BadgeCheck, ChevronRight, FileSignature, ShieldCheck, Smartphone, UserPlus, UserRound } from 'lucide-react-native';
+import { brand } from '@tgs/design-tokens';
 import { Logo } from '@/components/Logo';
-import { AppText, Screen } from '@/components/ui';
-import { c, radius, space } from '@/theme';
+import { Card, Screen, Text } from '@/ui';
+import { color, radius, space } from '@/theme';
 
-/** MJ-01 Welcome: two clear paths (docs/06 v0.3). Long-press the logo for Demo settings (MA-05). */
+const HOW = [
+  { icon: Smartphone, title: 'Apply from your phone', body: 'About 8 minutes. Save and finish later.' },
+  { icon: FileSignature, title: 'Sign with OTP', body: 'No paper forms, no office visit.' },
+  { icon: BadgeCheck, title: 'Track every step', body: 'See when your department and the office act.' },
+];
+
 export default function Welcome() {
   return (
-    <Screen style={styles.page}>
+    <Screen>
       <View style={styles.hero}>
-        <Pressable
-          onLongPress={() => router.push('/demo-settings')}
-          accessibilityHint="Long-press for demo settings"
-        >
-          <Logo size={72} />
+        <Pressable onLongPress={() => router.push('/demo-settings')} accessibilityHint="Long-press for demo settings" delayLongPress={600}>
+          <Logo size={120} />
         </Pressable>
-        <AppText variant="title" style={styles.center}>
-          Welcome
-        </AppText>
-        <AppText variant="muted" style={styles.center}>
-          The Telangana Secretariat Employees Co-operative Credit Society Ltd.{'\n'}Regd. No. P-929
-        </AppText>
+        <View style={{ gap: space[3] }}>
+          <Text role="display" style={styles.center}>
+            {brand.appName}
+          </Text>
+          <Text role="body" tone="secondary" style={styles.center}>
+            {brand.legalName}
+          </Text>
+          <Text role="caption" tone="tertiary" style={styles.center}>
+            Regd. No. {brand.registrationNo}
+          </Text>
+        </View>
       </View>
 
-      <Choice
-        icon={UserRound}
-        title="I'm a member"
-        body="Sign in to see your loans, deposits and payments."
-        onPress={() => router.push({ pathname: '/login', params: { mode: 'member' } })}
-      />
-      <Choice
-        icon={UserPlus}
-        title="Become a member"
-        body="Apply to join the society and track your application."
-        onPress={() => router.push({ pathname: '/login', params: { mode: 'applicant' } })}
-      />
+      <View style={{ gap: space[6] }}>
+        <Path
+          icon={UserPlus}
+          title="Become a member"
+          body="Secretariat employee? Apply to join and track your application."
+          primary
+          onPress={() => router.push('/join')}
+        />
+        <Path icon={UserRound} title="I'm already a member" body="Sign in to see your loans, deposits and payments." onPress={() => router.push('/login')} />
+      </View>
 
-      <AppText variant="caption" style={[styles.center, styles.footer]}>
-        2nd Floor, West Ancillary Building, Dr. B.R Ambedkar Telangana Secretariat, Hyderabad
-      </AppText>
+      <Card>
+        <Text role="overline" tone="tertiary">
+          How joining works
+        </Text>
+        <View style={{ gap: space[8], marginTop: space[6] }}>
+          {HOW.map((h) => (
+            <View key={h.title} style={styles.how}>
+              <View style={styles.howIcon}>
+                <h.icon size={20} color={color.brand.solid} strokeWidth={1.75} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text role="bodyStrong">{h.title}</Text>
+                <Text role="caption" tone="secondary">
+                  {h.body}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </Card>
+
+      <View style={styles.trust}>
+        <ShieldCheck size={16} color={color.text.tertiary} />
+        <Text role="caption" tone="tertiary" style={{ flex: 1 }}>
+          Demo build with fictional data. Your details stay on the society server.
+        </Text>
+      </View>
     </Screen>
   );
 }
 
-function Choice({
-  icon: Icon,
-  title,
-  body,
-  onPress,
-}: {
-  icon: LucideIcon;
-  title: string;
-  body: string;
-  onPress: () => void;
-}) {
+function Path({ icon: Icon, title, body, primary, onPress }: { icon: typeof UserPlus; title: string; body: string; primary?: boolean; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={title}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.choice,
-        pressed && { borderColor: c.primary, backgroundColor: c.primarySubtle },
-      ]}
+      style={({ pressed }) => [styles.path, primary && styles.pathPrimary, pressed && { opacity: 0.85 }]}
     >
-      <View style={styles.choiceIcon}>
-        <Icon size={24} color={c.primary} strokeWidth={1.75} />
+      <View style={[styles.pathIcon, primary && { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
+        <Icon size={24} color={primary ? color.text.onBrand : color.brand.solid} strokeWidth={1.75} />
       </View>
-      <View style={{ flex: 1, gap: 2 }}>
-        <AppText variant="heading">{title}</AppText>
-        <AppText variant="muted">{body}</AppText>
+      <View style={{ flex: 1, gap: space[1] }}>
+        <Text role="cardTitle" tone={primary ? 'onBrand' : 'primary'}>
+          {title}
+        </Text>
+        <Text role="caption" style={{ color: primary ? 'rgba(255,255,255,0.85)' : color.text.secondary }}>
+          {body}
+        </Text>
       </View>
-      <ChevronRight size={20} color={c.textMuted} />
+      <ChevronRight size={22} color={primary ? color.text.onBrand : color.text.tertiary} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flexGrow: 1, justifyContent: 'center' },
-  hero: { alignItems: 'center', gap: space[3], marginBottom: space[4] },
+  hero: { alignItems: 'center', gap: space[8], paddingTop: space[12] },
   center: { textAlign: 'center' },
-  footer: { marginTop: space[6] },
-  choice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[4],
-    padding: space[4],
-    minHeight: 88,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.surface,
-  },
-  choiceIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: c.primarySubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  path: { flexDirection: 'row', alignItems: 'center', gap: space[6], padding: space[8], minHeight: 88, borderRadius: radius.card, borderWidth: 1, borderColor: color.border.default, backgroundColor: color.bg.surface },
+  pathPrimary: { backgroundColor: color.brand.solid, borderColor: color.brand.solid },
+  pathIcon: { width: 48, height: 48, borderRadius: radius.control, backgroundColor: color.brand.subtle, alignItems: 'center', justifyContent: 'center' },
+  how: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
+  howIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.brand.subtle, alignItems: 'center', justifyContent: 'center' },
+  trust: { flexDirection: 'row', gap: space[4], alignItems: 'center', justifyContent: 'center' },
 });

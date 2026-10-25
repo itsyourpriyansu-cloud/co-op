@@ -1,6 +1,6 @@
 # 10 · Workflows & State Machines
 
-> Version 0.3 · 2026-10-24
+> Version 0.4 · 2026-10-24
 > Reconciles the flow diagrams (D-007) with the paper forms (doc 16): sequential Secretary → President sign-off (D-027), per-product stages (D-030), membership join pipeline (D-026), FD acceptance.
 > All transitions are enforced by the API (`POST /…/transitions`). Each one writes an event {actor, role, action, remarks, at} and triggers notifications per ST-63.
 
@@ -73,17 +73,19 @@ Side effects on `disburse`: assign Loan No. → generate schedule (BR-006) → c
 stateDiagram-v2
   [*] --> DRAFT : applicant signs up (MJ-02), passes eligibility (MJ-03)
   DRAFT --> SUBMITTED : sign with OTP (declarations + recovery agreement)
-  SUBMITTED --> DDO_CERTIFICATION : auto (routed to the department's DDO)
+  SUBMITTED --> DDO_CERTIFICATION : Accountant intake: Send to DDO (D-053)
+  SUBMITTED --> INFO_REQUESTED : Accountant returns at intake
+  SUBMITTED --> REJECTED : Accountant rejects at intake
   DDO_CERTIFICATION --> OFFICE_REVIEW : DDO certifies items 1–7 + AGREES mandate
   DDO_CERTIFICATION --> INFO_REQUESTED : DDO asks for a correction
   OFFICE_REVIEW --> APPROVAL_SECRETARY : accountant verifies (duplicates, docs, BR-026)
   OFFICE_REVIEW --> INFO_REQUESTED : missing info
-  INFO_REQUESTED --> DDO_CERTIFICATION : applicant resubmits (if DDO requested)
-  INFO_REQUESTED --> OFFICE_REVIEW : applicant resubmits (if office requested)
+  INFO_REQUESTED --> SUBMITTED : resubmits (returned at intake)
+  INFO_REQUESTED --> DDO_CERTIFICATION : resubmits (returned by the DDO)
+  INFO_REQUESTED --> OFFICE_REVIEW : resubmits (returned at office review)
   APPROVAL_SECRETARY --> APPROVAL_PRESIDENT : Secretary approves
   APPROVAL_PRESIDENT --> SHARE_PAYMENT_PENDING : President approves
   SHARE_PAYMENT_PENDING --> ACTIVE : share paid at counter OR scheduled on first demand (D-029, Q-510)
-  DDO_CERTIFICATION --> REJECTED
   OFFICE_REVIEW --> REJECTED
   APPROVAL_SECRETARY --> REJECTED
   APPROVAL_PRESIDENT --> REJECTED
@@ -101,6 +103,18 @@ stateDiagram-v2
 | ⑥ Welcome, General No. 4xxx | ACTIVE → app switches to member mode |
 | ⚠ Action needed | INFO_REQUESTED (what is needed, by whom, deep link to fix) |
 | ✕ Not approved | REJECTED (reason, contact office) |
+
+**Who acts at each stage (D-053, `MEMBERSHIP_STAGE_OWNER` in `packages/domain`):**
+
+| Stage | Owner | Actions |
+|---|---|---|
+| SUBMITTED (Received) | Accountant | Send to DDO · Return · Reject |
+| DDO_CERTIFICATION | DDO of the applicant's department | Certify (all 7 items + mandate AGREED) · Return |
+| OFFICE_REVIEW | Accountant | Recommend · Return · Reject |
+| APPROVAL_SECRETARY | Secretary | Approve · Reject |
+| APPROVAL_PRESIDENT | President (≠ Secretary, SOD-1) | Approve + choose share route · Reject |
+| SHARE_PAYMENT_PENDING | Cashier | Record share payment (counter) · Activate (first demand) |
+| INFO_REQUESTED | Applicant | Correct and sign again → back to the returning stage |
 
 **On ACTIVE (side effects):** create the Member record from the application → allot the next General No. (Q-501) → create the ShareAccount (shares proposed) → activate the RecoveryMandate → the applicant account becomes a member account (same login) → welcome notification.
 

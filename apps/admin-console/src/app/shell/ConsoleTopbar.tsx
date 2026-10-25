@@ -38,6 +38,9 @@ export function ConsoleTopbar() {
   const demo = useQuery({ queryKey: ['demo-state'], queryFn: api.demo.state, refetchInterval: 30_000 });
   const personas = useQuery({ queryKey: ['personas', 'console'], queryFn: () => api.demo.personas('console') });
   const failing = (demo.data?.failureRate ?? 0) > 0;
+  // ST-03 bell: unread notifications + open member questions (M9).
+  const notifyCount = useQuery({ queryKey: ['notification-count'], queryFn: api.notifications.count, refetchInterval: 20_000, enabled: Boolean(session) });
+  const bellCount = (notifyCount.data?.unread ?? 0) + (notifyCount.data?.openQuestions ?? 0);
 
   const switchTo = async (personaId: string) => {
     await loginAsPersona(personaId);
@@ -100,7 +103,14 @@ export function ConsoleTopbar() {
           onClick={toggle}
           aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         />
-        <ButtonV2 buttonType={ButtonV2Type.SECONDARY} subType={ButtonV2SubType.ICON_ONLY} size={ButtonV2Size.SMALL} leftSlot={icon(Bell)} aria-label="Notifications (M8)" disabled />
+        <div className="relative">
+          <ButtonV2 buttonType={ButtonV2Type.SECONDARY} subType={ButtonV2SubType.ICON_ONLY} size={ButtonV2Size.SMALL} leftSlot={icon(Bell)} aria-label={bellCount ? `Notifications, ${bellCount} new` : 'Notifications'} onClick={() => navigate(notifyCount.data?.unread || !notifyCount.data?.openQuestions ? '/notifications' : '/notifications?tab=questions')} />
+          {bellCount > 0 && (
+            <span className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-danger-solid px-1 text-[10px] font-semibold leading-none text-white" aria-hidden>
+              {bellCount > 9 ? '9+' : bellCount}
+            </span>
+          )}
+        </div>
 
         {session && (
           <MenuV2

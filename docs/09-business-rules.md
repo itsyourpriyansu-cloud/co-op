@@ -1,6 +1,6 @@
 # 09 · Business Rules
 
-> Version 0.3 · 2026-10-24
+> Version 0.6 · 2026-10-25
 > **Only rules tagged [A] are confirmed.** Everything else is a configurable placeholder, so the prototype can show numbers. Placeholders must never be presented to the client as society policy.
 > Each rule maps to a pure function in `packages/domain` and a settings key.
 
@@ -16,18 +16,19 @@
 | BR-006 | EMI by reducing balance | **[A]** / [UNKNOWN] variant | `calculateEmi`, `generateSchedule` | `loanProduct.emiMethod` |
 | BR-007 | Top-up settlement incl. interest to date | **[A]** / [UNKNOWN] accrual basis | `calculateAccruedInterest`, `calculateTopupSettlement` | `interestAccrualBasis` |
 | BR-008 | Insurance contribution amounts | **[A]** amounts / [UNKNOWN] frequency | `calculateInsuranceDue` | `insurance.*` |
-| BR-009 | Department-wise demand sheet | **[A]** / [P] composition | `generateDemandSheet` | `demand.*` |
-| BR-010 | Transfer effective next cycle | **[A]** | (inside BR-009) | — |
-| BR-011 | Partial recovery allocation priority | **[A]** / [UNKNOWN] gaps | `allocateRecovery` | `allocationOrder` (locked) |
+| BR-009 | Department-wise demand sheet | **[A]** / [P] composition | `buildDemandComponents` | `rrfMonthly`, `crdMonthly`, `srdsMonthly`, `insurance.*` |
+| BR-010 | Transfer effective next cycle | **[A]** | `departmentForCycle` | — |
+| BR-011 | Partial recovery allocation priority | **[A]** / [UNKNOWN] gaps | `allocateRecovery`, `allocateArrears` (counter / reported payments, oldest month first, D-061) | `allocationOrder` (locked) |
 | BR-012 | Penal charges | [UNKNOWN] | (inside BR-009) | `loanProduct.penalRatePercent` |
-| BR-013 | Loan approved by authorised personnel through stages | **[A][F]** | state machine (`10`) | `permissions` |
-| BR-014 | Surety rules | [PF] particulars / [UNKNOWN] limits | `checkSuretyEligibility` | `loanProduct.suretiesRequired`, `surety.*` |
-| BR-015 | Deposit / Share capital loan margin | [A] exists / [UNKNOWN] margin | `checkDepositLoanLimit` | `loanProduct.depositMarginPercent` |
-| BR-016 | Product limits (amount, tenure) | [UNKNOWN] | `checkProductLimits` | `loanProduct.max*` |
+| BR-013 | Loan approved by authorised personnel through stages | **[A][F]** | `loanActionsFor`, `nextLoanStatus` (+ FD `depositActionsFor`/`nextDepositStatus`, demand `demandSheetActionsFor`) | `permissions` |
+| BR-014 | Surety rules | [PF] particulars / [P] limit 2 open guarantees (D-055) | `checkSuretyEligibility` | `loanProduct.suretiesRequired`, `maxGuaranteesPerSurety` |
+| BR-015 | Deposit / Share capital loan margin | [A] exists / [P] 90% (D-055) | `checkDepositLoanLimit` | `loanProduct.depositMarginPercent` |
+| BR-016 | Product limits (amount, tenure) | [P] (D-055) | `checkProductLimits` | `loanProduct.minAmount`, `max*` |
 | BR-017 | FD maturity | [F] rates / [UNKNOWN] compounding | `calculateFdMaturity` | `depositScheme.*` |
-| BR-018 | Concurrent loans per member | [UNKNOWN] | `checkConcurrentLoans` | `loanProduct.maxConcurrent` |
+| BR-018 | Concurrent loans per member | [P] 1 per product, 2 deposit loans (D-055) | `checkConcurrentLoans` | `loanProduct.maxConcurrent` |
 | BR-019 | Segregation of duties | [P] | guards | `permissions` |
-| BR-020 | Due / Defaulter definition | [UNKNOWN] | report selectors | `defaulter.*` |
+| BR-020 | Due / Defaulter definition | [P] short in the last 3 cycles in a row (D-055) | `checkDefaulter` | `defaulterCycles` |
+| CAP-1 | Repayment capacity | [P] first EMI ≤ 50% of net salary, **warning only** (D-055) | `assessLoanApplication` | `emiToNetSalaryMaxPercent` |
 | BR-021 | Insurance eligibility from service period | [A] exists / [UNKNOWN] rule | — | — |
 
 ---
@@ -178,6 +179,7 @@ The agreement says service period is used for insurance eligibility, but gives n
 | BR-029 | Cash denominations total = amount | **[PF]** | `validateDenominations` | `cash.denominations` |
 | BR-030 | Demand sheet certified before sending | **[PF]** | sheet guard | — |
 | BR-031 | Sequential Secretary → President sign-off, different users | **[PF] + D-027** | approval guard | `loanProduct.signOffSteps` |
+| BR-032 | Share capital on joining = shares × share value; shares 10–100 | **[P] D-053/D-054** (Q-506) | `membershipShareAmount` | `settings.shareValue`, min/max shares |
 
 ### BR-022 Maximum instalments [PF F2 item 11]
 `tenureMonths ≤ min(100, product.maxTenure, leftoverMonths − 1)`. The "−1" comes from BR-002 (remaining service must *exceed* tenure). The UI shows which limit is binding.
@@ -215,3 +217,12 @@ A sheet must be `CERTIFIED` (officer name + time) before `SENT_TO_DDO`. Certifie
 
 ### BR-031 Sequential sign-off [PF + D-027]
 Steps come from config (default SECRETARY → PRESIDENT). Each step needs a user with that title. The same user cannot sign two steps. A rejection at any step is terminal for loans and memberships, and triggers a refund for FDs.
+
+### BR-032 Share capital on joining [P, D-053]
+Amount due = shares proposed × `settings.shareValue` (placeholder ₹100). Shares must be between 10 and 100 (placeholder; Q-506). Paid either at the counter (cashier receipt → membership starts on receipt) or recovered on the first salary demand (membership starts at activation; share capital shows ₹0 until the demand is recovered). No admission fee in the prototype (unknown, Q-506).
+
+### BR-033 Member app account [P, D-062]
+Sign-in with General No. or Employee ID + password. Password rule PW-1 ≥ 8 characters, PW-2 letters and numbers, PW-3 must not contain the member's General No., Employee ID or mobile (values of 4+ characters); strength score 0–4 for the meter (`checkPassword`). Activation needs the Member Master mobile to match; one activation per member. A reset signs out every session; a change signs out the other sessions. In-app notifications always on; SMS / WhatsApp / Email are member preferences (simulated delivery).
+
+### BR-034 Reports and messages [P, D-063]
+Report figures come from the posted demand sheets and ledgers. Unpaid = demand − allocated (counter and verified member payments included, D-061). Defaulter (BR-020) = short in the last `settings.defaulterCycles` posted cycles in a row; the report filter can lower or raise it. Messages to members are simulated: SMS ≤ 480 characters, Email needs an email on the profile, every message also lands in the member's in-app notifications. Placeholders `{name} {generalNo} {department} {overdue} {cycle} {dor}`.

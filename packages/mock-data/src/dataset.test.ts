@@ -1,6 +1,6 @@
 // Seed integrity (docs/13 §4) + scenario coverage (docs/20).
 import { beforeAll, describe, expect, it } from 'vitest';
-import { calculateLeftoverService, fullMonthsBetween } from '@tgs/domain';
+import { calculateFdMaturity, calculateLeftoverService, fullMonthsBetween } from '@tgs/domain';
 import { DEPOSIT_STATUSES, LOAN_STATUSES, MEMBERSHIP_STATUSES } from '@tgs/types';
 import { createSeed, type Dataset } from './index';
 
@@ -108,5 +108,81 @@ describe('money reconciles (docs/13 §4)', () => {
     const current = d.demandSheets.filter((s) => s.cycle === d.currentCycle);
     expect(current.length).toBe(12);
     expect(current.every((s) => s.totalRecovered === 0)).toBe(true);
+  });
+});
+
+describe('referential integrity and M1 rules (docs/13 §4)', () => {
+  it('every record points at a real member / department / loan', () => {
+    const members = new Set(d.members.map((m) => m.id));
+    const depts = new Set(d.departments.map((x) => x.id));
+    const loans = new Set(d.loans.map((l) => l.id));
+    for (const m of d.members) expect(depts.has(m.departmentId), m.id).toBe(true);
+    for (const l of d.loans) {
+      expect(members.has(l.memberId), l.id).toBe(true);
+      for (const s of l.sureties) expect(members.has(s.memberId), l.id).toBe(true);
+      if (l.parentLoanId) expect(loans.has(l.parentLoanId), l.id).toBe(true);
+    }
+    for (const x of [...d.deposits, ...d.receipts, ...d.paymentReports, ...d.profileChangeRequests, ...d.supportTickets]) expect(members.has(x.memberId), x.id).toBe(true);
+    for (const sh of d.demandSheets) {
+      expect(depts.has(sh.departmentId), sh.id).toBe(true);
+      for (const line of sh.lines) expect(members.has(line.memberId), sh.id).toBe(true);
+    }
+  });
+  it('demand sheet totals equal the sum of their lines', () => {
+    for (const sh of d.demandSheets) {
+      expect(sh.totalDemand, sh.id).toBe(sh.lines.reduce((a, l) => a + l.totalDemand, 0));
+      expect(sh.totalRecovered, sh.id).toBe(sh.lines.reduce((a, l) => a + (l.recovered ?? 0), 0));
+    }
+  });
+  it('active and closed loans carry a loan number, schedule and EMI', () => {
+    for (const l of d.loans.filter((x) => ['ACTIVE', 'CLOSED', 'CLOSED_BY_TOPUP'].includes(x.status))) {
+      expect(l.loanNo, l.id).toBeTruthy();
+      expect(l.schedule.length, l.id).toBeGreaterThan(0);
+      expect(l.emi, l.id).toBeGreaterThan(0);
+    }
+  });
+  it('FD maturity values come from calculateFdMaturity (BR-017)', () => {
+    for (const fd of d.deposits.filter((x) => x.scheme === 'FD' && x.fdrNo)) {
+      const m = calculateFdMaturity({ principal: fd.principal ?? 0, ratePercent: fd.ratePercent, tenureMonths: fd.tenureMonths ?? 0, payout: fd.payoutFrequency ?? 'ON_MATURITY', openedOn: fd.openedOn });
+      expect(fd.maturityValue, fd.id).toBe(m.maturityValue);
+      expect(fd.maturityDate, fd.id).toBe(m.maturityDate);
+    }
+  });
+  it('no surety guarantees more open loans than allowed (BR-014)', () => {
+    const open = d.loans.filter((l) => ['SURETY_PENDING', 'ACCOUNTANT_REVIEW', 'DDO_CERTIFICATION', 'ASSESSMENT', 'SANCTION_SECRETARY', 'SANCTION_PRESIDENT', 'SANCTIONED', 'ACTIVE'].includes(l.status));
+    const count = new Map<string, number>();
+    for (const l of open) for (const s of l.sureties) if (s.status !== 'DECLINED') count.set(s.memberId, (count.get(s.memberId) ?? 0) + 1);
+    const over = [...count.entries()].filter(([, n]) => n > d.settings.maxGuaranteesPerSurety);
+    expect(over).toEqual([]);
+  });
+  it('every placeholder setting key exists', () => {
+    for (const k of d.settings.placeholders) expect(k.split('.')[0]! in d.settings || k === 'loanProducts', k).toBe(true);
+  });
+});
+
+describe('members module seed (ST-12, ST-18, BR-010, BR-028)', () => {
+  it('every member has a JOINED event and exactly one current mandate for their department', () => {
+    for (const m of d.members) {
+      expect(d.serviceEvents.some((e) => e.memberId === m.id && e.type === 'JOINED'), m.id).toBe(true);
+      const current = d.mandates.filter((x) => x.memberId === m.id && x.status !== 'SUPERSEDED');
+      expect(current, m.id).toHaveLength(1);
+      expect(current[0]?.departmentId, m.id).toBe(m.departmentId);
+    }
+  });
+  it('transfers have ids and a TRANSFERRED event; next-cycle ones wait for the new DDO', () => {
+    for (const t of d.transfers) {
+      expect(t.id).toMatch(/^trf-/);
+      expect(d.serviceEvents.some((e) => e.memberId === t.memberId && e.type === 'TRANSFERRED' && e.effectiveCycle === t.effectiveCycle)).toBe(true);
+    }
+    expect(d.mandates.filter((x) => x.status === 'PENDING_NEW_DDO')).toHaveLength(d.transfers.filter((t) => t.effectiveCycle > d.currentCycle).length);
+  });
+  it('change requests: pending old values match the member, DDO route uses employment / pay fields', () => {
+    const byId = new Map(d.members.map((m) => [m.id, m]));
+    expect(d.profileChangeRequests.filter((r) => r.status === 'PENDING').length).toBeGreaterThanOrEqual(3);
+    expect(d.profileChangeRequests.some((r) => r.status === 'PENDING' && r.route === 'DDO_THEN_OFFICE' && !r.ddoCertified && byId.get(r.memberId)?.departmentId === 'dept-fin')).toBe(true);
+    for (const r of d.profileChangeRequests.filter((x) => x.status === 'PENDING')) {
+      const m = byId.get(r.memberId)!;
+      for (const f of r.fields) if (f.field === 'designation') expect(f.oldValue, r.id).toBe(m.designation);
+    }
   });
 });

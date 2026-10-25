@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Landmark } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 import { AlertV2, AlertV2SubType, AlertV2Type, AvatarV2, AvatarV2Size, Skeleton, Spinner, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type } from '@juspay/blend-design-system';
@@ -8,6 +8,7 @@ import { brand } from '@tgs/design-tokens';
 import { ROLE_LABELS, type Persona } from '@tgs/types';
 import { useAuth } from '@/app/auth';
 import { API_URL, api } from '@/lib/api';
+import { Seal } from '@/components/Seal';
 
 /** AU-01 Staff sign-in. Password sign-in waits for the real backend (Q-103); the prototype signs in by persona. */
 export function LoginPage() {
@@ -39,9 +40,7 @@ export function LoginPage() {
       {/* Brand panel */}
       <aside className="hidden w-[44%] max-w-[560px] flex-col justify-between bg-inverse p-10 text-fg-inverse lg:flex">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-control bg-brand text-on-brand">
-            <Landmark size={22} strokeWidth={1.75} aria-hidden />
-          </div>
+          <Seal size={56} />
           <span className="text-card-title">{brand.appName}</span>
         </div>
         <div>
@@ -57,6 +56,7 @@ export function LoginPage() {
       {/* Sign-in panel */}
       <section className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-xl">
+          <Seal size={64} className="mb-4 lg:hidden" />
           <h2 className="text-page-title text-fg">Sign in</h2>
           <p className="mt-1 text-body text-fg-secondary">This is a demo with fictional data. Choose a role to explore its workspace.</p>
 

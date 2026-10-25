@@ -1,11 +1,11 @@
 // Console layout = Blend SidebarV2 (navigation, collapse with "/", mobile nav) + our topbar content.
 import { useMemo } from 'react';
-import { Landmark } from 'lucide-react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { AvatarV2, AvatarV2Size, SidebarV2, type DirectoryData } from '@juspay/blend-design-system';
 import { brand } from '@tgs/design-tokens';
 import { ROLE_LABELS } from '@tgs/types';
 import { NAV_GROUPS, navItemFor } from '@/config/navigation';
+import { Seal } from '@/components/Seal';
 import { useAuth } from '../auth';
 import { ConsoleTopbar } from './ConsoleTopbar';
 
@@ -33,9 +33,7 @@ export function ConsoleShell() {
 
   const brandBlock = (
     <div className="flex min-w-0 items-center gap-2.5">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-brand text-on-brand">
-        <Landmark size={18} strokeWidth={1.75} aria-hidden />
-      </div>
+      <Seal size={36} />
       <div className="min-w-0 leading-tight">
         <div className="truncate text-label text-fg">{brand.appName}</div>
         <div className="truncate text-caption text-fg-tertiary">Admin Console</div>
