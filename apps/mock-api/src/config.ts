@@ -1,6 +1,7 @@
 // Runtime configuration from environment variables (all optional).
 //   PORT=4000  HOST=0.0.0.0 (so a phone on the same Wi-Fi can connect)
 //   MOCK_LATENCY=200-600 | 0       MOCK_PERSIST=1 | 0       MOCK_DATA_DIR=.data
+//   CORS_ORIGIN=https://console.example.org,https://other.example.org  (hosted; default: any origin)
 
 function parseLatency(raw: string | undefined): [number, number] {
   if (!raw) return [200, 600];
@@ -16,6 +17,7 @@ export const config = {
   latencyMs: parseLatency(process.env.MOCK_LATENCY),
   persist: process.env.MOCK_PERSIST !== '0',
   dataDir: process.env.MOCK_DATA_DIR ?? '.data',
+  corsOrigins: (process.env.CORS_ORIGIN ?? '').split(',').map((o) => o.trim()).filter((o) => o && o !== '*'),
   version: '0.1.0',
 };
 

@@ -9,7 +9,7 @@ const store = new Store({
   dataDir: config.dataDir,
   latencyMs: config.latencyMs,
 });
-const app = createApp({ store, version: config.version });
+const app = createApp({ store, version: config.version, corsOrigins: config.corsOrigins });
 
 serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
   const lanUrls = Object.values(networkInterfaces())

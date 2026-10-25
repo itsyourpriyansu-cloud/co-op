@@ -1,23 +1,15 @@
 import { ActivityIndicator, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuth } from '@/lib/auth';
-import { c } from '@/theme';
+import { color } from '@/theme';
 
-/** Entry gate: applicants see their tracker, members their home, everyone else the Welcome screen. */
+/** Entry gate: applicants → their tracker (it routes to eligibility/form as needed); members → home. */
 export default function Index() {
   const { ready, session } = useAuth();
-
   if (!ready) {
     return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: c.background,
-        }}
-      >
-        <ActivityIndicator color={c.primary} size="large" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg.canvas }}>
+        <ActivityIndicator color={color.brand.solid} size="large" />
       </View>
     );
   }

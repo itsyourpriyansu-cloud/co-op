@@ -10,7 +10,9 @@ import {
   checkSuretyRetirement,
   daysInMonth,
   fullMonthsBetween,
+  changeRequestRoute,
   generateSchedule,
+  profileFieldValue,
   toCycle,
 } from '@tgs/domain';
 import type {
@@ -30,7 +32,10 @@ import type {
   Paise,
   PaymentReport,
   ProfileChangeRequest,
+  ProfileField,
   Receipt,
+  RecoveryMandate,
+  ServiceEvent,
   ShareAccount,
   SupportTicket,
   TransferEvent,
@@ -43,6 +48,9 @@ import { createRng, type Rng } from './prng';
 
 export const SEED_TODAY: ISODate = '2026-10-24';
 export const CURRENT_CYCLE: Cycle = '2026-10';
+/** M9 seed (no RNG): members short in Jul, Aug and Sep 2026 → defaulters at the default 3 cycles. */
+const CHRONIC_DEFAULTERS = ['1030', '1062', '1202', '1447', '1569', '1595'];
+
 /** 12 demand cycles: Nov 2025 … Oct 2026. The last one is generated but not yet recovered. */
 export const DEMAND_CYCLES: Cycle[] = Array.from({ length: 12 }, (_, i) => toCycle(addMonths('2025-11-01', i)));
 const POSTED_CYCLES = DEMAND_CYCLES.slice(0, -1);
@@ -61,6 +69,8 @@ const staff = (role: string) => {
   return s;
 };
 const cycleStart = (c: Cycle): ISODate => `${c}-01`;
+/** "Sai Kumar" + "Kumar" → "Sai Kumar", not "Sai Kumar Kumar". */
+const joinName = (first: string, surname: string) => (first.split(' ').at(-1) === surname ? first : `${first} ${surname}`);
 const lastDay = (y: number, m: number): ISODate => `${y}-${pad(m, 2)}-${pad(daysInMonth(y, m), 2)}`;
 
 function randomDate(rng: Rng, fromYear: number, toYear: number): ISODate {
@@ -92,12 +102,15 @@ function makeMember(rng: Rng, generalNo: number, overrideIn?: Partial<Member> & 
   const gender = override.gender ?? (rng.chance(0.42) ? 'F' : 'M');
   const first = gender === 'F' ? rng.pick(FIRST_NAMES_F) : rng.pick(FIRST_NAMES_M);
   const surname = rng.pick(SURNAMES);
-  const name = override.name ?? `${first} ${surname}`;
+  const name = override.name ?? joinName(first, surname);
   const statusRoll = rng.next();
   const status: Member['status'] = override.status ?? (statusRoll < 0.92 ? 'ACTIVE' : statusRoll < 0.98 ? 'RETIRED' : statusRoll < 0.995 ? 'RESIGNED' : 'DECEASED');
   const age = ageOverride ?? (status === 'RETIRED' ? rng.int(61, 65) : rng.int(24, 59));
-  const birthYear = 2026 - age;
-  const birthMonth = rng.int(1, 12);
+  // ~4.5% of active members retire within the next 1–6 months (docs/13 §1: retirement report, gratuity risk).
+  const retiringSoon = !override.dob && ageOverride === undefined && status === 'ACTIVE' && rng.chance(0.045);
+  const retireOn = retiringSoon ? addMonths(SEED_TODAY, rng.int(1, 6)) : undefined;
+  const birthYear = retireOn ? Number(retireOn.slice(0, 4)) - SETTINGS.retirementAge : 2026 - age;
+  const birthMonth = retireOn ? Number(retireOn.slice(5, 7)) : rng.int(1, 12);
   const dob = override.dob ?? `${birthYear}-${pad(birthMonth, 2)}-${pad(rng.int(1, 28), 2)}`;
   const dobY = Number(dob.slice(0, 4));
   const dobM = Number(dob.slice(5, 7));
@@ -224,6 +237,86 @@ function buildEvents(rng: Rng, member: Member, code: LoanProductCode, target: Lo
   return events;
 }
 
+// ---------------------------------------------------------------------------------------------
+// Membership applications: full F1 form + staff sign-offs (docs/16 §F1, D-053)
+// ---------------------------------------------------------------------------------------------
+
+/** Who moved an application into each status, and what that action is called. */
+function membershipActor(to: MembershipStatus, app: MembershipApplication, route: MembershipApplication['sharePaymentRoute']) {
+  const dept = departments.find((d) => d.id === app.departmentId);
+  const s = (role: string) => ({ actorId: staff(role).id, actorName: staff(role).name, actorRole: role });
+  switch (to) {
+    case 'DDO_CERTIFICATION':
+      return { ...s('ACCOUNTANT'), action: 'sendToDdo', remarks: 'Documents complete. Sent to the department for certification.' };
+    case 'OFFICE_REVIEW':
+      return { actorId: `ddo-${app.departmentId}`, actorName: dept?.ddoName ?? 'DDO', actorRole: 'DDO', action: 'certify', remarks: 'Items 1 to 7 verified with the service register.' };
+    case 'APPROVAL_SECRETARY':
+      return { ...s('ACCOUNTANT'), action: 'forward', remarks: 'Eligible. Recommended for admission.' };
+    case 'APPROVAL_PRESIDENT':
+      return { ...s('SECRETARY'), action: 'approve', remarks: 'Approved.' };
+    case 'SHARE_PAYMENT_PENDING':
+      return { ...s('PRESIDENT'), action: 'approve', remarks: route === 'FIRST_DEMAND' ? 'Approved. Shares on the first demand.' : 'Approved. Shares at the counter.' };
+    case 'ACTIVE':
+      return { ...s('CASHIER'), action: route === 'FIRST_DEMAND' ? 'activate' : 'recordSharePayment', remarks: undefined };
+    default:
+      return undefined;
+  }
+}
+
+function enrichApplication(rng: Rng, app: MembershipApplication, existingMobile?: string) {
+  const dept = departments.find((d) => d.id === app.departmentId);
+  const [first = '', ...rest] = app.name.split(' ');
+  const surname = rest.at(-1) ?? first;
+  const female = (FIRST_NAMES_F as readonly string[]).includes(first);
+  const loc = rng.pick(CITIES);
+  const present = { line1: `H.No ${rng.int(1, 16)}-${rng.int(1, 240)}, ${rng.pick(STREETS)}`, city: loc.city, district: loc.district, pincode: `${loc.pin}${pad(rng.int(1, 99), 2)}` };
+  const dob = `${rng.int(1992, 2002)}-${pad(rng.int(1, 12), 2)}-${pad(rng.int(1, 28), 2)}`;
+  const mobile = existingMobile ?? `98480${pad(rng.int(10000, 99999), 5)}`;
+  const submittedAt = app.events[0]?.at ?? `${app.submittedOn ?? SEED_TODAY}T10:00:00+05:30`;
+  const docAt = submittedAt;
+  app.form = {
+    personal: { fullName: app.name, fatherName: `${rng.pick(FIRST_NAMES_M)} ${surname}`, dob, gender: female ? 'F' : 'M', mobile, ...(rng.chance(0.5) ? { email: `${first.toLowerCase()}.${app.id.slice(-3)}@example.org` } : {}) },
+    address: { present, sameAsPresent: rng.chance(0.75) },
+    employment: { departmentId: app.departmentId, designation: app.designation, employeeId: `TS${pad(rng.int(10000, 99999), 5)}`, employmentType: 'REGULAR', regularAppointmentDate: app.regularAppointmentDate },
+    shares: { sharesProposed: app.sharesProposed },
+    nominee: { name: `${rng.pick(female ? FIRST_NAMES_M : FIRST_NAMES_F)} ${surname}`, relation: rng.pick(['Spouse', 'Mother', 'Father'] as const), address: `${present.line1}, ${present.city}` },
+    documents: [
+      { type: 'PHOTO', fileName: 'photo.jpg', uploadedAt: docAt },
+      { type: 'ID_PROOF', fileName: 'employee-id-card.pdf', uploadedAt: docAt },
+      { type: 'APPOINTMENT_ORDER', fileName: 'appointment-order.pdf', uploadedAt: docAt },
+    ],
+    declarations: { byelawsAccepted: true, noOtherSociety: true, recoveryMandateAccepted: true },
+  };
+  if (app.form.address && !app.form.address.sameAsPresent) app.form.address.permanent = { line1: `D.No ${rng.int(1, 30)}-${rng.int(1, 99)}, Main Road`, city: 'Warangal', district: 'Hanumakonda', pincode: `5060${pad(rng.int(1, 20), 2)}` };
+  app.eligibility = { worksInSecretariatDept: true, regularOrApprovedProbationer: true, memberOfOtherCreditSocietyWithDues: false, checkedAt: submittedAt };
+  app.signature = { signedAt: submittedAt, textVersion: 'F1+F6-2026.1', method: 'OTP' };
+
+  // Real stage owners on the audit trail + structured sign-offs for each stage passed.
+  for (const e of app.events) {
+    const who = e.actorRole === 'APPLICANT' ? undefined : membershipActor(e.toStatus as MembershipStatus, app, app.sharePaymentRoute);
+    if (e.toStatus === 'INFO_REQUESTED') {
+      const byDdo = app.infoRequest?.by === 'DDO';
+      Object.assign(e, byDdo ? { actorId: `ddo-${app.departmentId}`, actorName: dept?.ddoName ?? 'DDO', actorRole: 'DDO' } : { actorId: staff('ACCOUNTANT').id, actorName: staff('ACCOUNTANT').name, actorRole: 'ACCOUNTANT' }, { action: 'returnToApplicant' });
+      continue;
+    }
+    if (e.toStatus === 'REJECTED') {
+      app.rejection = { byId: e.actorId, byName: e.actorName, role: e.actorRole, at: e.at, ...(e.remarks ? { remarks: e.remarks } : {}) };
+      continue;
+    }
+    if (!who) continue;
+    Object.assign(e, { actorId: who.actorId, actorName: who.actorName, actorRole: who.actorRole, action: who.action }, who.remarks ? { remarks: who.remarks } : {});
+    const signOff = { byId: who.actorId, byName: who.actorName, role: who.actorRole, at: e.at, ...(who.remarks ? { remarks: who.remarks } : {}) };
+    if (e.toStatus === 'DDO_CERTIFICATION') app.intake = signOff;
+    if (e.toStatus === 'OFFICE_REVIEW')
+      app.ddoCertification = { ...signOff, designation: dept?.ddoDesignation ?? 'DDO', departmentName: dept?.name ?? '', items: { name: 'OK', fatherName: 'OK', dob: 'OK', address: 'OK', designation: 'OK', office: 'OK', appointment: 'OK' }, mandateAgreed: true };
+    if (e.toStatus === 'APPROVAL_SECRETARY') app.officeReview = signOff;
+    if (e.toStatus === 'APPROVAL_PRESIDENT') app.secretaryApproval = signOff;
+    if (e.toStatus === 'SHARE_PAYMENT_PENDING') app.presidentApproval = signOff;
+    if (e.toStatus === 'ACTIVE')
+      app.shareReceipt = { receiptNo: `SH-2026-${app.id.slice(-3)}`, at: e.at, amount: app.sharesProposed * SETTINGS.shareValue, mode: app.sharePaymentRoute === 'FIRST_DEMAND' ? 'FIRST_DEMAND' : 'CASH', byName: who.actorName };
+  }
+}
+
 function addDays(iso: ISODate, days: number): ISODate {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
@@ -245,6 +338,8 @@ export interface GeneratedData {
   membershipApplications: MembershipApplication[];
   paymentReports: PaymentReport[];
   profileChangeRequests: ProfileChangeRequest[];
+  serviceEvents: ServiceEvent[];
+  mandates: RecoveryMandate[];
   notifications: AppNotification[];
   supportTickets: SupportTicket[];
 }
@@ -275,7 +370,9 @@ export function generateData(seed: number): GeneratedData {
     const to = departments[(departments.findIndex((d) => d.id === m.departmentId) + 1 + (i % 5)) % departments.length];
     if (!to) continue;
     const effectiveCycle = i < 2 ? toCycle(addMonths(cycleStart(CURRENT_CYCLE), 1)) : DEMAND_CYCLES[1 + (i % 10)] ?? CURRENT_CYCLE;
-    transfers.push({ memberId: m.id, fromDepartmentId: m.departmentId, toDepartmentId: to.id, effectiveCycle, orderRef: `GAD/TR/${2026}/${pad(100 + i, 4)}` });
+    // Recorded ten days before the month it takes effect (no RNG: keeps the rest of the dataset stable).
+    const effectiveDate = `${effectiveCycle}-01`;
+    transfers.push({ id: `trf-${pad(i + 1, 3)}`, memberId: m.id, fromDepartmentId: m.departmentId, toDepartmentId: to.id, effectiveCycle, effectiveDate, orderRef: `GAD/TR/${2026}/${pad(100 + i, 4)}`, recordedAt: `${addDays(effectiveDate, -10)}T10:30:00.000Z`, recordedByName: staff('ACCOUNTANT').name });
     m.departmentId = to.id;
   }
   const deptAt = (m: Member, c: Cycle) => {
@@ -288,14 +385,18 @@ export function generateData(seed: number): GeneratedData {
   const shareDeposit = new Map<string, Paise>();
   let appSeq = 1;
   let loanSeq = 1;
-  const pickSureties = (borrower: Member, count: number, status: Loan['sureties'][number]['status'], lastCycle: Cycle) => {
+  // BR-014 [P]: a member stands surety on at most `maxGuaranteesPerSurety` open loans.
+  const openGuarantees = new Map<string, number>();
+  const pickSureties = (borrower: Member, count: number, status: Loan['sureties'][number]['status'], lastCycle: Cycle, open: boolean) => {
     const chosen: Loan['sureties'] = [];
     let guard = 0;
-    while (chosen.length < count && guard++ < 50) {
+    while (chosen.length < count && guard++ < 200) {
       const s = rng.pick(active);
       if (s.id === borrower.id || isPersona(s) || chosen.some((c) => c.memberId === s.id)) continue;
+      if (open && (openGuarantees.get(s.id) ?? 0) >= SETTINGS.maxGuaranteesPerSurety) continue;
       chosen.push({ memberId: s.id, status, retiresDuringLoan: !checkSuretyRetirement(s.dor, lastCycle).pass });
     }
+    if (open) for (const c of chosen) openGuarantees.set(c.memberId, (openGuarantees.get(c.memberId) ?? 0) + 1);
     return chosen;
   };
 
@@ -330,7 +431,7 @@ export function generateData(seed: number): GeneratedData {
       ...(disbursedOn ? { disbursedOn } : {}),
       outstandingPrincipal: disbursedOn ? amount : 0,
       ...(opts.parentLoanId ? { parentLoanId: opts.parentLoanId } : {}),
-      sureties: p.suretiesRequired > 0 ? pickSureties(m, p.suretiesRequired, suretyStatus, lastCycle) : [],
+      sureties: p.suretiesRequired > 0 ? pickSureties(m, p.suretiesRequired, suretyStatus, lastCycle, !['CLOSED', 'CLOSED_BY_TOPUP', 'REJECTED', 'WITHDRAWN', 'DRAFT'].includes(status)) : [],
       schedule,
       events: buildEvents(rng, m, code, status === 'CLOSED' || status === 'CLOSED_BY_TOPUP' ? 'ACTIVE' : status, appliedOn, disbursedOn),
       appliedOn,
@@ -358,6 +459,11 @@ export function generateData(seed: number): GeneratedData {
   for (const m of active) {
     if (isPersona(m)) continue;
     const left = leftover(m);
+    // Retiring soon: an old 60-instalment Ordinary loan that ends just before retirement (still owing).
+    if (left <= 6 && rng.chance(0.6)) {
+      createLoan(m, 'ORDINARY', 'ACTIVE', { instalments: 60, disbursedOn: addDays(cycleStart(toCycle(addMonths(SEED_TODAY, -(60 - left + 1)))), rng.int(2, 20)) });
+      continue;
+    }
     if (left > 30 && rng.chance(0.55)) {
       const inst = Math.min(100, left - 1, rng.int(36, 100));
       createLoan(m, 'ORDINARY', 'ACTIVE', { instalments: inst, disbursedOn: recentDisbursal(m, Math.min(inst - 3, 54)) });
@@ -465,8 +571,8 @@ export function generateData(seed: number): GeneratedData {
   const slabRate = (months: number) => SETTINGS.fdSlabs.find((s) => months >= s.fromMonths && months <= s.toMonths)?.ratePercent ?? 7;
   const monthsBeforeWindow = (from: ISODate) => Math.max(0, fullMonthsBetween(from, cycleStart(WINDOW_START)));
   for (const m of active) {
-    deposits.push({ id: `dep-crd-${m.generalNo}`, accountNo: `CRD-${m.generalNo}`, memberId: m.id, scheme: 'CRD', status: 'ACTIVE', openedOn: m.joinedSocietyOn, monthlyAmount: SETTINGS.crdMonthly, ratePercent: 6, balance: monthsBeforeWindow(m.joinedSocietyOn) * SETTINGS.crdMonthly, operationMode: 'SINGLE', jointHolders: [] });
-    if (rng.chance(0.2)) deposits.push({ id: `dep-srds-${m.generalNo}`, accountNo: `SRDS-${m.generalNo}`, memberId: m.id, scheme: 'SRDS', status: 'ACTIVE', openedOn: addMonths(m.joinedSocietyOn, rng.int(1, 24)), monthlyAmount: SETTINGS.srdsMonthly, ratePercent: 6.5, balance: 0, operationMode: 'SINGLE', jointHolders: [] });
+    deposits.push({ id: `dep-crd-${m.generalNo}`, accountNo: `CRD-${m.generalNo}`, memberId: m.id, scheme: 'CRD', status: 'ACTIVE', openedOn: m.joinedSocietyOn, monthlyAmount: SETTINGS.crdMonthly, ratePercent: SETTINGS.crdRatePercent, balance: monthsBeforeWindow(m.joinedSocietyOn) * SETTINGS.crdMonthly, operationMode: 'SINGLE', jointHolders: [] });
+    if (rng.chance(0.2)) deposits.push({ id: `dep-srds-${m.generalNo}`, accountNo: `SRDS-${m.generalNo}`, memberId: m.id, scheme: 'SRDS', status: 'ACTIVE', openedOn: addMonths(m.joinedSocietyOn, rng.int(1, 24)), monthlyAmount: SETTINGS.srdsMonthly, ratePercent: SETTINGS.srdsRatePercent, balance: 0, operationMode: 'SINGLE', jointHolders: [] });
     if (rng.chance(0.3)) deposits.push({ id: `dep-sav-${m.generalNo}`, accountNo: `SAV-${m.generalNo}`, memberId: m.id, scheme: 'SAVINGS', status: 'ACTIVE', openedOn: m.joinedSocietyOn, ratePercent: SETTINGS.savingsRatePercent, balance: R(rng.step(2000, 80000, 100)), operationMode: 'SINGLE', jointHolders: [] });
   }
   for (const d of deposits) if (d.scheme === 'SRDS') d.balance = monthsBeforeWindow(d.openedOn) * SETTINGS.srdsMonthly;
@@ -514,7 +620,40 @@ export function generateData(seed: number): GeneratedData {
     if (!m) return;
     const tenure = 24;
     const principal = R(rng.step(50000, 300000, 10000));
-    deposits.push({ id: `dep-fdreq-${i + 1}`, accountNo: `REQ-${pad(i + 1, 4)}`, memberId: m.id, scheme: 'FD', status, openedOn: addDays(SEED_TODAY, -rng.int(0, 6)), principal, tenureMonths: tenure, ratePercent: slabRate(tenure), payoutFrequency: 'ON_MATURITY', balance: 0, operationMode: 'SINGLE', jointHolders: [] });
+    const openedOn = addDays(SEED_TODAY, -rng.int(0, 6));
+    // Fill each request as far as its stage (no RNG below, so the rest of the dataset is unchanged).
+    const paid = status !== 'REQUESTED' && status !== 'CANCELLED';
+    const requestedAt = `${openedOn}T09:15:00.000Z`;
+    const paidAt = `${openedOn}T12:30:00.000Z`;
+    const cashier = staff('CASHIER');
+    const secretary = staff('SECRETARY');
+    const events: WorkflowEvent[] = [{ at: requestedAt, actorId: m.id, actorName: m.name, actorRole: 'MEMBER', action: 'request', toStatus: 'REQUESTED' }];
+    if (paid) events.push({ at: paidAt, actorId: cashier.id, actorName: cashier.name, actorRole: 'CASHIER', action: 'recordPayment', fromStatus: 'REQUESTED', toStatus: 'ACCEPTANCE_SECRETARY' });
+    if (status === 'ACCEPTANCE_PRESIDENT') events.push({ at: `${openedOn}T15:00:00.000Z`, actorId: secretary.id, actorName: secretary.name, actorRole: 'SECRETARY', action: 'accept', fromStatus: 'ACCEPTANCE_SECRETARY', toStatus: 'ACCEPTANCE_PRESIDENT' });
+    if (status === 'CANCELLED') events.push({ at: `${openedOn}T16:00:00.000Z`, actorId: m.id, actorName: m.name, actorRole: 'MEMBER', action: 'cancel', fromStatus: 'REQUESTED', toStatus: 'CANCELLED' });
+    deposits.push({
+      id: `dep-fdreq-${i + 1}`,
+      accountNo: `REQ-${pad(i + 1, 4)}`,
+      memberId: m.id,
+      scheme: 'FD',
+      status,
+      openedOn,
+      principal,
+      tenureMonths: tenure,
+      ratePercent: slabRate(tenure),
+      payoutFrequency: 'ON_MATURITY',
+      balance: 0,
+      operationMode: 'SINGLE',
+      jointHolders: [],
+      nominee: m.nominee,
+      channel: 'APP',
+      requestedAt,
+      signature: { signedAt: requestedAt, textVersion: 'F4-2026.1' },
+      events,
+      ...(paid ? { payment: { mode: 'CASH' as const, amount: principal, date: openedOn, denominations: { 500: principal / 50000 }, receiptNo: `RCT-FD-${pad(i + 1, 4)}`, byName: cashier.name, at: paidAt } } : {}),
+      ...(status === 'ACCEPTANCE_PRESIDENT' ? { signOffs: { secretary: { byId: secretary.id, byName: secretary.name, role: 'SECRETARY', at: `${openedOn}T15:00:00.000Z` } } } : {}),
+      ...(status === 'CANCELLED' ? { cancelledReason: 'Changed my mind' } : {}),
+    });
   });
   // Deposit loans pledge an active FD (D-045)
   for (const fd of deposits.filter((d) => d.scheme === 'FD' && d.status === 'ACTIVE').slice(5, 9)) {
@@ -561,7 +700,9 @@ export function generateData(seed: number): GeneratedData {
         if (!isCurrent) {
           const roll = rng.next();
           const forcedShort = m.id === mahesh.id && cycle === '2026-09';
-          const recovered = forcedShort ? Math.round((totalDemand * 0.4) / 100) * 100 : roll < 0.9 ? totalDemand : roll < 0.98 ? Math.round((totalDemand * (0.4 + rng.next() * 0.5)) / 100) * 100 : 0;
+          // M9: six chronic defaulters (BR-020, 3 cycles in a row) so the Defaulters report and notice have data.
+          const chronic = CHRONIC_DEFAULTERS.indexOf(m.generalNo);
+          const recovered = chronic >= 0 && cycle >= '2026-07' ? (chronic % 2 ? Math.round((totalDemand * 0.3) / 100) * 100 : 0) : forcedShort ? Math.round((totalDemand * 0.4) / 100) * 100 : roll < 0.9 ? totalDemand : roll < 0.98 ? Math.round((totalDemand * (0.4 + rng.next() * 0.5)) / 100) * 100 : 0;
           const result = allocateRecovery(components, recovered);
           line.components = result.components;
           line.recovered = recovered;
@@ -604,6 +745,15 @@ export function generateData(seed: number): GeneratedData {
       });
     });
   });
+  // M7 sign-offs on every sheet (no RNG): generated the 5th, certified the 6th, sent the 7th, posted the 28th.
+  for (const sh of demandSheets) {
+    const acc = staff('ACCOUNTANT');
+    const so = (day: string, time: string, remarks?: string) => ({ byId: acc.id, byName: acc.name, role: 'ACCOUNTANT', at: `${sh.cycle}-${day}T${time}:00+05:30`, ...(remarks ? { remarks } : {}) });
+    sh.generated = so('05', '10:30');
+    if (sh.status !== 'GENERATED') sh.certified = so('06', '11:15', 'Certified correct (BR-030).');
+    if (sh.status === 'SENT_TO_DDO' || sh.status === 'RECOVERY_POSTED') sh.sent = so('07', '12:00');
+    if (sh.status === 'RECOVERY_POSTED') sh.posted = so('28', '16:00');
+  }
 
   // Rows before the window are settled; outstanding = sanctioned − principal recovered.
   for (const l of loans) {
@@ -646,7 +796,7 @@ export function generateData(seed: number): GeneratedData {
     for (let i = 0; i < count; i++) {
       const isRavi = status === 'DDO_CERTIFICATION' && i === 0;
       const gender = rng.chance(0.45) ? 'F' : 'M';
-      const name = isRavi ? 'Ravi Teja K' : `${gender === 'F' ? rng.pick(FIRST_NAMES_F) : rng.pick(FIRST_NAMES_M)} ${rng.pick(SURNAMES)}`;
+      const name = isRavi ? 'Ravi Teja K' : joinName(gender === 'F' ? rng.pick(FIRST_NAMES_F) : rng.pick(FIRST_NAMES_M), rng.pick(SURNAMES));
       const deptId = isRavi || (status === 'SUBMITTED' && i === 0) ? 'dept-fin' : rng.pick(departments).id;
       const submittedOn = addDays(SEED_TODAY, -rng.int(1, 20));
       const reach = status === 'INFO_REQUESTED' ? appSteps.indexOf('OFFICE_REVIEW') : status === 'REJECTED' ? appSteps.indexOf('OFFICE_REVIEW') : appSteps.indexOf(status);
@@ -671,7 +821,7 @@ export function generateData(seed: number): GeneratedData {
         sharesProposed: rng.step(10, 30, 5),
         status,
         submittedOn,
-        ...(status === 'INFO_REQUESTED' ? { infoRequest: { by: i === 0 ? 'DDO' : 'Accountant', field: i === 0 ? 'regularAppointmentDate' : 'documents.appointmentOrder', message: i === 0 ? 'Date of regular appointment does not match the service register.' : 'Please upload a clear copy of the appointment order.' } } : {}),
+        ...(status === 'INFO_REQUESTED' ? { infoRequest: { by: i === 0 ? 'DDO' : 'Accountant', field: i === 0 ? 'employment.regularAppointmentDate' : 'documents.APPOINTMENT_ORDER', message: i === 0 ? 'Date of regular appointment does not match the service register.' : 'Please upload a clear copy of the appointment order.' } } : {}),
         ...(status === 'SHARE_PAYMENT_PENDING' || status === 'ACTIVE' ? { sharePaymentRoute: rng.chance(0.5) ? 'COUNTER' : 'FIRST_DEMAND' } : {}),
         ...(status === 'ACTIVE' ? { allottedGeneralNo: String(newGeneralNo++) } : {}),
         events,
@@ -682,6 +832,12 @@ export function generateData(seed: number): GeneratedData {
       aSeq++;
     }
   }
+  // Full F1 form + staff sign-offs on every seeded application. A separate RNG stream keeps the
+  // rest of the dataset identical. The second "Received" application reuses a member's mobile
+  // so the duplicate check has something to find.
+  const formRng = createRng(seed + 2026);
+  membershipApplications.forEach((app, i) => enrichApplication(formRng, app, i === 1 ? members[49]?.mobile : undefined));
+
   // New members activated this month exist as members too (General No. 1601…)
   for (const app of membershipApplications.filter((a) => a.status === 'ACTIVE')) {
     const m = makeMember(rng, Number(app.allottedGeneralNo), { name: app.name, departmentId: app.departmentId, designation: app.designation, status: 'ACTIVE', portalActivated: true, joinedSocietyOn: addDays(SEED_TODAY, -rng.int(1, 10)), age: rng.int(24, 32) });
@@ -702,24 +858,83 @@ export function generateData(seed: number): GeneratedData {
     status,
     ...(status === 'REJECTED' ? { rejectReason: 'No matching credit found in the bank statement.' } : {}),
   }));
+  // M7 (no RNG): open reports belong to members who really owe from a short cycle; Mahesh reports his
+  // September short exactly, so the cashier can verify it and the dues clear (D-043, D-061).
+  const arrearsOf = new Map<string, Paise>();
+  for (const sh of demandSheets) {
+    if (sh.status !== 'RECOVERY_POSTED') continue;
+    for (const l of sh.lines) {
+      const short = l.totalDemand - (l.recovered ?? 0);
+      if (short > 0) arrearsOf.set(l.memberId, (arrearsOf.get(l.memberId) ?? 0) + short);
+    }
+  }
+  const owing = [...arrearsOf.entries()].filter(([id]) => id !== mahesh.id).sort((a, b) => a[0].localeCompare(b[0]));
+  let open = 0;
+  paymentReports.forEach((r, i) => {
+    r.towards = 'DUES';
+    r.reportedAt = `${r.paidOn}T18:20:00+05:30`;
+    if (r.status === 'REPORTED') {
+      const [memberId, owed] = i === 0 ? [mahesh.id, arrearsOf.get(mahesh.id) ?? r.amount] : (owing[(open++ * 37) % Math.max(1, owing.length)] ?? [r.memberId, r.amount]);
+      r.memberId = memberId;
+      r.amount = Math.floor(owed / 100) * 100;
+      if (i === 0) r.screenshotName = 'upi-payment-screenshot.jpg';
+    } else {
+      r.decided = { byId: staff('CASHIER').id, byName: staff('CASHIER').name, role: 'CASHIER', at: `${r.paidOn}T15:00:00+05:30`, ...(r.status === 'REJECTED' ? { remarks: r.rejectReason } : {}) };
+    }
+  });
 
-  const pcrPlan: Array<[ProfileChangeRequest['status'], string, string, string]> = [
-    ['PENDING', 'nominee.name', 'Old nominee', 'New nominee after marriage'],
-    ['PENDING', 'designation', 'Junior Assistant', 'Senior Assistant'],
-    ['PENDING', 'permanentAddress', 'Warangal', 'Hyderabad'],
-    ['APPROVED', 'email', '', 'updated@example.org'],
-    ['APPROVED', 'nominee.relation', 'Father', 'Spouse'],
-    ['REJECTED', 'dob', '1985-04-12', '1986-04-12'],
+  // ST-18 / MB-19 (D-057). No RNG: values come from the members themselves.
+  const finance = active.filter((m) => m.departmentId === 'dept-fin' && !isPersona(m));
+  const other = (i: number) => active.filter((m) => m.departmentId !== 'dept-fin' && !isPersona(m))[(i * 53 + 4) % 400] ?? mahesh;
+  const changed: Record<ProfileField, (m: Member) => string> = {
+    name: (m) => `${m.name} K`,
+    fatherName: (m) => `${m.fatherName} Rao`,
+    dob: (m) => addDays(m.dob, 365),
+    designation: (m) => (m.designation === 'Senior Assistant' ? 'Superintendent' : 'Senior Assistant'),
+    doj: (m) => addDays(m.doj, -30),
+    dor: (m) => addDays(m.dor, 31),
+    'nominee.name': (m) => m.nominee.name.replace(' ', ' K '),
+    'nominee.relation': (m) => (m.nominee.relation === 'Spouse' ? 'Son' : 'Spouse'),
+    'payProfile.scaleOfPay': () => '42300-115270',
+    'payProfile.grossSalary': (m) => String(Math.round(m.payProfile.grossSalary / 100) + 4200),
+  };
+  const pcrPlan: Array<{ m: Member; fields: ProfileField[]; status: ProfileChangeRequest['status']; daysAgo: number; reason: string; doc?: string; ddo?: boolean }> = [
+    { m: lakshmi, fields: ['nominee.name'], status: 'PENDING', daysAgo: 2, reason: 'Nominee name corrected as per Aadhaar' },
+    { m: finance[3] ?? sravani, fields: ['designation', 'payProfile.grossSalary'], status: 'PENDING', daysAgo: 4, reason: 'Promoted from 01 Sep 2026', doc: 'promotion-order.pdf' },
+    { m: other(1), fields: ['designation'], status: 'PENDING', daysAgo: 6, reason: 'Promotion order dated 12 Aug 2026', doc: 'go-promotion.pdf', ddo: true },
+    { m: other(2), fields: ['fatherName'], status: 'PENDING', daysAgo: 1, reason: 'Spelling as in the service register' },
+    { m: other(3), fields: ['nominee.relation'], status: 'APPROVED', daysAgo: 20, reason: 'Married in June 2026' },
+    { m: other(4), fields: ['dor'], status: 'APPROVED', daysAgo: 35, reason: 'Retirement date corrected by the department', doc: 'dor-correction.pdf', ddo: true },
+    { m: other(5), fields: ['dob'], status: 'REJECTED', daysAgo: 15, reason: 'Date of birth is wrong in the records' },
   ];
-  const profileChangeRequests: ProfileChangeRequest[] = pcrPlan.map(([status, field, oldValue, newValue], i) => ({
-    id: `pcr-${pad(i + 1, 3)}`,
-    memberId: i === 0 ? lakshmi.id : (active[(i * 53 + 4) % active.length]?.id ?? lakshmi.id),
-    field,
-    oldValue,
-    newValue,
-    reason: status === 'REJECTED' ? 'Date of birth changes need a service register extract.' : 'Updated personal details',
-    status,
-  }));
+  const profileChangeRequests: ProfileChangeRequest[] = pcrPlan.map((p, i) => {
+    const route = changeRequestRoute(p.fields);
+    const createdAt = `${addDays(SEED_TODAY, -p.daysAgo)}T09:30:00.000Z`;
+    const later = (d: number) => `${addDays(SEED_TODAY, -p.daysAgo + d)}T15:00:00.000Z`;
+    const ddoName = departments.find((d) => d.id === p.m.departmentId)?.ddoName ?? 'DDO';
+    return {
+      id: `pcr-${pad(i + 1, 3)}`,
+      memberId: p.m.id,
+      fields: p.fields.map((field) => ({ field, oldValue: profileFieldValue(p.m, field), newValue: changed[field](p.m) })),
+      reason: p.reason,
+      ...(p.doc ? { documentName: p.doc } : {}),
+      route,
+      status: p.status,
+      createdAt,
+      ...(route === 'DDO_THEN_OFFICE' && (p.ddo || p.status !== 'PENDING') ? { ddoCertified: { byName: ddoName, at: later(1) } } : {}),
+      ...(p.status !== 'PENDING' ? { decidedByName: staff('ACCOUNTANT').name, decidedAt: later(2) } : {}),
+      ...(p.status === 'REJECTED' ? { remarks: 'Date of birth changes need a service register extract.' } : {}),
+    };
+  });
+  // Approved requests are already applied to the member master.
+  for (const r of profileChangeRequests.filter((x) => x.status === 'APPROVED')) {
+    const m = byId.get(r.memberId);
+    for (const f of r.fields) {
+      if (!m) continue;
+      if (f.field === 'nominee.relation') m.nominee = { ...m.nominee, relation: f.newValue as Member['nominee']['relation'] };
+      if (f.field === 'dor') m.dor = f.newValue;
+    }
+  }
 
   const notifications: AppNotification[] = [];
   let nSeq = 1;
@@ -741,6 +956,71 @@ export function generateData(seed: number): GeneratedData {
     status,
     createdAt: at(addDays(SEED_TODAY, -rng.int(1, 40)), rng),
   }));
+  // MB-13 (M8, no RNG): the conversation on each ticket; answered / closed ones carry the office reply.
+  const TICKET_TEXT: Array<[SupportTicket['category'], string, string]> = [
+    ['DEPOSIT', 'I opened an FD last week but have not received the FD receipt yet.', 'Your FDR is issued once the President accepts the deposit. You will see it in the app under Deposits.'],
+    ['PROFILE', 'My nominee name is spelt wrongly. Please correct it.', 'Please raise a change request from Profile → Request a change with your corrected nominee details.'],
+    ['LOAN', 'Please send me the statement of my ordinary loan.', 'Your statement is in the app: Loans → your loan → Repayment schedule. A printed copy is ready at the counter.'],
+    ['PAYMENT', 'Why was ₹1,000 deducted as insurance this month?', 'The yearly insurance contribution is collected in April: ₹1,000 for members with a loan, ₹200 otherwise (BR-008).'],
+    ['PROFILE', 'I changed my mobile number. How do I update it?', 'Go to Profile → Edit and change the mobile number; we send an OTP to the new number to confirm.'],
+    ['APP', 'I cannot sign in to the app.', 'Use Forgot password on the sign-in screen. The OTP goes to your registered mobile.'],
+  ];
+  supportTickets.forEach((t, i) => {
+    const [category, ask, reply] = TICKET_TEXT[i] ?? ['OTHER', t.subject, 'We have answered your query.'];
+    const member = byId.get(t.memberId);
+    t.category = category;
+    t.messages = [{ from: 'MEMBER', byName: member?.name ?? 'Member', at: t.createdAt, text: ask }];
+    if (t.status !== 'OPEN') t.messages.push({ from: 'OFFICE', byName: staff('ACCOUNTANT').name, at: t.createdAt.replace(/T(\d\d)/, (_, h: string) => `T${String(Math.min(19, Number(h) + 2)).padStart(2, '0')}`), text: reply });
+    t.updatedAt = t.messages.at(-1)!.at;
+  });
 
-  return { members, shareAccounts, loans, deposits, transfers, demandSheets, receipts, membershipApplications, paymentReports, profileChangeRequests, notifications, supportTickets };
+  const { serviceEvents, mandates } = buildServiceHistory(members, transfers);
+
+  // M9 ST-03: a few in-app notifications for each staff persona (fixed times, no RNG, so nothing else shifts).
+  const staffNote = (recipientId: string, title: string, body: string, daysAgo: number, hour: number, read: boolean, link?: string) =>
+    notifications.push({ id: `ntf-s${pad(nSeq++, 4)}`, recipientId, title, body, channel: 'IN_APP', createdAt: `${addDays(SEED_TODAY, -daysAgo)}T${String(hour).padStart(2, '0')}:15:00.000Z`, read, ...(link ? { link } : {}) });
+  staffNote('stf-admin', 'Demand sheets pending', 'Three departments have no demand sheet for the current month yet.', 0, 5, false, '/demand-sheets');
+  staffNote('stf-admin', 'Interest rates reviewed', 'The FD slab table was last changed 30 days ago. Check it against the board resolution.', 3, 6, true, '/settings/rates');
+  staffNote('stf-admin', 'Monthly MIS ready', 'Department-wise collections for the last month are ready in Reports.', 6, 4, true, '/reports');
+  staffNote('stf-accountant', 'Payment reported by a member', `${mahesh.name} reported a bank payment towards the short months. Verify it against the statement.`, 0, 4, false, '/payments?tab=REPORTED');
+  staffNote('stf-accountant', 'New loan applications', 'Loan applications are waiting for your review in the Work Queue.', 1, 5, false, '/queue');
+  staffNote('stf-accountant', 'Member question', `${lakshmi.name} asked about an FD receipt. Answer it from Notifications → Member questions.`, 2, 6, true, '/notifications?tab=questions');
+  staffNote('stf-secretary', 'Loans waiting for sanction', 'Loans assessed by the Accountant are waiting for your signature.', 0, 5, false, '/queue');
+  staffNote('stf-secretary', 'Fixed deposit to accept', 'A fixed deposit whose payment has been received is waiting for your acceptance.', 2, 4, true, '/queue?tab=deposit');
+  staffNote('stf-president', 'Final sanction pending', 'Loans signed by the Secretary are waiting for your final sanction.', 0, 6, false, '/queue');
+  staffNote('stf-president', 'Membership approvals', 'Membership applications approved by the Secretary are waiting for you.', 4, 5, true, '/queue?tab=membership');
+  staffNote('stf-cashier', 'Ready to disburse', 'Sanctioned loans are waiting for payment.', 0, 4, false, '/queue?tab=SANCTIONED');
+  staffNote('stf-cashier', 'Payment reported by a member', 'A member reported a UPI payment. Match it with the bank statement.', 1, 7, false, '/payments?tab=REPORTED');
+  staffNote('stf-ddo-fin', 'Applications to certify', 'Finance department applications are waiting for your certificate.', 0, 5, false, '/queue');
+  staffNote('stf-ddo-fin', 'Demand sheet received', 'The society sent this month’s demand for the Finance department.', 7, 6, true, '/demand-sheets');
+
+  return { members, shareAccounts, loans, deposits, transfers, demandSheets, receipts, membershipApplications, paymentReports, profileChangeRequests, notifications, supportTickets, serviceEvents, mandates };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Service history + recovery mandates (ST-12, BR-028). Derived, no RNG.
+// ---------------------------------------------------------------------------------------------
+
+function buildServiceHistory(members: Member[], transfers: TransferEvent[]) {
+  const serviceEvents: ServiceEvent[] = [];
+  const mandates: RecoveryMandate[] = [];
+  const deptName = (id: string) => departments.find((d) => d.id === id)?.name ?? id;
+  const ddoName = (id: string) => departments.find((d) => d.id === id)?.ddoName ?? 'DDO';
+  let seq = 1;
+  const event = (e: Omit<ServiceEvent, 'id'>) => serviceEvents.push({ id: `sev-${pad(seq++, 5)}`, ...e });
+  for (const m of members) {
+    const t = transfers.find((x) => x.memberId === m.id);
+    const firstDept = t?.fromDepartmentId ?? m.departmentId;
+    event({ memberId: m.id, type: 'JOINED', date: m.joinedSocietyOn, summary: `Joined the society (General No. ${m.generalNo}) from ${deptName(firstDept)} as ${m.designation}` });
+    mandates.push({ id: `mdt-${m.generalNo}-1`, memberId: m.id, departmentId: firstDept, status: t ? 'SUPERSEDED' : 'AGREED', signedOn: m.joinedSocietyOn, agreedOn: m.joinedSocietyOn, agreedByName: ddoName(firstDept) });
+    if (t) {
+      const recorded = (t.recordedAt ?? `${t.effectiveCycle}-01`).slice(0, 10);
+      event({ memberId: m.id, type: 'TRANSFERRED', date: recorded, effectiveCycle: t.effectiveCycle, summary: `Transferred from ${deptName(t.fromDepartmentId)} to ${deptName(t.toDepartmentId)} (order ${t.orderRef})`, ...(t.recordedByName ? { byName: t.recordedByName } : {}) });
+      // Next-cycle transfers still wait for the new DDO to agree the salary recovery (BR-028).
+      const pending = t.effectiveCycle > CURRENT_CYCLE;
+      mandates.push({ id: `mdt-${m.generalNo}-2`, memberId: m.id, departmentId: t.toDepartmentId, status: pending ? 'PENDING_NEW_DDO' : 'AGREED', signedOn: recorded, ...(pending ? {} : { agreedOn: addDays(recorded, 3), agreedByName: ddoName(t.toDepartmentId) }) });
+    }
+    if (m.status === 'RETIRED') event({ memberId: m.id, type: 'RETIRED', date: m.dor <= SEED_TODAY ? m.dor : SEED_TODAY, summary: 'Retired from service' });
+  }
+  return { serviceEvents, mandates };
 }

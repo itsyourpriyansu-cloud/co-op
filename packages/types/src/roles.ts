@@ -43,10 +43,18 @@ export type Permission =
   | 'queue.view'
   | 'membership.view'
   | 'members.view'
+  | 'members.edit'
+  | 'members.decideChanges'
   | 'loans.view'
+  | 'loans.create'
   | 'deposits.view'
+  | 'deposits.open'
   | 'collections.view'
   | 'reports.view'
+  /** ST-03 simulated message composer (D-063). */
+  | 'messages.send'
+  /** ST-03 reply to member questions from MB-13 (D-063). */
+  | 'support.reply'
   | 'settings.view'
   | 'settings.edit'
   | 'users.manage'

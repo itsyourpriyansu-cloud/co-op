@@ -1,6 +1,6 @@
 # 12 · Design Direction & Design System
 
-> Version 0.3 · 2026-10-24 · Status: **Proposed (D-034)**. Tokens live in `packages/design-tokens` → Tailwind preset (web) + NativeWind preset (app).
+> Version 0.5 · 2026-10-25 · Status: **Proposed (D-034)**. Tokens live in `packages/design-tokens` → Tailwind preset (web) + NativeWind preset (app).
 > Research basis: platform guidelines (Material 3, WCAG 2.2), Google's HEART metrics framework, and fintech/banking UX practice. Sources are listed in §10. Points marked *(practice)* come from industry articles, not standards.
 
 ---
@@ -136,9 +136,22 @@ Dark mode: Admin Console supports it (long working sessions). The app starts lig
 |---|---|---|
 | **Spot illustrations** (flat, 2-tone: teal + gold on neutral) | Empty states, onboarding, success screens (application submitted, General No. allotted, loan disbursed), MA-04 offline | One consistent set, recoloured to the tokens. Source from an open-licensed set that allows recolouring, or commission it (verify the licence) |
 | **Data as imagery** | Dashboards, the member snapshot card, allocation waterfall | Charts follow `dataviz` rules: muted series, one highlight colour |
-| **Society identity** | Login/splash, letterhead, FDR, prints | Society logo (Q-008) + name + Regd. No. P-929 |
+| **Society identity** | Login/splash, letterhead, FDR, prints | The official seal (D-052) + name + Regd. No. P-929. See "Seal usage" below |
 | **Document thumbnails** | Member documents, uploaded proofs | Real file previews, not generic icons |
 | **Avoid** | Stock photos of people, the Secretariat building photo (rights unclear), 3D clip-art | Feels inauthentic in a members-only institution |
+
+**Seal usage (D-052).** Master: `assets/brand/tgseccsl-seal-source.jpg` (as supplied) and `assets/brand/tgseccsl-seal.png` (1024 px, circle cropped, transparent outside the ring, seal navy `#012258`).
+
+| Where | File | Size shown |
+|---|---|---|
+| Member App: Welcome / Sign in / Home header | `apps/member-app/assets/images/seal.png` via `components/Logo.tsx` | 120 / 72 / 48 dp |
+| Android icon (legacy) | `assets/icon.png`: seal at 90 % on white | launcher |
+| Android adaptive icon | `android-icon-foreground.png` (seal at 62 %, inside the 66/108 safe zone) on white `android-icon-background.png`; `android-icon-monochrome.png` = seal ink only (themed icons) | launcher |
+| Splash | `assets/splash-icon.png` via the `expo-splash-screen` plugin, 200 dp on white | splash |
+| Admin Console: login panel / sidebar | `apps/admin-console/src/assets/seal.png` via `components/Seal.tsx` | 56 / 36 px |
+| Admin Console: favicon, touch icon | `public/favicon.png` (64), `public/apple-touch-icon.png` (180) | browser |
+
+Rules: always show the whole seal, never recolour, crop or put it inside another shape; minimum 32 px (it becomes a navy ring below that, which is acceptable only for the favicon); keep clear space of ¼ of its diameter. The seal reads "TGSECCS", while the app name is "TGSECCSL" (the "L" stands for "Ltd."). Both are correct. Regenerate every size from the master PNG, never from a screenshot.
 
 ## 7. Components
 
@@ -183,3 +196,12 @@ Google's HEART framework covers Happiness, Engagement, Adoption, Retention and T
 - Lucide for React Native (same set as shadcn's lucide-react): lucide.dev docs
 - Banking/fintech app practice (bottom nav, progressive onboarding, resume later, terms up front): Meniga, ProCreator, Entropik articles
 - Enterprise data tables (key column left, alignment, bulk actions): Pencil & Paper table UX analysis, Stephanie Walter's resource list, NN/g "Data Tables: Four Major User Tasks" (cited via secondary sources)
+
+## M10 accessibility pass (D-064)
+
+- **Text tertiary** is `#666C79` in light mode (was gray-500 `#717784`, 4.49:1). Passes 4.5:1 on canvas, surface, subtle and the brand tint.
+- **Blend overrides** live in two places only: `apps/admin-console/src/app/theme.tsx` (`componentTokens`: TagV2 subtle warning / success / error text, StatCardV2 change colours; light mode) and the end of `apps/admin-console/src/index.css` (scoped rules on Blend `data-element` hooks: stat-card title/subtitle, sidebar section labels, `.tgs-datatable` headers, select placeholders, hint text, upcoming stepper titles, inactive boxed tabs, checkbox labels). Remove a rule when Blend fixes it upstream.
+- **Avatars**: people next to their name use `components/Initials.tsx` (brand tint, `aria-hidden`), not `AvatarV2` (its hashed fills fail contrast).
+- **Member App on brand blue**: secondary text `onBrandMuted` (#EEF4FE, 5:1) and tiles `onBrandTile` (black 12%) from `src/theme.ts`; never translucent white.
+- **Radios / checkboxes** on the phone set `aria-checked` as well as `accessibilityState` (react-native-web reads the former).
+- Result: axe (WCAG 2.2 AA) reports no critical/serious issues on 27 console routes (light and dark) and 25 phone screens. Known library warnings: Blend's `forwardRef` and `outlineOffset` dev warnings.

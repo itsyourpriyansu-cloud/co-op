@@ -1,99 +1,50 @@
-// Console smoke: every built screen renders with real mock data, role scoping works, no runtime
-// errors, and full-page screenshots land in test-results/screens for visual review.
-import { expect, test, type Page } from '@playwright/test';
+// Console smoke (docs/15): every console route renders for a role that may see it, with a heading,
+// no error / no-access state and no runtime errors. Screenshots land in test-results/screens.
+import { CONSOLE_ROUTES, fillIds, seededIds, type Ids } from './routes';
+import { consoleAs, CONSOLE_URL, expect, resetDemo, shot, test } from './support';
 
-const shot = (page: Page, name: string) => page.screenshot({ path: `test-results/screens/${name}.png`, fullPage: true });
+test.describe('console smoke', () => {
+  test.beforeEach(async ({ request }) => resetDemo(request));
 
-function trackErrors(page: Page) {
-  const errors: string[] = [];
-  page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => {
-    if (m.type() === 'error') errors.push(m.text());
+  test('login lists the staff personas and signs in', async ({ page }) => {
+    await page.goto(`${CONSOLE_URL}/login`);
+    await expect(page.getByRole('button', { name: /Anitha Rao/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Kiran Kumar/ })).toBeVisible();
+    await shot(page, 'console-login');
+    await page.getByRole('button', { name: /Suresh Goud/ }).click();
+    await page.waitForURL('**/dashboard');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
-  return errors;
-}
 
-async function signInAs(page: Page, name: string) {
-  await page.goto('/login');
-  await page.getByRole('button', { name: new RegExp(name) }).click();
-  await page.waitForURL('**/dashboard');
-}
-
-test('login lists the staff personas', async ({ page }) => {
-  const errors = trackErrors(page);
-  await page.goto('/login');
-  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Anitha Rao/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Kiran Kumar/ })).toBeVisible();
-  await shot(page, '01-login');
-  expect(errors).toEqual([]);
-});
-
-test('Super Admin dashboard shows live KPIs and the full navigation', async ({ page }) => {
-  const errors = trackErrors(page);
-  await signInAs(page, 'Anitha Rao');
-  await expect(page.getByText('Active members')).toBeVisible();
-  await expect(page.getByText('Loan pipeline')).toBeVisible();
-  await expect(page.getByRole('navigation').getByText('Deposits')).toBeVisible();
-  await page.waitForTimeout(400);
-  await shot(page, '02-dashboard-admin');
-  expect(errors).toEqual([]);
-});
-
-test('DDO sees only their department and no Deposits or Reports', async ({ page }) => {
-  await signInAs(page, 'Kiran Kumar');
-  await expect(page.getByText('your department only')).toBeVisible();
-  await expect(page.getByRole('navigation').getByText('Deposits')).toHaveCount(0);
-  await expect(page.getByRole('navigation').getByText('Reports')).toHaveCount(0);
-  await page.goto('/deposits');
-  await expect(page.getByText("You don't have access to this")).toBeVisible();
-  await shot(page, '03-ddo-no-access');
-});
-
-test('module skeleton page explains its milestone', async ({ page }) => {
-  await signInAs(page, 'Suresh Goud');
-  await page.goto('/loans');
-  await expect(page.getByText('Loans is next on the build plan')).toBeVisible();
-  await shot(page, '04-module-loans');
-});
-
-test('design system: every tab renders', async ({ page }) => {
-  const errors = trackErrors(page);
-  await signInAs(page, 'Anitha Rao');
-  for (const tab of ['foundations', 'components', 'status', 'states', 'scenarios']) {
-    await page.goto(`/design?tab=${tab}`);
-    await page.waitForTimeout(600);
-    await shot(page, `05-design-${tab}`);
+  // One test per route, so a failure names the screen. Detail ids are looked up once per run.
+  let ids: Ids | undefined;
+  for (const [template, persona] of CONSOLE_ROUTES) {
+    test(`route ${template} renders for ${persona}`, async ({ page, request }) => {
+      ids ??= await seededIds(request);
+      await consoleAs(page, request, persona, fillIds(template, ids));
+      await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+      await expect(page.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 20_000 });
+      await expect(page.getByText("We couldn't load this")).toHaveCount(0);
+      await expect(page.getByText("You don't have access to this")).toHaveCount(0);
+      await shot(page, `route${template.replace(/[/:]/g, '_')}`);
+    });
   }
-  await expect(page.getByText(/scenarios generated from the dataset/)).toBeVisible();
-  expect(errors).toEqual([]);
-});
 
-test('state explorer renders each state for the list pattern', async ({ page }) => {
-  await signInAs(page, 'Anitha Rao');
-  for (const state of ['loading', 'empty', 'error', 'partial']) {
-    await page.goto(`/design?tab=states&pattern=list&state=${state}`);
-    await page.waitForTimeout(400);
-    await shot(page, `06-state-list-${state}`);
-  }
-  await page.goto('/design?tab=states&pattern=detail&state=ready');
-  await page.waitForTimeout(400);
-  await shot(page, '06-state-detail-ready');
-});
+  test('DDO sees only their department and no Deposits or Reports', async ({ page, request }) => {
+    await consoleAs(page, request, 'stf-ddo-fin');
+    const nav = page.getByRole('navigation');
+    await expect(nav.getByText('Deposits')).toHaveCount(0);
+    await expect(nav.getByText('Reports')).toHaveCount(0);
+    await page.goto(`${CONSOLE_URL}/deposits`);
+    await expect(page.getByText("You don't have access to this")).toBeVisible();
+  });
 
-test('dark mode applies tokens and Blend dark theme', async ({ page }) => {
-  await signInAs(page, 'Padma Reddy');
-  await page.getByRole('button', { name: 'Switch to dark mode' }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.waitForTimeout(400);
-  await shot(page, '07-dashboard-dark');
-  await page.getByRole('button', { name: 'Switch to light mode' }).click();
-});
-
-test('scenario catalog jumps to a persona', async ({ page }) => {
-  await signInAs(page, 'Anitha Rao');
-  await page.goto('/design?tab=scenarios');
-  await page.getByRole('button', { name: /Padma Reddy · Secretary/ }).first().click();
-  await page.waitForURL('**/loans');
-  await expect(page.getByText('Padma Reddy').first()).toBeVisible();
+  test('dark mode applies tokens', async ({ page, request }) => {
+    await consoleAs(page, request, 'stf-secretary');
+    await page.getByRole('button', { name: 'Switch to dark mode' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await shot(page, 'dashboard-dark');
+    await page.getByRole('button', { name: 'Switch to light mode' }).click();
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'dark');
+  });
 });

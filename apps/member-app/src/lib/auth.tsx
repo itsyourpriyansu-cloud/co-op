@@ -19,6 +19,12 @@ interface AuthContextValue {
   session: Session | null;
   me: Me | undefined;
   loginAsPersona: (personaId: string) => Promise<Session>;
+  /** MA-01: General No. or Employee ID + password. */
+  signIn: (login: string, password: string) => Promise<Session>;
+  /** Use a session obtained elsewhere (e.g. applicant sign-up OTP, MJ-02). */
+  adoptSession: (session: Session) => Promise<void>;
+  /** Re-read the user from /me (an approved applicant becomes a member on the same login). */
+  syncSession: () => Promise<Session | null>;
   logout: () => Promise<void>;
 }
 
@@ -60,6 +66,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return next;
   }, []);
 
+  const signIn = useCallback(
+    async (login: string, password: string) => {
+      const next = await api.auth.memberLogin(login, password);
+      await saveSession(next);
+      setSession(next);
+      queryClient.clear();
+      return next;
+    },
+    [queryClient],
+  );
+
+  const adoptSession = useCallback(
+    async (next: Session) => {
+      await saveSession(next);
+      setSession(next);
+      queryClient.clear();
+    },
+    [queryClient],
+  );
+
+  const syncSession = useCallback(async () => {
+    if (!session) return null;
+    const me = await api.me();
+    const next: Session = { token: session.token, user: me.user };
+    await saveSession(next);
+    setSession(next);
+    return next;
+  }, [session]);
+
   const logout = useCallback(async () => {
     await api.auth.logout().catch(() => undefined);
     await clearSession();
@@ -68,8 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ ready, session, me: meQuery.data, loginAsPersona, logout }),
-    [ready, session, meQuery.data, loginAsPersona, logout],
+    () => ({ ready, session, me: meQuery.data, loginAsPersona, signIn, adoptSession, syncSession, logout }),
+    [ready, session, meQuery.data, loginAsPersona, signIn, adoptSession, syncSession, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

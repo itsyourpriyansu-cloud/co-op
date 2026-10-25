@@ -1,5 +1,5 @@
-// Session token in the device keystore (expo-secure-store), cached in memory for fast requests.
-import * as SecureStore from 'expo-secure-store';
+// Session token in the device keystore (web preview: localStorage), cached in memory for fast requests.
+import * as storage from './storage';
 import type { Session } from '@tgs/types';
 
 const KEY = 'tgs.app.session';
@@ -12,7 +12,7 @@ export function getCachedToken(): string | null {
 
 export async function loadSession(): Promise<Session | null> {
   try {
-    const raw = await SecureStore.getItemAsync(KEY);
+    const raw = await storage.getItem(KEY);
     cached = raw ? (JSON.parse(raw) as Session) : null;
   } catch {
     cached = null;
@@ -22,12 +22,12 @@ export async function loadSession(): Promise<Session | null> {
 
 export async function saveSession(session: Session): Promise<void> {
   cached = session;
-  await SecureStore.setItemAsync(KEY, JSON.stringify(session));
+  await storage.setItem(KEY, JSON.stringify(session));
 }
 
 export async function clearSession(): Promise<void> {
   cached = null;
-  await SecureStore.deleteItemAsync(KEY).catch(() => undefined);
+  await storage.removeItem(KEY).catch(() => undefined);
 }
 
 /** The auth provider registers here so a 401 from any request signs the user out. */

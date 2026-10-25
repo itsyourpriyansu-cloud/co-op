@@ -1,6 +1,6 @@
 # 14 · Implementation Plan
 
-> Phase 5 · Version 0.2 · 2026-10-24 · Applies to the **accepted MVP** (D-023): Admin Console 36 pages, Member App 19 screens, shared mock API.
+> Phase 5 · Version 0.3 · 2026-10-25 (status: demo-ready) · Applies to the **accepted MVP** (D-023): Admin Console 36 pages, Member App 19 screens, shared mock API.
 > Gate: no milestone starts before D-000 "Plan approved" is Accepted in `decisions-log.md`.
 > Milestones are **vertical slices**: each one delivers the API endpoints, the web screens and the mobile screens for one module, so cross-app journeys work as soon as the module is done.
 
@@ -54,16 +54,17 @@ flowchart LR
 | Milestone | Status | Notes |
 |---|---|---|
 | M0 | ✅ Done 2026-10-24 (branch `m0-foundation`) | Real APK on a phone still to do (needs an Expo account). Console visual check by the user pending |
-| M1 | Not started | |
-| M2 | Not started | |
-| M3 | Not started | |
-| M4 | Not started | |
-| M5 | Not started | |
-| M6 | Not started | |
-| M7 | Not started | |
-| M8 | Not started | |
-| M9 | Not started | |
-| M10 | Not started | |
+| M1 | ✅ Done 2026-10-24 | 76 domain tests, **100% statements/branches/functions/lines** (`npm run test:domain-coverage`); 53 seed integrity tests; state machines for loans, FDs, demand sheets, membership |
+| M2 | ✅ Done 2026-10-24 | ST-60…68 console + MB-16 rates with EMI estimate. Exit test passed live (11% → 13% changes the phone EMI). See build-history/02 |
+| M3 | ✅ Done 2026-10-24 | Joining (03a) + Members module (03b): ST-10…13, ST-18, MB-02, MB-19. J-09 (API tests), J-11 (browser) and the cross-app change request pass |
+| M4 | ✅ Done 2026-10-24 | ST-20, ST-21, ST-23 + MB-03, MB-04, MB-05. Exit passed on the live API (phone application → ST-20; Ramaiah BR-002 block). See build-history/04 |
+| M5 | ✅ Done 2026-10-24 | ST-02, ST-22, ST-24…28, sanction letter, MB-06, MB-07, MB-04 actions. Exit J-01 → J-08 passed on the live API with personas. See build-history/05 |
+| M6 | ✅ Done 2026-10-24 | ST-30…33, FDR print, MB-08, MB-09, MB-15. Exit J-16 passed live across both apps (phone request → cashier → Secretary → President → FDR on the phone). See build-history/06 |
+| M7 | ✅ Done 2026-10-24 | ST-40…47, MB-10, MB-18. J-10 passed live; Mahesh's September waterfall identical on web and phone; his reported payment verified and dues cleared. See build-history/07 |
+| M8 | ✅ Done 2026-10-25 | MA-01 real sign-in, MA-02 activation, MA-03 forgot password, MB-01 live home, MB-11 calculators, MB-12 notifications, MB-13 help & support, MB-14 settings, MB-17 change password. J-14 passed live (a seeded member who never activated activates and signs in). See build-history/08 |
+| M9 | ✅ Done 2026-10-25 | ST-01 five dashboard variants, ST-03 notifications + simulated composer + member questions, ST-50 catalogue, ST-51 viewer with 8 reports (CSV + print), ST-52 defaulter notice and F1–F6 form twins. J-13 passed (report totals reconcile with the ledgers). See build-history/09 |
+| M10 | ✅ Done 2026-10-25 (demo scope) | a11y pass (axe WCAG 2.2 AA clean, console light + dark, phone), state audit with the failure switch (console guard fix), topbar global search, M3–M5 visual check, DEMO-SCRIPT.md with Act 3 rehearsed. Signed APK, device test and hosting deferred until asked (D-054). See build-history/10 |
+| Demo-ready | ✅ Done 2026-10-25 | Demo clock (D-065). Playwright suite as the acceptance gate (D-066): console routes, J-03…J-14, cross-app AC-X01, axe light + dark + phone, error states, screen sizes, the whole DEMO-SCRIPT. `npm run demo:prod` on :5180. Nine real bugs fixed (see build-history/11). 188 Playwright tests; demo script green twice in a row. Real phone over Wi-Fi documented, not verified on a device |
 
 ### v0.3 notes
 - M3 also delivers **J-15 (join)** and **J-19 (DDO certify)** across both apps. Exit: an applicant joins on the phone → DDO, office, Secretary and President act on the web → the share payment is recorded → the phone switches to member mode with a General No.

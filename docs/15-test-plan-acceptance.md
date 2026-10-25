@@ -1,6 +1,6 @@
 # 15 · Test Plan & Acceptance Criteria
 
-> Version 0.3 · 2026-10-24 (two apps + shared mock API)
+> Version 0.5 · 2026-10-25 (two apps + shared mock API) · §1 "as built" column and §5 updated for demo-ready (D-066)
 
 ## 1. Test layers
 
@@ -10,11 +10,11 @@
 | Mock API tests | Vitest + Hono `app.request` | Every endpoint: happy path, validation, FORBIDDEN scoping (DDO, member), state machine (valid/invalid), idempotency | Each milestone's endpoints |
 | Component tests (web) | Vitest + Testing Library | Forms, EligibilityPanel, AllocationBreakdown, DataTable states | Key composites |
 | Component tests (mobile) | Jest + React Native Testing Library | Wizard steps, OTP input, surety accept/decline, offline state | Key screens |
-| E2E web | Playwright | Staff journeys J-03…J-13 | Each milestone |
-| E2E mobile | Maestro flows on an Android emulator | J-01, J-02, J-07, J-14, activation | M4, M5, M8 |
-| **Cross-app journey** | Script: Maestro (phone) + Playwright (web) against one mock-api instance, or an API-level script for CI | Phone apply → surety on phone → web stages → phone shows ACTIVE | M5, M10 |
-| Visual / responsive | Playwright at 1440 / 1024 (web). Emulator screenshots at 360×800 and 412×915 (mobile) | All P1 screens | M10 |
-| Accessibility | axe-core (web) + keyboard pass. TalkBack pass on key mobile journeys | All P1 screens | M10 |
+| E2E web | Playwright | Staff journeys J-03…J-13 | Each milestone · **as built:** `tests/e2e/console-smoke`, `journeys-console` (`npm run e2e:console`) |
+| E2E mobile | Maestro flows on an Android emulator | J-01, J-02, J-07, J-14, activation | M4, M5, M8 · **as built:** Playwright on the Expo web build at 412×915 (`journeys-phone`, `npm run e2e:phone`). Maestro waits for an APK |
+| **Cross-app journey** | Script: Maestro (phone) + Playwright (web) against one mock-api instance, or an API-level script for CI | Phone apply → surety on phone → web stages → phone shows ACTIVE | M5, M10 · **as built:** `cross-app.spec.ts` (two browser contexts, one API) and `demo-script.spec.ts` (`npm run e2e:demo`) |
+| Visual / responsive | Playwright at 1440 / 1024 (web). Emulator screenshots at 360×800 and 412×915 (mobile) | All P1 screens | M10 · **as built:** `screens.spec.ts` at 1366×768, 1280×800, collapsed sidebar, print, phone 360×740 |
+| Accessibility | axe-core (web) + keyboard pass. TalkBack pass on key mobile journeys | All P1 screens | M10 · **as built:** `a11y-console` (light + dark) and `a11y-phone`, no critical/serious. TalkBack waits for an APK |
 | Device test | Release APK on at least 2 physical Android phones (one low-end, Android 10+) | Install, login, J-01, offline | M10 |
 
 ## 2. Mandatory domain test cases
@@ -86,6 +86,8 @@
 - Reset demo data (web profile menu or MA-05) restores the seed for both apps.
 
 ## 4. Demo script (client walkthrough, ~20 min) [P]
+
+> Superseded by the rehearsed, step-by-step **`DEMO-SCRIPT.md`** at the repo root (M10, D-064). The outline below is the original plan.
 1. Admin dashboard → settings (show the configurable insurance amounts and allocation order).
 2. Member Ramaiah → eligibility block. Member Lakshmi → top-up with the agreement example.
 3. Sravani accepts the surety → Accountant review → DDO validation → assessment → Approver sanction → Disbursement.
@@ -94,13 +96,13 @@
 6. Reports: Defaulters, Less collections, Retirement → download.
 
 ## 5. M10 release checklist
-- [ ] All P1 screens built per `06` and listed in `05`
-- [ ] All journeys J-01…J-14 green (Playwright / Maestro) + cross-app journey AC-X01
-- [ ] Release APK installed and smoke-tested on physical devices
-- [ ] Domain tests green, coverage met
-- [ ] Responsive and a11y checks done
-- [ ] Every PLACEHOLDER value visible and editable in Settings
-- [ ] Docs updated (status tracker, decisions, open questions)
+- [x] All P1 screens built per `06` and listed in `05` (M1–M9)
+- [x] All journeys J-01…J-14 green + cross-app journey AC-X01: API tests (`apps/mock-api/src/*.test.ts`) and the Playwright suite (`tests/e2e/`, 188 tests, D-066). The whole `DEMO-SCRIPT.md` passes twice in a row (`npm run e2e:demo`)
+- [ ] Release APK installed and smoke-tested on physical devices — **deferred until the user asks (D-054)**; Android bundle exports cleanly
+- [x] Domain tests green, coverage met (100%)
+- [x] Responsive and a11y checks done: axe WCAG 2.2 AA clean on every console route (light + dark) and phone screen, re-checked automatically (`a11y-*.spec.ts`); 1366×768, 1280×800, collapsed sidebar and phone 360×740 without sideways scroll (`screens.spec.ts`); error / empty / no-results states with the failure switch (`states-*.spec.ts`) (D-064, D-066)
+- [x] Every PLACEHOLDER value visible and editable in Settings (M2 exit test, D-056)
+- [x] Docs updated (status tracker, decisions, open questions)
 
 ## 6. v0.3 additions (paper forms)
 

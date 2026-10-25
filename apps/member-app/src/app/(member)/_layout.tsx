@@ -9,13 +9,13 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
-import { c } from '@/theme';
+import { color } from '@/theme';
 
 // Bottom bar: 5 equal destinations (docs/12 §2.2). Only members get here (D-033).
 const tab = (title: string, Icon: LucideIcon) => ({
   title,
   tabBarIcon: ({ focused, size }: { focused: boolean; size: number }) => (
-    <Icon color={focused ? c.primary : c.textMuted} size={size} strokeWidth={1.75} />
+    <Icon color={focused ? color.brand.solid : color.text.tertiary} size={size} strokeWidth={1.75} />
   ),
 });
 
@@ -27,10 +27,10 @@ export default function MemberLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: c.primary,
-        tabBarInactiveTintColor: c.textMuted,
-        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border, minHeight: 64 },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+        tabBarActiveTintColor: color.brand.solid,
+        tabBarInactiveTintColor: color.text.tertiary,
+        tabBarStyle: { backgroundColor: color.bg.surface, borderTopColor: color.border.default, minHeight: 64 },
+        tabBarLabelStyle: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
       }}
     >
       <Tabs.Screen name="home" options={tab('Home', House)} />

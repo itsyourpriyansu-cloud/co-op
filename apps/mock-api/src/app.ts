@@ -12,9 +12,20 @@ import {
   type Session,
   type SessionUser,
 } from '@tgs/types';
+import { bindDemoClock } from './clock';
 import { fail, ServiceError } from './errors';
 import { permissionsFor } from './permissions';
 import { Store } from './store';
+import { registerJoining } from './joining';
+import { registerAccount } from './account';
+import { registerInsight } from './insight';
+import { registerCollections } from './collections';
+import { registerDeposits } from './deposits';
+import { registerLoanWorkflow } from './loan-workflow';
+import { registerLoans } from './loans';
+import { registerMembers } from './members';
+import { registerMembership } from './membership';
+import { registerSettings } from './settings';
 import { dashboardSummary, datasetSample, datasetSummary } from './summary';
 
 type Env = { Variables: { session: SessionUser; token: string } };
@@ -22,14 +33,18 @@ type Env = { Variables: { session: SessionUser; token: string } };
 export interface AppOptions {
   store: Store;
   version: string;
+  /** Allowed browser origins. Omit (or '*') for any origin, which is fine on localhost. */
+  corsOrigins?: string[];
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export function createApp({ store, version }: AppOptions) {
+export function createApp({ store, version, corsOrigins }: AppOptions) {
   const app = new Hono<Env>();
+  // D-065: server timestamps follow this store's demo date.
+  bindDemoClock(() => store.db.demo.today);
 
-  app.use('*', cors());
+  app.use('*', cors(corsOrigins?.length ? { origin: corsOrigins } : undefined));
 
   app.onError((err, c) => {
     if (err instanceof ServiceError) return c.json(err.body, err.status as 400);
@@ -146,6 +161,19 @@ export function createApp({ store, version }: AppOptions) {
     return c.json(dashboardSummary(store.db, user));
   });
 
+  // Joining the society from the Member App (D-026).
+  registerJoining(api, store, requireSession);
+  registerMembership(api, store, requireSession);
+  registerSettings(api, store, requireSession);
+  // Loans first: its static /members/search must win over /members/:id.
+  registerLoans(api, store, requireSession);
+  registerLoanWorkflow(api, store, requireSession);
+  registerDeposits(api, store, requireSession);
+  registerCollections(api, store, requireSession);
+  registerAccount(api, store, requireSession);
+  registerInsight(api, store, requireSession);
+  registerMembers(api, store, requireSession);
+
   app.route(API_PREFIX, api);
   return app;
 }
@@ -153,6 +181,7 @@ export function createApp({ store, version }: AppOptions) {
 function sessionUserFor(store: Store, personaId: string): SessionUser {
   const db = store.db;
   const staff = db.staffUsers.find((u) => u.id === personaId);
+  if (staff?.active === false) fail('FORBIDDEN', 'This user has been deactivated. Ask the Super Admin.');
   if (staff)
     return { id: staff.id, name: staff.name, role: staff.role, departmentId: staff.departmentId };
   const member = db.members.find((m) => m.id === personaId);

@@ -8,8 +8,10 @@ import type {
   SocietyProfile,
   SocietySettings,
   StaffUser,
+  AuditEntry,
+  NotificationTemplate,
 } from '@tgs/types';
-import { LOAN_PRODUCTS, SETTINGS } from './catalog';
+import { LOAN_PRODUCTS, NOTIFICATION_TEMPLATES, SETTINGS } from './catalog';
 import { departments } from './departments';
 import { CURRENT_CYCLE, DEMAND_CYCLES, generateData, SEED_TODAY, type GeneratedData } from './generate';
 import { applicants, personas, staffUsers } from './personas';
@@ -17,7 +19,7 @@ import { buildScenarios } from './scenarios';
 import { society } from './society';
 
 /** Bump when the dataset shape changes: the mock API reseeds snapshots with an older version. */
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 12;
 export const SEED = 20260705;
 
 export interface Dataset extends GeneratedData {
@@ -34,6 +36,8 @@ export interface Dataset extends GeneratedData {
   applicants: ApplicantSummary[];
   personas: Persona[];
   scenarios: Scenario[];
+  notificationTemplates: NotificationTemplate[];
+  auditLog: AuditEntry[];
 }
 
 /** @deprecated M0 name. Use Dataset. */
@@ -55,8 +59,11 @@ export function createSeed(seed: number = SEED): Dataset {
     applicants: structuredClone(applicants),
     personas: structuredClone(personas),
     scenarios: buildScenarios(data),
+    notificationTemplates: structuredClone(NOTIFICATION_TEMPLATES),
+    auditLog: [],
     ...data,
   };
 }
 
 export { society, departments, staffUsers, applicants, personas, LOAN_PRODUCTS, SETTINGS, SEED_TODAY, CURRENT_CYCLE };
+export { DESIGNATIONS, NOTIFICATION_TEMPLATES } from './catalog';

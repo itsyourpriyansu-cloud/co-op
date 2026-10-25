@@ -35,6 +35,15 @@ export function formatDisplayDate(iso: ISODate): string {
   return `${String(d).padStart(2, '0')} ${MONTHS[m - 1]} ${y}`;
 }
 
+/** Any ISO date-time → "24 Oct 2026, 11:40" in India time (IST, UTC+05:30). */
+export function formatDisplayDateTime(isoDateTime: string): string {
+  const ms = Date.parse(isoDateTime);
+  if (Number.isNaN(ms)) return isoDateTime;
+  const ist = new Date(ms + 330 * 60_000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(ist.getUTCDate())} ${MONTHS[ist.getUTCMonth()]} ${ist.getUTCFullYear()}, ${pad(ist.getUTCHours())}:${pad(ist.getUTCMinutes())}`;
+}
+
 /** "2026-10" → "Oct 2026". */
 export function formatCycle(cycle: Cycle): string {
   const match = /^(\d{4})-(\d{2})$/.exec(cycle);
@@ -76,3 +85,11 @@ export function formatDuration(totalMonths: number): string {
   if (months || !years) parts.push(`${months} ${months === 1 ? 'mth' : 'mths'}`);
   return sign + parts.join(' ');
 }
+
+/** Whole days from `from` to `to` (ISO dates or date-times; only the date part counts), never negative. */
+export function daysBetweenDates(from: string, to: ISODate): number {
+  const a = parseISODate(from.slice(0, 10));
+  const b = parseISODate(to.slice(0, 10));
+  return Math.max(0, Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86_400_000));
+}
+

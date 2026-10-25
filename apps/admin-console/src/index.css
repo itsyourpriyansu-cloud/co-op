@@ -34,3 +34,44 @@
     }
   }
 }
+
+/* WCAG AA (D-064): Blend draws stat-card titles / subtitles and sidebar group labels in gray-400
+   (2.6:1). Lift them to our secondary / tertiary text roles; layout and sizes stay Blend's. */
+[data-element='statcard-header'],
+[data-element='statcard-subtitle'] {
+  color: var(--tgs-text-tertiary) !important;
+}
+[data-element='sidebar-section'] > [role='button'] p {
+  color: var(--tgs-text-tertiary) !important;
+}
+.tgs-datatable thead p,
+[data-element='placeholder'] {
+  color: var(--tgs-text-tertiary) !important;
+}
+/* Blend form hints (gray-500) and the titles of upcoming stepper steps (gray-400). */
+[data-element='hint-text'],
+[id^='stepper-'][id$='-title'] {
+  color: var(--tgs-text-tertiary) !important;
+}
+/* Inactive labels of Blend's boxed tabs (gray-500 on gray-50 = 4.2:1). */
+[role='tab'][data-state='inactive'] span {
+  color: var(--tgs-text-tertiary);
+}
+/* Blend's dark theme fills "attentive" primary tags with primary-500 behind white text (3.8:1).
+   Darken that fill by a quarter so the "You / Certify / Decide" markers pass AA (D-066). */
+[data-theme='dark'] .tgs-tag-attentive [data-tag] {
+  background-color: color-mix(in srgb, var(--tgs-brand-solid) 75%, black) !important;
+}
+/* Blend's EmptyState passes its unitless line-height tokens (28, 20) straight to CSS, where they mean
+   "28 x the font size": a 560px title and a page-tall description on every empty / error / no-results
+   state. Restore the token ratios (20/28 title, 14/20 body) (D-066). */
+[data-empty-state] h2 {
+  line-height: 1.4 !important;
+}
+[data-empty-state] h2 + div {
+  line-height: 1.43 !important;
+}
+/* Blend checkbox labels lose contrast in dark mode; use the primary text role in both modes. */
+[data-element='checkbox-label'][data-status='enabled'] {
+  color: var(--tgs-text-primary) !important;
+}

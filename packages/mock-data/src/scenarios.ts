@@ -94,7 +94,7 @@ export function buildScenarios(d: GeneratedData): Scenario[] {
   }
   for (const status of ['PENDING', 'APPROVED', 'REJECTED'] as const) {
     const pcr = d.profileChangeRequests.find((p) => p.status === status);
-    if (pcr) add({ id: `SC-PROFILE-${status}`, area: 'profile', title: `Profile change: ${label(status)}`, description: `Change to ${pcr.field}.`, personaId: 'stf-accountant', role: 'ACCOUNTANT', screens: ['ST-18', 'MB-02', 'MB-19'], entityType: 'profileChangeRequest', entityId: pcr.id, state: status, milestone: 'M3' });
+    if (pcr) add({ id: `SC-PROFILE-${status}`, area: 'profile', title: `Profile change: ${label(status)}`, description: `Change to ${pcr.fields.map((f) => f.field).join(', ')}.`, personaId: 'stf-accountant', role: 'ACCOUNTANT', screens: ['ST-18', 'MB-02', 'MB-19'], entityType: 'profileChangeRequest', entityId: pcr.id, state: status, milestone: 'M3' });
   }
 
   // Members

@@ -2,6 +2,7 @@
 
 > A friendly guide to **what** we're building, **how it flows**, **what tools** we use, and **why the design looks the way it does**.
 > No jargon without an explanation. For exact rules, the real source of truth is `docs/`.
+> **Status: as built (25 Oct 2026).** Every milestone M0–M10 is built and tested end to end. It is a demo on mock data, running on this computer (localhost). How to present it: `DEMO-SCRIPT.md`.
 
 ---
 
@@ -120,7 +121,7 @@ packages/api-client  📮 the postman both apps use to talk to the kitchen
 packages/mock-data   🧸 the toy members and toy money
 packages/design-tokens 🎨 the shared colour and font box
 ```
-**npm** (it comes free with Node) is the house manager that installs tools for every room. One command, `npm run demo`, switches on the kitchen and the office app together.
+**npm** (it comes free with Node) is the house manager that installs tools for every room. One command, `npm run demo`, switches on the kitchen and the office app together. `npm run dev:app` adds the phone app (in a browser at phone size, or on a real phone with Expo Go).
 
 ### Building the screens
 | Tool | Like… | What it does |
@@ -129,14 +130,13 @@ packages/design-tokens 🎨 the shared colour and font box
 | **TypeScript** | Labels on every box | Catches mistakes early: "this should be a number, not text!" |
 | **Vite** | A super-fast oven | Runs the console app instantly while we build it |
 | **Tailwind CSS** | A paint box with numbered colours | Styling with ready-made tokens, so everything matches |
-| **shadcn/ui** | A wardrobe of nice ready-made clothes | Polished buttons, tables, drawers and dialogs for the console |
+| **Juspay Blend** | A wardrobe of nice ready-made clothes | The design system: buttons, tables, tags, drawers, the sidebar. The console uses it directly. The phone has a small copy of it (`apps/member-app/src/ui`) |
 | **Expo + React Native** | The same LEGO, but for phones | Builds the Android app with React skills |
 | **Expo Router** | A map of rooms in the phone app | Decides which screen opens when you tap something |
-| **NativeWind** | Tailwind's paint box, for phones | So the phone and computer share the same colours |
+| **Design tokens** | One shared paint box | `packages/design-tokens` gives both apps the same colours, fonts and spacing (`docs/18`) |
 | **Lucide icons** | One sticker book for both apps | The same icons on phone and computer |
 | **TanStack Query** | A messenger with a good memory | Fetches data from the kitchen and remembers it, so screens feel fast |
 | **React Hook Form + Zod** | A form helper + a strict teacher | Handles typing in forms. Zod checks every answer ("mobile must be 10 digits") |
-| **Recharts** | Crayons for charts | Draws the dashboard graphs |
 
 ### The pretend kitchen
 | Tool | Like… | What it does |
@@ -149,11 +149,11 @@ packages/design-tokens 🎨 the shared colour and font box
 | Tool | Tests what |
 |---|---|
 | **Vitest** | The rulebook maths (e.g. "₹20,000 loan with ₹1,000 already saved → cut only ₹1,000") |
-| **Playwright** | Clicks through the console like a real person |
-| **Maestro** | Taps through the phone app like a real person |
+| **Playwright** | Clicks through the console **and** the phone app (its web version, at phone size) like a real person: every journey, the cross-app hand-offs, the whole demo script, accessibility checks (axe), error states and screen sizes (`tests/e2e/`) |
+| **Maestro** | Planned for the real Android app once an APK is built. Not used yet |
 
 ### The gift box 🎁
-An **APK** is the Android app packed into one file you can send to someone's phone and install. **EAS** is Expo's cloud factory that builds it for us.
+An **APK** is the Android app packed into one file you can send to someone's phone and install. **EAS** is Expo's cloud factory that builds it for us. **Not built yet:** for the demo, the phone app runs in a browser at phone size, or on a real phone through the free **Expo Go** app over Wi-Fi (`DEMO-SCRIPT.md`).
 
 ### What happens when you tap a button (one trip)
 ```
@@ -182,8 +182,8 @@ Lakshmi taps "Submit loan" 📱
 | **Progress trackers** | Like a parcel delivery app, so people stop calling the office to ask "where's my application?" |
 | **Computer: side menu + tables + side drawer for decisions** | Staff see the full record **while** approving, not on a separate page |
 | **Ctrl+K search** | Find anyone by name or General No. in a second |
-| **Every screen has 4 moods** | Loading (skeleton shapes), Empty (friendly picture + next step), Error (what went wrong + Retry), Success (receipt/confirmation) |
-| **Colours:** calm teal + a touch of gold | Teal feels steady and trustworthy. Gold hints at savings. (Placeholders until we get the society's colours) |
+| **Every screen has its moods** | Loading (skeleton shapes), Empty (friendly picture + next step), No results (clear filters), Error (what went wrong + Try again), Offline, No access, Success. Ten in all, the same on every screen (`docs/19`) |
+| **Colours:** Blend's brand blue | Steady and trustworthy. It is a placeholder until the society shares its own colours (Q-008). Changing it is one setting. Light and dark mode both work |
 | **Simple drawings, not stock photos** | Stock smiling strangers feel fake in a members-only club |
 | **Accessibility (WCAG 2.2 AA)** | Readable contrast, keyboard use and screen-reader labels, so everyone can use it |
 
@@ -207,6 +207,9 @@ Lakshmi taps "Submit loan" 📱
 | M7 | Monthly bills | Demand sheets + salary recovery |
 | M8 | Furniture | The rest of the phone app |
 | M9 | Windows | Dashboards, reports, printable forms |
-| M10 | Paint + inspection | Polish, accessibility, testing, final APK |
+| M10 | Paint + inspection | Polish, accessibility, testing |
+| Demo-ready | Show-home | Demo clock, the full robot test suite, screen sizes, production mode, docs (`docs/build-history/11-demo-ready.md`) |
 
-Progress is tracked in **`BUILD-CHECKLIST.md`**. Exact details live in **`docs/`**.
+All of these are **built**. Still to come, only when asked: the Android APK, hosting on Azure, and the real Fusil backend.
+
+Progress is tracked in **`BUILD-CHECKLIST.md`**. Exact details live in **`docs/`**. The questions only the society can answer are in plain words in **`docs/client-questions.md`**.

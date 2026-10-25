@@ -51,3 +51,13 @@ describe('fullMonthsBetween', () => {
     expect(fullMonthsBetween('2027-10-24', '2026-10-24')).toBe(-12);
   });
 });
+
+describe('daysBetweenDates (D-065 demo clock)', () => {
+  it('counts calendar days on the date part, never negative', async () => {
+    const { daysBetweenDates } = await import('./index');
+    expect(daysBetweenDates('2026-10-20T18:29:59.999Z', '2026-10-24')).toBe(4);
+    expect(daysBetweenDates('2026-10-24', '2026-10-24')).toBe(0);
+    expect(daysBetweenDates('2026-10-25', '2026-10-24')).toBe(0);
+  });
+});
+

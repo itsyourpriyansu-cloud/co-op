@@ -11,6 +11,8 @@ Finished-UI prototype, with mock data, for **The Telangana Secretariat Employees
 
 Start here: [`CLAUDE.md`](CLAUDE.md) (project rules) → [`BUILD-CHECKLIST.md`](BUILD-CHECKLIST.md) (where we are) → [`LEARN-THE-APP.md`](LEARN-THE-APP.md) (plain-language guide) → [`docs/`](docs/) (specs).
 
+**Presenting it?** Follow [`DEMO-SCRIPT.md`](DEMO-SCRIPT.md): setup, personas, and a rehearsed 30-minute walkthrough across both apps.
+
 ## Requirements
 - Node.js 22+ (tested with 24) and npm (comes with Node). No pnpm needed.
 - For the phone: the **Expo Go** app on an Android phone on the same Wi-Fi as the laptop.

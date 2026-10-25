@@ -30,7 +30,8 @@ export interface SemanticColors {
 
 export const light: SemanticColors = {
   bg: { canvas: p.gray[50], surface: p.gray[0], surfaceSubtle: p.gray[25], surfaceMuted: p.gray[100], surfaceSunken: p.gray[150], inverse: p.gray[900], overlay: 'rgba(14, 18, 27, 0.48)' },
-  text: { primary: p.gray[800], secondary: p.gray[600], tertiary: p.gray[500], disabled: p.gray[400], inverse: p.gray[0], link: b[600], onBrand: p.gray[0] },
+  // tertiary: a touch darker than gray-500 (#717784 = 4.49:1) so captions pass WCAG AA on every surface (D-064).
+  text: { primary: p.gray[800], secondary: p.gray[600], tertiary: '#666C79', disabled: p.gray[400], inverse: p.gray[0], link: b[600], onBrand: p.gray[0] },
   border: { subtle: p.gray[150], default: p.gray[200], strong: p.gray[300], focus: b[500], brand: b[200] },
   brand: { solid: b[600], hover: b[700], pressed: b[800], subtle: b[50], subtleHover: b[100], border: b[200], text: b[700] },
   status: {
