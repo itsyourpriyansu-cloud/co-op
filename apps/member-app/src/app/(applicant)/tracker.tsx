@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { stagesFor, STEPS, errorsForStep, useJoiningReference, useMyApplication } from '@/lib/joining';
 import { Alert, Button, Card, EmptyState, Skeleton, StageTracker, StatusTag, Text, WizardProgress } from '@/ui';
-import { color, radius, space, theme } from '@/theme';
+import { color, radius, space, theme, onBrandMuted, onBrandTile } from '@/theme';
 
 export default function Tracker() {
   const { session, logout, syncSession } = useAuth();
@@ -104,7 +104,7 @@ export default function Tracker() {
                 Welcome to the society!
               </Text>
               <View style={{ alignItems: 'center' }}>
-                <Text role="caption" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                <Text role="caption" style={{ color: onBrandMuted }}>
                   Your General No.
                 </Text>
                 <Text role="display" tone="onBrand">
@@ -217,6 +217,6 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   rowIcon: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   welcome: { backgroundColor: color.brand.solid, borderColor: color.brand.solid, padding: space[12] },
-  party: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  party: { width: 72, height: 72, borderRadius: 36, backgroundColor: onBrandTile, alignItems: 'center', justifyContent: 'center' },
   demo: { borderStyle: 'dashed', borderColor: color.status.warning.border, backgroundColor: color.status.warning.bg },
 });

@@ -9,8 +9,6 @@ import {
   AlertV2,
   AlertV2SubType,
   AlertV2Type,
-  AvatarV2,
-  AvatarV2Size,
   ButtonV2,
   ButtonV2Size,
   ButtonV2SubType,
@@ -40,6 +38,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { changeValue, EVENT_META, fieldLabel, MANDATE_LABEL, retiringLabel } from './members';
 import { TransferDrawer } from './TransferDrawer';
+import { Initials } from '@/components/Initials';
 
 function Field({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return (
@@ -356,7 +355,7 @@ export function MemberProfilePage() {
           <div className="mt-3 flex flex-col gap-5">
             <header className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex min-w-0 items-center gap-4">
-                <AvatarV2 fallbackText={m.name} size={AvatarV2Size.LG} alt={m.name} />
+                <Initials name={m.name} size="lg" />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-page-title text-fg">{m.name}</h1>

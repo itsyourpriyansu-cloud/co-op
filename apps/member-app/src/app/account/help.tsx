@@ -107,7 +107,7 @@ function Contact({ icon: Icon, label, value, onPress, divider }: { icon: LucideI
     </>
   );
   return onPress ? (
-    <Pressable accessibilityRole="link" accessibilityLabel={`${label} ${value}`} onPress={onPress} style={({ pressed }) => [styles.contact, divider && styles.divider, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
+    <Pressable accessibilityRole="link" onPress={onPress} style={({ pressed }) => [styles.contact, divider && styles.divider, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
       {body}
     </Pressable>
   ) : (

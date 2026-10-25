@@ -10,6 +10,7 @@ export function ChoiceCard({ title, description, icon: Icon, selected, onPress, 
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ checked: !!selected }}
+      aria-checked={!!selected}
       onPress={onPress}
       style={({ pressed }) => [styles.card, selected && styles.cardSelected, pressed && !selected && { backgroundColor: color.bg.surfaceSubtle }]}
     >
@@ -45,7 +46,7 @@ export function YesNo({ question, why, value, onChange }: { question: string; wh
         {[true, false].map((v) => {
           const on = value === v;
           return (
-            <Pressable key={String(v)} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => onChange(v)} style={[styles.ynBtn, on && styles.ynOn]}>
+            <Pressable key={String(v)} accessibilityRole="radio" accessibilityState={{ checked: on }} aria-checked={on} onPress={() => onChange(v)} style={[styles.ynBtn, on && styles.ynOn]}>
               <Text role="label" style={{ color: on ? color.brand.text : color.text.primary }}>
                 {v ? 'Yes' : 'No'}
               </Text>
@@ -59,7 +60,7 @@ export function YesNo({ question, why, value, onChange }: { question: string; wh
 
 export function Checkbox({ checked, onChange, label, description }: { checked: boolean; onChange: (v: boolean) => void; label: string; description?: string }) {
   return (
-    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={() => onChange(!checked)} style={styles.cb}>
+    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} aria-checked={checked} onPress={() => onChange(!checked)} style={styles.cb}>
       <View style={[styles.box, checked && styles.boxOn]}>{checked ? <Check size={16} color={color.text.onBrand} strokeWidth={3} /> : null}</View>
       <View style={{ flex: 1, gap: space[1] }}>
         <Text role="bodyStrong">{label}</Text>
@@ -82,7 +83,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, e
         {options.map((o) => {
           const on = value === o.value;
           return (
-            <Pressable key={o.value} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => onChange(o.value)} style={[styles.ynBtn, on && styles.ynOn, !!error && !on && { borderColor: color.status.danger.solid }]}>
+            <Pressable key={o.value} accessibilityRole="radio" accessibilityState={{ checked: on }} aria-checked={on} onPress={() => onChange(o.value)} style={[styles.ynBtn, on && styles.ynOn, !!error && !on && { borderColor: color.status.danger.solid }]}>
               <Text role="label" style={{ color: on ? color.brand.text : color.text.primary }}>
                 {o.label}
               </Text>

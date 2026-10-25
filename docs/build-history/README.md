@@ -17,6 +17,7 @@ Every entry has the same sections: **Built** (screens by ID) · **Key files** ·
 | 8 | [M7 Demand & collections (phone + console)](07-collections.md) | Done | 2026-10-24 |
 | 9 | [M8 Member app completion (phone)](08-member-app.md) | Done | 2026-10-25 |
 | 10 | [M9 Dashboards, notifications & reports (console)](09-insight.md) | Done | 2026-10-25 |
+| 11 | [M10 Polish: a11y, states, search, demo script](10-polish.md) | Done (demo scope) | 2026-10-25 |
 
 ## How to resume
 1. `npm install` (once) → `npm run demo` (mock API :4000 + console :5173; the user's other project may hold 5173, then use `npm run dev -w @tgs/admin-console -- --port 5180`) → `npm run dev:app` or `npx expo start --web --port 8090` in `apps/member-app` for the phone preview.

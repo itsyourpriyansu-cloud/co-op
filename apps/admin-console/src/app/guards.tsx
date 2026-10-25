@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import type { Permission } from '@tgs/types';
+import { ViewState } from '@/components/ViewState';
 import { NoAccessPage } from '@/pages/SystemPages';
 import { useAuth } from './auth';
 
@@ -19,8 +20,10 @@ export function RequirePermission({
   permission: Permission;
   children: ReactNode;
 }) {
-  const { can, isLoadingMe } = useAuth();
-  if (isLoadingMe) return null;
+  const { can, isLoadingMe, meError, retryMe } = useAuth();
+  if (isLoadingMe) return <ViewState state="loading" layout="table" />;
+  // Server unreachable: say so, with Retry. Never claim "no access" without the permission list.
+  if (meError) return <ViewState state="error" layout="table" onRetry={retryMe} />;
   if (!can(permission)) return <NoAccessPage />;
   return <>{children}</>;
 }

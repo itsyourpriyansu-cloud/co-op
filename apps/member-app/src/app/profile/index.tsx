@@ -9,7 +9,7 @@ import { formatCycle, formatDisplayDate, formatINR, PROFILE_FIELDS } from '@tgs/
 import type { ProfileChangeRequest, ProfileFieldChange } from '@tgs/types';
 import { useMyProfile } from '@/lib/profile';
 import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, Skeleton, StatusTag, Text } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { color, radius, space, onBrandMuted, onBrandTile } from '@/theme';
 
 const show = (c: Pick<ProfileFieldChange, 'field'>, v: string) => (PROFILE_FIELDS[c.field].kind === 'money' && v ? formatINR(Number(v) * 100) : v || '—');
 const address = (a: { line1: string; city: string; district: string; pincode: string }) => [a.line1, a.city, a.district, a.pincode].filter(Boolean).join(', ');
@@ -77,10 +77,10 @@ export default function Profile() {
               <Text role="sectionTitle" tone="onBrand">
                 {m.name}
               </Text>
-              <Text role="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+              <Text role="caption" style={{ color: onBrandMuted }}>
                 General No. {m.generalNo} · {m.designation}
               </Text>
-              <Text role="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+              <Text role="caption" style={{ color: onBrandMuted }}>
                 {p.departmentName}
               </Text>
             </View>
@@ -196,7 +196,7 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   hero: { flexDirection: 'row', alignItems: 'center', gap: space[6], backgroundColor: color.brand.solid, borderRadius: radius.card, padding: space[8] },
-  initials: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  initials: { width: 56, height: 56, borderRadius: 28, backgroundColor: onBrandTile, alignItems: 'center', justifyContent: 'center' },
   actions: { flexDirection: 'row', gap: space[4] },
   rowBetween: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   rowIcon: { flexDirection: 'row', alignItems: 'flex-start', gap: space[6], paddingBottom: space[4] },

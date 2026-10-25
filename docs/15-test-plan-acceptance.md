@@ -1,6 +1,6 @@
 # 15 · Test Plan & Acceptance Criteria
 
-> Version 0.3 · 2026-10-24 (two apps + shared mock API)
+> Version 0.4 · 2026-10-25 (two apps + shared mock API) · §5 status updated in M10
 
 ## 1. Test layers
 
@@ -86,6 +86,8 @@
 - Reset demo data (web profile menu or MA-05) restores the seed for both apps.
 
 ## 4. Demo script (client walkthrough, ~20 min) [P]
+
+> Superseded by the rehearsed, step-by-step **`DEMO-SCRIPT.md`** at the repo root (M10, D-064). The outline below is the original plan.
 1. Admin dashboard → settings (show the configurable insurance amounts and allocation order).
 2. Member Ramaiah → eligibility block. Member Lakshmi → top-up with the agreement example.
 3. Sravani accepts the surety → Accountant review → DDO validation → assessment → Approver sanction → Disbursement.
@@ -94,13 +96,13 @@
 6. Reports: Defaulters, Less collections, Retirement → download.
 
 ## 5. M10 release checklist
-- [ ] All P1 screens built per `06` and listed in `05`
-- [ ] All journeys J-01…J-14 green (Playwright / Maestro) + cross-app journey AC-X01
-- [ ] Release APK installed and smoke-tested on physical devices
-- [ ] Domain tests green, coverage met
-- [ ] Responsive and a11y checks done
-- [ ] Every PLACEHOLDER value visible and editable in Settings
-- [ ] Docs updated (status tracker, decisions, open questions)
+- [x] All P1 screens built per `06` and listed in `05` (M1–M9)
+- [x] All journeys J-01…J-14 green + cross-app journey AC-X01 — API tests (`apps/mock-api/src/*.test.ts`) and headless browser runs per milestone (build-history 03–10); demo Act 3 rehearsed in the browser. The Playwright e2e suite is run by the user at the end
+- [ ] Release APK installed and smoke-tested on physical devices — **deferred until the user asks (D-054)**; Android bundle exports cleanly
+- [x] Domain tests green, coverage met (100%)
+- [x] Responsive and a11y checks done — axe WCAG 2.2 AA clean on every console route (light + dark) and phone screen; error / empty / no-results states checked with the failure switch (D-064)
+- [x] Every PLACEHOLDER value visible and editable in Settings (M2 exit test, D-056)
+- [x] Docs updated (status tracker, decisions, open questions)
 
 ## 6. v0.3 additions (paper forms)
 

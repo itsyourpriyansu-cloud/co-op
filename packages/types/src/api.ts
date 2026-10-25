@@ -1142,3 +1142,13 @@ export interface DefaulterNotice {
   payTo: { accountName: string; accountNo: string; ifsc: string; upi: string; counter: string };
 }
 
+
+/** M10 topbar global search (docs/04 §3, D-064). */
+export interface SearchHit {
+  kind: 'member' | 'loan' | 'deposit' | 'application' | 'receipt';
+  id: string;
+  title: string;
+  subtitle: string;
+  status?: string;
+  link: string;
+}

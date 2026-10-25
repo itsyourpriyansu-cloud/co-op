@@ -5,7 +5,7 @@ import { BadgeCheck, ChevronRight, FileSignature, ShieldCheck, Smartphone, UserP
 import { brand } from '@tgs/design-tokens';
 import { Logo } from '@/components/Logo';
 import { Card, Screen, Text } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { color, onBrandMuted, radius, space, onBrandTile } from '@/theme';
 
 const HOW = [
   { icon: Smartphone, title: 'Apply from your phone', body: 'About 8 minutes. Save and finish later.' },
@@ -79,18 +79,17 @@ function Path({ icon: Icon, title, body, primary, onPress }: { icon: typeof User
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={title}
       onPress={onPress}
       style={({ pressed }) => [styles.path, primary && styles.pathPrimary, pressed && { opacity: 0.85 }]}
     >
-      <View style={[styles.pathIcon, primary && { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
+      <View style={[styles.pathIcon, primary && { backgroundColor: onBrandTile }]}>
         <Icon size={24} color={primary ? color.text.onBrand : color.brand.solid} strokeWidth={1.75} />
       </View>
       <View style={{ flex: 1, gap: space[1] }}>
         <Text role="cardTitle" tone={primary ? 'onBrand' : 'primary'}>
           {title}
         </Text>
-        <Text role="caption" style={{ color: primary ? 'rgba(255,255,255,0.85)' : color.text.secondary }}>
+        <Text role="caption" style={{ color: primary ? onBrandMuted : color.text.secondary }}>
           {body}
         </Text>
       </View>

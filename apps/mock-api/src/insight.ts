@@ -2,7 +2,7 @@
 // member questions (MB-13), ST-50/51 reports, ST-52 defaulter notice. Read models over the store; the
 // only writes are notifications, the message log and ticket replies.
 import { checkDefaulter, formatCycle, formatDisplayDate, formatINR, fullMonthsBetween } from '@tgs/domain';
-import type { AppNotification, ComposeInput, ComposePreview, DefaulterNotice, Member, OutboxMessage, ReportFilterKey, RoleDashboard, SessionUser, StaffNotifications, StaffTicketRow, WorkflowEvent } from '@tgs/types';
+import type { AppNotification, SearchHit, ComposeInput, ComposePreview, DefaulterNotice, Member, OutboxMessage, ReportFilterKey, RoleDashboard, SessionUser, StaffNotifications, StaffTicketRow, WorkflowEvent } from '@tgs/types';
 import { memberDues } from './collections';
 import { audit, can, nowIso, requirePermission, requireStaff, type Api, type Guard } from './common';
 import { fail } from './errors';
@@ -371,6 +371,55 @@ export function registerInsight(api: Api, store: Store, requireSession: Guard) {
     audit(store, user, 'ticket', t.id, close ? 'close' : 'reply', `${close ? 'Closed' : 'Replied to'} "${t.subject}"`);
     store.save();
     return c.json(t);
+  });
+
+  /** M10 topbar search: members (name, General No., Employee ID, mobile), loans, deposits, joining, receipts. */
+  api.get('/search', requireSession, (c) => {
+    const user = staff(c.get('session'));
+    const q = (c.req.query('q') ?? '').trim().toLowerCase();
+    if (q.length < 2) return c.json<SearchHit[]>([]);
+    const d = db();
+    const dept = (id: string) => d.departments.find((x) => x.id === id)?.name ?? '';
+    const member = new Map(d.members.map((m) => [m.id, m]));
+    const scoped = (memberId: string) => !user.departmentId || member.get(memberId)?.departmentId === user.departmentId;
+    const digits = q.replace(/\D/g, '');
+    const hits: SearchHit[] = [];
+    if (can(user, 'members.view'))
+      hits.push(
+        ...d.members
+          .filter((m) => scoped(m.id) && (m.name.toLowerCase().includes(q) || m.generalNo === q || m.employeeId.toLowerCase() === q || (digits.length >= 4 && digits === q && m.mobile.endsWith(digits))))
+          .slice(0, 6)
+          .map((m) => ({ kind: 'member' as const, id: m.id, title: m.name, subtitle: `General No. ${m.generalNo} · ${m.employeeId} · ${dept(m.departmentId)}`, status: m.status, link: `/members/${m.id}` })),
+      );
+    if (can(user, 'loans.view'))
+      hits.push(
+        ...d.loans
+          .filter((l) => l.status !== 'DRAFT' && scoped(l.memberId) && (l.applicationNo.toLowerCase().includes(q) || (l.loanNo ?? '').toLowerCase().includes(q)))
+          .slice(0, 5)
+          .map((l) => ({ kind: 'loan' as const, id: l.id, title: l.loanNo ?? l.applicationNo, subtitle: `${member.get(l.memberId)?.name ?? ''} · ${d.loanProducts.find((p) => p.code === l.product)?.name ?? l.product} · ${formatINR(l.sanctionedAmount ?? l.appliedAmount)}`, status: l.status, link: `/loans/${l.id}` })),
+      );
+    if (can(user, 'deposits.view'))
+      hits.push(
+        ...d.deposits
+          .filter((x) => scoped(x.memberId) && (x.accountNo.toLowerCase().includes(q) || (x.fdrNo ?? '').toLowerCase().includes(q)))
+          .slice(0, 5)
+          .map((x) => ({ kind: 'deposit' as const, id: x.id, title: x.fdrNo ?? x.accountNo, subtitle: `${member.get(x.memberId)?.name ?? ''} · ${x.scheme} · ${formatINR(x.principal ?? x.balance)}`, status: x.status, link: `/deposits/${x.id}` })),
+      );
+    if (can(user, 'membership.view'))
+      hits.push(
+        ...d.membershipApplications
+          .filter((a) => a.status !== 'DRAFT' && (!user.departmentId || a.departmentId === user.departmentId) && (a.applicationNo.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)))
+          .slice(0, 4)
+          .map((a) => ({ kind: 'application' as const, id: a.id, title: a.name, subtitle: `Joining ${a.applicationNo} · ${dept(a.departmentId)}`, status: a.status, link: `/joining/${a.id}` })),
+      );
+    if (can(user, 'collections.view') && /\d/.test(q))
+      hits.push(
+        ...d.receipts
+          .filter((r) => scoped(r.memberId) && r.receiptNo.toLowerCase().includes(q))
+          .slice(0, 4)
+          .map((r) => ({ kind: 'receipt' as const, id: r.id, title: r.receiptNo, subtitle: `${member.get(r.memberId)?.name ?? ''} · ${formatINR(r.amount)} · ${formatDisplayDate(r.date)}`, link: `/payments/${r.id}` })),
+      );
+    return c.json<SearchHit[]>(hits);
   });
 
   /** Unread staff notifications + open questions, for the topbar bell. */

@@ -1,6 +1,6 @@
 # 12 · Design Direction & Design System
 
-> Version 0.4 · 2026-10-24 · Status: **Proposed (D-034)**. Tokens live in `packages/design-tokens` → Tailwind preset (web) + NativeWind preset (app).
+> Version 0.5 · 2026-10-25 · Status: **Proposed (D-034)**. Tokens live in `packages/design-tokens` → Tailwind preset (web) + NativeWind preset (app).
 > Research basis: platform guidelines (Material 3, WCAG 2.2), Google's HEART metrics framework, and fintech/banking UX practice. Sources are listed in §10. Points marked *(practice)* come from industry articles, not standards.
 
 ---
@@ -196,3 +196,12 @@ Google's HEART framework covers Happiness, Engagement, Adoption, Retention and T
 - Lucide for React Native (same set as shadcn's lucide-react): lucide.dev docs
 - Banking/fintech app practice (bottom nav, progressive onboarding, resume later, terms up front): Meniga, ProCreator, Entropik articles
 - Enterprise data tables (key column left, alignment, bulk actions): Pencil & Paper table UX analysis, Stephanie Walter's resource list, NN/g "Data Tables: Four Major User Tasks" (cited via secondary sources)
+
+## M10 accessibility pass (D-064)
+
+- **Text tertiary** is `#666C79` in light mode (was gray-500 `#717784`, 4.49:1). Passes 4.5:1 on canvas, surface, subtle and the brand tint.
+- **Blend overrides** live in two places only: `apps/admin-console/src/app/theme.tsx` (`componentTokens`: TagV2 subtle warning / success / error text, StatCardV2 change colours; light mode) and the end of `apps/admin-console/src/index.css` (scoped rules on Blend `data-element` hooks: stat-card title/subtitle, sidebar section labels, `.tgs-datatable` headers, select placeholders, hint text, upcoming stepper titles, inactive boxed tabs, checkbox labels). Remove a rule when Blend fixes it upstream.
+- **Avatars**: people next to their name use `components/Initials.tsx` (brand tint, `aria-hidden`), not `AvatarV2` (its hashed fills fail contrast).
+- **Member App on brand blue**: secondary text `onBrandMuted` (#EEF4FE, 5:1) and tiles `onBrandTile` (black 12%) from `src/theme.ts`; never translucent white.
+- **Radios / checkboxes** on the phone set `aria-checked` as well as `accessibilityState` (react-native-web reads the former).
+- Result: axe (WCAG 2.2 AA) reports no critical/serious issues on 27 console routes (light and dark) and 25 phone screens. Known library warnings: Blend's `forwardRef` and `outlineOffset` dev warnings.

@@ -14,7 +14,7 @@ const suretyKey = ['surety-requests'] as const;
 
 function RequestCard({ r }: { r: SuretyRequest }) {
   return (
-    <Card onPress={() => router.push({ pathname: '/surety/[loanId]', params: { loanId: r.loanId } })} accessibilityLabel={`${r.borrower.name}, ${r.productName} ${formatINR(r.amount)}`}>
+    <Card onPress={() => router.push({ pathname: '/surety/[loanId]', params: { loanId: r.loanId } })}>
       <View style={{ gap: space[4] }}>
         <View style={styles.row}>
           <View style={{ flex: 1, gap: space[1] }}>

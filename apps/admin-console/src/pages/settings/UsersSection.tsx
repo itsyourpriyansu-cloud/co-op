@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Plus, Pencil } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { AvatarV2, AvatarV2Size, ButtonV2, ButtonV2Size, ButtonV2Type, ColumnType, Radio, RadioGroup, Switch, SwitchSize, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, type ColumnDefinition } from '@juspay/blend-design-system';
+import { ButtonV2, ButtonV2Size, ButtonV2Type, ColumnType, Radio, RadioGroup, Switch, SwitchSize, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, type ColumnDefinition } from '@juspay/blend-design-system';
 import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type StaffUser } from '@tgs/types';
 import { TextField, fieldErrorsOf } from '@/components/Form';
 import { SideDrawer } from '@/components/SideDrawer';
@@ -12,6 +12,7 @@ import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useSettingsSave } from './shared';
+import { Initials } from '@/components/Initials';
 
 type Row = StaffUser & Record<string, unknown>;
 
@@ -42,7 +43,7 @@ export function UsersSection({ canEdit }: { canEdit: boolean }) {
       minWidth: '220px',
       renderCell: (_v, r) => (
         <div className="flex items-center gap-3">
-          <AvatarV2 fallbackText={r.name} size={AvatarV2Size.SM} alt={r.name} />
+          <Initials name={r.name} size="sm" />
           <div>
             <p className="text-label text-fg">{r.name}</p>
             <p className="text-caption text-fg-tertiary">{r.userId}</p>

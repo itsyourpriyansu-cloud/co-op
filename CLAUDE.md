@@ -31,7 +31,7 @@ A **clickable, finished-UI prototype backed only by mock data** of a Co-operativ
 | 3 System Architecture | v0.3, awaiting review |
 | 4 Context Engineering | v0.3 (this file + docs/) |
 | 5 Implementation Planning | v0.3, awaiting review |
-| **Build** | M0–M9 done on branch `m0-foundation` (Settings, Joining + Members, Loans core + workflow, Deposits, Demand & collections, Member app completion, Dashboards + notifications + reports; D-053 … D-063). Demo-only, localhost now, Azure later (D-054). Next: M10 Polish & demo (see `BUILD-CHECKLIST.md`) |
+| **Build** | **M0–M10 done (demo scope)** on branch `m0-foundation` (Settings, Joining + Members, Loans core + workflow, Deposits, Demand & collections, Member app completion, Dashboards + notifications + reports, a11y / states polish + global search + demo script; D-053 … D-064). Demo-only, localhost now, Azure later (D-054). Deferred until asked: signed APK, device test, hosting. Presenting: `DEMO-SCRIPT.md` |
 
 Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock API, digital membership join with stage tracker, Secretary → President sign-off, FDs for members + joint/minor, share payment by counter or first demand. Still open: Batch 1 Q-004..Q-011 and Batch 5 (forms) Q-501..Q-514 (see `docs/open-questions.md`).
 

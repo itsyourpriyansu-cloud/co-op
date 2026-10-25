@@ -58,7 +58,7 @@ export default function Activate() {
           {notice ? <Alert type={notice.signIn ? 'primary' : 'error'} heading={notice.heading} description={notice.description} action={notice.signIn ? { text: 'Go to sign in', onPress: () => router.replace('/login') } : undefined} /> : null}
           <Button text="Send code" size="lg" fullWidth disabled={!employeeId.trim() || mobile.length !== 10} loading={busy} onPress={() => void start()} />
           {sample.data ? (
-            <Card onPress={() => (setEmployeeId(sample.data.employeeId), setMobile(sample.data.mobile))} accessibilityLabel="Fill a demo member who has not activated">
+            <Card onPress={() => (setEmployeeId(sample.data.employeeId), setMobile(sample.data.mobile))}>
               <View style={{ flexDirection: 'row', gap: space[6], alignItems: 'center' }}>
                 <Sparkles size={20} color={color.brand.solid} />
                 <View style={{ flex: 1, gap: space[1] }}>

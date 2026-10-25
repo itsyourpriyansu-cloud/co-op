@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Navigate, useLocation, useNavigate } from 'react-router';
-import { AlertV2, AlertV2SubType, AlertV2Type, AvatarV2, AvatarV2Size, Skeleton, Spinner, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type } from '@juspay/blend-design-system';
+import { AlertV2, AlertV2SubType, AlertV2Type, Skeleton, Spinner, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
 import { brand } from '@tgs/design-tokens';
 import { ROLE_LABELS, type Persona } from '@tgs/types';
 import { useAuth } from '@/app/auth';
 import { API_URL, api } from '@/lib/api';
 import { Seal } from '@/components/Seal';
+import { Initials } from '@/components/Initials';
 
 /** AU-01 Staff sign-in. Password sign-in waits for the real backend (Q-103); the prototype signs in by persona. */
 export function LoginPage() {
@@ -89,7 +90,7 @@ export function LoginPage() {
                       disabled={pending !== null}
                       className="group flex w-full items-center gap-3 rounded-card border border-line bg-surface p-3 text-left shadow-raised transition-colors hover:border-brand-border hover:bg-brand-subtle disabled:opacity-60"
                     >
-                      <AvatarV2 fallbackText={p.name} size={AvatarV2Size.MD} alt={p.name} />
+                      <Initials name={p.name} size="md" />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="truncate text-label text-fg">{p.name}</span>

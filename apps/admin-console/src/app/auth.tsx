@@ -8,6 +8,9 @@ interface AuthContextValue {
   session: Session | null;
   me: Me | undefined;
   isLoadingMe: boolean;
+  /** /me failed (server unreachable): show an error with Retry, not "no access" (M10). */
+  meError: boolean;
+  retryMe: () => void;
   can: (permission: Permission) => boolean;
   loginAsPersona: (personaId: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -49,11 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       me: meQuery.data,
       isLoadingMe: meQuery.isLoading,
+      meError: meQuery.isError && !meQuery.data,
+      retryMe: () => void meQuery.refetch(),
       can: (permission) => meQuery.data?.permissions.includes(permission) ?? false,
       loginAsPersona,
       logout,
     }),
-    [session, meQuery.data, meQuery.isLoading, loginAsPersona, logout],
+    [session, meQuery, loginAsPersona, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

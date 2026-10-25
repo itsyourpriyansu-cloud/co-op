@@ -58,8 +58,8 @@ function NeedsAttention({ s, onOpen }: { s: DashboardSummary; onOpen: (path: str
         const waited = daysBetween(item.since, s.asOf);
         const late = waited > 7 ? 'text-danger-fg' : waited > 3 ? 'text-warning-fg' : 'text-fg-tertiary';
         return (
-          <li
-            key={item.id}
+          <li key={item.id}>
+          <div
             className={`grid grid-cols-[36px_1fr_auto] items-center gap-3 py-3 ${item.kind === 'membership' ? '-mx-2 cursor-pointer rounded-control px-2 hover:bg-surface-subtle' : ''}`}
             {...(item.kind === 'membership'
               ? { role: 'link', tabIndex: 0, onClick: () => onOpen(`/joining/${item.id}`), onKeyDown: (e: React.KeyboardEvent) => e.key === 'Enter' && onOpen(`/joining/${item.id}`) }
@@ -81,6 +81,7 @@ function NeedsAttention({ s, onOpen }: { s: DashboardSummary; onOpen: (path: str
               {item.amount !== undefined && <Money value={item.amount} className="block text-amount text-fg" />}
               <span className={`tabular text-caption ${late}`}>{waited === 0 ? 'Today' : `${waited} day${waited === 1 ? '' : 's'} waiting`}</span>
             </div>
+          </div>
           </li>
         );
       })}

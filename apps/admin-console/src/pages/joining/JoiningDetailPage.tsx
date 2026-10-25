@@ -8,8 +8,6 @@ import {
   AlertV2,
   AlertV2SubType,
   AlertV2Type,
-  AvatarV2,
-  AvatarV2Size,
   ButtonV2,
   ButtonV2Size,
   ButtonV2SubType,
@@ -46,6 +44,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { ActionDrawer } from './ActionDrawer';
 import { ACTION_LABEL, certItems, isPrimaryAction, STEPS } from './joining';
+import { Initials } from '@/components/Initials';
 
 const roleLabel = (r: string) => ROLE_LABELS[r as Role] ?? (r === 'APPLICANT' ? 'Applicant' : r.charAt(0) + r.slice(1).toLowerCase());
 
@@ -302,7 +301,7 @@ export function JoiningDetailPage() {
             {/* Header */}
             <header className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex min-w-0 items-center gap-4">
-                <AvatarV2 fallbackText={app.name} size={AvatarV2Size.LG} alt={app.name} />
+                <Initials name={app.name} size="lg" />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-3">
                     <h1 className="text-page-title text-fg">{app.name}</h1>

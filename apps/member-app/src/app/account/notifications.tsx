@@ -61,7 +61,6 @@ export default function Notifications() {
                 <Pressable
                   key={n.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`${n.read ? '' : 'Unread. '}${n.title}. ${n.body}`}
                   onPress={() => void open(n.id, n.read, n.link)}
                   style={({ pressed }) => [styles.row, i > 0 && styles.divider, !n.read && { backgroundColor: color.brand.subtle }, pressed && { opacity: 0.7 }]}
                 >

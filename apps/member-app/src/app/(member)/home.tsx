@@ -10,7 +10,7 @@ import { Logo } from '@/components/Logo';
 import { useAuth } from '@/lib/auth';
 import { useHome } from '@/lib/account';
 import { Alert, Card, Screen, Section, Skeleton, StatusTag, Tag, Text } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { color, radius, space, onBrandMuted, onBrandTile } from '@/theme';
 
 const TONE = { primary: 'primary', warning: 'warning', danger: 'error' } as const;
 
@@ -58,7 +58,7 @@ export default function Home() {
             <Section title="Waiting for you">
               <View style={{ gap: space[4] }}>
                 {h.actions.map((a) => (
-                  <Card key={a.key} onPress={() => router.push(a.link as Href)} accessibilityLabel={`${a.title}. ${a.detail}`}>
+                  <Card key={a.key} onPress={() => router.push(a.link as Href)}>
                     <View style={styles.row}>
                       <View style={[styles.dot, { backgroundColor: a.tone === 'danger' ? color.status.danger.solid : a.tone === 'warning' ? color.status.warning.solid : color.brand.solid }]} />
                       <View style={{ flex: 1, gap: space[1] }}>
@@ -84,7 +84,7 @@ export default function Home() {
           </View>
 
           {h.thisMonth ? (
-            <Card onPress={() => router.push('/payments')} accessibilityLabel={`Salary deduction for ${formatCycle(h.thisMonth.cycle)}`}>
+            <Card onPress={() => router.push('/payments')}>
               <View style={styles.row}>
                 <View style={{ flex: 1, gap: space[1] }}>
                   <Text role="caption" tone="secondary">
@@ -183,7 +183,7 @@ function Snapshot({ h }: { h: MemberHome }) {
 
 function Figure({ label, value, sub, onPress }: { label: string; value: string; sub: string; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${label} ${value}`} onPress={onPress} style={({ pressed }) => [styles.figure, pressed && { opacity: 0.75 }]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.figure, pressed && { opacity: 0.75 }]}>
       <Text role="caption" style={styles.heroDim}>
         {label}
       </Text>
@@ -213,9 +213,9 @@ const styles = StyleSheet.create({
   bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.default },
   badge: { position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: color.status.danger.solid, alignItems: 'center', justifyContent: 'center' },
   hero: { backgroundColor: color.brand.solid, borderRadius: radius.card, padding: space[10], gap: space[4] },
-  heroDim: { color: 'rgba(255,255,255,0.8)' },
+  heroDim: { color: onBrandMuted },
   heroGrid: { flexDirection: 'row', gap: space[3], marginTop: space[4] },
-  figure: { flex: 1, gap: space[1], padding: space[5], borderRadius: radius.control, backgroundColor: 'rgba(255,255,255,0.12)' },
+  figure: { flex: 1, gap: space[1], padding: space[5], borderRadius: radius.control, backgroundColor: onBrandTile },
   unpaid: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginTop: space[2], padding: space[5], borderRadius: radius.control, backgroundColor: color.status.danger.bg },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
   dot: { width: 10, height: 10, borderRadius: 5 },

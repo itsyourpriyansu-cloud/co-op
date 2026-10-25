@@ -65,7 +65,7 @@ export default function Login() {
         <Button text="Sign in" leftSlot={LogIn} size="lg" fullWidth loading={pending === 'form'} disabled={pending !== null} onPress={() => void submit()} />
       </View>
 
-      <Card onPress={() => router.push('/activate')} accessibilityLabel="First time? Activate the app">
+      <Card onPress={() => router.push('/activate')}>
         <View style={styles.row}>
           <View style={styles.icon}>
             <Sparkles size={20} color={color.brand.solid} />
@@ -91,7 +91,7 @@ export default function Login() {
         {personas.isError ? <Alert type="error" heading="Can't reach the society server" action={{ text: 'Check connection', onPress: () => router.push('/offline') }} /> : null}
         <View style={{ gap: space[4] }}>
           {members.map((p) => (
-            <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`Sign in as ${p.name}`} disabled={pending !== null} onPress={() => quick(p)} style={({ pressed }) => [styles.persona, pressed && { backgroundColor: color.brand.subtle, borderColor: color.brand.solid }]}>
+            <Pressable key={p.id} accessibilityRole="button" disabled={pending !== null} onPress={() => quick(p)} style={({ pressed }) => [styles.persona, pressed && { backgroundColor: color.brand.subtle, borderColor: color.brand.solid }]}>
               <View style={styles.avatar}>
                 <Text role="label" tone="link">
                   {p.name.split(' ').map((s) => s[0]).slice(0, 2).join('')}

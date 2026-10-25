@@ -22,3 +22,8 @@ export function textStyle(role: TextRoleName) {
   const { fontWeight, ...rest } = theme.text[role];
   return { ...rest, fontFamily: FONT_BY_WEIGHT[fontWeight] };
 }
+
+/** Secondary text on the brand-blue hero cards: 5:1 on brand.solid (WCAG AA, D-064). Replaces translucent white. */
+export const onBrandMuted = '#EEF4FE';
+/** Tile inside a brand card: a darker tint keeps white text ≥ 6.7:1. */
+export const onBrandTile = 'rgba(0,0,0,0.12)';

@@ -8,7 +8,7 @@ import { formatDisplayDate, formatINR } from '@tgs/domain';
 import type { DepositRow } from '@tgs/types';
 import { SCHEME_LABEL, segmentOf, useMyDeposits, type DepositSegment } from '@/lib/deposits';
 import { Alert, Button, Card, EmptyState, Screen, Segmented, Skeleton, StatusTag, Tag, Text } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { color, radius, space, onBrandMuted } from '@/theme';
 
 const SEGMENTS: Array<{ value: DepositSegment; label: string }> = [
   { value: 'FD', label: 'Fixed' },
@@ -19,7 +19,7 @@ const SEGMENTS: Array<{ value: DepositSegment; label: string }> = [
 function DepositCard({ row }: { row: DepositRow }) {
   const isFd = row.scheme === 'FD';
   return (
-    <Card onPress={() => router.push({ pathname: '/deposit/[id]', params: { id: row.id } })} accessibilityLabel={`${SCHEME_LABEL[row.scheme]} ${formatINR(row.amount)}, ${row.status}`}>
+    <Card onPress={() => router.push({ pathname: '/deposit/[id]', params: { id: row.id } })}>
       <View style={{ gap: space[4] }}>
         <View style={styles.row}>
           <View style={{ flex: 1, gap: space[1] }}>
@@ -77,7 +77,7 @@ export default function Deposits() {
 
       {deposits.data ? (
         <View style={styles.hero}>
-          <Text role="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          <Text role="caption" style={{ color: onBrandMuted }}>
             Saved with the society
           </Text>
           <Text role="display" tone="onBrand">
@@ -85,7 +85,7 @@ export default function Deposits() {
           </Text>
           <View style={styles.heroRow}>
             <View style={{ flex: 1 }}>
-              <Text role="caption" style={{ color: 'rgba(255,255,255,0.75)' }}>
+              <Text role="caption" style={{ color: onBrandMuted }}>
                 Fixed deposits
               </Text>
               <Text role="bodyStrong" tone="onBrand">
@@ -93,7 +93,7 @@ export default function Deposits() {
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text role="caption" style={{ color: 'rgba(255,255,255,0.75)' }}>
+              <Text role="caption" style={{ color: onBrandMuted }}>
                 CRD, SRDS & savings
               </Text>
               <Text role="bodyStrong" tone="onBrand">

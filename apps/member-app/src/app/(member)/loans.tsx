@@ -11,7 +11,7 @@ import { color, radius, space } from '@/theme';
 
 function LoanCard({ row }: { row: LoanRow }) {
   return (
-    <Card onPress={() => router.push({ pathname: '/loan/[id]', params: { id: row.id } })} accessibilityLabel={`${row.productName} ${formatINR(row.appliedAmount)}, ${row.status}`}>
+    <Card onPress={() => router.push({ pathname: '/loan/[id]', params: { id: row.id } })}>
       <View style={{ gap: space[4] }}>
         <View style={styles.row}>
           <View style={{ flex: 1, gap: space[1] }}>

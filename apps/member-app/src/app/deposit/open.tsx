@@ -157,7 +157,7 @@ export default function OpenFd() {
           <Section title="Period">
             <View style={styles.chips}>
               {periods.map((p) => (
-                <Pressable key={p} accessibilityRole="radio" accessibilityState={{ selected: tenure === p }} onPress={() => setTenure(p)} style={[styles.chip, tenure === p && styles.chipOn]}>
+                <Pressable key={p} accessibilityRole="radio" accessibilityState={{ checked: tenure === p }} aria-checked={tenure === p} onPress={() => setTenure(p)} style={[styles.chip, tenure === p && styles.chipOn]}>
                   <Text role="label" style={{ color: tenure === p ? color.brand.solid : color.text.secondary }}>
                     {p} months
                   </Text>

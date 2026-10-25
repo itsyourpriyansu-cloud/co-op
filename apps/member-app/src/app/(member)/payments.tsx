@@ -15,7 +15,7 @@ type Seg = 'MONTHS' | 'RECEIPTS' | 'REPORTED';
 function MonthCard({ m, open, onToggle }: { m: MyPayments['months'][number]; open: boolean; onToggle: () => void }) {
   const posted = m.sheetStatus === 'RECOVERY_POSTED';
   return (
-    <Card onPress={onToggle} accessibilityLabel={`${formatCycle(m.cycle)}: demand ${formatINR(m.demand)}`}>
+    <Card onPress={onToggle}>
       <View style={{ gap: space[4] }}>
         <View style={styles.row}>
           <Text role="cardTitle" style={{ flex: 1 }}>

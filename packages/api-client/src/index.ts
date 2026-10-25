@@ -99,6 +99,7 @@ import {
   type RoleDashboard,
   type StaffNotifications,
   type StaffTicketRow,
+  type SearchHit,
 } from '@tgs/types';
 
 export class ApiError extends Error {
@@ -238,6 +239,8 @@ export function createApiClient(options: ApiClientOptions) {
       /** ST-01 role variant (M9). */
       role: () => request<RoleDashboard>('GET', '/dashboard/role'),
     },
+    /** Topbar global search (M10). */
+    search: (q: string) => request<SearchHit[]>('GET', `/search${toQuery({ q })}`),
     /** ST-50 / ST-51 / ST-52 (M9). */
     reports: {
       catalogue: () => request<{ reports: ReportDef[]; options: ReportOptions }>('GET', '/reports'),

@@ -9,8 +9,6 @@ import {
   AlertV2,
   AlertV2SubType,
   AlertV2Type,
-  AvatarV2,
-  AvatarV2Size,
   ButtonV2,
   ButtonV2Size,
   ButtonV2SubType,
@@ -40,6 +38,7 @@ import { StatusTag } from '@/components/StatusTag';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { Initials } from '@/components/Initials';
 
 const ACTION_LABEL: Record<string, string> = { recordPayment: 'Record payment', accept: 'Accept', reject: 'Reject', cancel: 'Cancel request', refund: 'Refund', payout: 'Pay out' };
 const SCHEME: Record<string, string> = { FD: 'Fixed deposit', CRD: 'CRD', SRDS: 'SRDS', SAVINGS: 'Savings' };
@@ -153,7 +152,7 @@ export function DepositDetailPage() {
     onSuccess: (next) => {
       qc.setQueryData(['deposit', id], next);
       void qc.invalidateQueries({ queryKey: ['deposits'] });
-      addSnackbarV2({ header: 'Demo: stage completed', description: next.waitingOn ? `Now with ${next.waitingOn}` : next.deposit.status, variant: SnackbarV2Variant.INFO });
+      addSnackbarV2({ header: 'Demo: stage completed', description: next.waitingOn ? `Now with ${next.waitingOn}` : `Now ${next.deposit.status.toLowerCase().replace(/_/g, ' ')}`, variant: SnackbarV2Variant.INFO });
     },
     onError: (e) => addSnackbarV2({ header: "Couldn't act", description: isApiError(e) ? e.message : 'Try again.', variant: SnackbarV2Variant.ERROR }),
   });
@@ -177,7 +176,7 @@ export function DepositDetailPage() {
           <div className="mt-3 flex flex-col gap-5">
             <header className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex min-w-0 items-center gap-4">
-                <AvatarV2 fallbackText={d.member.name} size={AvatarV2Size.LG} alt={d.member.name} />
+                <Initials name={d.member.name} size="lg" />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-page-title text-fg">
@@ -188,7 +187,7 @@ export function DepositDetailPage() {
                   </div>
                   <p className="mt-1 text-body text-fg-secondary">
                     <span className="tabular">{dep.fdrNo ?? dep.accountNo}</span> ·{' '}
-                    <Link to={`/members/${d.member.id}`} className="text-link hover:underline">
+                    <Link to={`/members/${d.member.id}`} className="text-link underline underline-offset-2">
                       {d.member.name} (No. {d.member.generalNo})
                     </Link>{' '}
                     · {d.member.departmentName}
@@ -359,7 +358,7 @@ export function DepositDetailPage() {
                   <Panel title="Pledged">
                     <p className="text-body text-fg-secondary">
                       Security for loan{' '}
-                      <Link to={`/loans/${d.pledgedLoan.id}`} className="text-link hover:underline">
+                      <Link to={`/loans/${d.pledgedLoan.id}`} className="text-link underline underline-offset-2">
                         {d.pledgedLoan.loanNo}
                       </Link>{' '}
                       (outstanding <Money value={d.pledgedLoan.outstanding} />). It cannot be closed early.

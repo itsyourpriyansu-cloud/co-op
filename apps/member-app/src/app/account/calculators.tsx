@@ -12,7 +12,7 @@ import type { LoanContext, PayoutFrequency, RatesReference } from '@tgs/types';
 import { api } from '@/lib/api';
 import { useLoanContext } from '@/lib/loans';
 import { Alert, Button, Card, Divider, Header, KeyValue, NumberStepper, Screen, Segmented, SelectField, Skeleton, Tag, Text, TextField } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { color, radius, space, onBrandMuted } from '@/theme';
 
 const rupees = (t: string) => Number(t.replace(/[^0-9]/g, '')) || 0;
 
@@ -92,13 +92,13 @@ function LoanCalc({ ctx }: { ctx: LoanContext }) {
 
       {r && !tooMuch ? (
         <View style={styles.result}>
-          <Text role="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          <Text role="caption" style={{ color: onBrandMuted }}>
             {r.emi.constant ? 'Monthly instalment' : 'First instalment (gets smaller every month)'}
           </Text>
           <Text role="display" tone="onBrand" accessibilityLiveRegion="polite">
             {formatINR(r.emi.firstInstalment)}
           </Text>
-          <Text role="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          <Text role="caption" style={{ color: onBrandMuted }}>
             {months} months at {product.ratePercent}% a year{!r.emi.constant ? ` · last ${formatINR(r.emi.lastInstalment)}` : ''}
           </Text>
         </View>
@@ -182,13 +182,13 @@ function FdCalc({ rates, today }: { rates: RatesReference; today: string }) {
       {rate === undefined ? <Alert type="warning" heading="No rate for this period" description="Choose a period in one of the society's FD slabs." /> : null}
       {r ? (
         <View style={styles.result}>
-          <Text role="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          <Text role="caption" style={{ color: onBrandMuted }}>
             {payout === 'ON_MATURITY' ? 'You get at maturity' : payout === 'MONTHLY' ? 'Interest every month' : 'Interest every quarter'}
           </Text>
           <Text role="display" tone="onBrand" accessibilityLiveRegion="polite">
             {formatINR(payout === 'ON_MATURITY' ? r.maturityValue : r.periodicInterest)}
           </Text>
-          <Text role="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          <Text role="caption" style={{ color: onBrandMuted }}>
             Matures around {formatDisplayDate(r.maturityDate)}
           </Text>
         </View>

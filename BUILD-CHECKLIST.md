@@ -10,8 +10,8 @@
 
 | | |
 |---|---|
-| **Current step** | C. **M9 Dashboards, notifications & reports done** (5 role dashboards, ST-03 notifications + composer + member questions, 8 reports with CSV / print, defaulter notice and F1–F6 form twins). M0–M9 on branch `m0-foundation`, uncommitted |
-| **Next action** | **M10 Polish & demo** (states / a11y pass over every screen, visual check of M3–M5 screens, demo script; APK only when the user asks). Commit when the user says so |
+| **Current step** | C. **M0–M10 done (demo scope).** The prototype is complete: both apps, all MVP screens, reports and printables, a11y pass, demo script. On branch `m0-foundation`, uncommitted |
+| **Next action** | Commit when the user says so. Then, only when asked: APK build (`npm run build:apk`, needs an Expo account), Azure hosting (all URLs are env vars, D-054), the Playwright e2e run, or changes from the society's answers (`docs/open-questions.md`) |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
 | **Last updated** | 2026-10-25 |
 
@@ -46,7 +46,7 @@ Each milestone ends with its exit test passing. Tick the box only then.
 - [x] **M7 Collections:** demand sheets · certify & send · recovery allocation waterfall · receipts · statements on the phone ✅ (docs/build-history/07-collections.md, D-061)
 - [x] **M8 App completion:** activation · forgot password · home · calculators · notifications · help · settings ✅ (docs/build-history/08-member-app.md, D-062)
 - [x] **M9 Reports & dashboards:** 5 dashboards · 8 reports · 9 printable form twins ✅ (docs/build-history/09-insight.md, D-063)
-- [ ] **M10 Polish & release:** every state designed · WCAG 2.2 AA · device test · signed APK · demo script
+- [x] **M10 Polish & release (demo scope):** every state designed · WCAG 2.2 AA · demo script ✅ (docs/build-history/10-polish.md, D-064). **Deferred until asked:** signed APK, physical-device test, hosting (D-054)
 
 ## D. Demo & hand-over
 - [ ] Usability test: 5 members + 3 staff. Record task success, time, SUS (targets in `docs/12` §9)
@@ -81,3 +81,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-10-24 | **M7 Demand & collections built:** ST-40 index, ST-41 generate, ST-42 sheet with BR-030 certify + send, ST-43 recovery entry with live BR-011 allocation, ST-44 payments, ST-45 counter receipt (denominations), ST-46 printable receipt, ST-47 verify reported payment; phone MB-10 statements and MB-18 report a payment (D-061, seed v10). 239 tests green, coverage 100%, bundle OK. Exit passed live (J-10, Mahesh's waterfall identical on web and phone) | M8 Member app completion |
 | 2026-10-25 | **M8 Member app completion built:** MA-01 General No./Employee ID + password sign-in (demo members fill the demo password), MA-02 activation (Employee ID + registered mobile → OTP → password), MA-03 forgot password, MB-17 change password (D-062 strength meter), MB-01 live Home snapshot with action cards and bell, MB-11 loan + FD calculators (→ apply prefilled), MB-12 notifications, MB-13 help & support with tickets, MB-14 channel settings (seed v11). 249 tests green, coverage 100%, Android bundle 5.5 MB. J-14 passed live, no page errors | M9 Dashboards & reports |
 | 2026-10-25 | **M9 Dashboards, notifications & reports built:** ST-01 role variants (Accountant, Secretary/President, Cashier, DDO + Admin) from the Work Queue; ST-03 notifications (bell with count), simulated composer (SMS/WhatsApp/Email to a member, department, defaulters, retiring; preview → send → outbox), member questions with replies that reach the phone; ST-50 catalogue, ST-51 viewer (8 reports, grouped subtotals, CSV, print on letterhead); ST-52 defaulter notice + F1, F2, F3, F4, F5/F6 twins with print buttons on joining, loan and member pages (D-063, seed v12). 257 tests green, coverage 100%, console build OK. J-13 passed live, no page errors | M10 Polish & demo |
+| 2026-10-25 | **M10 Polish (demo scope):** axe WCAG 2.2 AA sweep of 27 console routes (light + dark) and 25 phone screens → no critical/serious left (tertiary token, Blend contrast lifts, Initials, tab/scroll/label fix-ups, aria-checked, on-brand colours); state audit with `/__demo/failure-rate` found and fixed the console showing "no access" when the server is down; topbar global search (`GET /search`, Ctrl K); M3–M5 screens visually checked; `DEMO-SCRIPT.md` written and Act 3 rehearsed across both apps (D-064). 258 tests green, coverage 100%, console build + Android bundle OK. APK / device / hosting deferred | Commit · APK or hosting when asked |

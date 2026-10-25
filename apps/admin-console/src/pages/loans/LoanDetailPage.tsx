@@ -9,8 +9,6 @@ import {
   AlertV2,
   AlertV2SubType,
   AlertV2Type,
-  AvatarV2,
-  AvatarV2Size,
   ButtonV2,
   ButtonV2Size,
   ButtonV2SubType,
@@ -47,6 +45,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { LoanActionDrawer, SanctionSheetView } from './LoanActionDrawer';
 import { ACTION_LABEL, formFor } from './loans';
+import { Initials } from '@/components/Initials';
 
 const SECONDARY = new Set(['returnToMember', 'reject', 'sendBack']);
 
@@ -286,7 +285,7 @@ export function LoanDetailPage() {
           <div className="mt-3 flex flex-col gap-5">
             <header className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex min-w-0 items-center gap-4">
-                <AvatarV2 fallbackText={d.member.name} size={AvatarV2Size.LG} alt={d.member.name} />
+                <Initials name={d.member.name} size="lg" />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-page-title text-fg">
@@ -297,7 +296,7 @@ export function LoanDetailPage() {
                   </div>
                   <p className="mt-1 text-body text-fg-secondary">
                     <span className="tabular">{l.loanNo ?? l.applicationNo}</span> ·{' '}
-                    <Link to={`/members/${d.member.id}`} className="text-link hover:underline">
+                    <Link to={`/members/${d.member.id}`} className="text-link underline underline-offset-2">
                       {d.member.name} (No. {d.member.generalNo})
                     </Link>{' '}
                     · {d.member.departmentName} · applied {formatDisplayDate(l.appliedOn)}

@@ -95,7 +95,6 @@ function ReportCard({ r, onOpen }: { r: ReportDef; onOpen: () => void }) {
       type="button"
       disabled={!r.available}
       onClick={onOpen}
-      aria-label={r.available ? `Open ${r.title}` : `${r.title}: ${r.note ?? 'not available'}`}
       className={cn('group flex flex-col gap-2 rounded-card border p-5 text-left transition', r.available ? 'border-line bg-surface shadow-raised hover:-translate-y-0.5 hover:border-brand-border' : 'cursor-not-allowed border-dashed border-line bg-surface-subtle')}
     >
       <span className="flex items-start justify-between gap-2">

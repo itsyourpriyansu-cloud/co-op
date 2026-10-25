@@ -1,11 +1,9 @@
-// Topbar content: search (M3), demo controls, theme, notifications, account menu with persona switch.
-import { Bell, FlaskConical, LogOut, Moon, RotateCcw, Search, Sun, UserRoundCog, WifiOff } from 'lucide-react';
+// Topbar content: global search (M10), demo controls, theme, notifications, account menu with persona switch.
+import { Bell, FlaskConical, LogOut, Moon, RotateCcw, Sun, UserRoundCog, WifiOff } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import {
   addSnackbarV2,
-  AvatarV2,
-  AvatarV2Size,
   ButtonV2,
   ButtonV2Size,
   ButtonV2SubType,
@@ -13,20 +11,20 @@ import {
   MenuV2,
   MenuV2ItemActionType,
   MenuV2ItemVariant,
-  SearchInputV2,
   SnackbarV2Variant,
   TagV2,
   TagV2Color,
   TagV2Size,
   TagV2SubType,
   TagV2Type,
-  TooltipV2,
 } from '@juspay/blend-design-system';
 import { formatDisplayDate } from '@tgs/domain';
 import { ROLE_LABELS } from '@tgs/types';
 import { api } from '@/lib/api';
 import { useAuth } from '../auth';
 import { useThemeMode } from '../theme';
+import { GlobalSearch } from './GlobalSearch';
+import { Initials } from '@/components/Initials';
 
 const icon = (Icon: typeof Bell) => ({ slot: <Icon size={16} strokeWidth={1.75} aria-hidden /> });
 
@@ -63,17 +61,13 @@ export function ConsoleTopbar() {
   return (
     <div className="flex w-full items-center gap-3">
       <div className="w-full max-w-md">
-        <TooltipV2 content="Member and loan search arrives with the member master (M3)">
-          <div>
-            <SearchInputV2 value="" placeholder="Search members, loans, General No…" disabled leftSlot={<Search size={16} aria-hidden />} onChange={() => undefined} aria-label="Search" />
-          </div>
-        </TooltipV2>
+        <GlobalSearch />
       </div>
 
       <div className="ml-auto flex items-center gap-2">
         <MenuV2
           trigger={
-            <button type="button" className="flex items-center" aria-label="Demo controls">
+            <button type="button" className="flex items-center" aria-label={`${demo.data ? `Demo · ${formatDisplayDate(demo.data.today)}` : 'Demo data'}: demo controls`}>
               <TagV2
                 text={demo.data ? `Demo · ${formatDisplayDate(demo.data.today)}` : 'Demo data'}
                 type={TagV2Type.SUBTLE}
@@ -115,8 +109,9 @@ export function ConsoleTopbar() {
         {session && (
           <MenuV2
             trigger={
-              <button type="button" className="rounded-pill" aria-label="Account menu">
-                <AvatarV2 fallbackText={session.user.name} size={AvatarV2Size.SM} alt={session.user.name} />
+              <button type="button" className="rounded-pill">
+                <span className="sr-only">Account menu, {session.user.name}</span>
+                <Initials name={session.user.name} size="sm" />
               </button>
             }
             items={[

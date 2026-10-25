@@ -5,5 +5,10 @@ import { DataTable, type DataTableProps } from '@juspay/blend-design-system';
  * (rows typed as Record<string, unknown>); this restores row typing for columns and callbacks.
  */
 export function Table<T extends Record<string, unknown>>(props: DataTableProps<T>) {
-  return <DataTable {...(props as unknown as DataTableProps<Record<string, unknown>>)} />;
+  // .tgs-datatable: scope for the WCAG contrast lift on Blend's header labels (index.css, D-064).
+  return (
+    <div className="tgs-datatable">
+      <DataTable {...(props as unknown as DataTableProps<Record<string, unknown>>)} />
+    </div>
+  );
 }

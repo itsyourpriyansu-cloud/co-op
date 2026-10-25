@@ -182,3 +182,24 @@ describe('ST-03 notifications, composer and member questions', () => {
     expect((await call('POST', `/support/tickets/${t.id}/reply`, { text: 'Anything else?' }, acc)).status).toBe(409);
   });
 });
+
+describe('M10 topbar search', () => {
+  it('finds members by name / General No. / Employee ID, loans and receipts by number, scoped for the DDO', async () => {
+    const admin = await login('stf-admin');
+    const m = store.db.members.find((x) => x.generalNo === '1101')!;
+    const byName = (await call<Array<{ kind: string; id: string }>>('GET', '/search?q=lakshmi', undefined, admin)).body;
+    expect(byName.some((h) => h.kind === 'member' && h.id === m.id)).toBe(true);
+    expect((await call<Array<{ id: string }>>('GET', '/search?q=1101', undefined, admin)).body.some((h) => h.id === m.id)).toBe(true);
+    expect((await call<Array<{ id: string }>>('GET', `/search?q=${m.employeeId}`, undefined, admin)).body.some((h) => h.id === m.id)).toBe(true);
+    const loan = store.db.loans.find((l) => l.loanNo)!;
+    expect((await call<Array<{ kind: string; id: string }>>('GET', `/search?q=${loan.loanNo}`, undefined, admin)).body.some((h) => h.kind === 'loan' && h.id === loan.id)).toBe(true);
+    expect((await call<unknown[]>('GET', '/search?q=a', undefined, admin)).body).toHaveLength(0);
+    const ddo = await login('stf-ddo-fin');
+    const scoped = (await call<Array<{ kind: string; id: string }>>('GET', '/search?q=a', undefined, ddo)).body;
+    expect(scoped).toHaveLength(0);
+    const fin = (await call<Array<{ kind: string; id: string }>>('GET', '/search?q=kumar', undefined, ddo)).body;
+    expect(fin.filter((h) => h.kind === 'member').every((h) => store.db.members.find((x) => x.id === h.id)?.departmentId === 'dept-fin')).toBe(true);
+    expect(fin.some((h) => h.kind === 'deposit')).toBe(false);
+  });
+});
+

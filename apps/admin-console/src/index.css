@@ -34,3 +34,30 @@
     }
   }
 }
+
+/* WCAG AA (D-064): Blend draws stat-card titles / subtitles and sidebar group labels in gray-400
+   (2.6:1). Lift them to our secondary / tertiary text roles; layout and sizes stay Blend's. */
+[data-element='statcard-header'],
+[data-element='statcard-subtitle'] {
+  color: var(--tgs-text-tertiary) !important;
+}
+[data-element='sidebar-section'] > [role='button'] p {
+  color: var(--tgs-text-tertiary) !important;
+}
+.tgs-datatable thead p,
+[data-element='placeholder'] {
+  color: var(--tgs-text-tertiary) !important;
+}
+/* Blend form hints (gray-500) and the titles of upcoming stepper steps (gray-400). */
+[data-element='hint-text'],
+[id^='stepper-'][id$='-title'] {
+  color: var(--tgs-text-tertiary) !important;
+}
+/* Inactive labels of Blend's boxed tabs (gray-500 on gray-50 = 4.2:1). */
+[role='tab'][data-state='inactive'] span {
+  color: var(--tgs-text-tertiary);
+}
+/* Blend checkbox labels lose contrast in dark mode; use the primary text role in both modes. */
+[data-element='checkbox-label'][data-status='enabled'] {
+  color: var(--tgs-text-primary) !important;
+}
