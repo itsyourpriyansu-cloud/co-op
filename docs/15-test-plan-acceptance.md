@@ -97,10 +97,10 @@
 
 ## 5. M10 release checklist
 - [x] All P1 screens built per `06` and listed in `05` (M1–M9)
-- [x] All journeys J-01…J-14 green + cross-app journey AC-X01 — API tests (`apps/mock-api/src/*.test.ts`) and headless browser runs per milestone (build-history 03–10); demo Act 3 rehearsed in the browser. The Playwright e2e suite is run by the user at the end
+- [x] All journeys J-01…J-14 green + cross-app journey AC-X01: API tests (`apps/mock-api/src/*.test.ts`) and the Playwright suite (`tests/e2e/`, 188 tests, D-066). The whole `DEMO-SCRIPT.md` passes twice in a row (`npm run e2e:demo`)
 - [ ] Release APK installed and smoke-tested on physical devices — **deferred until the user asks (D-054)**; Android bundle exports cleanly
 - [x] Domain tests green, coverage met (100%)
-- [x] Responsive and a11y checks done — axe WCAG 2.2 AA clean on every console route (light + dark) and phone screen; error / empty / no-results states checked with the failure switch (D-064)
+- [x] Responsive and a11y checks done: axe WCAG 2.2 AA clean on every console route (light + dark) and phone screen, re-checked automatically (`a11y-*.spec.ts`); 1366×768, 1280×800, collapsed sidebar and phone 360×740 without sideways scroll (`screens.spec.ts`); error / empty / no-results states with the failure switch (`states-*.spec.ts`) (D-064, D-066)
 - [x] Every PLACEHOLDER value visible and editable in Settings (M2 exit test, D-056)
 - [x] Docs updated (status tracker, decisions, open questions)
 

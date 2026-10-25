@@ -32,6 +32,8 @@ Goal: the prototype survives a live demo on any day, and a robot proves it befor
   - Dark mode: Blend fills "attentive" primary tags ("You", "Certify", "Decide") with primary-500 behind white text (3.8:1). Fixed with a scoped CSS darken (`.tgs-tag-attentive`).
   - Paper twins (FDR, sanction letter, letterhead pages such as receipts and printed forms) used `bg-white`, which does not exist because the token theme removes Tailwind's palette. In dark mode the paper was transparent with dark ink. Papers now carry `data-theme="light"`, and the token build emits light variables for any nested light scope (`scripts/build-css.ts`). The notification badge's `text-white` became `text-on-brand`.
   - New receipt: the date defaulted to a hard-coded 2026-10-24. It now uses the demo date.
+  - Blend's EmptyState passes unitless line-height tokens to CSS (28 → 28 × font size). Every empty, error and no-results state had a 560px-tall title, with its description pushed a page down. Fixed with a scoped `[data-empty-state]` rule in `index.css`.
+  - Joining wizard: the present and permanent address fields had identical screen-reader names. They are now named with their section ("Present address: PIN code").
 - **Production mode:**
   - `npm run demo:prod` builds the console and serves it with `vite preview` on **5180**, together with the API;
   - `npm run dev:web` starts the phone preview on 8090;
@@ -44,7 +46,11 @@ Goal: the prototype survives a live demo on any day, and a robot proves it befor
   - `DEMO-SCRIPT.md` v1.1.
 
 ## Verified
-RESULTS_PLACEHOLDER
+- `npm run typecheck` green · `npx vitest run` **263 passed** · domain coverage **100%** (783/783 statements, 789/789 branches) · console production build · Android bundle export 5.5 MB (no APK).
+- Full Playwright suite (`npx playwright test`): **188 tests**. The first full run had 183 passed and 2 failures, both test-timing races (an "Act as" button re-rendering mid-read; the menu not loaded before failures were switched on), plus the 3 later acts those skipped. The races were fixed in the tests, and both specs re-run green (states-console + demo-script, 18/18).
+- The demo script passes **twice in a row** after a reset (`--repeat-each=2`: 14/14).
+- Accessibility: console light + dark (71) and every phone screen (24): no critical or serious axe findings.
+- Demo data reset afterwards (`POST /__demo/reset`).
 
 ## Decisions
 D-065 (demo clock), D-066 (demo-ready gate: port, prod mode, e2e suite as acceptance, a11y fixes).
