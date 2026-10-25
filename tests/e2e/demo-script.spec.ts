@@ -41,7 +41,9 @@ async function actAs(page: Page, n: number) {
         async () => {
           const b = page.getByRole('button', { name: /^Act as / }).first();
           if (!(await b.count())) return last ? 'ok' : 'wait';
-          return (await b.innerText()) !== label && (await b.isEnabled()) ? 'ok' : 'wait';
+          // The page can re-render between calls; a vanished button just means "look again".
+          const text = await b.innerText({ timeout: 1_000 }).catch(() => label);
+          return text !== label && (await b.isEnabled().catch(() => false)) ? 'ok' : 'wait';
         },
         { timeout: 30_000 },
       )

@@ -40,6 +40,9 @@ test.describe('states · console', () => {
   test('in-app navigation: each list shows its own error state', async ({ page, request }) => {
     test.setTimeout(180_000);
     await consoleAs(page, request, 'stf-accountant', '/dashboard');
+    // The menu is built from the user's permissions: let them load before every call starts failing.
+    await expect(page.getByRole('navigation').getByText(/^Work Queue/).first()).toBeVisible();
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 20_000 });
     await setFailureRate(request, 1);
     for (const [label] of LISTS.filter(([, , p]) => p === 'stf-accountant')) {
       await page.getByRole('navigation').getByText(new RegExp(`^${label}`)).first().click();

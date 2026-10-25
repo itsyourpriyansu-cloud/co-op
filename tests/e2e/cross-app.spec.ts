@@ -15,7 +15,9 @@ async function stepLanded(page: Page, label: string, done: () => Promise<boolean
         if (await done()) return 'done';
         const b = page.getByRole('button', { name: /^Act as / }).first();
         if (!(await b.count())) return 'wait';
-        return (await b.innerText()) !== label && (await b.isEnabled()) ? 'next' : 'wait';
+        // The page can re-render between calls; a vanished button just means "look again".
+        const text = await b.innerText({ timeout: 1_000 }).catch(() => label);
+        return text !== label && (await b.isEnabled().catch(() => false)) ? 'next' : 'wait';
       },
       { timeout: 30_000 },
     )
