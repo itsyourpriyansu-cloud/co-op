@@ -1,9 +1,7 @@
-// M8 exit: J-14 member sign-in with General No. / Employee ID + password, activation of a seeded
-// member who has not activated the app (MA-02), forgot password (MA-03), change password (MB-17),
-// home snapshot (MB-01), notifications (MB-12), preferences (MB-14) and support tickets (MB-13).
+// J-14 member sign-in by mobile + one-time code (D-067; passwords retired), home snapshot (MB-01),
+// notifications (MB-12), preferences (MB-14) and support tickets (MB-13).
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { AccountOtp, ActivationSample, MemberHome, MemberPreferences, MyNotifications, PasswordToken, Session, SupportCenter, SupportTicket } from '@tgs/types';
-import { DEMO_PASSWORD } from './account';
+import type { ActivationSample, MemberHome, MemberPreferences, MyNotifications, OtpStarted, Session, SupportCenter, SupportTicket } from '@tgs/types';
 import { createApp } from './app';
 import { Store } from './store';
 
@@ -23,69 +21,50 @@ const call = async <T>(method: string, path: string, body?: unknown, token?: str
   });
   return { status: res.status, body: (await res.json()) as T & Err };
 };
-const signIn = (login: string, password = DEMO_PASSWORD) => call<Session>('POST', '/auth/member-login', { login, password });
+/** Demo one-tap sign-in for a member by General No. (persona id mem-<no>). */
+const signIn = (generalNo: string) => call<Session>('POST', '/auth/persona', { personaId: store.db.members.find((m) => m.generalNo === generalNo)!.id, channel: 'app' });
 const lakshmi = () => store.db.members.find((m) => m.generalNo === '1101')!;
 
-describe('J-14 member sign-in', () => {
-  it('signs in by General No. or Employee ID and explains every failure', async () => {
-    const byNo = await signIn('1101');
-    expect(byNo.status).toBe(200);
-    expect(byNo.body.user).toMatchObject({ role: 'MEMBER', memberId: lakshmi().id });
-    expect((await signIn(lakshmi().employeeId.toLowerCase())).status).toBe(200);
-    expect((await call('GET', '/me/home', undefined, byNo.body.token)).status).toBe(200);
+describe('J-14 member sign-in by mobile + one-time code (D-067)', () => {
+  const start = (mobile: string, purpose = 'LOGIN') => call<OtpStarted>('POST', '/auth/otp/start', { mobile, purpose });
+  const verify = (otpRef: string, otp = '123456', name?: string) => call<Session>('POST', '/auth/otp/verify', { otpRef, otp, ...(name ? { name } : {}) });
 
-    expect((await signIn('', '')).body.fieldErrors).toMatchObject({ login: expect.any(String), password: expect.any(String) });
-    expect((await signIn('9999')).body.fieldErrors?.login).toBeTruthy();
-    expect((await signIn('1101', 'wrong-pass1')).body.fieldErrors?.password).toBeTruthy();
-    const sample = (await call<ActivationSample>('GET', '/__demo/activation-sample')).body;
-    const notActive = await signIn(sample.generalNo);
-    expect(notActive.status).toBe(422);
-    expect(notActive.body.ruleId).toBe('NOT_ACTIVATED');
+  it('signs a member in with their registered mobile and explains every failure', async () => {
+    const started = await start(lakshmi().mobile);
+    expect(started.status).toBe(200);
+    expect(started.body).toMatchObject({ demoOtp: '123456', channel: 'SIMULATED' });
+    expect(started.body.mobileMasked).toMatch(/^\d\dX{6}\d\d$/);
+    expect((await verify(started.body.otpRef, '000000')).body.fieldErrors?.otp).toBe('Incorrect code');
+    const ok = await verify(started.body.otpRef);
+    expect(ok.status).toBe(200);
+    expect(ok.body.user).toMatchObject({ role: 'MEMBER', memberId: lakshmi().id, generalNo: '1101' });
+    expect((await call('GET', '/me/home', undefined, ok.body.token)).status).toBe(200);
+    expect((await verify(started.body.otpRef)).body.fieldErrors?.otp).toBe('Expired');
+
+    expect((await start('12345')).body.fieldErrors?.mobile).toBeTruthy();
+    expect((await start('9999999990')).body.fieldErrors?.mobile).toMatch(/^Not registered/);
   });
 
-  it('activates a member who never used the app, then signs in with the new password', async () => {
+  it('a member who never used the app signs in the same way (no activation step)', async () => {
     const sample = (await call<ActivationSample>('GET', '/__demo/activation-sample')).body;
-    expect(store.db.members.find((m) => m.generalNo === sample.generalNo)?.portalActivated).toBe(false);
-
-    expect((await call('POST', '/auth/activate/start', { employeeId: sample.employeeId, mobile: '9000000000' })).body.fieldErrors?.mobile).toContain('registered');
-    expect((await call('POST', '/auth/activate/start', { employeeId: lakshmi().employeeId, mobile: lakshmi().mobile })).body.ruleId).toBe('ALREADY_ACTIVE');
-    const otp = await call<AccountOtp>('POST', '/auth/activate/start', { employeeId: sample.employeeId, mobile: sample.mobile });
-    expect(otp.body.mobileMasked).toMatch(/^\d\dX{6}\d\d$/);
-    expect((await call('POST', '/auth/otp/verify', { otpRef: otp.body.otpRef, otp: '000000' })).body.fieldErrors?.otp).toBeTruthy();
-    const tok = await call<PasswordToken>('POST', '/auth/otp/verify', { otpRef: otp.body.otpRef, otp: '123456' });
-    expect(tok.status).toBe(200);
-
-    expect((await call('POST', '/auth/password/set', { passwordToken: tok.body.passwordToken, password: `abc${sample.generalNo}9` })).body.fieldErrors?.password).toContain('General No.');
-    const set = await call<{ activated: boolean; session: Session }>('POST', '/auth/password/set', { passwordToken: tok.body.passwordToken, password: 'Garden42!' });
-    expect(set.body.activated).toBe(true);
-    expect(set.body.session.user.generalNo).toBe(sample.generalNo);
-    expect(store.db.members.find((m) => m.generalNo === sample.generalNo)?.portalActivated).toBe(true);
-    expect(store.db.credentials[set.body.session.user.memberId!]?.hash).toBeTruthy();
-
-    expect((await signIn(sample.generalNo, DEMO_PASSWORD)).status).toBe(400);
-    expect((await signIn(sample.generalNo, 'Garden42!')).status).toBe(200);
-    expect(store.db.auditLog.some((a) => a.action === 'activate' && a.entityId === set.body.session.user.memberId)).toBe(true);
-    expect((await call<ActivationSample>('GET', '/__demo/activation-sample')).body.generalNo).not.toBe(sample.generalNo);
+    const s = await verify((await start(sample.mobile)).body.otpRef);
+    expect(s.body.user.generalNo).toBe(sample.generalNo);
   });
 
-  it('forgot password resets it and signs out the old sessions; change password keeps this one', async () => {
-    const old = (await signIn('1102')).body.token;
-    const otp = await call<AccountOtp>('POST', '/auth/forgot/start', { login: '1102' });
-    const tok = await call<PasswordToken>('POST', '/auth/otp/verify', { otpRef: otp.body.otpRef, otp: '123456' });
-    expect((await call('POST', '/auth/otp/verify', { otpRef: otp.body.otpRef, otp: '123456' })).status).toBe(400);
-    expect((await call<{ activated: boolean }>('POST', '/auth/password/set', { passwordToken: tok.body.passwordToken, password: 'River2026x' })).body.activated).toBe(false);
-    expect((await call('GET', '/me/home', undefined, old)).status).toBe(401);
-    expect((await signIn('1102', 'River2026x')).status).toBe(200);
+  it('signs up a new applicant, who then signs in with the same mobile', async () => {
+    expect((await start(lakshmi().mobile, 'SIGNUP')).status).toBe(409);
+    const ref = (await start('9123400002', 'SIGNUP')).body.otpRef;
+    expect((await verify(ref)).body.fieldErrors?.name).toBeTruthy();
+    const ref2 = (await start('9123400002', 'SIGNUP')).body.otpRef;
+    const created = await verify(ref2, '123456', 'Test Applicant');
+    expect(created.body.user).toMatchObject({ role: 'APPLICANT', name: 'Test Applicant' });
+    const again = await verify((await start('9123400002')).body.otpRef);
+    expect(again.body.user.id).toBe(created.body.user.id);
+  });
 
-    const a = (await signIn('1102', 'River2026x')).body.token;
-    const b = (await signIn('1102', 'River2026x')).body.token;
-    expect((await call('POST', '/me/password', { current: 'nope', next: 'Ocean77xy' }, a)).body.fieldErrors?.current).toBeTruthy();
-    expect((await call('POST', '/me/password', { current: 'River2026x', next: 'short1' }, a)).body.fieldErrors?.password).toBeTruthy();
-    const changed = await call<{ signedOutOtherSessions: number }>('POST', '/me/password', { current: 'River2026x', next: 'Ocean77xy' }, a);
-    expect(changed.body.signedOutOtherSessions).toBeGreaterThanOrEqual(2);
-    expect((await call('GET', '/me/home', undefined, a)).status).toBe(200);
-    expect((await call('GET', '/me/home', undefined, b)).status).toBe(401);
-    expect((await call('POST', '/auth/forgot/start', { login: (await call<ActivationSample>('GET', '/__demo/activation-sample')).body.generalNo })).body.ruleId).toBe('NOT_ACTIVATED');
+  it('retires the password routes', async () => {
+    expect((await call('POST', '/auth/member-login', { login: '1101', password: 'x' })).status).toBe(404);
+    expect((await call('POST', '/auth/activate/start', {})).status).toBe(404);
   });
 
   it('staff tokens cannot use member account routes', async () => {

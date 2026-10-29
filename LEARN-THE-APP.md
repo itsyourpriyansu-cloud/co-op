@@ -36,6 +36,8 @@ Today all of this runs on **paper forms** carried from desk to desk. We're turni
 
 **Golden rule:** members only use the **phone app**, and staff only use the **computer console**. Nobody uses both with the same login.
 
+**How people sign in (real backend, P1):** members type the **mobile number** registered with the society and get a **one-time code** (no password to forget). Staff type a **user ID and password**; the Super Admin, Secretary and President also type a 6-digit code from an **authenticator app** on their phone, because they sign approvals.
+
 ---
 
 ## 3. The three pieces (think of a restaurant 🍽️)

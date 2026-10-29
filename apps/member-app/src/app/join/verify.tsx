@@ -1,4 +1,5 @@
-// MJ-02 (step 2): verify the mobile with OTP. Demo OTP is shown (mock API returns it).
+// MJ-02 (step 2): verify the mobile with OTP; this creates the applicant's sign-in (D-067).
+// The demo code is shown when the server returns it.
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -11,7 +12,7 @@ import { space } from '@/theme';
 
 export default function JoinVerify() {
   const params = useLocalSearchParams<{ otpRef: string; mobile: string; fullName: string; demoOtp?: string }>();
-  const { adoptSession } = useAuth();
+  const { verifyOtp } = useAuth();
   const [otpRef, setOtpRef] = useState(params.otpRef);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | undefined>();
@@ -29,8 +30,7 @@ export default function JoinVerify() {
     setBusy(true);
     setError(undefined);
     try {
-      const session = await api.joining.verify(otpRef, code);
-      await adoptSession(session);
+      await verifyOtp(otpRef, code, params.fullName);
       router.replace('/eligibility');
     } catch (e) {
       setError(isApiError(e) ? e.message : 'Verification failed.');
@@ -41,7 +41,7 @@ export default function JoinVerify() {
   };
 
   const resend = async () => {
-    const next = await api.joining.signup(params.fullName, params.mobile);
+    const next = await api.auth.otpStart(params.mobile, 'SIGNUP');
     setOtpRef(next.otpRef);
     setResendIn(30);
     setError(undefined);
@@ -58,7 +58,7 @@ export default function JoinVerify() {
           if (v.length === 6) void verify(v);
         }}
       />
-      {params.demoOtp ? <Alert type="neutral" heading={`Demo code: ${params.demoOtp}`} description="This prototype doesn't send SMS." /> : null}
+      {params.demoOtp ? <Alert type="neutral" heading={`Demo code: ${params.demoOtp}`} description="This prototype doesn't send WhatsApp messages." /> : null}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
         <Text role="caption" tone="tertiary">
           Didn't get it?

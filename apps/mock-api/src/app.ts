@@ -133,6 +133,10 @@ export function createApp({ store, version, corsOrigins }: AppOptions) {
   api.post('/__demo/session', async (c) => {
     const user = await c.req.json<SessionUser>().catch(() => undefined);
     if (!user?.id || !user.name || !user.role) fail('VALIDATION_ERROR', 'Send the session user.');
+    // An applicant who signed up on the backend is new here: register them so joining works.
+    if (user!.role === 'APPLICANT' && !store.db.applicants.some((a) => a.id === user!.id)) {
+      store.db.applicants.push({ id: user!.id, name: user!.name, mobileMasked: '' });
+    }
     const token = randomUUID();
     store.db.sessions[token] = user!;
     return c.json<Session>({ token, user: user! });

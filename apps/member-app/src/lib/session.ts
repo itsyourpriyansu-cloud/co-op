@@ -10,6 +10,10 @@ export function getCachedToken(): string | null {
   return cached?.token ?? null;
 }
 
+export function getCachedSession(): Session | null {
+  return cached;
+}
+
 export async function loadSession(): Promise<Session | null> {
   try {
     const raw = await storage.getItem(KEY);

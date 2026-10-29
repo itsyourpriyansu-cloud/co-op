@@ -7,7 +7,6 @@ export const PHONE_URL = process.env.E2E_PHONE_URL ?? 'http://localhost:8090';
 export const API_URL = process.env.E2E_API_URL ?? 'http://localhost:4000';
 export const API = `${API_URL}/api/v1`;
 export const OTP = '123456';
-export const PASSWORD = 'Society@2026';
 
 /** Library noise we cannot fix in our code (docs/build-history/10-polish.md "Known gaps"). */
 const KNOWN_NOISE = [/forwardRef render functions accept exactly two parameters/, /outlineOffset/, /React DevTools/];

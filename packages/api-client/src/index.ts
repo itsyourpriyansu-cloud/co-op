@@ -82,13 +82,10 @@ import {
   type ReceiptListParams,
   type RecoveryInput,
   type ReportPaymentInput,
-  type AccountOtp,
   type ActivationSample,
   type MemberHome,
   type MemberPreferences,
   type MyNotifications,
-  type PasswordCheck,
-  type PasswordToken,
   type SupportCenter,
   type SupportTicket,
   type ComposeInput,
@@ -227,21 +224,10 @@ export function createApiClient(options: ApiClientOptions) {
       /** Member App sign-in / sign-up by mobile (D-067). */
       otpStart: (mobile: string, purpose: 'LOGIN' | 'SIGNUP' = 'LOGIN') => request<OtpStarted>('POST', '/auth/otp/start', { mobile, purpose }),
       otpVerify: (otpRef: string, otp: string, name?: string) => request<Session>('POST', '/auth/otp/verify', { otpRef, otp, ...(name ? { name } : {}) }),
-      /** MA-01: General No. or Employee ID + password. */
-      memberLogin: (login: string, password: string) => request<Session>('POST', '/auth/member-login', { login, password }),
-      /** MA-02: Employee ID + registered mobile → OTP. */
-      startActivation: (employeeId: string, mobile: string) => request<AccountOtp>('POST', '/auth/activate/start', { employeeId, mobile }),
-      /** MA-03: General No. / Employee ID → OTP. */
-      startReset: (login: string) => request<AccountOtp>('POST', '/auth/forgot/start', { login }),
-      verifyOtp: (otpRef: string, otp: string) => request<PasswordToken>('POST', '/auth/otp/verify', { otpRef, otp }),
-      setPassword: (passwordToken: string, password: string) =>
-        request<{ activated: true; session: Session } | { activated: false }>('POST', '/auth/password/set', { passwordToken, password }),
-      checkPassword: (password: string, login?: string) => request<PasswordCheck>('POST', '/auth/password/check', { password, login }),
     },
     /** Member: account, home, notifications, preferences, support (M8). */
     account: {
       home: () => request<MemberHome>('GET', '/me/home'),
-      changePassword: (current: string, next: string) => request<{ ok: true; signedOutOtherSessions: number }>('POST', '/me/password', { current, next }),
       notifications: () => request<MyNotifications>('GET', '/me/notifications'),
       readNotification: (id: string) => request<{ ok: true }>('POST', `/me/notifications/${id}/read`),
       readAllNotifications: () => request<{ ok: true }>('POST', '/me/notifications/read-all'),
@@ -294,11 +280,9 @@ export function createApiClient(options: ApiClientOptions) {
       tickets: () => request<StaffTicketRow[]>('GET', '/support/tickets'),
       reply: (id: string, text: string, close = false) => request<StaffTicketRow>('POST', `/support/tickets/${id}/reply`, { text, close }),
     },
-    /** Joining the society (D-026): public reference + applicant sign-up. */
+    /** Joining the society (D-026): public reference. Sign-up is auth.otpStart('SIGNUP') (D-067). */
     joining: {
       reference: () => request<JoiningReference>('GET', '/joining/reference'),
-      signup: (fullName: string, mobile: string) => request<OtpChallenge>('POST', '/joining/signup', { fullName, mobile }),
-      verify: (otpRef: string, otp: string) => request<Session>('POST', '/joining/verify', { otpRef, otp }),
     },
     /** The signed-in applicant's own membership application. */
     membership: {

@@ -1,4 +1,5 @@
-// MJ-02 Applicant sign-up: name + mobile → OTP. Keep it short: only what's needed (docs/12 §2.2).
+// MJ-02 Applicant sign-up: name + mobile → OTP (D-067: the mobile is the sign-in from now on).
+// Keep it short: only what's needed (docs/12 §2.2).
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
@@ -14,7 +15,7 @@ export default function JoinSignUp() {
   const [fullName, setFullName] = useState('');
   const [mobile, setMobile] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ message: string; signIn?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
@@ -22,14 +23,13 @@ export default function JoinSignUp() {
     setErrors({});
     setFormError(null);
     try {
-      const otp = await api.joining.signup(fullName.trim(), mobile);
+      const otp = await api.auth.otpStart(mobile, 'SIGNUP');
       router.push({ pathname: '/join/verify', params: { otpRef: otp.otpRef, mobile, fullName: fullName.trim(), demoOtp: otp.demoOtp ?? '' } });
     } catch (e) {
       if (isApiError(e) && e.code === 'NETWORK') return router.push('/offline');
       if (isApiError(e)) {
         setErrors(e.fieldErrors ?? {});
-        setFormError(e.fieldErrors ? null : e.message);
-        if (e.code === 'ALREADY_EXISTS') setFormError(e.message);
+        setFormError(e.code === 'ALREADY_EXISTS' ? { message: e.message, signIn: true } : e.fieldErrors ? null : { message: e.message });
       }
     } finally {
       setBusy(false);
@@ -64,7 +64,7 @@ export default function JoinSignUp() {
         />
       </View>
 
-      {formError ? <Alert type="error" heading="Can't continue" description={formError} action={formError.includes('member') ? { text: 'Sign in instead', onPress: () => router.replace('/login') } : undefined} /> : null}
+      {formError ? <Alert type="error" heading="Can't continue" description={formError.message} action={formError.signIn ? { text: 'Sign in instead', onPress: () => router.replace('/login') } : undefined} /> : null}
 
       <View style={{ gap: space[4] }}>
         <Text role="overline" tone="tertiary">

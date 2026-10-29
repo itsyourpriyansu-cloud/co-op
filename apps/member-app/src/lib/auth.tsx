@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Me, Session } from '@tgs/types';
 import { api } from './api';
 import { loadServerUrl } from './serverUrl';
-import { clearSession, loadSession, onUnauthenticated, saveSession } from './session';
+import { clearSession, getCachedSession, loadSession, onUnauthenticated, saveSession } from './session';
 
 interface AuthContextValue {
   /** false until the stored session and server URL have been read from the device. */
@@ -19,8 +19,8 @@ interface AuthContextValue {
   session: Session | null;
   me: Me | undefined;
   loginAsPersona: (personaId: string) => Promise<Session>;
-  /** MA-01: General No. or Employee ID + password. */
-  signIn: (login: string, password: string) => Promise<Session>;
+  /** MA-01 / MJ-02: finish a mobile sign-in or sign-up with the one-time code (D-067). */
+  verifyOtp: (otpRef: string, otp: string, name?: string) => Promise<Session>;
   /** Use a session obtained elsewhere (e.g. applicant sign-up OTP, MJ-02). */
   adoptSession: (session: Session) => Promise<void>;
   /** Re-read the user from /me (an approved applicant becomes a member on the same login). */
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const meQuery = useQuery({
-    queryKey: ['me', session?.token],
+    queryKey: ['me', session?.user.id],
     queryFn: api.me,
     enabled: ready && !!session,
   });
@@ -66,9 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return next;
   }, []);
 
-  const signIn = useCallback(
-    async (login: string, password: string) => {
-      const next = await api.auth.memberLogin(login, password);
+  const verifyOtp = useCallback(
+    async (otpRef: string, otp: string, name?: string) => {
+      const next = await api.auth.otpVerify(otpRef, otp, name);
       await saveSession(next);
       setSession(next);
       queryClient.clear();
@@ -89,22 +89,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const syncSession = useCallback(async () => {
     if (!session) return null;
     const me = await api.me();
-    const next: Session = { token: session.token, user: me.user };
+    // Keep the current tokens (a refresh may have renewed them since the session was read).
+    const next: Session = { ...(getCachedSession() ?? session), user: me.user };
     await saveSession(next);
     setSession(next);
     return next;
   }, [session]);
 
   const logout = useCallback(async () => {
-    await api.auth.logout().catch(() => undefined);
+    await api.auth.logout(getCachedSession()?.refreshToken).catch(() => undefined);
     await clearSession();
     setSession(null);
     queryClient.clear();
   }, [queryClient]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ ready, session, me: meQuery.data, loginAsPersona, signIn, adoptSession, syncSession, logout }),
-    [ready, session, meQuery.data, loginAsPersona, signIn, adoptSession, syncSession, logout],
+    () => ({ ready, session, me: meQuery.data, loginAsPersona, verifyOtp, adoptSession, syncSession, logout }),
+    [ready, session, meQuery.data, loginAsPersona, verifyOtp, adoptSession, syncSession, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

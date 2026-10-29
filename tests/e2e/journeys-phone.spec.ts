@@ -1,6 +1,9 @@
 // Member App journeys (J-14 and the member screens) on the Expo web build at phone size.
 import type { Page } from '@playwright/test';
-import { expect, OTP, PASSWORD, PHONE_URL, phoneAs, resetDemo, shot, tap, test } from './support';
+import { createSeed } from '@tgs/mock-data';
+import { API, expect, OTP, PHONE_URL, phoneAs, resetDemo, shot, tap, test } from './support';
+
+const MAHESH_MOBILE = createSeed().members.find((m) => m.generalNo === '1104')!.mobile;
 
 async function typeOtp(page: Page) {
   await page.getByLabel('One-time password').click();
@@ -22,44 +25,36 @@ test.describe('member app journeys', () => {
     await expect(page.getByText(/Become a member/).first()).toBeVisible();
   });
 
-  test('J-14 sign in with General No. and password', async ({ page }) => {
+  test('J-14 sign in with the registered mobile and a one-time code (D-067)', async ({ page, request }) => {
+    // A member who has never used the app: no activation step any more.
+    const sample = (await (await request.get(`${API}/__demo/activation-sample`)).json()) as { mobile: string; name: string };
     await page.goto(`${PHONE_URL}/login`);
-    await page.getByLabel('General No. or Employee ID').fill('1104');
-    await page.getByRole('textbox', { name: 'Password', exact: true }).fill(PASSWORD);
-    await tap(page, /^Sign in$/);
+    await page.getByLabel('Mobile number').fill(sample.mobile);
+    await tap(page, 'Send code');
+    await expect(page.getByText(`Demo code: ${OTP}`)).toBeVisible();
+    await typeOtp(page);
+    await expect(page.getByText(`Hello, ${sample.name.split(' ')[0]}`)).toBeVisible();
+    await shot(page, 'phone-otp-signed-in');
+  });
+
+  test('J-14 an unregistered mobile is told to become a member', async ({ page }) => {
+    await page.goto(`${PHONE_URL}/login`);
+    await page.getByLabel('Mobile number').fill('9999999990');
+    await tap(page, 'Send code');
+    await expect(page.getByText('Mobile not registered')).toBeVisible();
+    await tap(page, 'Become a member');
+    await expect(page.getByLabel('Full name')).toBeVisible();
+  });
+
+  test('J-14 a wrong code is refused, the right one signs in', async ({ page }) => {
+    await page.goto(`${PHONE_URL}/login`);
+    await page.getByLabel('Mobile number').fill(MAHESH_MOBILE);
+    await tap(page, 'Send code');
+    await page.getByLabel('One-time password').click();
+    await page.keyboard.type('000000');
+    await expect(page.getByText(/doesn't match|Incorrect code/).first()).toBeVisible();
+    await typeOtp(page);
     await expect(page.getByText('Hello, Mahesh')).toBeVisible();
-  });
-
-  test('J-14 activation of a member who never used the app', async ({ page }) => {
-    await page.goto(`${PHONE_URL}/activate`);
-    await page.getByText(/has not activated the app/).click();
-    await tap(page, 'Send code');
-    await typeOtp(page);
-    await tap(page, 'Verify code');
-    await page.getByRole('textbox', { name: 'New password', exact: true }).fill('Bright-Lotus-73');
-    await page.getByRole('textbox', { name: 'Type it again', exact: true }).fill('Bright-Lotus-73');
-    await tap(page, 'Activate & sign in');
-    await expect(page.getByText(/^Hello, /)).toBeVisible();
-    await shot(page, 'phone-activated');
-  });
-
-  test('J-14 forgot password, then change password', async ({ page, request }) => {
-    await page.goto(`${PHONE_URL}/forgot-password`);
-    await page.getByLabel('General No. or Employee ID').fill('1103');
-    await tap(page, 'Send code');
-    await typeOtp(page);
-    await tap(page, 'Verify code');
-    await page.getByRole('textbox', { name: 'New password', exact: true }).fill('Quiet-River-58');
-    await page.getByRole('textbox', { name: 'Type it again', exact: true }).fill('Quiet-River-58');
-    await tap(page, /Save|Change|Set/);
-    await expect(page.getByText('Password changed')).toBeVisible();
-
-    await phoneAs(page, request, 'mem-1103', '/account/password');
-    await page.getByRole('textbox', { name: 'Current password', exact: true }).fill('Quiet-River-58');
-    await page.getByRole('textbox', { name: 'New password', exact: true }).fill('Green-Field-91');
-    await page.getByRole('textbox', { name: 'Type the new one again', exact: true }).fill('Green-Field-91');
-    await tap(page, 'Save new password');
-    await expect(page.getByText('Password changed')).toBeVisible();
   });
 
   test('home snapshot, loans, deposits and payments tabs', async ({ page, request }) => {

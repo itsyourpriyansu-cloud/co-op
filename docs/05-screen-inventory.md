@@ -1,5 +1,6 @@
 # 05 · Screen Inventory: How Many Things We Build
 
+> Version 0.5 · 2026-10-29 · MA-02, MA-03, MB-17 retired (D-078): Member App 26, total 64
 > Version 0.4 · 2026-10-24 · Accepted MVP (D-036), incl. the membership join flow (D-026) and paper-form digitisation (doc 16)
 > Complexity: **S** simple · **M** standard · **L** complex. Columns: **Lean** = loan-lifecycle demo · **MVP** = accepted · **Full** = everything
 > Source: A agreement · F flow diagram · PF paper form · P proposal
@@ -11,8 +12,8 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | Build item | Lean | **MVP (accepted)** | Full |
 |---|---|---|---|
 | Admin Console pages | 14 | **38** | 40 |
-| Member App screens | 12 | **29** | 29 |
-| **Total screens** | 26 | **67** | 69 |
+| Member App screens | 12 | **26** (29 before D-078) | 29 |
+| **Total screens** | 26 | **64** (67 before D-078) | 69 |
 | Overlays (decision drawers / dialogs with business logic) | 6 | **11** | 11 |
 | Dashboard role variants (console) | 3 | **5** (Admin, Accountant, Secretary/President, Cashier, DDO) | 5 |
 | Report templates | 0 | **8** | 22 |
@@ -115,9 +116,9 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | ID | Screen | Src | Cx | Lean | MVP |
 |---|---|---|---|---|---|
 | MJ-01 | **Welcome**: "I'm a member → Log in / Activate" · "Become a member → Apply" | P D-026 | S | | ✓ |
-| MA-01 | Member login (+ demo persona picker) | F | M | ✓ | ✓ |
-| MA-02 | Account activation for existing members (General No./Employee ID + mobile OTP) | D-009 | M | | ✓ |
-| MA-03 | Forgot password | P | S | | ✓ |
+| MA-01 | Member sign-in: mobile + one-time code (+ demo persona picker) (D-078) | F, S | M | ✓ | ✓ |
+| ~~MA-02~~ | ~~Account activation~~ retired: first sign-in by mobile + OTP (D-078) | D-009 | — | | |
+| ~~MA-03~~ | ~~Forgot password~~ retired: no member password (D-078) | P | — | | |
 | MA-04 | Offline / server unreachable | P | S | ✓ | ✓ |
 | MA-05 | Hidden demo settings | P | S | ✓ | ✓ |
 
@@ -150,9 +151,9 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | MB-13 | Help & support | F | S | | ✓ |
 | MB-14 | Settings / Notifications (channel preferences) | F SM | S | | ✓ |
 | MB-16 | **Interest rates** (loan products + FD slabs, read-only) | SM | S | | ✓ |
-| MB-17 | **Change password** | SM | S | | ✓ |
+| ~~MB-17~~ | ~~Change password~~ retired: no member password (D-078) | SM | — | | |
 
-**Member App MVP = 6 + 4 + 19 = 29 screens.** (Member mode 15 + MB-16, 17, 18, 19)
+**Member App MVP = 26 screens** after D-078 (was 6 + 4 + 19 = 29: MA-02, MA-03, MB-17 retired).
 
 ## 4. Traceability: sources → screens
 

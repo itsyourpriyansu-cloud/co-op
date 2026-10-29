@@ -1,5 +1,6 @@
 # 06 · Screen Specifications
 
+> Version 0.6 · 2026-10-29 · MA-01 mobile + OTP; MA-02, MA-03, MB-17 retired (P1c, D-078)
 > Version 0.5 · 2026-10-29 · AU-01 as built against the backend (P1b, D-077)
 > Version 0.4 · 2026-10-24 (member screens are now native mobile, D-019)
 > One block per screen: **Purpose · Content · Actions · States/Rules · Acceptance ref**.
@@ -166,14 +167,15 @@ Society letterhead (logo, name, registration no. [UNKNOWN], address). Used for: 
 Platform rules: bottom tab bar, native header with back, Android hardware back supported, pull-to-refresh on lists, infinite scroll (20 per page), bottom sheets for filters and pickers, sticky bottom CTA on forms, ≥ 48 dp touch targets, keyboard-aware forms, skeleton loaders.
 
 ### MA-01 Splash + Login
-Splash with society logo → login: Member No. / Employee ID, password, show/hide, "Forgot password", "Activate your account". **Demo panel** (prototype): member persona cards (Lakshmi, Ramaiah, Sravani, Mahesh). Long-press the logo → MA-05. Error states: wrong password, account not activated (CTA → MA-02), server unreachable (→ MA-04).
+**As built (P1c, D-078, D-067):** mobile number registered with the society → **Send code** → 6-digit one-time code (WhatsApp / push in production, simulated now; demo code `123456` shown) with a 30 s resend timer and "Change number" → member home (applicants → tracker). No password. Unregistered mobile: warning with **Become a member** (→ MJ-02). Wrong code: inline error; 5 wrong tries end the code; a code works 5 minutes. **Demo panel**: member persona cards (Lakshmi, Ramaiah, Sravani, Mahesh), one tap. Long-press the logo → MA-05. Server unreachable → MA-04.
 
-### MA-02 Account Activation (replaces "Signup", D-009)
+### MA-02 Account Activation — **retired (D-078)**
+A member signs in with the registered mobile and a code from the first time; no activation step. Kept below for history.
+
 - **Steps:** 1. Employee ID + registered mobile → 2. OTP (`123456`, shown in a toast) with a 30 s resend timer → 3. Set password (strength rules) → 4. Success → MB-01.
 - **Errors:** Employee ID not found in Member Master ("Contact society office"). Mobile mismatch. Already activated (→ login). Wrong/expired OTP.
 
-### MA-03 Forgot Password
-Member No./Employee ID → OTP → new password → success → login.
+### MA-03 Forgot Password — **retired (D-078)**: there is no member password.
 
 ### MA-04 Offline / Server Unreachable
 Illustration, "Can't reach the society server", Retry, and (demo builds) "Change server" → MA-05.
@@ -295,8 +297,7 @@ Sections: **Account**: Profile (MB-02), Edit profile (MB-19), Change password (M
 ### MB-16 Interest rates
 Two sections: Loan products (name, rate % p.a., max amount, max instalments) and FD rates (tenure slab → rate, payout options). "Effective from" date. Read-only. Links to the calculators with the rate pre-filled.
 
-### MB-17 Change password
-Current password → new password (strength meter, rules) → confirm → success toast, other sessions signed out [P].
+### MB-17 Change password — **retired (D-078)**: there is no member password. A member changes the sign-in mobile through MB-19 (OTP to the new number).
 
 ### MB-18 Report a payment (D-043)
 Fields: amount* (+ words), paid on* (≤ today), mode* (Bank transfer / UPI / Cheque deposit), reference no.* (UTR/cheque no.), towards (Dues · Share capital · FD request link), screenshot (optional, Q-120). Shows the society's account details (settings). Submit → status **Reported** → **Verified** (receipt created, allocation per BR-011) or **Rejected** (reason). Listed in MB-10 with its status chip.

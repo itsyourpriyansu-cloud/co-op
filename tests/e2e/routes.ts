@@ -69,8 +69,6 @@ export const fillIds = (template: string, i: Ids) =>
 export const PHONE_SCREENS: Array<[string, string]> = [
   ['/welcome', ''],
   ['/login', ''],
-  ['/activate', ''],
-  ['/forgot-password', ''],
   ['/home', 'mem-1101'],
   ['/loans', 'mem-1101'],
   ['/deposits', 'mem-1101'],
@@ -88,7 +86,6 @@ export const PHONE_SCREENS: Array<[string, string]> = [
   ['/account/notifications', 'mem-1101'],
   ['/account/help', 'mem-1101'],
   ['/account/settings', 'mem-1101'],
-  ['/account/password', 'mem-1101'],
   ['/tracker', 'apl-ravi'],
   ['/eligibility', 'apl-divya'],
 ];

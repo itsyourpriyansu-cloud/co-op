@@ -1,19 +1,16 @@
-// M8 Member app completion: MA-01 sign-in with General No. / Employee ID + password, MA-02 activation
-// (Employee ID + registered mobile → OTP → set password), MA-03 forgot password, MB-17 change password,
-// MB-01 home snapshot, MB-12 notifications, MB-13 help & support, MB-14 preferences.
-// Passwords are scrypt-hashed in the store; activated members without one use the demo password (D-062).
-import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
-import { calculateLeftoverService, checkPassword, formatCycle, formatINR } from '@tgs/domain';
-import type { AccountOtp, ActivationSample, Member, MemberHome, MemberPreferences, MyNotifications, PasswordCheck, PasswordToken, Session, SessionUser, SupportCenter, SupportTicket } from '@tgs/types';
+// Member app account: MA-01 sign-in by mobile + one-time code (D-067; member passwords, activation,
+// forgot and change password are retired), MB-01 home snapshot, MB-12 notifications, MB-13 help &
+// support, MB-14 preferences.
+import { randomUUID } from 'node:crypto';
+import { calculateLeftoverService, formatCycle, formatINR } from '@tgs/domain';
+import type { ActivationSample, Member, MemberHome, MemberPreferences, MyNotifications, OtpStarted, Session, SessionUser, SupportCenter, SupportTicket } from '@tgs/types';
 import { memberDues } from './collections';
 import { audit, nowIso, requireMember, type Api, type Guard } from './common';
 import { fail } from './errors';
 import type { Db, Store } from './store';
 
-export const DEMO_PASSWORD = 'Society@2026';
 const DEMO_OTP = '123456';
 const OTP_TTL = 300;
-const TOKEN_TTL = 600;
 
 const OFFICE: SupportCenter['office'] = {
   name: 'TGSECCSL Society Office',
@@ -34,27 +31,10 @@ const FAQS: SupportCenter['faqs'] = [
   { topic: 'Payments', q: 'I paid by UPI. What now?', a: 'Report the payment from Payments → Report with the UTR number. The cashier matches it with the bank statement and you get a receipt.' },
   { topic: 'Deposits', q: 'When does my FD start earning interest?', a: 'From the day the society receives your money. You get the FD receipt (FDR) when the Secretary and the President accept it.' },
   { topic: 'Deposits', q: 'Can I borrow against my FD?', a: 'Yes. Open the FD and choose "Take a loan against this FD": you can borrow up to 90% of it without breaking it.' },
-  { topic: 'Account', q: 'I forgot my password.', a: 'Use "Forgot password" on the sign-in screen. We send an OTP to your registered mobile.' },
+  { topic: 'Account', q: 'How do I sign in?', a: 'With the mobile number registered with the society. We send a one-time code to it; there is no password to remember (D-067).' },
 ];
 
-function hash(password: string, salt = randomBytes(16).toString('hex')) {
-  return { salt, hash: scryptSync(password, salt, 32).toString('hex') };
-}
-
-function passwordMatches(db: Db, memberId: string, password: string): boolean {
-  const c = db.credentials[memberId];
-  if (!c) return password === DEMO_PASSWORD;
-  const given = Buffer.from(hash(password, c.salt).hash, 'hex');
-  return timingSafeEqual(given, Buffer.from(c.hash, 'hex'));
-}
-
 const masked = (mobile: string) => `${mobile.slice(0, 2)}XXXXXX${mobile.slice(-2)}`;
-
-function findMember(db: Db, login: string): Member | undefined {
-  const v = login.trim().toUpperCase();
-  if (!v) return undefined;
-  return db.members.find((m) => m.generalNo === v || m.employeeId.toUpperCase() === v);
-}
 
 function sessionFor(db: Db, m: Member): Session {
   const user: SessionUser = { id: m.id, name: m.name, role: 'MEMBER', memberId: m.id, generalNo: m.generalNo };
@@ -108,119 +88,52 @@ function homeFor(db: Db, m: Member): MemberHome {
 
 export function registerAccount(api: Api, store: Store, requireSession: Guard) {
   const db = () => store.db;
-  const otps = new Map<string, { memberId: string; purpose: 'activate' | 'reset'; expiresAt: number }>();
-  const tokens = new Map<string, { memberId: string; purpose: 'activate' | 'reset'; expiresAt: number }>();
-  const challenge = (m: Member, purpose: 'activate' | 'reset'): AccountOtp => {
-    const otpRef = randomUUID();
-    otps.set(otpRef, { memberId: m.id, purpose, expiresAt: Date.now() + OTP_TTL * 1000 });
-    return { otpRef, expiresInSeconds: OTP_TTL, mobileMasked: masked(m.mobile), name: m.name, demoOtp: DEMO_OTP };
-  };
   const me = (user: SessionUser) => {
     const id = requireMember(user);
     return db().members.find((m) => m.id === id) ?? fail('NOT_FOUND', 'Member record not found.');
   };
-  const setPassword = (m: Member, password: string) => {
-    const check = checkPassword(password, { generalNo: m.generalNo, employeeId: m.employeeId, mobile: m.mobile });
-    if (!check.ok) fail('VALIDATION_ERROR', 'Choose a stronger password.', { fieldErrors: { password: check.checks.find((c) => !c.pass)!.message } });
-    const h = hash(password);
-    db().credentials[m.id] = { ...h, setAt: nowIso() };
-  };
 
-  // ---- MA-01 ------------------------------------------------------------------------------------
-  api.post('/auth/member-login', async (c) => {
-    const { login = '', password = '' } = await c.req.json<{ login?: string; password?: string }>().catch(() => ({}) as { login?: string; password?: string });
-    const fieldErrors: Record<string, string> = {};
-    if (!login.trim()) fieldErrors.login = 'Enter your General No. or Employee ID';
-    if (!password) fieldErrors.password = 'Enter your password';
-    if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please fill both fields.', { fieldErrors });
-    const m = findMember(db(), login);
-    if (!m) fail('VALIDATION_ERROR', 'No member with this General No. or Employee ID.', { fieldErrors: { login: 'Not found. Check the number or contact the society office.' } });
-    if (m!.status !== 'ACTIVE') fail('FORBIDDEN', 'This membership is not active. Contact the society office.');
-    if (!m!.portalActivated) fail('RULE_VIOLATION', 'You have not activated the app yet. Activate it with your Employee ID and registered mobile.', { ruleId: 'NOT_ACTIVATED' });
-    if (!passwordMatches(db(), m!.id, password)) fail('VALIDATION_ERROR', 'That password is not right.', { fieldErrors: { password: 'Wrong password. Try again or use Forgot password.' } });
-    const s = sessionFor(db(), m!);
-    store.save();
-    return c.json<Session>(s);
-  });
-
-  // ---- MA-02 / MA-03 ----------------------------------------------------------------------------
-  api.post('/auth/activate/start', async (c) => {
-    const { employeeId = '', mobile = '' } = await c.req.json<{ employeeId?: string; mobile?: string }>().catch(() => ({}) as { employeeId?: string; mobile?: string });
-    const fieldErrors: Record<string, string> = {};
-    if (!employeeId.trim()) fieldErrors.employeeId = 'Enter your Employee ID or General No.';
-    if (!/^[6-9]\d{9}$/.test(mobile)) fieldErrors.mobile = 'Enter your 10-digit registered mobile';
-    if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
-    const m = findMember(db(), employeeId);
-    if (!m || m.status !== 'ACTIVE') fail('VALIDATION_ERROR', 'Not found in the Member Master.', { fieldErrors: { employeeId: 'Not found in the Member Master. Contact the society office.' } });
-    if (m!.mobile !== mobile) fail('VALIDATION_ERROR', 'This mobile is not the one registered with the society.', { fieldErrors: { mobile: `Does not match the registered mobile (${masked(m!.mobile)}). Contact the office to update it.` } });
-    if (m!.portalActivated) fail('RULE_VIOLATION', 'Your account is already activated. Sign in, or reset your password.', { ruleId: 'ALREADY_ACTIVE' });
-    return c.json<AccountOtp>(challenge(m!, 'activate'));
-  });
-
-  api.post('/auth/forgot/start', async (c) => {
-    const { login = '' } = await c.req.json<{ login?: string }>().catch(() => ({}) as { login?: string });
-    const m = findMember(db(), login);
-    if (!m || m.status !== 'ACTIVE') fail('VALIDATION_ERROR', 'No member with this General No. or Employee ID.', { fieldErrors: { login: 'Not found. Check the number or contact the society office.' } });
-    if (!m!.portalActivated) fail('RULE_VIOLATION', 'You have not activated the app yet. Activate it first.', { ruleId: 'NOT_ACTIVATED' });
-    return c.json<AccountOtp>(challenge(m!, 'reset'));
+  // ---- MA-01 mobile + one-time code (D-067, same contract as the backend, docs/22 §5.1) -----------
+  const mobileOtps = new Map<string, { mobile: string; purpose: 'LOGIN' | 'SIGNUP'; expiresAt: number; attempts: number }>();
+  api.post('/auth/otp/start', async (c) => {
+    const { mobile = '', purpose = 'LOGIN' } = await c.req.json<{ mobile?: string; purpose?: 'LOGIN' | 'SIGNUP' }>().catch(() => ({}) as { mobile?: string; purpose?: 'LOGIN' | 'SIGNUP' });
+    if (!/^[6-9]\d{9}$/.test(mobile)) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors: { mobile: 'Enter a 10-digit mobile number' } });
+    const member = db().members.find((m) => m.mobile === mobile && m.status === 'ACTIVE');
+    const applicant = db().applicants.find((a) => a.mobile === mobile);
+    if (purpose === 'LOGIN' && !member && !applicant) fail('VALIDATION_ERROR', 'This mobile is not registered with the society.', { fieldErrors: { mobile: 'Not registered. Use the mobile in your society record, or become a member.' } });
+    if (purpose === 'SIGNUP' && (member || applicant)) fail('ALREADY_EXISTS', 'This mobile is already registered. Sign in instead.', { fieldErrors: { mobile: 'Already registered. Sign in instead.' } });
+    const otpRef = randomUUID();
+    mobileOtps.set(otpRef, { mobile, purpose, expiresAt: Date.now() + OTP_TTL * 1000, attempts: 0 });
+    return c.json<OtpStarted>({ otpRef, expiresInSeconds: OTP_TTL, channel: 'SIMULATED', mobileMasked: masked(mobile), demoOtp: DEMO_OTP });
   });
 
   api.post('/auth/otp/verify', async (c) => {
-    const { otpRef = '', otp = '' } = await c.req.json<{ otpRef?: string; otp?: string }>().catch(() => ({}) as { otpRef?: string; otp?: string });
-    const pending = otps.get(otpRef);
+    const { otpRef = '', otp = '', name } = await c.req.json<{ otpRef?: string; otp?: string; name?: string }>().catch(() => ({}) as { otpRef?: string; otp?: string; name?: string });
+    const pending = mobileOtps.get(otpRef);
     if (!pending || Date.now() > pending.expiresAt) fail('VALIDATION_ERROR', 'This code has expired. Request a new one.', { fieldErrors: { otp: 'Expired' } });
-    if (otp !== DEMO_OTP) fail('VALIDATION_ERROR', "That code doesn't match. Check the SMS and try again.", { fieldErrors: { otp: 'Incorrect code' } });
-    otps.delete(otpRef);
-    const passwordToken = randomUUID();
-    tokens.set(passwordToken, { memberId: pending!.memberId, purpose: pending!.purpose, expiresAt: Date.now() + TOKEN_TTL * 1000 });
-    return c.json<PasswordToken>({ passwordToken, expiresInSeconds: TOKEN_TTL });
-  });
-
-  /** Sets the password. Activation signs the member in (→ MB-01); a reset signs out every session (→ login). */
-  api.post('/auth/password/set', async (c) => {
-    const { passwordToken = '', password = '' } = await c.req.json<{ passwordToken?: string; password?: string }>().catch(() => ({}) as { passwordToken?: string; password?: string });
-    const t = tokens.get(passwordToken);
-    if (!t || Date.now() > t.expiresAt) fail('VALIDATION_ERROR', 'This step has expired. Start again.', { fieldErrors: { passwordToken: 'Expired' } });
-    const m = db().members.find((x) => x.id === t!.memberId)!;
-    setPassword(m, password);
-    tokens.delete(passwordToken);
-    for (const [k, s] of Object.entries(db().sessions)) if (s.memberId === m.id) delete db().sessions[k];
-    if (t!.purpose === 'activate') {
-      m.portalActivated = true;
-      const s = sessionFor(db(), m);
-      audit(store, s.user, 'member', m.id, 'activate', `${m.name} activated the member app`);
-      store.save();
-      return c.json<{ activated: true; session: Session }>({ activated: true, session: s });
+    if (pending!.attempts >= 5) fail('VALIDATION_ERROR', 'Too many wrong codes. Request a new one.', { fieldErrors: { otp: 'Too many tries' } });
+    if (otp !== DEMO_OTP) {
+      pending!.attempts++;
+      fail('VALIDATION_ERROR', "That code doesn't match. Check the message and try again.", { fieldErrors: { otp: 'Incorrect code' } });
     }
-    audit(store, { id: m.id, name: m.name, role: 'MEMBER' }, 'member', m.id, 'resetPassword', `${m.name} reset the app password`);
+    if (pending!.purpose === 'SIGNUP' && !name?.trim()) fail('VALIDATION_ERROR', 'Enter your full name.', { fieldErrors: { name: 'Enter your full name as in your service record.' } });
+    mobileOtps.delete(otpRef);
+    const member = db().members.find((m) => m.mobile === pending!.mobile && m.status === 'ACTIVE');
+    if (member) {
+      const s = sessionFor(db(), member);
+      store.save();
+      return c.json<Session>(s);
+    }
+    let applicant = db().applicants.find((a) => a.mobile === pending!.mobile);
+    if (!applicant) {
+      applicant = { id: `apl-${randomUUID().slice(0, 8)}`, name: name!.trim(), mobile: pending!.mobile, mobileMasked: masked(pending!.mobile) };
+      db().applicants.push(applicant);
+    }
+    const user: SessionUser = { id: applicant.id, name: applicant.name, role: 'APPLICANT' };
+    const token = randomUUID();
+    db().sessions[token] = user;
     store.save();
-    return c.json<{ activated: false }>({ activated: false });
-  });
-
-  api.post('/auth/password/check', async (c) => {
-    const { password = '', login } = await c.req.json<{ password?: string; login?: string }>().catch(() => ({}) as { password?: string; login?: string });
-    const m = login ? findMember(db(), login) : undefined;
-    return c.json<PasswordCheck>(checkPassword(password, m ? { generalNo: m.generalNo, employeeId: m.employeeId, mobile: m.mobile } : {}));
-  });
-
-  // ---- MB-17 --------------------------------------------------------------------------------------
-  api.post('/me/password', requireSession, async (c) => {
-    const user = c.get('session');
-    const m = me(user);
-    const { current = '', next = '' } = await c.req.json<{ current?: string; next?: string }>().catch(() => ({}) as { current?: string; next?: string });
-    if (!passwordMatches(db(), m.id, current)) fail('VALIDATION_ERROR', 'Your current password is not right.', { fieldErrors: { current: 'Wrong password' } });
-    if (current === next) fail('VALIDATION_ERROR', 'Choose a new password.', { fieldErrors: { password: 'Must be different from the current one' } });
-    setPassword(m, next);
-    const token = c.get('token');
-    let signedOut = 0;
-    for (const [k, s] of Object.entries(db().sessions))
-      if (s.memberId === m.id && k !== token) {
-        delete db().sessions[k];
-        signedOut++;
-      }
-    audit(store, user, 'member', m.id, 'changePassword', `${m.name} changed the app password`);
-    store.save();
-    return c.json({ ok: true as const, signedOutOtherSessions: signedOut });
+    return c.json<Session>({ token, user });
   });
 
   const prefsOf = (m: Member): MemberPreferences => db().preferences[m.id] ?? { channels: { SMS: true, WHATSAPP: false, EMAIL: Boolean(m.email) }, language: 'en', ...(m.email ? { email: m.email } : {}) };

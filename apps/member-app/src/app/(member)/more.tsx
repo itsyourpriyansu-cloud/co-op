@@ -1,7 +1,7 @@
 // More tab = the sitemap's "Settings / Index" (docs/17, docs/06 v0.4). Everything is live from M8.
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, type Href } from 'expo-router';
-import { Bell, Calculator, ChevronRight, FlaskConical, Handshake, KeyRound, LifeBuoy, LogOut, Percent, Settings, UserRound, type LucideIcon } from 'lucide-react-native';
+import { Bell, Calculator, ChevronRight, FlaskConical, Handshake, LifeBuoy, LogOut, Percent, Settings, UserRound, type LucideIcon } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
 import { Card, Screen, Text } from '@/ui';
 import { color, space, touchTarget } from '@/theme';
@@ -14,7 +14,6 @@ const items: Array<{ icon: LucideIcon; label: string; href: Href }> = [
   { icon: Handshake, label: 'Surety requests', href: '/surety' },
   { icon: LifeBuoy, label: 'Help & support', href: '/account/help' },
   { icon: Settings, label: 'Settings', href: '/account/settings' },
-  { icon: KeyRound, label: 'Change password', href: '/account/password' },
 ];
 
 export default function More() {

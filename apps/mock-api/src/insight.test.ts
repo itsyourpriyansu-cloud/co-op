@@ -3,7 +3,6 @@
 // ST-52 defaulter notice (D-063).
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { ComposePreview, DashboardSummary, DefaulterNotice, MemberDues, MyNotifications, OutboxMessage, ReportDef, ReportOptions, ReportResult, RoleDashboard, Session, StaffNotifications, StaffTicketRow, WorkQueue } from '@tgs/types';
-import { DEMO_PASSWORD } from './account';
 import { createApp } from './app';
 import { Store } from './store';
 
@@ -130,7 +129,7 @@ describe('ST-01 role dashboards', () => {
     }
     const ddo = (await call<RoleDashboard>('GET', '/dashboard/role', undefined, await login('stf-ddo-fin'))).body;
     expect(ddo.scope.departmentName).toBeTruthy();
-    const member = (await call<Session>('POST', '/auth/member-login', { login: '1101', password: DEMO_PASSWORD })).body.token;
+    const member = (await call<Session>('POST', '/auth/persona', { personaId: 'mem-1101', channel: 'app' })).body.token;
     expect((await call('GET', '/dashboard/role', undefined, member)).status).toBe(403);
   });
 });
@@ -175,7 +174,7 @@ describe('ST-03 notifications, composer and member questions', () => {
     expect((await call('POST', `/support/tickets/${t.id}/reply`, { text: 'no' }, acc)).body.fieldErrors?.text).toBeTruthy();
     const r = await call<StaffTicketRow>('POST', `/support/tickets/${t.id}/reply`, { text: 'Your FDR is ready, collect it at the counter.' }, acc);
     expect(r.body.status).toBe('ANSWERED');
-    const member = (await call<Session>('POST', '/auth/member-login', { login: '1101', password: DEMO_PASSWORD })).body.token;
+    const member = (await call<Session>('POST', '/auth/persona', { personaId: 'mem-1101', channel: 'app' })).body.token;
     const mine = (await call<MyNotifications>('GET', '/me/notifications', undefined, member)).body;
     expect(mine.items[0]!.title).toBe('Reply from the society office');
     await call('POST', `/support/tickets/${t.id}/reply`, { close: true }, acc);

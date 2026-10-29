@@ -2,7 +2,7 @@
 // Each act is a test in a serial group; they share state like a real presentation.
 //   npx playwright test demo-script --repeat-each=2     (must pass twice in a row)
 import type { BrowserContext, Page } from '@playwright/test';
-import { apiCall, apiToken, consoleAs, CONSOLE_URL, ErrorTracker, expect, OTP, PHONE_URL, phoneAs, resetDemo, setFailureRate, shot, tap, test } from './support';
+import { API, apiCall, apiToken, consoleAs, CONSOLE_URL, ErrorTracker, expect, OTP, PHONE_URL, phoneAs, resetDemo, setFailureRate, shot, tap, test } from './support';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -326,14 +326,12 @@ test('Act 7 · settings and the member account', async ({ page, request }) => {
   await expect(phone.getByText('13%').first()).toBeVisible();
   await setOrdinaryRate('11');
 
+  // A member who never used the app signs in with the registered mobile and a one-time code (D-067).
+  const sample = (await (await request.get(`${API}/__demo/activation-sample`)).json()) as { mobile: string };
   await phone.evaluate(() => localStorage.removeItem('tgs.app.session'));
-  await phone.goto(`${PHONE_URL}/activate`);
-  await phone.getByText(/has not activated the app/).click();
+  await phone.goto(`${PHONE_URL}/login`);
+  await phone.getByLabel('Mobile number').fill(sample.mobile);
   await tap(phone, 'Send code');
   await otp(phone);
-  await tap(phone, 'Verify code');
-  await phone.getByRole('textbox', { name: 'New password', exact: true }).fill('Bright-Lotus-73');
-  await phone.getByRole('textbox', { name: 'Type it again', exact: true }).fill('Bright-Lotus-73');
-  await tap(phone, 'Activate & sign in');
   await expect(phone.getByText(/^Hello, /)).toBeVisible();
 });

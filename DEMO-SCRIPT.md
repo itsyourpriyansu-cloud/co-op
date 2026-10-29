@@ -43,7 +43,7 @@ The phone and the laptop must be on the **same Wi-Fi**.
 | Who | How to sign in |
 |---|---|
 | Staff (console) | Login page → click a name. Switch later from the avatar menu → **Switch demo persona** |
-| Members (phone) | Sign in → **Demo members** → tap a name (password `Society@2026` is filled in for you) |
+| Members (phone) | Sign in → **Demo members** → tap a name. Or type a member's registered mobile → **Send code** → `123456` (D-078: no member passwords) |
 | Applicants (phone) | Welcome → **Become a member** → *Continue as Divya S* (new) or *Ravi Teja K* (in progress) |
 | Any OTP | `123456` |
 
@@ -101,7 +101,7 @@ Members: **Lakshmi Devi** 1101 (running loan, top-up example) · **Ramaiah Chary
 ## Act 7 · Settings and the member account (2 min)
 
 1. Console as **Anitha (Super Admin)** → **Settings → Loan products** → Ordinary Loan → **Edit** → *Interest rate* 13 → **Save product** (the drawer previews the new EMI). Phone → More → **Interest rates** / **Calculators**: the instalment changes. (Change it back.)
-2. Phone, signed out → **Sign in → First time here? → Activate**: tap the demo card (General No. 1003), send code `123456`, choose a password — the strength meter refuses one with the General No. in it. He lands on his home screen.
+2. Phone, signed out → **Sign in**: type the mobile of a member who has never used the app (Demo tag → dataset sample, or `GET /api/v1/__demo/activation-sample`) → **Send code** → `123456`. No password and no activation step: he lands on his home screen (D-067, D-078).
 
 ---
 

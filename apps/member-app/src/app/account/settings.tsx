@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { KeyRound, Mail, MessageCircle, MessageSquareText, Smartphone, type LucideIcon } from 'lucide-react-native';
+import { Mail, MessageCircle, MessageSquareText, Smartphone, type LucideIcon } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import type { MemberPreferences } from '@tgs/types';
 import { api } from '@/lib/api';
 import { accountKeys, usePreferences } from '@/lib/account';
-import { Alert, Button, Card, Header, KeyValue, Screen, Section, Skeleton, Tag, Text } from '@/ui';
+import { Alert, Card, Header, KeyValue, Screen, Section, Skeleton, Tag, Text } from '@/ui';
 import { color, radius, space, touchTarget } from '@/theme';
 
 type Channel = keyof MemberPreferences['channels'];
@@ -97,9 +97,6 @@ export default function SettingsScreen() {
             </Card>
           </Section>
 
-          <Section title="Security">
-            <Button text="Change password" leftSlot={KeyRound} buttonType="secondary" fullWidth onPress={() => router.push('/account/password')} />
-          </Section>
         </>
       )}
     </Screen>
