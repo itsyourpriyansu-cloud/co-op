@@ -1,9 +1,11 @@
+import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { Env } from './config/env';
 import { createDb, type DbHandle } from './db/client';
 import { registerModules } from './modules';
+import { authPlugin } from './plugins/auth';
 import { dbPlugin } from './plugins/db';
 import { errorHandlerPlugin } from './plugins/error-handler';
 import { mockFallbackPlugin } from './plugins/mock-fallback';
@@ -38,6 +40,10 @@ export async function buildApp({ env, dbHandle, logger = true }: BuildAppOptions
   await app.register(errorHandlerPlugin);
   await app.register(securityPlugin, { corsOrigins: env.CORS_ORIGIN });
   await app.register(dbPlugin, { handle: dbHandle ?? createDb({ url: env.DATABASE_URL, ssl: env.DATABASE_SSL }) });
+  await app.register(authPlugin, { env });
+  // Off by default; sign-in routes opt in with `config.rateLimit` (docs/22 §5.1).
+  // Not registered under NODE_ENV=test, where one IP signs in hundreds of times.
+  if (env.NODE_ENV !== 'test') await app.register(rateLimit, { global: false });
   await app.register(swaggerPlugin);
 
   await registerModules(app);

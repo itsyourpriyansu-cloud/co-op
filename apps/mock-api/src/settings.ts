@@ -22,29 +22,10 @@ import {
 } from '@tgs/types';
 import { audit, can, requirePermission, requireStaff, type Api, type Guard } from './common';
 import { fail } from './errors';
-import { ROLE_PERMISSIONS } from './permissions';
+import { PERMISSION_LABELS, ROLE_PERMISSIONS } from '@tgs/domain';
 import type { Store } from './store';
 
-const PERMISSION_LABELS: Array<{ key: Permission; label: string; group: string }> = [
-  { key: 'dashboard.view', label: 'Dashboard', group: 'Work' },
-  { key: 'queue.view', label: 'Work queue', group: 'Work' },
-  { key: 'membership.view', label: 'Joining applications', group: 'Records' },
-  { key: 'members.view', label: 'Members', group: 'Records' },
-  { key: 'members.edit', label: 'Add, edit and transfer members', group: 'Records' },
-  { key: 'members.decideChanges', label: 'Decide profile change requests', group: 'Records' },
-  { key: 'loans.view', label: 'Loans', group: 'Records' },
-  { key: 'loans.create', label: 'Enter loan applications on behalf', group: 'Records' },
-  { key: 'deposits.view', label: 'Deposits', group: 'Records' },
-  { key: 'deposits.open', label: 'Open deposits at the counter', group: 'Records' },
-  { key: 'collections.view', label: 'Demand sheets & payments', group: 'Money' },
-  { key: 'reports.view', label: 'Reports', group: 'Insight' },
-  { key: 'messages.send', label: 'Send messages to members (simulated)', group: 'Insight' },
-  { key: 'support.reply', label: 'Answer member questions', group: 'Insight' },
-  { key: 'settings.view', label: 'View settings', group: 'Admin' },
-  { key: 'settings.edit', label: 'Change settings', group: 'Admin' },
-  { key: 'users.manage', label: 'Manage users', group: 'Admin' },
-  { key: 'demo.control', label: 'Demo controls', group: 'Demo' },
-];
+// PERMISSION_LABELS moved to @tgs/domain (D-076).
 
 /** Which settings keys a payload touched (for placeholders + audit text). */
 const keysOf = (o: object, prefix = ''): string[] =>

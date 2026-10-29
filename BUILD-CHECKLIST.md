@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | P0 + P1 design are on `main` (D-075: main only). Next: build **P1a** (backend auth, users, permissions, audit, session bridge, `docs/22` §5.1) |
+| **Next action** | **P1a done** (D-076): backend sign-in, users, permissions, audit, session bridge. Next: **P1b** console sign-in page (password + authenticator, token refresh in `@tgs/api-client`) |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
 | **Last updated** | 2026-10-29 |
 
@@ -91,3 +91,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-10-29 | DB connected as `postgres` (PostgreSQL 18.1); created empty `tgseccsl_test`; `backend/.env` written (git-ignored). Agreement rules stay in force for F-03 until the society confirms otherwise | P0 Foundation |
 | 2026-10-29 | **Backend P0 Foundation built** (D-073): `backend/` Fastify + Drizzle + PostgreSQL 18.1, env validation, migrations + seed runner, error envelope, guards, `/health` (DB status), `/docs`, dev mock fallback, root scripts. Exit test passed: backend tests 11/11 on `tgseccsl_test`; root tests 263/263; all typechecks; console e2e against :4100 60/61 (the 1 failure is a phone-screen test whose app was pointed at port 4000, which another project (mnr-dairy-app) occupies). Playwright Chromium reinstalled | P1 Auth |
 | 2026-10-29 | CLAUDE.md scope widened to the real backend (D-074). P0 + P1 design fast-forwarded into `main` and pushed; from now on everything goes to `main` only (D-075). Leftover branch `backend-p0-foundation` not deleted (blocked by a safety check) | P1a |
+| 2026-10-29 | **P1a built** (D-076): 6 auth tables (migration 0001) + seed (6 staff, 555 app accounts, 76 permissions); staff password + lockout + TOTP, member mobile OTP sign-in/up, JWT + rotating refresh tokens, /me, users + permissions admin, audit log, demo persona sign-in; permission map moved to @tgs/domain; session bridge (mock `/__demo/session`). Tests: backend 39/39, root 263/263, typecheck green; console e2e through the backend 131/131 after making the a11y check wait for row fade-ins (it raced with the extra API hop). Phone e2e not run (member app still talks to the mock until P1c) | P1b |

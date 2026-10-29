@@ -183,7 +183,7 @@ Each phase ends with its exit test passing. Never start the next phase before th
 
 ### 5.1 P1 design: auth, users, permissions, audit
 
-P1 is split in three steps, each committed on its own: **P1a** backend, **P1b** console sign-in, **P1c** member-app sign-in. The P1 exit test runs after P1c.
+P1 is split in three steps, each committed on its own: **P1a** backend (✅ built 2026-10-29, D-076), **P1b** console sign-in, **P1c** member-app sign-in. The P1 exit test runs after P1c.
 
 **Tables (P1a)**
 

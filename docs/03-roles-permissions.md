@@ -85,3 +85,14 @@ Legend: **F** full · **V** view · **A** stage action · **—** none · *own* 
 | `messages.send` | Super Admin, Accountant | ST-03 simulated message composer (SMS / WhatsApp / Email to members) |
 | `support.reply` | Super Admin, Accountant | ST-03 Member questions: reply to and close MB-13 questions |
 | `reports.view` | Super Admin, Accountant, Secretary, President, Cashier (not DDO) | ST-50…52 reports and printables (unchanged) |
+
+## Backend P1a additions (D-076)
+
+| Topic | Rule in the production backend |
+|---|---|
+| Staff sign-in | User ID + password (argon2id). 5 wrong tries lock the account for 15 minutes |
+| Authenticator (TOTP) | Required for Super Admin, Secretary and President (`TOTP_ROLES`). First sign-in enrols by QR code; the Super Admin can reset it |
+| Member / applicant sign-in | Mobile number + one-time code (D-067). New mobiles sign up as applicants |
+| Permission matrix | Stored in `role_permissions`, editable by the Super Admin (`PUT /permissions/:role`). The Super Admin always keeps settings.view, settings.edit and users.manage |
+| Sessions | Ended at once when a user is deactivated, changes role, or has their password or authenticator reset |
+| Audit | Every sign-in, failed sign-in, lock and change is written to `audit_log` |

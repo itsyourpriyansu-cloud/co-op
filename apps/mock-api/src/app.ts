@@ -128,6 +128,15 @@ export function createApp({ store, version, corsOrigins }: AppOptions) {
     return c.json(list);
   });
   api.get('/__demo/state', (c) => c.json(store.db.demo));
+  // Session bridge (docs/22 §5.1, dev only): the backend signs users in and asks for a mock
+  // session of the same user, so routes still served here accept them. Removed with the fallback in P9.
+  api.post('/__demo/session', async (c) => {
+    const user = await c.req.json<SessionUser>().catch(() => undefined);
+    if (!user?.id || !user.name || !user.role) fail('VALIDATION_ERROR', 'Send the session user.');
+    const token = randomUUID();
+    store.db.sessions[token] = user!;
+    return c.json<Session>({ token, user: user! });
+  });
   api.post('/__demo/reset', (c) => c.json(store.reset().demo));
   api.post('/__demo/clock', async (c) => {
     const { today } = await c.req.json<{ today?: string | null }>();

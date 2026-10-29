@@ -48,6 +48,16 @@ Calls go one way: routes → controller → service → repository → models. A
 service, never another module's repository. Business math comes only from `@tgs/domain`.
 `modules/health` is the reference example of all five layers.
 
+## Signing in (P1a)
+
+| Who | How |
+|---|---|
+| Demo staff (seeded) | User IDs `admin`, `accounts`, `secretary`, `president`, `cashier`, `ddo.fin` with `SEED_STAFF_PASSWORD` (default `Society@2026`). Super Admin, Secretary and President then set up an authenticator app (QR code) |
+| Members | `POST /api/v1/auth/otp/start` with their mobile, then `/auth/otp/verify`. Demo mode: the code is `123456` |
+| Demo one-click | `GET /api/v1/__demo/personas`, `POST /api/v1/auth/persona` (DEMO_MODE only) |
+
+Try them at http://localhost:4100/docs. Use the token from a sign-in with the **Authorize** button.
+
 ## Errors
 
 Every error is `{ code, message, fieldErrors?, ruleId? }` with the status from docs/11 §1. Throw `fail('RULE_VIOLATION', '…', { ruleId: 'BR-002' })`

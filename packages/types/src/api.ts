@@ -64,6 +64,34 @@ export interface SessionUser {
 export interface Session {
   token: string;
   user: SessionUser;
+  /** Backend only (docs/22 §5.1): opaque, rotated on every POST /auth/refresh. */
+  refreshToken?: string;
+  /** Backend only: lifetime of `token` in seconds. */
+  expiresInSeconds?: number;
+}
+
+/** POST /auth/staff/login (backend, docs/22 §5.1). Signers need an authenticator code next. */
+export type StaffLoginResult =
+  | { status: 'OK'; session: Session; mustChangePassword: boolean }
+  | { status: 'TOTP_REQUIRED'; challengeToken: string }
+  | { status: 'TOTP_SETUP_REQUIRED'; challengeToken: string };
+
+/** POST /auth/staff/totp/setup: scan the QR code with an authenticator app, then confirm a code. */
+export interface TotpSetup {
+  otpauthUrl: string;
+  qrDataUrl: string;
+  /** Base32 secret for typing in by hand. */
+  secret: string;
+}
+
+/** POST /auth/otp/start (member mobile sign-in, D-067). */
+export interface OtpStarted {
+  otpRef: string;
+  expiresInSeconds: number;
+  channel: 'WHATSAPP' | 'PUSH' | 'SIMULATED';
+  mobileMasked: string;
+  /** Demo mode only: the code, so the demo can show it. Never sent in production. */
+  demoOtp?: string;
 }
 
 export interface Me {

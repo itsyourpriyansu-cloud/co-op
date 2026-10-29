@@ -38,7 +38,7 @@ describe('app wiring (P0)', () => {
   });
 
   it('records the seed in system_info', async () => {
-    const names = await runSeed(app.db, [{ name: 'probe', run: async () => {} }]);
+    const names = await runSeed(app.db, { staffPassword: 'unused-here' }, [{ name: 'probe', run: async () => {} }]);
     expect(names).toEqual(['probe']);
   });
 });
@@ -110,9 +110,15 @@ describe('mock fallback (docs/22 §4)', () => {
     expect(res.json().service).toBe('tgseccsl-backend');
   });
 
-  it('is never enabled in production', () => {
-    const env = loadEnv({ ...process.env, NODE_ENV: 'production', MOCK_FALLBACK_URL: 'http://localhost:4000' });
+  it('is never enabled in production, and neither is demo sign-in', () => {
+    const secrets = { JWT_SECRET: 'x'.repeat(40), DATA_ENCRYPTION_KEY: 'y'.repeat(40) };
+    const env = loadEnv({ ...process.env, ...secrets, NODE_ENV: 'production', MOCK_FALLBACK_URL: 'http://localhost:4000', DEMO_MODE: 'true' });
     expect(env.MOCK_FALLBACK_URL).toBeUndefined();
+    expect(env.DEMO_MODE).toBe(false);
+  });
+
+  it('refuses to start in production without real secrets', () => {
+    expect(() => loadEnv({ ...process.env, NODE_ENV: 'production' })).toThrow(/JWT_SECRET and DATA_ENCRYPTION_KEY are required/);
   });
 });
 

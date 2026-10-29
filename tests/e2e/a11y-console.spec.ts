@@ -6,6 +6,9 @@ import { CONSOLE_ROUTES, fillIds, seededIds, type Ids } from './routes';
 import { consoleAs, CONSOLE_URL, expect, resetDemo, test } from './support';
 
 async function axeCheck(page: Page, info: TestInfo, label: string) {
+  // Rows fade in after data arrives; mid-fade text has partial opacity and fails contrast.
+  // Wait for running CSS animations/transitions to finish (slower API hops, e.g. via the backend).
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), undefined, { timeout: 10_000 });
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   const bad = r.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
   await info.attach(`axe-${label}`, { body: JSON.stringify(r.violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, sample: v.nodes[0]?.target })), null, 2), contentType: 'application/json' });
