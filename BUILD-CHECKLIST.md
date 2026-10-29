@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | P0 committed and pushed on `backend-p0-foundation`. P1 designed (`docs/22` §5.1). Next: build **P1a** (backend auth, users, permissions, audit, session bridge) |
+| **Next action** | P0 + P1 design are on `main` (D-075: main only). Next: build **P1a** (backend auth, users, permissions, audit, session bridge, `docs/22` §5.1) |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
 | **Last updated** | 2026-10-29 |
 
@@ -90,3 +90,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-10-29 | F-03 checked against the agreement (pages 2–5): 10% only on Ordinary, netted; insurance via demand sheet, not payout (D-072). Two points still for the society. DB login `tgseccsl_dev` still fails (password authentication) | Fix DB login, then P0 |
 | 2026-10-29 | DB connected as `postgres` (PostgreSQL 18.1); created empty `tgseccsl_test`; `backend/.env` written (git-ignored). Agreement rules stay in force for F-03 until the society confirms otherwise | P0 Foundation |
 | 2026-10-29 | **Backend P0 Foundation built** (D-073): `backend/` Fastify + Drizzle + PostgreSQL 18.1, env validation, migrations + seed runner, error envelope, guards, `/health` (DB status), `/docs`, dev mock fallback, root scripts. Exit test passed: backend tests 11/11 on `tgseccsl_test`; root tests 263/263; all typechecks; console e2e against :4100 60/61 (the 1 failure is a phone-screen test whose app was pointed at port 4000, which another project (mnr-dairy-app) occupies). Playwright Chromium reinstalled | P1 Auth |
+| 2026-10-29 | CLAUDE.md scope widened to the real backend (D-074). P0 + P1 design fast-forwarded into `main` and pushed; from now on everything goes to `main` only (D-075). Leftover branch `backend-p0-foundation` not deleted (blocked by a safety check) | P1a |

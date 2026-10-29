@@ -49,7 +49,8 @@ Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock A
 6. **Change discipline:** when anything changes: (a) add or modify an entry in `docs/decisions-log.md`, (b) update every affected doc, (c) bump the version line at the top of each changed doc, (d) update section 2 above.
 7. **Domain math** (EMI, eligibility, share deduction, top-up settlement, recovery allocation, demand generation) lives only in `packages/domain` as pure, unit-tested functions driven by settings. The backend services (and the mock API) use it for every posting; never re-implement a calculation in a service. UIs use it only for previews.
 8. **Mock data** is deterministic (seeded) and fictional. Never use real member names, phone numbers, Aadhaar or PAN.
-9. Use stable IDs everywhere: `REQ-###`, `BR-###`, screen IDs (`AU-`, `ST-`, `SYS-`, `MJ-`, `MA-`, `MB-`), `J-##` journeys, `Q-###` questions, `D-###` decisions, `AC-…` acceptance criteria. Reference them in commits and code comments where relevant.
+9. **Git: one branch.** Commit and push directly to `main` (D-075). No feature branches or pull requests.
+10. Use stable IDs everywhere: `REQ-###`, `BR-###`, screen IDs (`AU-`, `ST-`, `SYS-`, `MJ-`, `MA-`, `MB-`), `J-##` journeys, `Q-###` questions, `D-###` decisions, `AC-…` acceptance criteria. Reference them in commits and code comments where relevant.
 
 ## 4. Doc map: which document to use at each stage
 
