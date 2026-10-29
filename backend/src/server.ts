@@ -1,0 +1,21 @@
+import { buildApp } from './app';
+import { loadEnv } from './config/env';
+
+const env = loadEnv();
+const app = await buildApp({ env });
+
+try {
+  await app.listen({ port: env.PORT, host: env.HOST });
+  // Plain ASCII: legacy Windows consoles garble typographic characters.
+  console.log(`\n  TGSECCSL backend  |  http://localhost:${env.PORT}  |  API docs http://localhost:${env.PORT}/docs`);
+  console.log(`  Mock fallback: ${env.MOCK_FALLBACK_URL ?? 'off'}\n`);
+} catch (err) {
+  app.log.error(err);
+  process.exit(1);
+}
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    void app.close().then(() => process.exit(0));
+  });
+}

@@ -3,22 +3,25 @@
 > **Every Claude session must read this file first, then `BUILD-CHECKLIST.md` → "Resume here"**, then the docs listed under "Doc map" for the current step.
 > At the end of every session, follow the **Session ritual** in `BUILD-CHECKLIST.md` (tick boxes, update "Resume here", add a session-log line).
 > Plain-language guide for humans: `LEARN-THE-APP.md`.
-> Version: 0.4 (draft) · Last updated: 2026-10-25 · Owner: Envizon Studio
+> Version: 0.6 (draft) · Last updated: 2026-10-29 · Scope widened: production backend (D-069, D-074) · Owner: Envizon Studio
 
 ---
 
 ## 1. What we are building
 
-A **clickable, finished-UI prototype backed only by mock data** of a Co-operative Credit Society Management System for
-**The Telangana Secretariat Employees Co-operative Credit Society Ltd. (TGSECCSL)**.
+A Co-operative Credit Society Management System for
+**The Telangana Secretariat Employees Co-operative Credit Society Ltd. (TGSECCSL)**. Two stages:
+- **Done:** a clickable, finished-UI prototype on mock data (M0–M10, demo-ready).
+- **Now:** the **production backend** (Fastify + PostgreSQL) that replaces the mock API phase by phase (P0–P9, `docs/22`). Envizon builds it (Q-005 → D-069).
 
 - Contract context: Software Supply, Implementation & Support Agreement dated 05 July 2026 between **Fusil Solutions Pvt Ltd** (Service Provider) and TGSECCSL (Client). Product name in the agreement: "FUSIL EMPLOYEES SOCIETY ERP".
 - UX flow diagrams were prepared by **Envizon** (6 role flows).
 - The society's **paper forms** (Membership, Ordinary/Education loan, Salary loan, FD, 2 recovery agreements) were photographed and mapped field by field in `docs/16-paper-forms-digitization.md`. Letterhead: Regd. No. P-929, 2nd Floor, West Ancillary Building, Dr. B.R Ambedkar Telangana Secretariat, Hyderabad-500004.
-- Prototype output, three deliverables in one monorepo:
+- Deliverables in one monorepo:
   1. **Admin Console** (desktop web, React + Vite): Super Admin, Accountant, Secretary, President, Cashier/Disbursement, DDO
   2. **Member App** (Expo React Native, **Android APK**): applicants (join the society + track) and members. **Members use only the app. Staff use only the console** (D-033)
-  3. **Mock API server** (Node + Hono, in-memory, seeded) shared by both apps, so cross-app hand-offs are real in demos
+  3. **Backend** (`backend/`, Fastify + PostgreSQL + Drizzle): the real server for both apps (`docs/22`)
+  4. **Mock API server** (`apps/mock-api`, Node + Hono, in-memory, seeded): the demo server and, until P9, the dev fallback for routes the backend has not built yet
 - Scope accepted: **MVP = 38 console pages + 29 app screens (67) + 11 decision drawers + 8 report templates + 9 printable form twins** (D-046).
 - Start with `docs/00-system-overview.md` for the one-page structure.
 
@@ -33,18 +36,18 @@ A **clickable, finished-UI prototype backed only by mock data** of a Co-operativ
 | 5 Implementation Planning | v0.3, awaiting review |
 | **Build** | **M0–M10 done (demo scope)** on branch `m0-foundation` (Settings, Joining + Members, Loans core + workflow, Deposits, Demand & collections, Member app completion, Dashboards + notifications + reports, a11y / states polish + global search + demo script; D-053 … D-064). **Demo-ready (D-065, D-066):** demo clock, full Playwright suite in `tests/e2e/` (journeys, cross-app, a11y, states, screen sizes, the whole demo script), `npm run demo:prod` on :5180. Demo-only, localhost now, Azure later (D-054). Deferred until asked: signed APK, device test, hosting. Presenting: `DEMO-SCRIPT.md`; society questions: `docs/client-questions.md` |
 
-Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock API, digital membership join with stage tracker, Secretary → President sign-off, FDs for members + joint/minor, share payment by counter or first demand. Still open: Batch 1 Q-004..Q-011 and Batch 5 (forms) Q-501..Q-514 (see `docs/open-questions.md`).
+Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock API, digital membership join with stage tracker, Secretary → President sign-off, FDs for members + joint/minor, share payment by counter or first demand. **Society answers received 2026-10-29 (D-067):** recorded in `docs/client-questions.md`; what changes, conflicts (C-1 EMI method, C-2 approvals) and follow-ups F-01..F-12 in `docs/21-society-answers-impact.md`. **Production backend: Envizon builds it** (Q-005 → D-069) in `backend/` (Fastify + PostgreSQL + Drizzle, layered modules), phases P0–P9 in `docs/22-backend-plan.md` (D-068, D-069). **P0 Foundation built** (D-073): `npm run dev:backend` on :4100, `/health`, `/docs`, `npm run test:backend`.
 
 ## 3. Hard rules for every Claude session
 
-1. **Build milestone by milestone** (`docs/14`). Plan approved (D-000). Never start M(n+1) before M(n)'s exit test passes.
-2. **Prototype scope = finished UI + mock data.** No real backend, database, authentication, payment gateway, email, WhatsApp or SMS. Every integration is simulated and visibly behaves like the real thing.
+1. **Build phase by phase.** Prototype milestones M0–M10 are done (`docs/14`). Backend phases P0–P9 (`docs/22` §5): never start P(n+1) before P(n)'s exit test passes.
+2. **Scope (D-074):** the backend is real: PostgreSQL, real authentication (staff password + TOTP, member mobile + OTP), ledgers, jobs. **Outside services stay simulated until their phase connects them** behind an interface (`backend/src/integrations`): WhatsApp, email, push, file storage (P8/P9). No payment gateway (members pay by the society's QR code, D-067). The mock API keeps the demo working and serves as the dev fallback until P9; never add new business features to the mock API only.
 3. **Never invent business logic.** Rules come only from `docs/09-business-rules.md`. If a rule is `UNKNOWN`, implement it as a **configurable setting** that has the placeholder default listed there. Do not hard-code the guess. Log any new assumption in `docs/open-questions.md`.
 4. **Source precedence:** Agreement (A) and paper forms (PF) > Accepted decisions (decisions-log) > Flow diagrams (F) > Proposals (P). Conflicts are tracked as `CONFLICT` in `docs/02-requirements-register.md`.
 5. **Status tags used across all docs:**
-   `[A]` confirmed by Agreement · `[PF]` confirmed by a paper form · `[F]` confirmed by Flow diagram · `[D-xxx]` decided · `[P]` proposal (needs approval) · `[ASSUMPTION]` domain assumption (needs confirmation) · `[UNKNOWN]` · `[CONFLICT]`
+   `[A]` confirmed by Agreement · `[PF]` confirmed by a paper form · `[S]` confirmed by the society in writing (D-067) · `[F]` confirmed by Flow diagram · `[D-xxx]` decided · `[P]` proposal (needs approval) · `[ASSUMPTION]` domain assumption (needs confirmation) · `[UNKNOWN]` · `[CONFLICT]`
 6. **Change discipline:** when anything changes: (a) add or modify an entry in `docs/decisions-log.md`, (b) update every affected doc, (c) bump the version line at the top of each changed doc, (d) update section 2 above.
-7. **Domain math** (EMI, eligibility, share deduction, top-up settlement, recovery allocation, demand generation) lives only in `packages/domain` as pure, unit-tested functions driven by settings. The mock API uses it for every posting. UIs use it only for previews.
+7. **Domain math** (EMI, eligibility, share deduction, top-up settlement, recovery allocation, demand generation) lives only in `packages/domain` as pure, unit-tested functions driven by settings. The backend services (and the mock API) use it for every posting; never re-implement a calculation in a service. UIs use it only for previews.
 8. **Mock data** is deterministic (seeded) and fictional. Never use real member names, phone numbers, Aadhaar or PAN.
 9. Use stable IDs everywhere: `REQ-###`, `BR-###`, screen IDs (`AU-`, `ST-`, `SYS-`, `MJ-`, `MA-`, `MB-`), `J-##` journeys, `Q-###` questions, `D-###` decisions, `AC-…` acceptance criteria. Reference them in commits and code comments where relevant.
 
@@ -74,6 +77,8 @@ Decided so far: MVP scope, Expo Android app, React + Vite console, shared mock A
 | Sequencing & milestones | `docs/14-implementation-plan.md` | status column |
 | Done-ness / QA | `docs/15-test-plan-acceptance.md` | same |
 | Decisions & questions | `docs/decisions-log.md`, `docs/open-questions.md` | always |
+| Society answers → app changes | `docs/21-society-answers-impact.md` | same + 09/10 when built |
+| Production backend | `docs/22-backend-plan.md` | same + 07 |
 
 ## 5. Quick glossary (full list in `docs/glossary.md`)
 
@@ -87,6 +92,7 @@ DDO = Drawing & Disbursing Officer · CRD / SRDS / RRF = deposit/fund heads name
 | Admin Console | React 18 + TypeScript + Vite · React Router · TanStack Query/Table · React Hook Form + Zod · Tailwind + shadcn/ui · Recharts · date-fns · Vitest · Playwright | D-008 (Accepted) |
 | Member App | Expo SDK 58 (React Native 0.88) + TypeScript · Expo Router (`src/app/`) · StyleSheet + shared tokens (D-039) · TanStack Query · expo-secure-store · lucide-react-native · Jest + RNTL · Maestro · Android APK via EAS | D-019, D-020, D-022, D-039, D-040 |
 | Mock API | Node + Hono · in-memory store + JSON snapshot · demo endpoints (reset, clock, failure rate, personas) | D-021 (Accepted), D-025 (Proposed) |
+| Backend | Node 24 · Fastify 5 · Zod 4 (fastify-type-provider-zod) · PostgreSQL 18 locally (Azure PostgreSQL later) · Drizzle ORM + drizzle-kit migrations · pg-boss jobs · Vitest on `tgseccsl_test`. Port 4100, docs at `/docs`. Layout: `backend/README.md` | D-068, D-069, D-073 |
 
 ## 7. Conventions (apply once the build is approved)
 
@@ -95,7 +101,8 @@ DDO = Drawing & Disbursing Officer · CRD / SRDS / RRF = deposit/fund heads name
 - Months for tenure and service. Rates stored as annual % numbers.
 - File names: kebab-case. Components: PascalCase. Domain functions: camelCase verbs (`calculateEmi`, `allocateRecovery`).
 - Every list screen implements loading, empty, error and no-results states (`docs/04` §6). Mobile also handles offline (MA-04).
-- Business data comes only from the mock API. Apps may call `packages/domain` for live previews, but the server's result is authoritative.
+- Business data comes only from the server (the backend; the mock API for demos and unbuilt routes). Apps may call `packages/domain` for live previews, but the server's result is authoritative.
+- Backend: one module per area in `backend/src/modules/<name>/` with `.routes · .controller · .service · .repository · .schema · .test`. Calls go routes → controller → service → repository → models. Tables only through migrations (`npm run db:generate` / `db:migrate`). Keep the docs/11 contracts unless a decision changes them.
 - Screen ID prefixes: `AU-`/`SYS-`/`ST-` = Admin Console. `MJ-` (joining) / `MA-` (auth) / `MB-` (member) = Member App.
 - Icons: Lucide only (`lucide-react` / `lucide-react-native`). Font: Inter. Tokens from `packages/design-tokens` (`docs/12`).
 
@@ -110,6 +117,7 @@ packages/domain      money (Indian format, amount in words) + dates. Business ru
 packages/api-client  createApiClient(): the only way the apps talk to the API
 packages/mock-data   fictional personas, departments, society profile (docs/13)
 packages/design-tokens  src/index.ts → css/tokens.css (npm run tokens)
+backend              Fastify + PostgreSQL (docs/22): src/{config,db,models,modules/<name>/{routes,controller,service,repository,schema},common,plugins,jobs}. See backend/README.md
 ```
 Expo note: Expo changes every SDK. Before touching an Expo API, read `apps/member-app/AGENTS.md` and the SDK 58 docs. Always add native packages with `npx expo install` inside `apps/member-app`.
 

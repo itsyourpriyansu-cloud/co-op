@@ -6,6 +6,8 @@ coverage/
 .env
 .env.*
 !.env.example
+# Non-secret mode file: console pointed at the backend (docs/22 §4)
+!apps/admin-console/.env.backend
 
 # mock API runtime snapshot
 apps/mock-api/.data/

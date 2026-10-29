@@ -11,9 +11,9 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | Before a demo: `npm run demo:prod` + `npm run dev:web`, then `npm run e2e:demo` (optional) and reset. Only when asked: APK build (`npm run build:apk`, needs an Expo account), Azure hosting (all URLs are env vars, D-054), a real-phone try-out over Wi-Fi, or changes from the society's answers (`docs/client-questions.md`) |
+| **Next action** | **P0 Foundation done** (D-073). Next: **P1 Auth, users, audit** (`docs/22` §5). Commit P0 first |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
-| **Last updated** | 2026-10-25 |
+| **Last updated** | 2026-10-29 |
 
 ---
 
@@ -29,7 +29,7 @@
 - [x] **Plan approved** → D-000 Accepted 2026-10-24 (proposed decisions = working defaults)
 - [x] ~~Q-005: does Fusil already have a backend/API?~~ Skipped: demo only (D-054)
 - [ ] APK route chosen: EAS cloud (Expo account) **or** local build (JDK 17 + Android SDK). **Deferred until the user asks (D-054)**
-- [ ] Society questions sent: plain-language list ready in `docs/client-questions.md` (from Batch 1–6, `docs/open-questions.md`)
+- [x] Society questions sent and **answered 2026-10-29** (D-067): plain-language list in `docs/client-questions.md` (from Batch 1–6, `docs/open-questions.md`)
 - [ ] Back sides of the Membership and Ordinary-loan forms requested
 - [ ] Machine setup: Node + npm ✅ (already installed, no pnpm needed, D-038) · `git init` · Expo Go on an Android phone · (local route: JDK 17 + `ANDROID_HOME` + adb)
 
@@ -84,3 +84,9 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-10-25 | **M9 Dashboards, notifications & reports built:** ST-01 role variants (Accountant, Secretary/President, Cashier, DDO + Admin) from the Work Queue; ST-03 notifications (bell with count), simulated composer (SMS/WhatsApp/Email to a member, department, defaulters, retiring; preview → send → outbox), member questions with replies that reach the phone; ST-50 catalogue, ST-51 viewer (8 reports, grouped subtotals, CSV, print on letterhead); ST-52 defaulter notice + F1, F2, F3, F4, F5/F6 twins with print buttons on joining, loan and member pages (D-063, seed v12). 257 tests green, coverage 100%, console build OK. J-13 passed live, no page errors | M10 Polish & demo |
 | 2026-10-25 | **M10 Polish (demo scope):** axe WCAG 2.2 AA sweep of 27 console routes (light + dark) and 25 phone screens → no critical/serious left (tertiary token, Blend contrast lifts, Initials, tab/scroll/label fix-ups, aria-checked, on-brand colours); state audit with `/__demo/failure-rate` found and fixed the console showing "no access" when the server is down; topbar global search (`GET /search`, Ctrl K); M3–M5 screens visually checked; `DEMO-SCRIPT.md` written and Act 3 rehearsed across both apps (D-064). 258 tests green, coverage 100%, console build + Android bundle OK. APK / device / hosting deferred | Commit · APK or hosting when asked |
 | 2026-10-25 | **Demo-ready:** demo clock (D-065); Playwright suite in `tests/e2e/` (188 tests: every console route, J-03…J-14, cross-app AC-X01, axe light + dark + phone, error states, screen sizes, the whole demo script twice in a row); fixed 9 real bugs (duplicate `<main>`, search box ARIA, dashboard tile names, unlabelled checkboxes, dark-mode tags, paper twins in dark mode, Blend EmptyState line-height, hard-coded receipt date, duplicate address-field names); console port 5180 via `CONSOLE_PORT` + `npm run demo:prod`; docs 18–20, `docs/client-questions.md`, LEARN-THE-APP as built, DEMO-SCRIPT v1.1 with the real-phone path (not verified on a device) (D-066, build-history/11) |
+| 2026-10-29 | Society answers to the 35 questions recorded (client-questions v1.1, open-questions v0.4, Batch 7 follow-ups); impact doc 21 (23 changes, 4 conflicts, 12 follow-ups), REQ-130…137; backend stack proposed in doc 22 (D-068). No code changed | Decide C-1/C-2 + D-068, then build doc 21 changes |
+| 2026-10-29 | Q-005 answered: Envizon builds the backend (D-069). Backend plan v0.3: `backend/` folder structure (routes/controller/service/repository/schema/models), DB `tgseccsl_dev`/`tgseccsl_test`, phases P0–P9 with mock-API fallback for integration | P0 Foundation |
+| 2026-10-29 | C-2 → two signatures as in the prototype (D-070); C-1 → all EMI methods incl. FLAT, chosen per product (D-071); forms checked for F-03 (not stated, user will ask). Local DB login for `tgseccsl_dev` failed (password authentication), so `backend/.env` is not written yet | Fix DB login, then P0 |
+| 2026-10-29 | F-03 checked against the agreement (pages 2–5): 10% only on Ordinary, netted; insurance via demand sheet, not payout (D-072). Two points still for the society. DB login `tgseccsl_dev` still fails (password authentication) | Fix DB login, then P0 |
+| 2026-10-29 | DB connected as `postgres` (PostgreSQL 18.1); created empty `tgseccsl_test`; `backend/.env` written (git-ignored). Agreement rules stay in force for F-03 until the society confirms otherwise | P0 Foundation |
+| 2026-10-29 | **Backend P0 Foundation built** (D-073): `backend/` Fastify + Drizzle + PostgreSQL 18.1, env validation, migrations + seed runner, error envelope, guards, `/health` (DB status), `/docs`, dev mock fallback, root scripts. Exit test passed: backend tests 11/11 on `tgseccsl_test`; root tests 263/263; all typechecks; console e2e against :4100 60/61 (the 1 failure is a phone-screen test whose app was pointed at port 4000, which another project (mnr-dairy-app) occupies). Playwright Chromium reinstalled | P1 Auth |

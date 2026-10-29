@@ -5,19 +5,23 @@
     "description": "TGSECCSL society management: Admin Console (web), Member App (Android) and Mock API",
     "workspaces": [
         "apps/*",
-        "packages/*"
+        "packages/*",
+        "backend"
     ],
     "scripts": {
         "demo": "concurrently -k -n api,console -c cyan,magenta \"npm run dev -w @tgs/mock-api\" \"npm run dev -w @tgs/admin-console\"",
         "dev:api": "npm run dev -w @tgs/mock-api",
+        "dev:backend": "npm run dev -w @tgs/backend",
         "dev:console": "npm run dev -w @tgs/admin-console",
         "demo:prod": "npm run build:console && concurrently -k -n api,console -c cyan,magenta \"npm run start -w @tgs/mock-api\" \"npm run preview -w @tgs/admin-console\"",
+        "demo:backend": "concurrently -k -n mock,backend,console -c cyan,green,magenta \"npm run dev -w @tgs/mock-api\" \"npm run dev -w @tgs/backend\" \"npm run dev -w @tgs/admin-console -- --mode backend\"",
         "dev:app": "npm run start -w @tgs/member-app",
         "dev:web": "cd apps/member-app && npx expo start --web --port 8090",
         "build:console": "npm run build -w @tgs/admin-console",
         "build:apk": "npm run build:apk -w @tgs/member-app",
         "tokens": "npm run build -w @tgs/design-tokens",
         "test": "vitest run",
+        "test:backend": "npm test -w @tgs/backend",
         "test:watch": "vitest",
         "test:domain-coverage": "vitest run packages/domain --coverage --coverage.include=packages/domain/src/** --coverage.exclude=**/*.test.ts --coverage.reporter=text-summary",
         "typecheck": "npm run typecheck --workspaces --if-present",

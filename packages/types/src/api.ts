@@ -179,10 +179,13 @@ export interface JoiningReference {
 }
 
 export interface Health {
-  ok: true;
-  service: 'tgseccsl-mock-api';
+  ok: boolean;
+  /** Which server answered: the demo mock API or the production backend (docs/22). */
+  service: 'tgseccsl-mock-api' | 'tgseccsl-backend';
   version: string;
   today: ISODate;
+  /** Backend only: database reachability (docs/22 P0 exit test). */
+  database?: { ok: boolean; latencyMs: number; serverVersion?: string };
 }
 
 // ---- Joining: staff side (ST-14 … ST-17) --------------------------------------------------------

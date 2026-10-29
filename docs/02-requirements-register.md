@@ -1,6 +1,6 @@
 # 02 · Requirements Register (Traceability)
 
-> Version 0.3 · 2026-10-24
+> Version 0.4 · 2026-10-29 · REQ-130…135 from the society answers (D-067, doc 21)
 > Every buildable requirement with its source, status and prototype priority.
 > Status: **C** confirmed · **P** proposal · **U** unknown/needs answer · **X** conflict
 > Priority: **P1** MVP prototype · **P2** later · **OUT** not in prototype
@@ -155,3 +155,11 @@
 | REQ-123 | Profile settings / edit: contact direct, certified fields by request | SM + D-044 | C | P1 | MB-19, ST-18 |
 | REQ-124 | Loan against FD from FD details | SM + D-045 | C | P1 | MB-09, MB-05 |
 | REQ-125 | Email / WhatsApp from member dashboard | SM | U (Q-119) | P1 (contact links) | MB-13 |
+| REQ-130 | Versioned master files with an active status (products, FD rates, insurance, fees, penal %) | S (Q-311, Q-511) | C | P1 | ST-60…67 |
+| REQ-131 | Ledgers: every EMI, disbursement, deposit, FD interest and penalty posts to the books | S (Q-311, Q-313) | C | P1 | ST-44, reports |
+| REQ-132 | DDO records the actual salary deduction per member | S (Q-502, Q-309) | C | P1 | ST-43 (DDO) |
+| REQ-133 | Daily penal interest on unpaid dues until cleared | S (Q-307, Q-309) | C | P1 | BR-012 |
+| REQ-134 | One unpaid month = defaulter; notice to guarantors and surety recovery | S (Q-310) | C | P1 | ST-52, reports |
+| REQ-135 | Service targets: membership ≤ 48 h, loan ≤ 4–5 days | S (Q-514) | C | P2 | ST-01, ST-02 |
+| REQ-136 | EMI method flat (society) vs reducing balance (agreement) | S vs A | C (D-071: all methods, chosen per product) | P1 | BR-006 |
+| REQ-137 | Membership approval: one signature (society) vs two (form F1) | S vs PF | C (D-070: two signatures) | P1 | ST-16/17 |

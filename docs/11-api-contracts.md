@@ -1,6 +1,6 @@
 # 11 · Service / API Contracts
 
-> Version 0.9 · 2026-10-25 · Status: **[P] HTTP contracts served by `apps/mock-api` (D-021)** and consumed by both apps through `packages/api-client`.
+> Version 0.10 · 2026-10-29 · `GET /health` also answered by the backend (`service: tgseccsl-backend`, plus `database` status, D-073) · Status: **[P] HTTP contracts served by `apps/mock-api` (D-021)** and consumed by both apps through `packages/api-client`.
 > These are **not** the production backend API. Production endpoints must come from the backend owner (Q-005). If Fusil has an existing API, these contracts are adapted to it before M1.
 
 ## 1. Conventions
