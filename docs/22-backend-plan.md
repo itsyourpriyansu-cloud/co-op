@@ -1,5 +1,6 @@
 # 22 · Production backend plan
 
+> Version 0.5 · 2026-10-29 · v0.5: §5.1 P1 design (auth, users, permissions, audit; session bridge; P1a/b/c).
 > Version 0.4 · 2026-10-29 · v0.4: local server is PostgreSQL 18.1, user `postgres`; `tgseccsl_dev` and `tgseccsl_test` exist; URLs in `backend/.env`.
 > Version 0.3 · 2026-10-29 · Status: **[P] Proposed (D-068, D-069)**.
 > v0.2: Fastify instead of Hono; local PostgreSQL now, Azure PostgreSQL later (user choices). v0.3: **Envizon builds the backend** (Q-005 answered: Fusil has no backend); separate `backend/` folder with a layered, module-based structure; implementation phases P0–P9 with integration into both apps.
@@ -179,6 +180,46 @@ Each phase ends with its exit test passing. Never start the next phase before th
 | **P7 Collections** | Demand sheets per department, send-by date, **DDO enters actual deduction**, allocation (BR-011), dues (not carried forward), counter receipts, member payment reports (QR, no screenshot), daily penal job, defaulter after 1 month, guarantor notices | Demand screens, DDO console, MB-10/18 | Month-end journey e2e passes; reports match ledger totals |
 | **P8 Notifications, dashboards, reports** | Work queue + dashboards (48 h / 4–5 day alerts), in-app notifications, WhatsApp/email/push providers (simulated + real adapters), support tickets, 8 reports, CSV/Excel, PDFs | Every remaining screen | Full Playwright suite (188 tests) green against :4100 with fallback **switched off** |
 | **P9 Hardening & go-live prep** | Remove fallback, security review (rate limits, headers, OWASP checks), backups, Dockerfile, data import tool for the society's registers (F-11), performance check, Azure deployment (Bicep) when asked | Apps default to the backend | e2e green; restore drill; import of a sample register succeeds |
+
+### 5.1 P1 design: auth, users, permissions, audit
+
+P1 is split in three steps, each committed on its own: **P1a** backend, **P1b** console sign-in, **P1c** member-app sign-in. The P1 exit test runs after P1c.
+
+**Tables (P1a)**
+
+| Table | Holds |
+|---|---|
+| `staff_users` | id, username (unique), name, role (console role), department_id (DDO only), email, mobile, password_hash (argon2id), totp_secret (encrypted), totp_enabled, status ACTIVE/INACTIVE, failed_attempts, locked_until, last_login_at |
+| `app_accounts` | The phone identity: id, kind MEMBER/APPLICANT, member_id or applicant_id, general_no, employee_id, name, **mobile (unique)**, status, last_login_at. Members and applicants themselves move in P4; this table is only who may sign in |
+| `otp_challenges` | id, mobile, purpose LOGIN/SIGNUP, code_hash, channel (WHATSAPP/PUSH; simulated), attempts, expires_at (5 min), consumed_at |
+| `refresh_tokens` | id, subject (staff or app account), token_hash (SHA-256), device label, ip, created_at, expires_at (30 days), revoked_at, replaced_by (rotation; reuse of a rotated token revokes the whole chain) |
+| `role_permissions` | role, permission. Seeded from the docs/03 matrix (today in `apps/mock-api/src/permissions.ts`, moved to `@tgs/domain` so both servers share one list). The Super Admin edits it (ST-62) |
+| `audit_log` | id, at, actor id, actor role, action, entity, entity id, summary, before/after (jsonb), ip, user agent, request id. Append-only |
+
+**Sign-in**
+
+| Who | Flow | Endpoints |
+|---|---|---|
+| Staff | username + password → if the role needs it (Super Admin, Secretary, President; setting) a 6-digit **authenticator (TOTP)** code → tokens. First sign-in of a signer enrols TOTP (QR code). 5 wrong tries lock the account for 15 min | `POST /auth/staff/login`, `POST /auth/staff/totp`, `POST /auth/staff/totp/setup`, `POST /auth/staff/totp/confirm` |
+| Member / applicant | **mobile number → OTP** (D-067) → tokens. Unknown mobile on the sign-up path creates an applicant account. Simulated delivery locally (the code is logged and, outside production, returned as `demoOtp`, `123456` as in the demo); WhatsApp/push in P8 | `POST /auth/otp/start`, `POST /auth/otp/verify` |
+| Everyone | short **access token** (JWT, 15 min, `JWT_SECRET`) + **refresh token** (opaque, rotated on every use, stored hashed). `/me` returns user, channel and permissions as today | `POST /auth/refresh`, `POST /auth/logout`, `GET /me` |
+| Demo only (not in production) | the persona list and one-click sign-in stay, so the demo script and e2e suite keep working | `GET /__demo/personas`, `POST /auth/persona` |
+
+Member passwords go away (D-067): MA-03 forgot password, MB-17 change password and the activation password step are retired in P1c. `/auth/member-login`, `/auth/activate/*`, `/auth/forgot/*`, `/auth/password/*`, `/me/password` are not built in the backend.
+
+**Users and permissions (P1a):** `GET/POST/PUT /users` (Super Admin; create staff with a temporary password, deactivate, reset TOTP), `GET/PUT /permissions`. Guards: `requirePermission('loans.sanction')` reads the role's permissions (cached, refreshed on change); DDO department scope as in P0. Separation-of-duties checks (Secretary ≠ President, assessor ≠ sanctioner, cashier ≠ FD acceptor, no self-surety) live in the services of P4–P6.
+
+**Session bridge (dev only, until P9):** routes still served by the mock API need a mock session. When the backend forwards a request with a valid backend token, it swaps the `Authorization` header for a mock session of the same user, created through a new dev-only mock endpoint `POST /api/v1/__demo/session { userId }` and cached per user (re-created once on a 401, e.g. after a demo reset). Requests without a token are forwarded unchanged.
+
+**Seed (P1a):** the 6 demo staff (username = their demo user ID, dev password from `SEED_STAFF_PASSWORD`, default the demo password), app accounts for every active member and applicant in `@tgs/mock-data` (same IDs and mobiles), the permission matrix.
+
+**Other packages:** `@node-rs/argon2` (prebuilt, no compiler), `otplib` (TOTP), `@fastify/jwt`, `@fastify/rate-limit` (5 OTP requests per mobile per 15 min, 10 logins per IP per minute).
+
+**P1b console:** sign-in page with username + password and the TOTP step (enrolment shows a QR code); the demo persona panel shows only when the server offers personas. `@tgs/api-client` refreshes the access token on a 401 and retries once.
+
+**P1c member app:** MA-01 becomes mobile → OTP; applicants sign up the same way; demo member cards still sign in with one tap; retire MA-03 and MB-17 (screen count changes in docs/05).
+
+**Exit test (after P1c):** backend tests for every flow (wrong password, lockout, TOTP, OTP expiry and attempts, refresh rotation and reuse, permission guard, DDO scope, audit rows); console e2e suite green on :4100 (personas through the backend + bridge) plus a new real staff sign-in test with TOTP; phone e2e for mobile + OTP sign-in.
 
 ## 6. Rules carried over
 

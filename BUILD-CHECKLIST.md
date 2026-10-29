@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | **P0 Foundation done** (D-073). Next: **P1 Auth, users, audit** (`docs/22` §5). Commit P0 first |
+| **Next action** | P0 committed and pushed on `backend-p0-foundation`. P1 designed (`docs/22` §5.1). Next: build **P1a** (backend auth, users, permissions, audit, session bridge) |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
 | **Last updated** | 2026-10-29 |
 
