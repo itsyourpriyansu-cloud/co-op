@@ -1,5 +1,6 @@
 # 06 · Screen Specifications
 
+> Version 0.5 · 2026-10-29 · AU-01 as built against the backend (P1b, D-077)
 > Version 0.4 · 2026-10-24 (member screens are now native mobile, D-019)
 > One block per screen: **Purpose · Content · Actions · States/Rules · Acceptance ref**.
 > Global states (loading, empty, error, permission) from `04-experience-architecture.md` §6 apply to all screens and are not repeated here.
@@ -12,6 +13,7 @@
 ### AU-01 Staff Login (web)
 - **Content:** Society logo and name. Fields: User ID, password. "Forgot password". **Demo panel** (prototype only): persona cards for R1–R5, one-click sign-in.
 - **Rules:** Login method is UNKNOWN (Q-103). The mock accepts any persona. Wrong password state is demonstrable with password `wrong`.
+- **As built (P1b, D-077):** against the backend: User ID + password → for the Super Admin, Secretary and President an **authenticator step** (first time: QR code + typeable key, then a 6-digit code) → after a temporary password, **Choose a new password** (rules shown live; the console stays closed until it is saved). Wrong password: inline error; 5 wrong tries lock for 15 min. "Forgot password" = ask the Super Admin, who uses **Reset password** on ST-61 (a temporary password shown once). The demo panel shows only when the server offers personas (DEMO_MODE); against the mock API the page shows personas only. Access tokens renew silently; a failed renewal returns to sign-in.
 - **AC:** AC-AU-01.
 
 ### AU-03 Staff Forgot Password (web)

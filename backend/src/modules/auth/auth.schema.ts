@@ -34,8 +34,8 @@ export const staffLoginBody = z.object({
 
 export const staffLoginResult = z.discriminatedUnion('status', [
   z.object({ status: z.literal('OK'), session: sessionSchema, mustChangePassword: z.boolean() }),
-  z.object({ status: z.literal('TOTP_REQUIRED'), challengeToken: z.string() }),
-  z.object({ status: z.literal('TOTP_SETUP_REQUIRED'), challengeToken: z.string() }),
+  z.object({ status: z.literal('TOTP_REQUIRED'), challengeToken: z.string(), mustChangePassword: z.boolean() }),
+  z.object({ status: z.literal('TOTP_SETUP_REQUIRED'), challengeToken: z.string(), mustChangePassword: z.boolean() }),
 ]);
 
 export const challengeBody = z.object({ challengeToken: z.string().min(1) });

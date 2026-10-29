@@ -6,9 +6,10 @@ import { NoAccessPage } from '@/pages/SystemPages';
 import { useAuth } from './auth';
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { session } = useAuth();
+  const { session, mustChangePassword } = useAuth();
   const location = useLocation();
-  if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  // A temporary password must be replaced before anything else (the sign-in page asks for it).
+  if (!session || mustChangePassword) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <>{children}</>;
 }
 

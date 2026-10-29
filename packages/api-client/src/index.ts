@@ -27,6 +27,9 @@ import {
   type SocietyProfile,
   type SocietySettings,
   type StaffUser,
+  type StaffLoginResult,
+  type TotpSetup,
+  type OtpStarted,
   type OtpChallenge,
   type DatasetSummary,
   type Persona,
@@ -128,6 +131,11 @@ export interface ApiClientOptions {
   getToken?: () => string | null | undefined | Promise<string | null | undefined>;
   /** Called on 401 so the app can drop its session. */
   onUnauthenticated?: () => void;
+  /**
+   * Backend only (docs/22 §5.1): on a 401, try to renew the access token once and retry.
+   * Resolve true when a new token is stored (getToken then returns it), false to give up.
+   */
+  refreshSession?: () => Promise<boolean>;
   timeoutMs?: number;
 }
 
@@ -141,11 +149,21 @@ export function createApiClient(options: ApiClientOptions) {
     return raw.replace(/\/+$/, '');
   }
 
+  // One renewal at a time: parallel 401s wait for the same refresh.
+  let refreshing: Promise<boolean> | null = null;
+  function refreshOnce(): Promise<boolean> {
+    refreshing ??= (options.refreshSession?.() ?? Promise.resolve(false)).catch(() => false).finally(() => {
+      refreshing = null;
+    });
+    return refreshing;
+  }
+
   async function request<T>(
     method: Method,
     path: string,
     body?: unknown,
     versioned = true,
+    retried = false,
   ): Promise<T> {
     const url = (await resolveBase()) + (versioned ? API_PREFIX : '') + path;
     const token = options.getToken ? await options.getToken() : undefined;
@@ -179,6 +197,11 @@ export function createApiClient(options: ApiClientOptions) {
       const errorBody = isErrorBody(data)
         ? data
         : { code: 'NETWORK' as const, message: `Unexpected response (${res.status}).` };
+      // Sign-in calls answer 401 for a bad step; never renew on those (or on the renewal itself).
+      const isAuthCall = path.startsWith('/auth/');
+      if (res.status === 401 && !retried && !isAuthCall && options.refreshSession && token) {
+        if (await refreshOnce()) return request<T>(method, path, body, versioned, true);
+      }
       if (res.status === 401) options.onUnauthenticated?.();
       throw new ApiError(res.status, errorBody);
     }
@@ -191,7 +214,19 @@ export function createApiClient(options: ApiClientOptions) {
     auth: {
       loginAsPersona: (personaId: string, channel: Channel) =>
         request<Session>('POST', '/auth/persona', { personaId, channel }),
-      logout: () => request<{ ok: true }>('POST', '/auth/logout'),
+      /** Backend sends the refresh token so the whole sign-in ends; the mock ignores the body. */
+      logout: (refreshToken?: string) => request<{ ok: true }>('POST', '/auth/logout', refreshToken ? { refreshToken } : undefined),
+      // ---- Backend (docs/22 §5.1) ----
+      /** AU-01: staff user ID + password. Signers continue with an authenticator code. */
+      staffLogin: (username: string, password: string) => request<StaffLoginResult>('POST', '/auth/staff/login', { username, password }),
+      totpSetup: (challengeToken: string) => request<TotpSetup>('POST', '/auth/staff/totp/setup', { challengeToken }),
+      totpConfirm: (challengeToken: string, code: string) => request<Session>('POST', '/auth/staff/totp/confirm', { challengeToken, code }),
+      totpVerify: (challengeToken: string, code: string) => request<Session>('POST', '/auth/staff/totp', { challengeToken, code }),
+      changeStaffPassword: (currentPassword: string, newPassword: string) => request<{ ok: true }>('POST', '/auth/staff/password', { currentPassword, newPassword }),
+      refresh: (refreshToken: string) => request<Session>('POST', '/auth/refresh', { refreshToken }),
+      /** Member App sign-in / sign-up by mobile (D-067). */
+      otpStart: (mobile: string, purpose: 'LOGIN' | 'SIGNUP' = 'LOGIN') => request<OtpStarted>('POST', '/auth/otp/start', { mobile, purpose }),
+      otpVerify: (otpRef: string, otp: string, name?: string) => request<Session>('POST', '/auth/otp/verify', { otpRef, otp, ...(name ? { name } : {}) }),
       /** MA-01: General No. or Employee ID + password. */
       memberLogin: (login: string, password: string) => request<Session>('POST', '/auth/member-login', { login, password }),
       /** MA-02: Employee ID + registered mobile → OTP. */
@@ -294,6 +329,10 @@ export function createApiClient(options: ApiClientOptions) {
       users: () => request<StaffUser[]>('GET', '/users'),
       createUser: (u: Partial<StaffUser>) => request<StaffUser[]>('POST', '/users', u),
       updateUser: (id: string, u: Partial<StaffUser>) => request<StaffUser[]>('PUT', `/users/${id}`, u),
+      /** Backend only: a temporary password the Super Admin hands over (must be changed at sign-in). */
+      resetUserPassword: (id: string) => request<{ userId: string; temporaryPassword: string; mustChangePassword: true }>('POST', `/users/${id}/reset-password`),
+      /** Backend only: the user sets up a new authenticator at the next sign-in. */
+      resetUserTotp: (id: string) => request<StaffUser[]>('POST', `/users/${id}/reset-totp`),
       permissions: () => request<PermissionMatrix>('GET', '/permissions'),
       templates: () => request<NotificationTemplate[]>('GET', '/notification-templates'),
       updateTemplate: (key: string, t: Partial<NotificationTemplate>) => request<NotificationTemplate[]>('PUT', `/notification-templates/${key}`, t),

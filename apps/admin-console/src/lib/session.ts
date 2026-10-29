@@ -3,6 +3,8 @@
 import type { Session } from '@tgs/types';
 
 const KEY = 'tgs.console.session';
+/** Set after a temporary password: the user must choose a new one before using the console (P1b). */
+const MUST_CHANGE_KEY = 'tgs.console.mustChangePassword';
 
 export function loadSession(): Session | null {
   try {
@@ -24,6 +26,7 @@ export function saveSession(session: Session): void {
 export function clearSession(): void {
   try {
     localStorage.removeItem(KEY);
+    localStorage.removeItem(MUST_CHANGE_KEY);
   } catch {
     /* non-fatal */
   }
@@ -31,4 +34,21 @@ export function clearSession(): void {
 
 export function getToken(): string | null {
   return loadSession()?.token ?? null;
+}
+
+export function loadMustChangePassword(): boolean {
+  try {
+    return localStorage.getItem(MUST_CHANGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function saveMustChangePassword(value: boolean): void {
+  try {
+    if (value) localStorage.setItem(MUST_CHANGE_KEY, '1');
+    else localStorage.removeItem(MUST_CHANGE_KEY);
+  } catch {
+    /* non-fatal */
+  }
 }

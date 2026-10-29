@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Me, Permission, Session } from '@tgs/types';
+import type { Me, Permission, Session, StaffLoginResult } from '@tgs/types';
 import { api } from '@/lib/api';
-import { clearSession, loadSession, saveSession } from '@/lib/session';
+import { clearSession, loadMustChangePassword, loadSession, saveMustChangePassword, saveSession } from '@/lib/session';
 
 interface AuthContextValue {
   session: Session | null;
@@ -13,6 +13,13 @@ interface AuthContextValue {
   retryMe: () => void;
   can: (permission: Permission) => boolean;
   loginAsPersona: (personaId: string) => Promise<void>;
+  /** AU-01 (backend): user ID + password. Returns the next step for signers (authenticator). */
+  loginWithPassword: (username: string, password: string) => Promise<StaffLoginResult>;
+  /** Finishes a sign-in that needed an authenticator code. */
+  completeSignIn: (session: Session, mustChangePassword?: boolean) => Promise<void>;
+  /** Signed in with a temporary password: must choose a new one first. */
+  mustChangePassword: boolean;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -21,28 +28,53 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(() => loadSession());
+  const [mustChangePassword, setMustChange] = useState(() => loadMustChangePassword());
 
   // Permissions always come from the API (docs/03 §4), never from the client.
   const meQuery = useQuery({
-    queryKey: ['me', session?.token],
+    queryKey: ['me', session?.user.id],
     queryFn: api.me,
-    enabled: !!session,
+    enabled: !!session && !mustChangePassword,
     staleTime: 5 * 60_000,
   });
 
-  const loginAsPersona = useCallback(
-    async (personaId: string) => {
-      const next = await api.auth.loginAsPersona(personaId, 'console');
+  const begin = useCallback(
+    async (next: Session, mustChange = false) => {
       saveSession(next);
+      saveMustChangePassword(mustChange);
+      setMustChange(mustChange);
       setSession(next);
       await queryClient.invalidateQueries({ queryKey: ['me'] });
     },
     [queryClient],
   );
 
+  const loginAsPersona = useCallback(
+    async (personaId: string) => {
+      await begin(await api.auth.loginAsPersona(personaId, 'console'));
+    },
+    [begin],
+  );
+
+  const loginWithPassword = useCallback(
+    async (username: string, password: string) => {
+      const result = await api.auth.staffLogin(username, password);
+      if (result.status === 'OK') await begin(result.session, result.mustChangePassword);
+      return result;
+    },
+    [begin],
+  );
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    await api.auth.changeStaffPassword(currentPassword, newPassword);
+    saveMustChangePassword(false);
+    setMustChange(false);
+  }, []);
+
   const logout = useCallback(async () => {
-    await api.auth.logout().catch(() => undefined);
+    await api.auth.logout(loadSession()?.refreshToken).catch(() => undefined);
     clearSession();
+    setMustChange(false);
     setSession(null);
     queryClient.clear();
   }, [queryClient]);
@@ -56,9 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       retryMe: () => void meQuery.refetch(),
       can: (permission) => meQuery.data?.permissions.includes(permission) ?? false,
       loginAsPersona,
+      loginWithPassword,
+      completeSignIn: (next, mustChange) => begin(next, mustChange),
+      mustChangePassword,
+      changePassword,
       logout,
     }),
-    [session, meQuery, loginAsPersona, logout],
+    [session, meQuery, loginAsPersona, loginWithPassword, begin, mustChangePassword, changePassword, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

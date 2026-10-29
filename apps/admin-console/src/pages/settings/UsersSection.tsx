@@ -2,10 +2,11 @@
 // for DDOs, their department.
 import { useState } from 'react';
 import { Plus, Pencil } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { ButtonV2, ButtonV2Size, ButtonV2Type, ColumnType, Radio, RadioGroup, Switch, SwitchSize, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, type ColumnDefinition } from '@juspay/blend-design-system';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2Type, ColumnType, Radio, RadioGroup, Switch, SwitchSize, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, type ColumnDefinition } from '@juspay/blend-design-system';
 import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type StaffUser } from '@tgs/types';
 import { TextField, fieldErrorsOf } from '@/components/Form';
+import { isApiError } from '@tgs/api-client';
 import { SideDrawer } from '@/components/SideDrawer';
 import { Table } from '@/components/Table';
 import { ViewState } from '@/components/ViewState';
@@ -15,6 +16,10 @@ import { useSettingsSave } from './shared';
 import { Initials } from '@/components/Initials';
 
 type Row = StaffUser & Record<string, unknown>;
+
+/** Extra sign-in facts the production backend adds to each user (docs/22 §5.1). */
+type BackendUser = StaffUser & { totpEnabled?: boolean; locked?: boolean; lastLoginAt?: string };
+const isBackendUser = (u: Partial<StaffUser>): u is BackendUser => 'totpEnabled' in u;
 
 const ROLE_HINT: Record<ConsoleRole, string> = {
   SUPER_ADMIN: 'Settings, users, everything read-only otherwise',
@@ -78,7 +83,7 @@ export function UsersSection({ canEdit }: { canEdit: boolean }) {
         open={Boolean(editing)}
         onClose={() => setEditing(null)}
         title={editing?.id ? `Edit ${editing.name}` : 'Add user'}
-        description="Demo: new users can be managed here; the login screen keeps the six demo personas."
+        description={editing && isBackendUser(editing) ? 'New users get a temporary password from Reset password, and choose their own at first sign-in.' : 'Demo: new users can be managed here; the login screen keeps the six demo personas.'}
         footer={
           <div className="flex justify-end gap-2">
             <ButtonV2 text="Cancel" buttonType={ButtonV2Type.SECONDARY} onClick={() => setEditing(null)} />
@@ -121,9 +126,45 @@ export function UsersSection({ canEdit }: { canEdit: boolean }) {
               </section>
             )}
             {editing.id && <Switch checked={editing.active !== false} onChange={(active) => set({ active })} size={SwitchSize.MEDIUM} label="Can sign in" subtext={errors.active} />}
+            {editing.id && isBackendUser(editing) && <SignInSection user={editing} />}
           </div>
         )}
       </SideDrawer>
     </>
+  );
+}
+
+/** Backend only: hand over a temporary password, or make the user set up a new authenticator. */
+function SignInSection({ user }: { user: BackendUser }) {
+  const queryClient = useQueryClient();
+  const reset = useMutation({ mutationFn: () => api.settings.resetUserPassword(user.id) });
+  const resetTotp = useMutation({
+    mutationFn: () => api.settings.resetUserTotp(user.id),
+    onSuccess: (list) => queryClient.setQueryData(['users'], list),
+  });
+  const failure = reset.error ?? resetTotp.error;
+  return (
+    <section className="flex flex-col gap-3 border-t border-line pt-4" aria-label="Sign-in">
+      <p className="text-label text-fg">Sign-in</p>
+      <div className="flex flex-wrap gap-2">
+        <TagV2 text={user.totpEnabled ? 'Authenticator set up' : 'No authenticator'} size={TagV2Size.XS} color={user.totpEnabled ? TagV2Color.SUCCESS : TagV2Color.NEUTRAL} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
+        {user.locked && <TagV2 text="Locked after wrong attempts" size={TagV2Size.XS} color={TagV2Color.WARNING} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />}
+      </div>
+      <p className="text-caption text-fg-secondary">{user.lastLoginAt ? `Last signed in ${new Date(user.lastLoginAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Has not signed in yet.'}</p>
+      <div className="flex flex-wrap gap-2">
+        <ButtonV2 text="Reset password" size={ButtonV2Size.SMALL} buttonType={ButtonV2Type.SECONDARY} loading={reset.isPending} onClick={() => reset.mutate()} />
+        {user.totpEnabled && <ButtonV2 text="Reset authenticator" size={ButtonV2Size.SMALL} buttonType={ButtonV2Type.SECONDARY} loading={resetTotp.isPending} onClick={() => resetTotp.mutate()} />}
+      </div>
+      {reset.data && (
+        <AlertV2
+          type={AlertV2Type.SUCCESS}
+          subType={AlertV2SubType.SUBTLE}
+          heading={`Temporary password for ${reset.data.userId}: ${reset.data.temporaryPassword}`}
+          description="Give it to the user in person. It works once: they choose a new password when they sign in. It is not shown again."
+        />
+      )}
+      {resetTotp.isSuccess && <AlertV2 type={AlertV2Type.SUCCESS} subType={AlertV2SubType.SUBTLE} heading="Authenticator reset" description="The user sets up a new authenticator app at the next sign-in." />}
+      {failure && <AlertV2 type={AlertV2Type.ERROR} subType={AlertV2SubType.SUBTLE} heading="That didn't work" description={isApiError(failure) ? failure.message : 'Try again.'} />}
+    </section>
   );
 }

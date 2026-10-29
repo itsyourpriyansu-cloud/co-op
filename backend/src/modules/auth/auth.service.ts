@@ -45,7 +45,8 @@ export class AuthService {
 
     if (this.app.env.TOTP_ROLES.includes(staff.role)) {
       const challengeToken = this.challenge(staff.id);
-      return staff.totpEnabled ? { status: 'TOTP_REQUIRED', challengeToken } : { status: 'TOTP_SETUP_REQUIRED', challengeToken };
+      const mustChangePassword = staff.mustChangePassword;
+      return staff.totpEnabled ? { status: 'TOTP_REQUIRED', challengeToken, mustChangePassword } : { status: 'TOTP_SETUP_REQUIRED', challengeToken, mustChangePassword };
     }
     return { status: 'OK', session: await this.completeStaffLogin(request, staff), mustChangePassword: staff.mustChangePassword };
   }

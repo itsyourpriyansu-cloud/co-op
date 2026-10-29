@@ -30,7 +30,7 @@ export default defineConfig({
   projects: [
     {
       name: 'console',
-      testMatch: /(console-smoke|journeys-console|cross-app|a11y-console|states-console|screens|demo-script)\.spec\.ts$/,
+      testMatch: /(console-smoke|journeys-console|cross-app|a11y-console|states-console|screens|demo-script|auth-backend)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'], baseURL: CONSOLE_URL, viewport: { width: 1440, height: 900 } },
     },
     {

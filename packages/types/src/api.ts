@@ -73,8 +73,8 @@ export interface Session {
 /** POST /auth/staff/login (backend, docs/22 §5.1). Signers need an authenticator code next. */
 export type StaffLoginResult =
   | { status: 'OK'; session: Session; mustChangePassword: boolean }
-  | { status: 'TOTP_REQUIRED'; challengeToken: string }
-  | { status: 'TOTP_SETUP_REQUIRED'; challengeToken: string };
+  | { status: 'TOTP_REQUIRED'; challengeToken: string; mustChangePassword: boolean }
+  | { status: 'TOTP_SETUP_REQUIRED'; challengeToken: string; mustChangePassword: boolean };
 
 /** POST /auth/staff/totp/setup: scan the QR code with an authenticator app, then confirm a code. */
 export interface TotpSetup {
