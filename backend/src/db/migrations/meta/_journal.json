@@ -36,6 +36,13 @@
       "when": 1793344722738,
       "tag": "0004_p3_ledger_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793346126511,
+      "tag": "0005_p4a_members",
+      "breakpoints": true
     }
   ]
 }

@@ -82,7 +82,7 @@ export class OtpService {
 
     const user = appSessionUser(account);
     await this.app.audit.record(request, { action: 'auth.login', entity: 'appAccount', entityId: account.id, summary: `${account.name} signed in to the Member App`, actor: user });
-    return this.tokens.issue(request, 'APP', user);
+    return this.tokens.issue(request, 'APP', user, account.id);
   }
 
   private assertUsable(row: OtpRow | undefined): void {

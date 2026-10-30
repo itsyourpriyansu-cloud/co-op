@@ -3,6 +3,8 @@ import type { SessionUser } from '@tgs/types';
 import fp from 'fastify-plugin';
 import type { Env } from '../config/env';
 import { AuditRepository } from '../modules/audit/audit.repository';
+import { AuthRepository } from '../modules/auth/auth.repository';
+import { appSessionUser } from '../modules/auth/session-user';
 import { AuditService } from '../modules/audit/audit.service';
 import { PermissionsRepository } from '../modules/permissions/permissions.repository';
 import { PermissionsService } from '../modules/permissions/permissions.service';
@@ -11,6 +13,8 @@ import { PermissionsService } from '../modules/permissions/permissions.service';
 export interface AccessClaims {
   typ: 'access';
   user: SessionUser;
+  /** Member App only: the sign-in account, reloaded on each request so a joining applicant becomes a member at once. */
+  aid?: string;
 }
 
 declare module 'fastify' {
@@ -35,15 +39,30 @@ export const authPlugin = fp<{ env: Env }>(
 
     await app.register(jwt, { secret: env.JWT_SECRET });
 
+    // Member App accounts change during joining (applicant → member): read them fresh, cached briefly.
+    const accounts = new AuthRepository(app.db);
+    const cache = new Map<string, { at: number; user: SessionUser | undefined }>();
+    const appUser = async (aid: string): Promise<SessionUser | undefined> => {
+      const hit = cache.get(aid);
+      if (hit && Date.now() - hit.at < 2000) return hit.user;
+      const row = await accounts.appById(aid);
+      const user = row && row.status === 'ACTIVE' ? appSessionUser(row) : undefined;
+      cache.set(aid, { at: Date.now(), user });
+      return user;
+    };
+
     app.addHook('onRequest', async (request) => {
       const header = request.headers.authorization;
       if (!header?.startsWith('Bearer ')) return;
+      let claims: AccessClaims;
       try {
-        const claims = app.jwt.verify<AccessClaims>(header.slice(7));
-        if (claims.typ === 'access') request.session = claims.user;
+        claims = app.jwt.verify<AccessClaims>(header.slice(7));
       } catch {
         // Expired or forged: stay signed out. Guards answer 401 and the app refreshes.
+        return;
       }
+      if (claims.typ !== 'access') return;
+      request.session = claims.aid ? await appUser(claims.aid) : claims.user;
     });
   },
   { name: 'auth', dependencies: ['db'] },

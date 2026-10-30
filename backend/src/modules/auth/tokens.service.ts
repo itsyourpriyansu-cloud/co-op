@@ -19,8 +19,8 @@ export class TokensService {
     private readonly repo: AuthRepository,
   ) {}
 
-  private accessToken(user: SessionUser): string {
-    const claims: AccessClaims = { typ: 'access', user };
+  private accessToken(user: SessionUser, subjectType: Subject, subjectId: string): string {
+    const claims: AccessClaims = { typ: 'access', user, ...(subjectType === 'APP' ? { aid: subjectId } : {}) };
     return this.app.jwt.sign(claims, { expiresIn: this.app.env.ACCESS_TOKEN_TTL_SECONDS });
   }
 
@@ -29,18 +29,19 @@ export class TokensService {
   }
 
   /** New sign-in: a fresh token family. */
-  async issue(request: FastifyRequest, subjectType: Subject, user: SessionUser): Promise<Session> {
+  /** `subjectId`: the staff user or Member App account id (an app account id may differ from the member id). */
+  async issue(request: FastifyRequest, subjectType: Subject, user: SessionUser, subjectId = user.id): Promise<Session> {
     const refreshToken = randomToken();
     await this.repo.insertRefresh({
       familyId: crypto.randomUUID(),
       subjectType,
-      subjectId: user.id,
+      subjectId,
       tokenHash: sha256(refreshToken),
       device: request.headers['user-agent']?.slice(0, 200) ?? null,
       ip: request.ip,
       expiresAt: this.refreshExpiry(),
     });
-    return { token: this.accessToken(user), refreshToken, expiresInSeconds: this.app.env.ACCESS_TOKEN_TTL_SECONDS, user };
+    return { token: this.accessToken(user, subjectType, subjectId), refreshToken, expiresInSeconds: this.app.env.ACCESS_TOKEN_TTL_SECONDS, user };
   }
 
   async refresh(request: FastifyRequest, rawToken: string): Promise<Session> {
@@ -77,14 +78,14 @@ export class TokensService {
       );
       if (!(await this.repo.markRefreshReplaced(row!.id, next.id, tx))) fail('UNAUTHENTICATED', 'Please sign in again.');
     });
-    return { token: this.accessToken(user), refreshToken, expiresInSeconds: this.app.env.ACCESS_TOKEN_TTL_SECONDS, user };
+    return { token: this.accessToken(user, row!.subjectType, row!.subjectId), refreshToken, expiresInSeconds: this.app.env.ACCESS_TOKEN_TTL_SECONDS, user };
   }
 
   /** Ends the sign-in this refresh token belongs to (all its rotations). */
   async logout(rawToken: string | undefined, subjectId: string): Promise<void> {
     if (!rawToken) return;
     const row = await this.repo.refreshByHash(sha256(rawToken));
-    if (row && row.subjectId === subjectId) await this.repo.revokeFamily(row.familyId);
+    if (row && (row.subjectId === subjectId || row.subjectType === 'APP')) await this.repo.revokeFamily(row.familyId);
   }
 
   private async currentUser(subjectType: Subject, id: string): Promise<SessionUser> {

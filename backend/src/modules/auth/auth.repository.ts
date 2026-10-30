@@ -42,6 +42,25 @@ export class AuthRepository {
     return row!;
   }
 
+  /** Member App account for a member (P4): created with the member, follows mobile and status changes. */
+  async upsertMemberAccount(tx: Tx, m: { id: string; generalNo: string; employeeId: string; name: string; mobile: string; active: boolean }): Promise<void> {
+    const values = { kind: 'MEMBER' as const, memberId: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, mobile: m.mobile, status: m.active ? ('ACTIVE' as const) : ('INACTIVE' as const) };
+    await tx
+      .insert(appAccounts)
+      .values({ id: m.id, ...values })
+      .onConflictDoUpdate({ target: appAccounts.id, set: { ...values, updatedAt: sql`now()` } });
+  }
+
+  /** An applicant who joined: the same sign-in now belongs to the member (D-026). */
+  async convertApplicant(tx: Tx, mobile: string, m: { id: string; generalNo: string; employeeId: string; name: string }): Promise<boolean> {
+    const rows = await tx
+      .update(appAccounts)
+      .set({ kind: 'MEMBER', memberId: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, updatedAt: sql`now()` })
+      .where(and(eq(appAccounts.mobile, mobile), eq(appAccounts.kind, 'APPLICANT')))
+      .returning({ id: appAccounts.id });
+    return rows.length > 0;
+  }
+
   async touchAppLogin(id: string, tx?: Tx): Promise<void> {
     await (tx ?? this.db).update(appAccounts).set({ lastLoginAt: sql`now()` }).where(eq(appAccounts.id, id));
   }

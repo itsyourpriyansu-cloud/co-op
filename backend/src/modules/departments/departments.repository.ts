@@ -1,4 +1,4 @@
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
 import type { Tx } from '../../db/transaction';
 import { departments, staffUsers } from '../../models';
@@ -32,7 +32,7 @@ export class DepartmentsRepository {
 
   /** DDO staff logins by department (docs/03 R5). */
   async ddoLogins(): Promise<Map<string, string>> {
-    const rows = await this.db.select({ id: staffUsers.id, departmentId: staffUsers.departmentId }).from(staffUsers).where(eq(staffUsers.role, 'DDO'));
+    const rows = await this.db.select({ id: staffUsers.id, departmentId: staffUsers.departmentId }).from(staffUsers).where(and(eq(staffUsers.role, 'DDO'), eq(staffUsers.status, 'ACTIVE')));
     return new Map(rows.filter((r) => r.departmentId).map((r) => [r.departmentId!, r.id]));
   }
 }

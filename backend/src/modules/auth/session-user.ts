@@ -8,7 +8,8 @@ export function staffSessionUser(s: StaffRow): SessionUser {
 
 export function appSessionUser(a: AppAccountRow): SessionUser {
   return a.kind === 'MEMBER'
-    ? { id: a.id, name: a.name, role: 'MEMBER', ...(a.memberId ? { memberId: a.memberId } : {}), ...(a.generalNo ? { generalNo: a.generalNo } : {}) }
+    ? // A member's session id is their member id (an applicant who joined keeps the same login, D-026).
+      { id: a.memberId ?? a.id, name: a.name, role: 'MEMBER', ...(a.memberId ? { memberId: a.memberId } : {}), ...(a.generalNo ? { generalNo: a.generalNo } : {}) }
     : { id: a.id, name: a.name, role: 'APPLICANT' };
 }
 

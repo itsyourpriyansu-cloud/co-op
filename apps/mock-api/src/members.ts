@@ -126,6 +126,44 @@ function toRow(db: Db, m: Member): MemberRow {
   };
 }
 
+/**
+ * Dev bridge (docs/22 §5.4): the parts of a member page the mock still owns until P5–P7 (loans,
+ * guarantees, deposits, share account, demand history) and P4b (change requests).
+ */
+export function legacyMemberExtras(db: Db, m: Member) {
+  const { loans, guarantees } = loanRows(db, m.id);
+  return {
+    today: db.demo.today,
+    currentCycle: db.currentCycle,
+    loans,
+    guarantees,
+    deposits: db.deposits
+      .filter((d) => d.memberId === m.id)
+      .map(({ id, accountNo, scheme, status, balance, principal, monthlyAmount, ratePercent, maturityDate, openedOn }) => ({ id, accountNo, scheme, status, balance, ratePercent, openedOn, ...(principal !== undefined ? { principal } : {}), ...(monthlyAmount !== undefined ? { monthlyAmount } : {}), ...(maturityDate ? { maturityDate } : {}) })),
+    shares: db.shareAccounts.find((s) => s.memberId === m.id) ?? null,
+    ledger: db.demandSheets
+      .flatMap((sh) => sh.lines.filter((l) => l.memberId === m.id).map((l) => ({ cycle: sh.cycle, departmentName: deptName(db, sh.departmentId), demand: l.totalDemand, ...(l.recovered !== undefined ? { recovered: l.recovered } : {}), sheetStatus: sh.status })))
+      .sort((a, b) => b.cycle.localeCompare(a.cycle)),
+    changeRequests: db.profileChangeRequests.filter((r) => r.memberId === m.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    /** Demand cycles already generated for the member's department (BR-010 transfer timing). */
+    demandCycles: db.demandSheets.filter((s) => s.departmentId === m.departmentId && s.status !== 'NOT_GENERATED').map((s) => s.cycle),
+  };
+}
+
+/** Dev bridge: per-member loan totals and pending change requests for the backend's member list. */
+export function legacyMembersSummary(db: Db) {
+  const rows: Record<string, { activeLoans: number; outstanding: number; pendingChanges: number }> = {};
+  for (const l of db.loans) {
+    if (!OPEN_LOAN.has(l.status)) continue;
+    const r = (rows[l.memberId] ??= { activeLoans: 0, outstanding: 0, pendingChanges: 0 });
+    r.activeLoans++;
+    r.outstanding += l.outstandingPrincipal;
+  }
+  const pending = db.profileChangeRequests.filter((r) => r.status === 'PENDING');
+  for (const r of pending) (rows[r.memberId] ??= { activeLoans: 0, outstanding: 0, pendingChanges: 0 }).pendingChanges++;
+  return { today: db.demo.today, currentCycle: db.currentCycle, rows, pendingChangeRequests: pending.map((r) => ({ id: r.id, memberId: r.memberId, route: r.route })) };
+}
+
 function memberDetail(db: Db, m: Member, user: SessionUser): MemberDetail {
   const today = db.demo.today;
   const mandate = currentMandate(db, m.id);

@@ -23,6 +23,7 @@ import { registerCollections } from './collections';
 import { registerDeposits } from './deposits';
 import { registerLoanWorkflow } from './loan-workflow';
 import { registerLoans } from './loans';
+import { registerDevSync } from './dev-sync';
 import { registerMembers } from './members';
 import { registerMembership } from './membership';
 import { registerSettings } from './settings';
@@ -186,6 +187,7 @@ export function createApp({ store, version, corsOrigins }: AppOptions) {
   registerAccount(api, store, requireSession);
   registerInsight(api, store, requireSession);
   registerMembers(api, store, requireSession);
+  registerDevSync(api, store);
 
   app.route(API_PREFIX, api);
   return app;

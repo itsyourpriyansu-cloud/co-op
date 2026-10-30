@@ -99,7 +99,7 @@ export class AuthService {
     const account = (await this.repo.appById(persona.id)) ?? fail('NOT_FOUND', 'Unknown demo persona.');
     if (account.status !== 'ACTIVE') fail('FORBIDDEN', 'This account is not active. Contact the society office.');
     await this.repo.touchAppLogin(account.id);
-    return this.tokens.issue(request, 'APP', appSessionUser(account));
+    return this.tokens.issue(request, 'APP', appSessionUser(account), account.id);
   }
 
   // ---- everyone ----------------------------------------------------------------------------------

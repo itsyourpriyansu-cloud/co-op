@@ -19,6 +19,21 @@ export class DepartmentsService {
     return rows.map((d) => ({ ...toDepartment(d), memberCount: counts.get(d.id) ?? 0, ...(ddos.get(d.id) ? { ddoUserId: ddos.get(d.id)! } : {}) }));
   }
 
+  /** For other modules (members, joining). */
+  async get(id: string): Promise<Department | undefined> {
+    const d = await this.repo.byId(id);
+    return d ? toDepartment(d) : undefined;
+  }
+
+  /** The DDO's console login for a department, if one exists (docs/03 R5). */
+  async ddoLogin(departmentId: string): Promise<string | undefined> {
+    return (await this.repo.ddoLogins()).get(departmentId);
+  }
+
+  async all(): Promise<Department[]> {
+    return (await this.repo.list()).map(toDepartment);
+  }
+
   async create(request: FastifyRequest, body: Partial<Department>): Promise<DepartmentRow[]> {
     const input = await this.validate(body);
     const id = `dept-${input.code.toLowerCase()}`;

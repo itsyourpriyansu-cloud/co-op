@@ -1,5 +1,7 @@
 # 22 · Production backend plan
 
+> Version 0.9 · 2026-10-30 · v0.9: P4a built (members).
+> Version 0.8 · 2026-10-30 · v0.8: §5.4 P4 design (members, change requests, joining) and the record sync to the mock.
 > Version 0.7 · 2026-10-30 · v0.7: §5.3 P3 ledger as built.
 > Version 0.6 · 2026-10-30 · v0.6: §5.2 P2 as built (masters, departments, mirror to the mock, demo reset).
 > Version 0.5 · 2026-10-29 · v0.5: §5.1 P1 design (auth, users, permissions, audit; session bridge; P1a/b/c).
@@ -250,6 +252,22 @@ Rules, enforced twice (service via `@tgs/domain checkJournal`, and database trig
 Endpoints: `GET /ledger/accounts`, `/ledger/trial-balance?asOf`, `/ledger/accounts/:code/lines`, `/ledger/members/:memberId/statement`, `/ledger/journals`, `/ledger/journals/:id`; `POST /ledger/journals` (manual, must balance, not future-dated) and `/ledger/journals/:id/reverse`. Permissions: `ledger.view` (Super Admin, Accountant, Secretary, President, Cashier), `ledger.post` (Accountant).
 
 Seed: the chart and **opening balances from the demo dataset**, one entry per member (shares, share deposit, active loans, deposits), each balanced against 3900 Opening balance difference: 605 entries, 3,022 lines. In production the same OPENING entries come from the society's registers (P9 import).
+
+### 5.4 P4 design: members, change requests, joining (D-081)
+
+P4 is the first move of everyday records, so it is split in three, each tested and pushed on its own:
+
+| Step | Builds | Endpoints |
+|---|---|---|
+| **P4a** Members ✅ built 2026-10-30 (D-081) | `members` (scalar columns + jsonb for addresses, nominee, pay profile), `service_events`, `recovery_mandates`, `member_transfers`; seed from the demo dataset; new members get a Member App account (mobile) | `GET /members`, `GET /members/:id`, `POST /members`, `PUT /members/:id`, `POST /members/:id/transfers`, `POST /members/:id/mandate/agree` |
+| **P4b** Change requests + my profile | `profile_change_requests` (DDO-then-office routing, D-057) | `/profile-change-requests*`, `/me/profile*` |
+| **P4c** Joining | `membership_applications`, documents (local storage), share payment (receipt posted to the ledger), General No. allotment, applicant → member | `/joining/*`, `/membership/*`, demo stage controls |
+
+**Keeping the mock in step (dev only, until P5–P7):** the mock still owns loans, deposits, share accounts and demand sheets, and reads members for them. So:
+- **Record sync:** after each member change the backend pushes the changed records (member, mandate, service event, transfer, share account for a new member) to a dev-only mock endpoint `POST /__demo/sync`, which upserts them by id. More robust than replaying requests: ids and General Nos are decided once, by the backend.
+- **Combined reads:** the member list's loan columns (active loans, outstanding) and the member page's loans, guarantees, deposits, share account and demand history come from dev-only mock endpoints `GET /__demo/legacy/members-summary` and `GET /__demo/legacy/member/:id` until P5–P7 move them. Each read is marked `TODO(P5|P6|P7)` in code.
+- **Business date:** while the mock owns the demo clock, the backend reads "today" from it (`members-summary.today`), so leftover service and dates match the demo; otherwise India's date.
+- **Joining until P4c:** joining still runs on the mock; when it creates a member, the backend imports it right after (reverse sync on the joining routes), so the member list never misses one and General Nos never clash.
 
 ## 6. Rules carried over
 

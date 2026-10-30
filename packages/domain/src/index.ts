@@ -17,3 +17,4 @@ export * from './settings';
 export * from './account';
 export * from './permissions';
 export * from './ledger';
+export * from './joining-reference';

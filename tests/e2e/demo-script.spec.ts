@@ -173,7 +173,8 @@ test('Act 3 · a loan from application to money (phone ↔ console)', async ({ p
   await tap(phone, 'Sign with OTP');
   await otp(phone);
   await tap(phone, 'Confirm & submit');
-  await phone.waitForURL(/\/loan\/[^/]+$/, { timeout: 20_000 });
+  // The new loan's page, not /loan/apply (which also matches /loan/<x> and would race the redirect).
+  await phone.waitForURL((url) => /\/loan\/[^/]+$/.test(url.pathname) && !url.pathname.endsWith('/apply'), { timeout: 20_000 });
   const lakshmi = (await apiToken(request, 'mem-1101', 'app')).token;
   const mine = await apiCall<Array<{ id: string; product: string; status: string }>>(request, 'GET', '/me/loans', lakshmi);
   const loanId = mine.find((l) => l.product === 'EDUCATION' && l.status === 'SURETY_PENDING')!.id;

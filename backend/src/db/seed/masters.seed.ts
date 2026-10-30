@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { demoDataset } from './dataset';
 import { departments, loanProductVersions, notificationTemplates, settingsVersions, societyProfile } from '../../models';
 import type { Seeder } from '.';
@@ -12,7 +13,8 @@ const masters: Seeder = {
     await tx.delete(loanProductVersions);
     await tx.delete(settingsVersions);
     await tx.delete(societyProfile);
-    await tx.delete(departments);
+    // Members (P4) reference departments: a reseed clears them too, and the members seeder reloads them.
+    await tx.execute(sql`truncate ${departments} cascade`);
     await tx.delete(notificationTemplates);
 
     await tx.insert(settingsVersions).values({ version: 1, status: 'ACTIVE', data: data.settings, summary: 'Initial values (demo dataset)' });
