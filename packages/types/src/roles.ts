@@ -51,6 +51,10 @@ export type Permission =
   | 'deposits.open'
   | 'collections.view'
   | 'reports.view'
+  /** Backend P3 (D-080): read the books (accounts, journals, statements, trial balance). */
+  | 'ledger.view'
+  /** Backend P3 (D-080): manual journals and reversals (corrections). */
+  | 'ledger.post'
   /** ST-03 simulated message composer (D-063). */
   | 'messages.send'
   /** ST-03 reply to member questions from MB-13 (D-063). */

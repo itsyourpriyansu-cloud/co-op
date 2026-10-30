@@ -1,5 +1,6 @@
 # 22 · Production backend plan
 
+> Version 0.7 · 2026-10-30 · v0.7: §5.3 P3 ledger as built.
 > Version 0.6 · 2026-10-30 · v0.6: §5.2 P2 as built (masters, departments, mirror to the mock, demo reset).
 > Version 0.5 · 2026-10-29 · v0.5: §5.1 P1 design (auth, users, permissions, audit; session bridge; P1a/b/c).
 > Version 0.4 · 2026-10-29 · v0.4: local server is PostgreSQL 18.1, user `postgres`; `tgseccsl_dev` and `tgseccsl_test` exist; URLs in `backend/.env`.
@@ -174,7 +175,7 @@ Each phase ends with its exit test passing. Never start the next phase before th
 | **P0 Foundation** ✅ built 2026-10-29 (D-073) | `backend/` scaffold, env validation, Postgres + Drizzle, migrations, seed, error envelope, pino logs, swagger, guards skeleton, test DB helpers, mock fallback, root scripts | Console works fully on :4100 (everything via fallback) | `GET /health` reports database OK; `npm test -w @tgs/backend` green; `/docs` opens |
 | **P1 Auth, users, audit** | Staff login (password + TOTP for signers), member login (mobile + OTP, simulated WhatsApp), refresh tokens, `/me`, permission map (docs/03), users admin, audit log | Console + phone sign in against the backend | Every persona signs in; role guards return 403 correctly; e2e login tests pass on :4100 |
 | **P2 Masters & departments** ✅ built 2026-10-30 (D-079) | Versioned masters (loan products, FD rates, insurance ₹200/₹1,000, joining fee ₹0, penal %), society profile, departments, templates, reference rates | Settings screens + MB-16 rates | Editing a product creates a new ACTIVE version; old loans keep their version |
-| **P3 Ledger core** | Chart of accounts, member sub-accounts, posting service, statements, trial balance | — (used by P4–P7) | Every posting balances; reversal works; trial balance = 0 |
+| **P3 Ledger core** ✅ built 2026-10-30 (D-080) | Chart of accounts, member sub-accounts, posting service, statements, trial balance | — (used by P4–P7) | Every posting balances; reversal works; trial balance = 0 |
 | **P4 Members & joining** | Members, service history, mandates, documents (Aadhaar, PAN, service particulars), joining workflow (Accountant → Secretary → President, D-070), share payment, profile change requests, search | Joining board, member pages, MJ screens on the phone | Joining journey e2e passes on :4100; General No. allotted; share receipt posted to ledger |
 | **P5 Loans & sureties** | Applications, eligibility, sureties (FD check for retiring sureties), workflow, assessment with counter-offer, sanction, disbursement (10% share + insurance deducted, ledger posting), schedule (EMI method per product: reducing, amortised or flat, D-071), top-up, multiple loans per type | Loans screens, work queue, MB-03…07 | Loan journeys e2e pass; disbursement entries balance; remaining balance + months shown |
 | **P6 Deposits** | FD request, payment (cash denominations / transfer), acceptance, FDR, maturity job, premature withdrawal with penalty, loan against FD | Deposits screens, MB-08/09/15 | FD journey e2e passes; interest and penalty posted to ledger |
@@ -235,6 +236,20 @@ Member passwords go away (D-067): MA-03 forgot password, MB-17 change password a
 Endpoints (same contracts as the mock): `GET /settings`, `PUT /settings/society`, `PUT /settings/values` (new version), `PUT /settings/loan-products/:code` (new version), `GET /settings/versions`, `GET /settings/loan-products/:code/versions`, `GET|POST /departments`, `PUT /departments/:id`, `GET /notification-templates`, `PUT /notification-templates/:key`, `GET /reference/rates`, demo `POST /__demo/reset`.
 
 **Keeping the mock in step (dev only, until the modules that read these move):** the mock still calculates loans, FDs and demand with its own copy of settings, products, departments and staff. After the backend saves a change on those routes, the same request is replayed to the mock as the same user before the reply leaves (`MIRRORED_ROUTES` in `plugins/mock-fallback.ts`; also P1's `/users`). **Demo reset** reseeds the backend tables and then resets the mock. Department **member counts** come from the mock until members move (P4).
+
+### 5.3 P3 as built: the books (D-080)
+
+| Table | Holds |
+|---|---|
+| `ledger_accounts` | Chart of accounts [P] (Q-401): 25 heads from the agreement and the society's answers (cash, bank, 4 loan accounts, interest receivable, recoveries receivable, share deposit, FDs, FD interest payable, CRD, SRDS, RRF, closed savings, insurance, unidentified receipts, share capital, opening difference, loan interest, penal interest, admission fees, FD premature penalty, FD interest, CRD/SRDS interest). `member_level` accounts need a member on every line |
+| `journal_entries` | One entry: number `JE-000001`, business date, narration, source (OPENING, MANUAL, REVERSAL; later LOAN_DISBURSEMENT, RECEIPT, …), who posted, the entry it reverses |
+| `journal_lines` | Account, debit or credit (never both, never negative), member, reference (LOAN / DEPOSIT / SHARE / RECEIPT + id) |
+
+Rules, enforced twice (service via `@tgs/domain checkJournal`, and database triggers): every entry has ≥ 2 lines and debits = credits (checked at commit); entries and lines are **append-only** (UPDATE/DELETE refused); a correction is a **reversal** (mirror image, dated today, once per entry, never of a reversal). Other modules post with `app.ledger.post(input, tx)` inside their own transaction.
+
+Endpoints: `GET /ledger/accounts`, `/ledger/trial-balance?asOf`, `/ledger/accounts/:code/lines`, `/ledger/members/:memberId/statement`, `/ledger/journals`, `/ledger/journals/:id`; `POST /ledger/journals` (manual, must balance, not future-dated) and `/ledger/journals/:id/reverse`. Permissions: `ledger.view` (Super Admin, Accountant, Secretary, President, Cashier), `ledger.post` (Accountant).
+
+Seed: the chart and **opening balances from the demo dataset**, one entry per member (shares, share deposit, active loans, deposits), each balanced against 3900 Opening balance difference: 605 entries, 3,022 lines. In production the same OPENING entries come from the society's registers (P9 import).
 
 ## 6. Rules carried over
 

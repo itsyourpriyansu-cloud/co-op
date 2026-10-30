@@ -18,6 +18,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'deposits.view',
     'collections.view',
     'reports.view',
+    'ledger.view',
     'messages.send',
     'support.reply',
     'settings.edit',
@@ -27,10 +28,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'deposits.open',
   ],
   // R2 keeps the member master and decides profile change requests (docs/03, D-057).
-  ACCOUNTANT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'messages.send', 'support.reply', 'members.edit', 'members.decideChanges', 'loans.create', 'deposits.open'],
-  SECRETARY: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view'],
-  PRESIDENT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view'],
-  CASHIER: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'deposits.open'],
+  // P3 (D-080) [P]: the Accountant keeps the books; signers and the Cashier read them, the Super Admin only reads.
+  ACCOUNTANT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view', 'ledger.post', 'messages.send', 'support.reply', 'members.edit', 'members.decideChanges', 'loans.create', 'deposits.open'],
+  SECRETARY: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view'],
+  PRESIDENT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view'],
+  CASHIER: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view', 'deposits.open'],
   // DDO: own department only (scoping applied per endpoint); no deposits or reports (docs/03).
   DDO: [...STAFF_COMMON, 'collections.view'],
   MEMBER: ['app.member', 'demo.control'],
@@ -55,6 +57,8 @@ export const PERMISSION_LABELS: Array<{ key: Permission; label: string; group: s
   { key: 'deposits.open', label: 'Open deposits at the counter', group: 'Records' },
   { key: 'collections.view', label: 'Demand sheets & payments', group: 'Money' },
   { key: 'reports.view', label: 'Reports', group: 'Insight' },
+  { key: 'ledger.view', label: 'Books of account (read)', group: 'Money' },
+  { key: 'ledger.post', label: 'Manual journals and reversals', group: 'Money' },
   { key: 'messages.send', label: 'Send messages to members (simulated)', group: 'Insight' },
   { key: 'support.reply', label: 'Answer member questions', group: 'Insight' },
   { key: 'settings.view', label: 'View settings', group: 'Admin' },

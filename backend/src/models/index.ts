@@ -4,3 +4,4 @@ export * from './system.model';
 export * from './users.model';
 export * from './audit.model';
 export * from './masters.model';
+export * from './ledger.model';

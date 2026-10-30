@@ -96,3 +96,10 @@ Legend: **F** full · **V** view · **A** stage action · **—** none · *own* 
 | Permission matrix | Stored in `role_permissions`, editable by the Super Admin (`PUT /permissions/:role`). The Super Admin always keeps settings.view, settings.edit and users.manage |
 | Sessions | Ended at once when a user is deactivated, changes role, or has their password or authenticator reset |
 | Audit | Every sign-in, failed sign-in, lock and change is written to `audit_log` |
+
+## Backend P3 additions (D-080) [P]
+
+| Permission | Who | What |
+|---|---|---|
+| `ledger.view` | Super Admin, Accountant, Secretary, President, Cashier (not DDO) | Chart of accounts, journals, trial balance, account ledgers, member statements |
+| `ledger.post` | Accountant | Manual journals and reversals (corrections). The Super Admin reads only (SOD-5) |

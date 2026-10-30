@@ -67,7 +67,7 @@
 
 | ID | Question | Proposal | Owner | Status |
 |---|---|---|---|---|
-| Q-401 | Is a full accounting module (chart of accounts, vouchers, periods) in scope? Who defines the chart of accounts? | P2 (D-013) | S/F | **Partly answered [S] → D-067:** ledgers required for EMIs and FDs (REQ-131) |
+| Q-401 | Is a full accounting module (chart of accounts, vouchers, periods) in scope? Who defines the chart of accounts? | P2 (D-013) | S/F | **Partly answered [S] → D-067:** ledgers required for EMIs and FDs (REQ-131). **Chart of accounts proposed (D-080, 25 heads, editable)**: the society to confirm or send theirs |
 | Q-402 | "Other relevant profile details": Employee ID, email, photo, Aadhaar, PAN, bank account, basic pay? | As listed in `08` [P] | S | Open |
 | Q-403 | List of mandatory registration documents | 4 placeholder types | S | **Answered [S] → D-067:** Aadhaar, PAN, service particulars |
 | Q-404 | Which events make up "service history" (transfers, promotions, deputation, leave)? | Event list in `08` | S | Open |
