@@ -61,7 +61,7 @@ export const otpChallenges = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     mobile: text('mobile').notNull(),
-    purpose: text('purpose').$type<'LOGIN' | 'SIGNUP' | 'MOBILE_CHANGE'>().notNull(),
+    purpose: text('purpose').$type<'LOGIN' | 'SIGNUP' | 'MOBILE_CHANGE' | 'SIGN'>().notNull(),
     /** MOBILE_CHANGE: the member asking to move to this new mobile (MB-19). */
     subjectId: text('subject_id'),
     codeHash: text('code_hash').notNull(),

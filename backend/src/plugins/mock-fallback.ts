@@ -21,7 +21,6 @@ declare module 'fastify' {
  * modules reading it move to the backend).
  */
 /** Mock routes that can create a member while joining still runs there (until P4c). */
-const JOINING_WRITES = /^\/api\/v1\/(membership\/applications\/[^/]+\/(actions\/[^/?]+|demo-act)|__demo\/membership\/)/;
 
 const MIRRORED_ROUTES = new Set([
   'PUT /api/v1/settings/society',
@@ -168,15 +167,6 @@ export const mockFallbackPlugin = fp(
         onResponse: (request, reply, res) => {
           // A 401 on a bridged token means the mock forgot its sessions (restart).
           if ((request as FastifyRequest).mockToken && res.statusCode === 401) bridge.clear();
-          // Until P4c the mock's joining flow creates members: import them before replying (docs/22 §5.4).
-          const fr = request as FastifyRequest;
-          if (res.statusCode < 300 && fr.method === 'POST' && JOINING_WRITES.test(fr.url)) {
-            void app.membersImport
-              .fromMock()
-              .catch((err) => fr.log.warn({ err }, 'member import from the mock failed'))
-              .finally(() => reply.send(res.stream));
-            return;
-          }
           reply.send(res.stream);
         },
       },

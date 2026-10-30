@@ -186,7 +186,7 @@ export class MastersService {
     return (await this.repo.activeSettings()) ?? fail('NOT_FOUND', 'Society settings are not set up. Run the seed or create version 1.');
   }
 
-  private async society(): Promise<SocietyProfile> {
+  async society(): Promise<SocietyProfile> {
     const s = (await this.repo.society()) ?? fail('NOT_FOUND', 'The society profile is not set up.');
     return { name: s.name, shortName: s.shortName, registrationNo: s.registrationNo, address: s.address };
   }

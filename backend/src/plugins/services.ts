@@ -1,3 +1,5 @@
+import { JoiningRepository } from '../modules/joining/joining.repository';
+import { JoiningService } from '../modules/joining/joining.service';
 import fp from 'fastify-plugin';
 import { AppAccountsService } from '../modules/auth/app-accounts.service';
 import { AuthRepository } from '../modules/auth/auth.repository';
@@ -6,7 +8,6 @@ import { DepartmentsService } from '../modules/departments/departments.service';
 import { LedgerRepository } from '../modules/ledger/ledger.repository';
 import { LedgerService } from '../modules/ledger/ledger.service';
 import { MastersRepository } from '../modules/masters/masters.repository';
-import { MembersImport } from '../modules/members/members.import';
 import { MembersRepository } from '../modules/members/members.repository';
 import { MembersService } from '../modules/members/members.service';
 import { ProfileChangesRepository } from '../modules/profile-changes/profile-changes.repository';
@@ -23,7 +24,7 @@ declare module 'fastify' {
     /** Member App sign-in accounts, kept in step with members (P4). */
     appAccounts: AppAccountsService;
     /** Dev only until P4c: import members the mock's joining flow created. */
-    membersImport: MembersImport;
+    joining: JoiningService;
     members: MembersService;
     profileChanges: ProfileChangesService;
   }
@@ -36,9 +37,9 @@ export const servicesPlugin = fp(
     app.decorate('ledger', new LedgerService(app, new LedgerRepository(app.db)));
     app.decorate('departments', new DepartmentsService(app, new DepartmentsRepository(app.db)));
     app.decorate('appAccounts', new AppAccountsService(app, new AuthRepository(app.db)));
-    app.decorate('membersImport', new MembersImport(app, new MembersRepository(app.db)));
     app.decorate('members', new MembersService(app, new MembersRepository(app.db)));
     app.decorate('profileChanges', new ProfileChangesService(app, new ProfileChangesRepository(app.db)));
+    app.decorate('joining', new JoiningService(app, new JoiningRepository(app.db)));
   },
   { name: 'services', dependencies: ['db', 'auth'] },
 );

@@ -6,6 +6,7 @@ import { withTransaction, type Tx } from '../../db/transaction';
 import type { AuthRepository } from './auth.repository';
 
 const DEMO_OTP = '123456';
+type CodePurpose = 'MOBILE_CHANGE' | 'SIGN';
 
 /** Keeps Member App sign-in (mobile + OTP, D-067) in step with the member master (P4). */
 export class AppAccountsService {
@@ -32,19 +33,34 @@ export class AppAccountsService {
     await this.repo.upsertMemberAccount(tx, m);
   }
 
+  /** The mobile an applicant signed up with (already proven by a code). */
+  async mobileOf(accountId: string): Promise<string | undefined> {
+    return (await this.repo.appById(accountId))?.mobile;
+  }
+
   // ---- MB-19: a member moves their sign-in to a new mobile, proven by a code sent to it ----
   async startMobileChange(memberId: string, mobile: string): Promise<OtpChallenge> {
     await this.assertMobileFree(mobile, memberId);
-    const code = this.app.env.DEMO_MODE ? DEMO_OTP : randomCode();
-    const row = await this.repo.insertOtp({ mobile, purpose: 'MOBILE_CHANGE', subjectId: memberId, codeHash: sha256(`${mobile}:${code}`), channel: 'SIMULATED', expiresAt: new Date(Date.now() + this.app.env.OTP_TTL_SECONDS * 1000) });
-    if (this.app.env.NODE_ENV !== 'production') this.app.log.info({ code }, 'simulated mobile-change OTP');
-    return { otpRef: row.id, expiresInSeconds: this.app.env.OTP_TTL_SECONDS, ...(this.app.env.DEMO_MODE ? { demoOtp: code } : {}) };
+    return this.startCode(mobile, 'MOBILE_CHANGE', memberId);
   }
 
   /** The verified new mobile. */
   async verifyMobileChange(memberId: string, otpRef: string, otp: string): Promise<string> {
+    return this.verifyCode('MOBILE_CHANGE', memberId, otpRef, otp);
+  }
+
+  // ---- a code bound to one thing (a member's new mobile, an application to sign, D-031) ----
+  async startCode(mobile: string, purpose: CodePurpose, subjectId: string): Promise<OtpChallenge> {
+    const code = this.app.env.DEMO_MODE ? DEMO_OTP : randomCode();
+    const row = await this.repo.insertOtp({ mobile, purpose, subjectId, codeHash: sha256(`${mobile}:${code}`), channel: 'SIMULATED', expiresAt: new Date(Date.now() + this.app.env.OTP_TTL_SECONDS * 1000) });
+    if (this.app.env.NODE_ENV !== 'production') this.app.log.info({ code, purpose }, 'simulated OTP');
+    return { otpRef: row.id, expiresInSeconds: this.app.env.OTP_TTL_SECONDS, ...(this.app.env.DEMO_MODE ? { demoOtp: code } : {}) };
+  }
+
+  /** Consumes the code; returns the mobile it was sent to. */
+  async verifyCode(purpose: CodePurpose, subjectId: string, otpRef: string, otp: string): Promise<string> {
     const row = await this.repo.otpById(otpRef);
-    if (!row || row.purpose !== 'MOBILE_CHANGE' || row.subjectId !== memberId || row.consumedAt || row.expiresAt < new Date()) {
+    if (!row || row.purpose !== purpose || row.subjectId !== subjectId || row.consumedAt || row.expiresAt < new Date()) {
       fail('VALIDATION_ERROR', 'This code has expired. Request a new one.', { fieldErrors: { otp: 'Expired' } });
     }
     if (row!.attempts >= 5) fail('VALIDATION_ERROR', 'Too many wrong codes. Request a new one.', { fieldErrors: { otp: 'Too many tries' } });

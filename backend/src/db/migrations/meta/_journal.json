@@ -50,6 +50,13 @@
       "when": 1793349799812,
       "tag": "0006_p4b_profile_changes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793352444395,
+      "tag": "0007_p4c_joining",
+      "breakpoints": true
     }
   ]
 }

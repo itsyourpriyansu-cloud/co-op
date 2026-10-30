@@ -1,5 +1,6 @@
 # 22 · Production backend plan
 
+> Version 0.11 · 2026-10-30 · v0.11: P4c built (joining); P4 complete.
 > Version 0.10 · 2026-10-30 · v0.10: P4b built (change requests + my profile).
 > Version 0.9 · 2026-10-30 · v0.9: P4a built (members).
 > Version 0.8 · 2026-10-30 · v0.8: §5.4 P4 design (members, change requests, joining) and the record sync to the mock.
@@ -179,7 +180,7 @@ Each phase ends with its exit test passing. Never start the next phase before th
 | **P1 Auth, users, audit** | Staff login (password + TOTP for signers), member login (mobile + OTP, simulated WhatsApp), refresh tokens, `/me`, permission map (docs/03), users admin, audit log | Console + phone sign in against the backend | Every persona signs in; role guards return 403 correctly; e2e login tests pass on :4100 |
 | **P2 Masters & departments** ✅ built 2026-10-30 (D-079) | Versioned masters (loan products, FD rates, insurance ₹200/₹1,000, joining fee ₹0, penal %), society profile, departments, templates, reference rates | Settings screens + MB-16 rates | Editing a product creates a new ACTIVE version; old loans keep their version |
 | **P3 Ledger core** ✅ built 2026-10-30 (D-080) | Chart of accounts, member sub-accounts, posting service, statements, trial balance | — (used by P4–P7) | Every posting balances; reversal works; trial balance = 0 |
-| **P4 Members & joining** | Members, service history, mandates, documents (Aadhaar, PAN, service particulars), joining workflow (Accountant → Secretary → President, D-070), share payment, profile change requests, search | Joining board, member pages, MJ screens on the phone | Joining journey e2e passes on :4100; General No. allotted; share receipt posted to ledger |
+| **P4 Members & joining** ✅ built 2026-10-30 (D-081…D-083) | Members, service history, mandates, documents (Aadhaar, PAN, service particulars), joining workflow (Accountant → Secretary → President, D-070), share payment, profile change requests, search | Joining board, member pages, MJ screens on the phone | Joining journey e2e passes on :4100; General No. allotted; share receipt posted to ledger |
 | **P5 Loans & sureties** | Applications, eligibility, sureties (FD check for retiring sureties), workflow, assessment with counter-offer, sanction, disbursement (10% share + insurance deducted, ledger posting), schedule (EMI method per product: reducing, amortised or flat, D-071), top-up, multiple loans per type | Loans screens, work queue, MB-03…07 | Loan journeys e2e pass; disbursement entries balance; remaining balance + months shown |
 | **P6 Deposits** | FD request, payment (cash denominations / transfer), acceptance, FDR, maturity job, premature withdrawal with penalty, loan against FD | Deposits screens, MB-08/09/15 | FD journey e2e passes; interest and penalty posted to ledger |
 | **P7 Collections** | Demand sheets per department, send-by date, **DDO enters actual deduction**, allocation (BR-011), dues (not carried forward), counter receipts, member payment reports (QR, no screenshot), daily penal job, defaulter after 1 month, guarantor notices | Demand screens, DDO console, MB-10/18 | Month-end journey e2e passes; reports match ledger totals |
@@ -262,13 +263,13 @@ P4 is the first move of everyday records, so it is split in three, each tested a
 |---|---|---|
 | **P4a** Members ✅ built 2026-10-30 (D-081) | `members` (scalar columns + jsonb for addresses, nominee, pay profile), `service_events`, `recovery_mandates`, `member_transfers`; seed from the demo dataset; new members get a Member App account (mobile) | `GET /members`, `GET /members/:id`, `POST /members`, `PUT /members/:id`, `POST /members/:id/transfers`, `POST /members/:id/mandate/agree` |
 | **P4b** Change requests + my profile ✅ built 2026-10-30 (D-082) | `profile_change_requests` (DDO-then-office routing, D-057) | `/profile-change-requests*`, `/me/profile*` |
-| **P4c** Joining | `membership_applications`, documents (local storage), share payment (receipt posted to the ledger), General No. allotment, applicant → member | `/joining/*`, `/membership/*`, demo stage controls |
+| **P4c** Joining ✅ built 2026-10-30 (D-083) | `membership_applications`, documents (local storage), share payment (receipt posted to the ledger), General No. allotment, applicant → member | `/joining/*`, `/membership/*`, demo stage controls |
 
 **Keeping the mock in step (dev only, until P5–P7):** the mock still owns loans, deposits, share accounts and demand sheets, and reads members for them. So:
 - **Record sync:** after each member change the backend pushes the changed records (member, mandate, service event, transfer, share account for a new member) to a dev-only mock endpoint `POST /__demo/sync`, which upserts them by id. More robust than replaying requests: ids and General Nos are decided once, by the backend.
 - **Combined reads:** the member list's loan columns (active loans, outstanding) and the member page's loans, guarantees, deposits, share account and demand history come from dev-only mock endpoints `GET /__demo/legacy/members-summary` and `GET /__demo/legacy/member/:id` until P5–P7 move them. Each read is marked `TODO(P5|P6|P7)` in code.
 - **Business date:** while the mock owns the demo clock, the backend reads "today" from it (`members-summary.today`), so leftover service and dates match the demo; otherwise India's date.
-- **Joining until P4c:** joining still runs on the mock; when it creates a member, the backend imports it right after (reverse sync on the joining routes), so the member list never misses one and General Nos never clash.
+- **Joining (since P4c):** the backend owns joining and admits members itself; applications are synced to the mock for its dashboards and search. The earlier reverse import of mock-created members is removed.
 
 ## 6. Rules carried over
 

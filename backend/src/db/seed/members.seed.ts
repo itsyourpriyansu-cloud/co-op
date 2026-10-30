@@ -1,4 +1,5 @@
-import { memberTransfers, members, profileChangeRequests, recoveryMandates, serviceEvents } from '../../models';
+import { sql } from 'drizzle-orm';
+import { memberTransfers, members, membershipApplications, profileChangeRequests, recoveryMandates, serviceEvents } from '../../models';
 import { demoDataset } from './dataset';
 import type { Seeder } from '.';
 
@@ -40,4 +41,14 @@ const changeRequests: Seeder = {
   },
 };
 
-export const memberSeeders: Seeder[] = [memberRecords, changeRequests];
+/** P4c: the demo's membership applications, one per stage. */
+const applications: Seeder = {
+  name: 'membership-applications',
+  run: async (tx) => {
+    await tx.execute(sql`truncate ${membershipApplications}`);
+    const rows = demoDataset().membershipApplications.map((a) => ({ id: a.id, applicationNo: a.applicationNo, applicantId: a.applicantId, status: a.status, departmentId: a.departmentId || null, allottedGeneralNo: a.allottedGeneralNo ?? null, data: a }));
+    if (rows.length) await tx.insert(membershipApplications).values(rows);
+  },
+};
+
+export const memberSeeders: Seeder[] = [memberRecords, changeRequests, applications];

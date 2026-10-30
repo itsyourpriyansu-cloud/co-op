@@ -20,3 +20,8 @@ export async function businessToday(app: FastifyInstance): Promise<ISODate> {
     return todayIST();
   }
 }
+
+/** A timestamp on the business date (the demo date while the mock owns the clock) at the current time. */
+export async function businessNow(app: FastifyInstance): Promise<string> {
+  return `${await businessToday(app)}T${new Date().toISOString().slice(11)}`;
+}

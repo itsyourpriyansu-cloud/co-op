@@ -110,7 +110,8 @@ describe('members (P4a)', () => {
     const res = await send('PUT', `/members/${lakshmi.id}`, accountant, { ...input, departmentId: lakshmi.departmentId });
     expect(res.statusCode).toBe(200);
     expect(res.json().member.designation).toBe('Assistant Secretary');
-    expect(res.json().serviceEvents[0]).toMatchObject({ type: 'DESIGNATION_CHANGED' });
+    // One edit can log several events in one transaction (same timestamp), so check presence, not order.
+    expect(res.json().serviceEvents).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'DESIGNATION_CHANGED' })]));
   });
 
   it('transfers a member: new department, mandate waits for the new DDO, who agrees it', async () => {

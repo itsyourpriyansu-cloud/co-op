@@ -1,4 +1,4 @@
-import type { Address, Member, MemberStatus, Nominee, PayProfile, ProfileChangeRequest, ProfileFieldChange, RecoveryMandate, ServiceEventType } from '@tgs/types';
+import type { Address, Member, MembershipApplication, MembershipStatus, MemberStatus, Nominee, PayProfile, ProfileChangeRequest, ProfileFieldChange, RecoveryMandate, ServiceEventType } from '@tgs/types';
 import { date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, boolean } from 'drizzle-orm/pg-core';
 import { departments } from './masters.model';
 
@@ -128,4 +128,24 @@ export const profileChangeRequests = pgTable(
     remarks: text('remarks'),
   },
   (t) => [index('profile_change_requests_member_idx').on(t.memberId), index('profile_change_requests_status_idx').on(t.status)],
+);
+
+/**
+ * P4c joining (D-026, ST-14…17, MJ-02…05). The columns are what lists filter and lock on; the
+ * application itself (form, eligibility, sign-offs, events, share receipt) is one jsonb document,
+ * always read and written whole.
+ */
+export const membershipApplications = pgTable(
+  'membership_applications',
+  {
+    id: text('id').primaryKey(),
+    applicationNo: text('application_no').notNull(),
+    applicantId: text('applicant_id').notNull(),
+    status: text('status').$type<MembershipStatus>().notNull(),
+    departmentId: text('department_id'),
+    allottedGeneralNo: text('allotted_general_no'),
+    data: jsonb('data').$type<MembershipApplication>().notNull(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('membership_applications_no_idx').on(t.applicationNo), uniqueIndex('membership_applications_applicant_idx').on(t.applicantId), index('membership_applications_status_idx').on(t.status)],
 );

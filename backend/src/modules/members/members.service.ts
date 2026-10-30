@@ -344,6 +344,30 @@ export class MembersService {
     return { members: [m], serviceEvents: events };
   }
 
+  // ---- P4c: a member admitted by the joining flow ----
+
+  async duplicates(mobile: string | undefined, employeeId: string | undefined): Promise<Member[]> {
+    return this.repo.byMobileOrEmployeeId(mobile, employeeId);
+  }
+
+  /**
+   * Inside the joining transaction: allot the next General No., write the member, the mandate the
+   * DDO agreed when certifying, the JOINED event, and turn the applicant's sign-in into theirs (D-026).
+   */
+  async admit(tx: Tx, draft: Omit<Member, 'id' | 'generalNo' | 'mobileMasked'>, mandateAgreedBy: string, byName: string): Promise<{ member: Member; mandate: RecoveryMandate; event: ServiceEvent }> {
+    const generalNo = await this.repo.nextGeneralNo(tx);
+    const member: Member = { ...draft, id: `mem-${generalNo}`, generalNo, mobileMasked: maskMobile(draft.mobile) };
+    const dept = await this.app.departments.get(member.departmentId);
+    const today = member.joinedSocietyOn;
+    const mandate: RecoveryMandate = { id: `mdt-${generalNo}-1`, memberId: member.id, departmentId: member.departmentId, status: 'AGREED', signedOn: today, agreedOn: today, agreedByName: mandateAgreedBy };
+    const event: ServiceEvent = { id: `sev-${randomUUID().slice(0, 8)}`, memberId: member.id, type: 'JOINED', date: today, summary: `Joined the society (General No. ${generalNo}) from ${dept?.name ?? ''} as ${member.designation}`, byName };
+    await this.repo.insert(tx, member);
+    await this.repo.insertMandate(tx, mandate);
+    await this.repo.addEvent(tx, event);
+    await this.app.appAccounts.memberJoined(tx, { id: member.id, generalNo, employeeId: member.employeeId, name: member.name, mobile: member.mobile, active: true });
+    return { member, mandate, event };
+  }
+
   /** Record sync for callers that changed members inside their own transaction. */
   async sync(records: Record<string, unknown[]>): Promise<void> {
     await this.syncToMock(records);

@@ -94,6 +94,13 @@ export class MembersRepository {
     return rows.map(toMember);
   }
 
+  /** Joining duplicate checks (DUP-1, DUP-2): any member, active or not. */
+  async byMobileOrEmployeeId(mobile: string | undefined, employeeId: string | undefined): Promise<Member[]> {
+    const conds = [mobile ? eq(members.mobile, mobile) : undefined, employeeId ? eq(members.employeeId, employeeId) : undefined].filter((c) => c !== undefined);
+    if (!conds.length) return [];
+    return (await this.db.select().from(members).where(or(...conds))).map(toMember);
+  }
+
   async maxGeneralNo(): Promise<number> {
     const [row] = await this.db.select({ top: max(sql<number>`${members.generalNo}::int`) }).from(members);
     return Number(row?.top ?? 0);
