@@ -57,6 +57,13 @@
       "when": 1793352444395,
       "tag": "0007_p4c_joining",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793355347558,
+      "tag": "0008_p5_loans",
+      "breakpoints": true
     }
   ]
 }

@@ -448,6 +448,23 @@ export class MembersService {
     return (await this.repo.find(user.memberId!)) ?? fail('NOT_FOUND', 'Member record not found.');
   }
 
+  /** ST-25: the DDO's loan certificate refreshes the member's pay profile (F2 items 4–5). Caller syncs. */
+  async certifyPay(tx: Tx, memberId: string, pay: Pick<Member['payProfile'], 'scaleOfPay' | 'grossSalary' | 'govtLoanDeductions' | 'otherLoanDeductions'>, today: string): Promise<Member> {
+    const m = (await this.repo.find(memberId, tx)) ?? fail('NOT_FOUND', 'Member record not found.');
+    const next: Member = { ...m, payProfile: { ...m.payProfile, ...pay, certifiedAt: today } };
+    await this.repo.update(tx, next);
+    return next;
+  }
+
+  /** Every member (loan lists name their borrowers and sureties). */
+  async all(): Promise<Member[]> {
+    return this.repo.list();
+  }
+
+  async mandateOf(memberId: string): Promise<RecoveryMandate | null> {
+    return this.repo.currentMandate(memberId);
+  }
+
   async byId(id: string): Promise<Member | undefined> {
     return this.repo.find(id);
   }

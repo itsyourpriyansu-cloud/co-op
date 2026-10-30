@@ -1,5 +1,7 @@
 # 22 · Production backend plan
 
+> Version 0.13 · 2026-10-30 · v0.13: P5 built (loans).
+> Version 0.12 · 2026-10-30 · v0.12: §5.5 P5 design (loans) and its dev bridge.
 > Version 0.11 · 2026-10-30 · v0.11: P4c built (joining); P4 complete.
 > Version 0.10 · 2026-10-30 · v0.10: P4b built (change requests + my profile).
 > Version 0.9 · 2026-10-30 · v0.9: P4a built (members).
@@ -181,7 +183,7 @@ Each phase ends with its exit test passing. Never start the next phase before th
 | **P2 Masters & departments** ✅ built 2026-10-30 (D-079) | Versioned masters (loan products, FD rates, insurance ₹200/₹1,000, joining fee ₹0, penal %), society profile, departments, templates, reference rates | Settings screens + MB-16 rates | Editing a product creates a new ACTIVE version; old loans keep their version |
 | **P3 Ledger core** ✅ built 2026-10-30 (D-080) | Chart of accounts, member sub-accounts, posting service, statements, trial balance | — (used by P4–P7) | Every posting balances; reversal works; trial balance = 0 |
 | **P4 Members & joining** ✅ built 2026-10-30 (D-081…D-083) | Members, service history, mandates, documents (Aadhaar, PAN, service particulars), joining workflow (Accountant → Secretary → President, D-070), share payment, profile change requests, search | Joining board, member pages, MJ screens on the phone | Joining journey e2e passes on :4100; General No. allotted; share receipt posted to ledger |
-| **P5 Loans & sureties** | Applications, eligibility, sureties (FD check for retiring sureties), workflow, assessment with counter-offer, sanction, disbursement (10% share + insurance deducted, ledger posting), schedule (EMI method per product: reducing, amortised or flat, D-071), top-up, multiple loans per type | Loans screens, work queue, MB-03…07 | Loan journeys e2e pass; disbursement entries balance; remaining balance + months shown |
+| **P5 Loans & sureties** ✅ built 2026-10-30 (D-084) | Applications, eligibility, sureties (FD check for retiring sureties), workflow, assessment with counter-offer, sanction, disbursement (10% share + insurance deducted, ledger posting), schedule (EMI method per product: reducing, amortised or flat, D-071), top-up, multiple loans per type | Loans screens, work queue, MB-03…07 | Loan journeys e2e pass; disbursement entries balance; remaining balance + months shown |
 | **P6 Deposits** | FD request, payment (cash denominations / transfer), acceptance, FDR, maturity job, premature withdrawal with penalty, loan against FD | Deposits screens, MB-08/09/15 | FD journey e2e passes; interest and penalty posted to ledger |
 | **P7 Collections** | Demand sheets per department, send-by date, **DDO enters actual deduction**, allocation (BR-011), dues (not carried forward), counter receipts, member payment reports (QR, no screenshot), daily penal job, defaulter after 1 month, guarantor notices | Demand screens, DDO console, MB-10/18 | Month-end journey e2e passes; reports match ledger totals |
 | **P8 Notifications, dashboards, reports** | Work queue + dashboards (48 h / 4–5 day alerts), in-app notifications, WhatsApp/email/push providers (simulated + real adapters), support tickets, 8 reports, CSV/Excel, PDFs | Every remaining screen | Full Playwright suite (188 tests) green against :4100 with fallback **switched off** |
@@ -270,6 +272,24 @@ P4 is the first move of everyday records, so it is split in three, each tested a
 - **Combined reads:** the member list's loan columns (active loans, outstanding) and the member page's loans, guarantees, deposits, share account and demand history come from dev-only mock endpoints `GET /__demo/legacy/members-summary` and `GET /__demo/legacy/member/:id` until P5–P7 move them. Each read is marked `TODO(P5|P6|P7)` in code.
 - **Business date:** while the mock owns the demo clock, the backend reads "today" from it (`members-summary.today`), so leftover service and dates match the demo; otherwise India's date.
 - **Joining (since P4c):** the backend owns joining and admits members itself; applications are synced to the mock for its dashboards and search. The earlier reverse import of mock-created members is removed.
+
+### 5.5 P5 design: loans (D-084) ✅ built
+
+A loan is one record from draft to closure, so P5 moves every loan route at once (it cannot be split by entity like P4):
+
+| Part | Built |
+|---|---|
+| Table | `loans`: the fields lists filter and sort on as columns (application / loan no., member, product, status, parent loan, dates, amounts, outstanding), the loan itself (sureties, schedule, events, form, sign-offs, sanction sheet) as one jsonb document. The list reads only columns and works out the next due instalment in SQL. |
+| Member App | `/me/loans*` (draft, edit, discard, sign with a code bound to the loan, submit, withdraw, replace a surety), `/me/surety-requests*` (sign with a code, decline) |
+| Console | `/loans`, `/loans/:id`, `POST /loans` (paper application), `/loans/assess`, `/loans/surety-preview`, `/members/search`, `/members/:id/loan-context`, `/loans/:id/sanction-preview`, `/loans/:id/actions/:action`, `/loans/:id/demo-act` |
+| Rules | all from `@tgs/domain` (assessLoanApplication, checkSuretyEligibility, buildSanctionSheet, generateSchedule, nextLoanStatus, loanActionsFor …) |
+| Disbursement | in one transaction: loan no., schedule, outstanding, top-up closes the parent, and a **ledger entry**: Dr the product's loan account (member) = sanctioned amount; Cr bank (or cash) = net paid; Cr share deposit (member) = BR-004 deduction; top-up: Cr the parent's loan account = its principal, Cr interest on loans = accrued interest |
+
+**Keeping the mock in step (dev only, until P6/P7):**
+- Every loan the backend changes is synced to the mock (`POST /__demo/sync` with `loans`), so the mock's work queue, dashboards, reports, demand and collections still see them. The work queue stays on the mock until P7 (it gathers deposit and collection items the mock owns).
+- **Share accounts and deposits stay with the mock** (collections post share capital until P7; deposits move in P6). The backend reads them through `/__demo/legacy/member/:id`; a disbursement pushes the member's increased share deposit back; an FD pledge is set or released through `POST /__demo/legacy/pledge`.
+- **Reverse sync:** the mock's collections still reduce outstanding, mark schedule rows paid and close repaid loans. The mock marks each loan it touches; after any write the mock serves, the backend pulls those loans (`GET /__demo/legacy/dirty-loans`) and saves them, so the backend never shows a stale balance. Until P7 those recoveries are not yet posted to the backend ledger.
+- The billing cycle comes from the mock while it owns the demo clock (`/__demo/state`).
 
 ## 6. Rules carried over
 

@@ -5,6 +5,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
 import { businessToday } from '../../common/utils/business-date';
+import { notifyMember } from '../../common/utils/notify';
 import { withTransaction } from '../../db/transaction';
 import type { ProfileChangesRepository } from './profile-changes.repository';
 
@@ -175,8 +176,7 @@ export class ProfileChangesService {
     await this.app.members.sync({ profileChangeRequests: requests });
   }
 
-  /** TODO(P8): notifications move to the backend; until then the mock creates them. */
   private async notify(recipientId: string, templateKey: string, vars: Record<string, string>): Promise<void> {
-    await this.app.mockBridge?.send(undefined, 'POST', '/api/v1/__demo/notify', { recipientId, templateKey, vars, link: '/profile' }).catch((err) => this.app.log.warn({ err }, 'mock notify failed'));
+    await notifyMember(this.app, recipientId, templateKey, vars, '/profile');
   }
 }

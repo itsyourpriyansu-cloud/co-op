@@ -1,3 +1,6 @@
+import { LoanWorkflowService } from '../modules/loans/loan-workflow.service';
+import { LoansRepository } from '../modules/loans/loans.repository';
+import { LoansService } from '../modules/loans/loans.service';
 import { JoiningRepository } from '../modules/joining/joining.repository';
 import { JoiningService } from '../modules/joining/joining.service';
 import fp from 'fastify-plugin';
@@ -25,6 +28,8 @@ declare module 'fastify' {
     appAccounts: AppAccountsService;
     /** Dev only until P4c: import members the mock's joining flow created. */
     joining: JoiningService;
+    loans: LoansService;
+    loanWorkflow: LoanWorkflowService;
     members: MembersService;
     profileChanges: ProfileChangesService;
   }
@@ -40,6 +45,9 @@ export const servicesPlugin = fp(
     app.decorate('members', new MembersService(app, new MembersRepository(app.db)));
     app.decorate('profileChanges', new ProfileChangesService(app, new ProfileChangesRepository(app.db)));
     app.decorate('joining', new JoiningService(app, new JoiningRepository(app.db)));
+    const loans = new LoansService(app, new LoansRepository(app.db));
+    app.decorate('loans', loans);
+    app.decorate('loanWorkflow', new LoanWorkflowService(app, loans));
   },
   { name: 'services', dependencies: ['db', 'auth'] },
 );

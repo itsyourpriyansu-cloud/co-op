@@ -83,7 +83,7 @@ describe('mock fallback (docs/22 §4)', () => {
     upstream = Fastify();
     upstream.setValidatorCompiler(validatorCompiler);
     upstream.setSerializerCompiler(serializerCompiler);
-    upstream.get('/api/v1/loans', async (_req, reply) =>
+    upstream.get('/api/v1/deposits', async (_req, reply) =>
       reply.header('access-control-allow-origin', '*').send({ items: [], from: 'mock' }),
     );
     upstream.get('/health', async () => ({ service: 'tgseccsl-mock-api' }));
@@ -97,7 +97,7 @@ describe('mock fallback (docs/22 §4)', () => {
   });
 
   it('forwards routes the backend does not have yet', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/loans', headers: { origin: 'http://localhost:5180' } });
+    const res = await app.inject({ method: 'GET', url: '/api/v1/deposits', headers: { origin: 'http://localhost:5180' } });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ items: [], from: 'mock' });
     expect(res.headers['x-served-by']).toBe('mock-fallback');

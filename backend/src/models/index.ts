@@ -6,3 +6,4 @@ export * from './audit.model';
 export * from './masters.model';
 export * from './ledger.model';
 export * from './members.model';
+export * from './loans.model';

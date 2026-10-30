@@ -128,7 +128,7 @@ export function createApp({ store, version, corsOrigins }: AppOptions) {
     const list = store.db.personas.filter((p) => !channel || p.channel === channel);
     return c.json(list);
   });
-  api.get('/__demo/state', (c) => c.json(store.db.demo));
+  api.get('/__demo/state', (c) => c.json({ ...store.db.demo, currentCycle: store.db.currentCycle }));
   // Session bridge (docs/22 §5.1, dev only): the backend signs users in and asks for a mock
   // session of the same user, so routes still served here accept them. Removed with the fallback in P9.
   api.post('/__demo/session', async (c) => {

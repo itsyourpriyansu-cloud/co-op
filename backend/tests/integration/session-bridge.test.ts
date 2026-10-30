@@ -2,6 +2,10 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bearer, reseed, signInAs } from '../helpers/auth';
 import { buildTestApp } from '../helpers/test-app';
+import { demoDataset } from '../../src/db/seed/dataset';
+
+/** A loan the mock's collections paid off (P5 reverse sync). */
+const repaid = { ...demoDataset().loans.find((l) => l.status === 'ACTIVE')!, outstandingPrincipal: 0, status: 'CLOSED' as const, closedOn: '2026-10-24' };
 
 /** A stand-in mock API: issues bridge sessions and echoes the Authorization it receives. */
 async function fakeMock() {
@@ -39,7 +43,18 @@ async function fakeMock() {
   mock.get('/api/v1/__demo/state', async () => ({ today: '2026-10-24' }));
   mock.get('/api/v1/__demo/legacy/members-summary', async () => ({ today: '2026-10-24', currentCycle: '2026-10', rows: { 'mem-1101': { activeLoans: 2, outstanding: 1234500, pendingChanges: 1 } }, pendingChangeRequests: [{ id: 'pcr-1', memberId: 'mem-1101', route: 'OFFICE' }] }));
   mock.get('/api/v1/__demo/legacy/member/:id', async () => ({ today: '2026-10-24', currentCycle: '2026-10', loans: [{ id: 'loan-x', applicationNo: 'APP-1', product: 'ORDINARY', productName: 'Ordinary Loan', status: 'ACTIVE', amount: 100, outstanding: 50, appliedOn: '2026-01-01' }], guarantees: [], deposits: [], shares: null, ledger: [], changeRequests: [], demandCycles: ['2026-10'] }));
-  // P4a reverse sync: the mock's joining flow made member 9999.
+  // P5 reverse sync: a receipt here closes a loan; the backend pulls it after the write.
+  let dirty = false;
+  mock.post('/api/v1/receipts', async (req, reply) => {
+    if (!sessions.get((req.headers.authorization ?? '').replace('Bearer ', ''))) return reply.status(401).send({ code: 'UNAUTHENTICATED' });
+    dirty = true;
+    return { ok: true };
+  });
+  mock.get('/api/v1/__demo/legacy/dirty-loans', async () => {
+    const loans = dirty ? [repaid] : [];
+    dirty = false;
+    return { loans };
+  });
   await mock.listen({ port: 0, host: '127.0.0.1' });
   return { mock, url: `http://127.0.0.1:${(mock.server.address() as { port: number }).port}`, issuedCount: () => issued, mirrored: () => mirrored, synced: () => synced };
 }
@@ -126,6 +141,14 @@ describe('session bridge (docs/22 §5.1)', () => {
     expect(res.headers['x-served-by']).toBeUndefined();
     const sent = fake.synced().slice(before);
     expect(sent.some((s) => (s.membershipApplications as Array<{ applicantId: string }> | undefined)?.some((a) => a.applicantId === 'apl-divya'))).toBe(true);
+  });
+
+  it('pulls loans the mock changed after a write it served (P5 reverse sync)', async () => {
+    const acc = await signInAs(app, 'stf-accountant');
+    const res = await app.inject({ method: 'POST', url: '/api/v1/receipts', headers: bearer(acc), payload: {} });
+    expect(res.headers['x-served-by']).toBe('mock-fallback');
+    const loan = (await app.inject({ method: 'GET', url: `/api/v1/loans/${repaid.id}`, headers: bearer(acc) })).json().loan;
+    expect(loan).toMatchObject({ status: 'CLOSED', outstandingPrincipal: 0 });
   });
 
   it('forwards signed-out requests unchanged', async () => {

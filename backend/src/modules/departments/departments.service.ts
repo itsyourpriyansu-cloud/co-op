@@ -35,6 +35,11 @@ export class DepartmentsService {
     return (await this.repo.ddoLoginNames()).get(departmentId);
   }
 
+  /** DDO login names by department, for many rows at once. */
+  async ddoLoginNames(): Promise<Map<string, string>> {
+    return this.repo.ddoLoginNames();
+  }
+
   async all(): Promise<Department[]> {
     return (await this.repo.list()).map(toDepartment);
   }

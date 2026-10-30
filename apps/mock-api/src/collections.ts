@@ -2,6 +2,7 @@
 // ST-43 recovery entry & posting, ST-44 receipts, ST-45 counter receipt, ST-46 receipt, ST-47 verify a
 // member-reported payment; MB-10 payments & statements and MB-18 report a payment on the phone.
 // All money movement goes through `postComponents`, so sheets, loans, CRD/SRDS and shares agree.
+import { markLoanDirty } from './dev-sync';
 import {
   allocateArrears,
   allocateRecovery,
@@ -127,7 +128,10 @@ function postComponents(db: Db, memberId: string, cycle: Cycle, before: DemandCo
     out.push({ head: c.head, ...(c.loanId ? { loanId: c.loanId } : {}), amount: delta, cycle });
     if (c.head === 'PRINCIPAL' && c.loanId) {
       const loan = db.loans.find((l) => l.id === c.loanId);
-      if (loan) loan.outstandingPrincipal = Math.max(0, loan.outstandingPrincipal - delta);
+      if (loan) {
+        loan.outstandingPrincipal = Math.max(0, loan.outstandingPrincipal - delta);
+        markLoanDirty(loan.id);
+      }
     }
     if (c.head === 'CRD' || c.head === 'SRDS') {
       const dep = db.deposits.find((d) => d.memberId === memberId && d.scheme === c.head);
@@ -147,6 +151,7 @@ function postComponents(db: Db, memberId: string, cycle: Cycle, before: DemandCo
     const paid = sum(parts.map((c) => c.allocated));
     const due = sum(parts.map((c) => c.amount));
     row.paidStatus = paid >= due ? 'PAID' : paid > 0 ? 'PARTIAL' : 'UNPAID';
+    markLoanDirty(loan.id);
     if (loan.status === 'ACTIVE' && loan.outstandingPrincipal === 0 && loan.schedule.every((r) => r.paidStatus === 'PAID')) {
       loan.status = 'CLOSED';
       loan.closedOn = db.demo.today;

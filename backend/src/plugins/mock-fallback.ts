@@ -167,6 +167,14 @@ export const mockFallbackPlugin = fp(
         onResponse: (request, reply, res) => {
           // A 401 on a bridged token means the mock forgot its sessions (restart).
           if ((request as FastifyRequest).mockToken && res.statusCode === 401) bridge.clear();
+          // Until P7 the mock's collections change loans: pull them back before replying (docs/22 §5.5).
+          if (request.method !== 'GET' && res.statusCode < 300) {
+            void app.loans
+              .pullFromMock()
+              .catch((err) => request.log.warn({ err }, 'loan pull from the mock failed'))
+              .finally(() => reply.send(res.stream));
+            return;
+          }
           reply.send(res.stream);
         },
       },
