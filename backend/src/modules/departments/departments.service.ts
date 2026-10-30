@@ -30,6 +30,11 @@ export class DepartmentsService {
     return (await this.repo.ddoLogins()).get(departmentId);
   }
 
+  /** Name of that DDO login (who a request is waiting on). */
+  async ddoLoginName(departmentId: string): Promise<string | undefined> {
+    return (await this.repo.ddoLoginNames()).get(departmentId);
+  }
+
   async all(): Promise<Department[]> {
     return (await this.repo.list()).map(toDepartment);
   }

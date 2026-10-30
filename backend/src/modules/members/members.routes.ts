@@ -1,13 +1,11 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireAuth } from '../../common/guards';
 import { MembersController } from './members.controller';
-import { MembersRepository } from './members.repository';
 import { memberDetailResponse, memberInput, memberListQuery, memberListResponse, memberParams, transferInput } from './members.schema';
-import { MembersService } from './members.service';
 
 /** ST-10…13 members (docs/22 §5.4 P4a). The service checks members.view / members.edit and the DDO's department. */
 export const membersRoutes: FastifyPluginAsyncZod = async (app) => {
-  const controller = new MembersController(new MembersService(app, new MembersRepository(app.db)));
+  const controller = new MembersController(app.members);
   const tags = ['members'];
   const security = [{ bearer: [] }];
   const pre = { preHandler: requireAuth };

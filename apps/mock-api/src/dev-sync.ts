@@ -1,8 +1,8 @@
 // Dev-only bridge for the production backend (docs/22 §4, §5.4). While the backend moves modules
 // over phase by phase, it pushes the records it now owns here (so the mock's loans, deposits and
 // demand still see them) and reads the parts the mock still owns. Removed with the fallback in P9.
-import type { Member, RecoveryMandate, ServiceEvent, ShareAccount, TransferEvent } from '@tgs/types';
-import type { Api } from './common';
+import type { Member, ProfileChangeRequest, RecoveryMandate, ServiceEvent, ShareAccount, TransferEvent } from '@tgs/types';
+import { notify, type Api } from './common';
 import { fail } from './errors';
 import { legacyMemberExtras, legacyMembersSummary } from './members';
 import type { Store } from './store';
@@ -13,6 +13,7 @@ interface SyncBody {
   serviceEvents?: ServiceEvent[];
   transfers?: TransferEvent[];
   shareAccounts?: ShareAccount[];
+  profileChangeRequests?: ProfileChangeRequest[];
 }
 
 function upsert<T>(list: T[], items: T[] | undefined, key: (x: T) => string) {
@@ -32,8 +33,18 @@ export function registerDevSync(api: Api, store: Store) {
     upsert(db.serviceEvents, body.serviceEvents, (e) => e.id);
     upsert(db.transfers, body.transfers, (t) => t.id);
     upsert(db.shareAccounts, body.shareAccounts, (s) => s.memberId);
+    upsert(db.profileChangeRequests, body.profileChangeRequests, (r) => r.id);
     store.save();
     return c.json({ ok: true as const });
+  });
+
+  /** In-app notifications stay here until P8: the backend asks for one by template (ST-63). */
+  api.post('/__demo/notify', async (c) => {
+    const body = await c.req.json<{ recipientId?: string; templateKey?: string; vars?: Record<string, string | number>; link?: string }>().catch(() => ({}) as { recipientId?: string });
+    if (!body.recipientId || !('templateKey' in body) || !body.templateKey) return fail('VALIDATION_ERROR', 'recipientId and templateKey are required.');
+    const n = notify(store, body.recipientId, body.templateKey, body.vars ?? {}, body.link);
+    store.save();
+    return c.json({ ok: true as const, id: n?.id ?? null });
   });
 
   api.get('/__demo/legacy/members-summary', (c) => c.json(legacyMembersSummary(store.db)));

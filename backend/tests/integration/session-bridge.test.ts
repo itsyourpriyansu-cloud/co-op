@@ -106,8 +106,11 @@ describe('session bridge (docs/22 §5.1)', () => {
     const acc = await signInAs(app, 'stf-accountant');
     const list = (await app.inject({ method: 'GET', url: '/api/v1/members?q=1101', headers: bearer(acc) })).json();
     expect(list.asOf).toBe('2026-10-24');
-    expect(list.items[0]).toMatchObject({ generalNo: '1101', activeLoans: 2, outstanding: 1234500, pendingChanges: 1 });
-    expect(list.counts.changeRequests).toBe(1);
+    expect(list.items[0]).toMatchObject({ generalNo: '1101', activeLoans: 2, outstanding: 1234500 });
+    // P4b: change requests are the backend's own records now, not the mock's.
+    const changes = (await app.inject({ method: 'GET', url: '/api/v1/profile-change-requests', headers: bearer(acc) })).json();
+    expect(list.counts.changeRequests).toBe(changes.counts.pending);
+    expect(list.items[0].pendingChanges).toBe(changes.rows.filter((r: { generalNo: string; status: string }) => r.generalNo === '1101' && r.status === 'PENDING').length);
     const detail = (await app.inject({ method: 'GET', url: '/api/v1/members/1101', headers: bearer(acc) })).json();
     expect(detail.loans[0].id).toBe('loan-x');
   });

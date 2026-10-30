@@ -43,6 +43,13 @@
       "when": 1793346126511,
       "tag": "0005_p4a_members",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793349799812,
+      "tag": "0006_p4b_profile_changes",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { memberTransfers, members, recoveryMandates, serviceEvents } from '../../models';
+import { memberTransfers, members, profileChangeRequests, recoveryMandates, serviceEvents } from '../../models';
 import { demoDataset } from './dataset';
 import type { Seeder } from '.';
 
@@ -23,4 +23,21 @@ const memberRecords: Seeder = {
   },
 };
 
-export const memberSeeders: Seeder[] = [memberRecords];
+/** P4b: the demo's profile change requests (pending, certified, decided). */
+const changeRequests: Seeder = {
+  name: 'profile-change-requests',
+  run: async (tx) => {
+    const rows = demoDataset().profileChangeRequests.map((r) => ({
+      ...r,
+      documentName: r.documentName ?? null,
+      createdAt: new Date(r.createdAt),
+      ddoCertified: r.ddoCertified ?? null,
+      decidedByName: r.decidedByName ?? null,
+      decidedAt: r.decidedAt ? new Date(r.decidedAt) : null,
+      remarks: r.remarks ?? null,
+    }));
+    if (rows.length) await tx.insert(profileChangeRequests).values(rows);
+  },
+};
+
+export const memberSeeders: Seeder[] = [memberRecords, changeRequests];

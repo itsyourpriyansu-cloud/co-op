@@ -4,6 +4,7 @@
 > v0.11 · 2026-10-29 · Backend auth endpoints (P1a, D-076): staff login + TOTP, member mobile OTP, refresh/logout, users reset-password/reset-totp, PUT /permissions/:role. Contracts and examples in the backend OpenAPI at `/docs`. `Session` gains optional `refreshToken`, `expiresInSeconds`.
 > v0.12 · 2026-10-30 · Backend P2 (D-079): settings, loan products, society, departments, templates and rates served by the backend with the same shapes; new `GET /settings/versions`, `GET /settings/loan-products/:code/versions`; demo reset resets both servers.
 > v0.13 · 2026-10-30 · Backend P3 (D-080): `/ledger/*` read endpoints, manual journal and reversal. New, no mock equivalent; contracts in the backend OpenAPI at `/docs`.
+> v0.15 · 2026-10-30 · Backend P4b (D-082): `/profile-change-requests*` and `/me/profile*` on the backend with the same shapes. Dev-only mock endpoint `POST /__demo/notify`; `/__demo/sync` also takes `profileChangeRequests`.
 > v0.14 · 2026-10-30 · Backend P4a (D-081): `/members`, `/members/:id`, create, edit, transfer, mandate agree on the backend with the same shapes. Dev-only mock endpoints `/__demo/sync`, `/__demo/legacy/members-summary`, `/__demo/legacy/member/:id`, `/__demo/legacy/export-members`.
 > These are **not** the production backend API. Production endpoints must come from the backend owner (Q-005). If Fusil has an existing API, these contracts are adapted to it before M1.
 

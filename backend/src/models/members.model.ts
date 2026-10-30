@@ -1,4 +1,4 @@
-import type { Address, Member, MemberStatus, Nominee, PayProfile, RecoveryMandate, ServiceEventType } from '@tgs/types';
+import type { Address, Member, MemberStatus, Nominee, PayProfile, ProfileChangeRequest, ProfileFieldChange, RecoveryMandate, ServiceEventType } from '@tgs/types';
 import { date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, boolean } from 'drizzle-orm/pg-core';
 import { departments } from './masters.model';
 
@@ -106,4 +106,26 @@ export const memberTransfers = pgTable(
     recordedByName: text('recorded_by_name'),
   },
   (t) => [index('member_transfers_member_idx').on(t.memberId)],
+);
+
+/** ST-18 / MB-19 profile change requests (D-044, D-057): DDO certifies employment/pay first, then the Accountant decides. */
+export const profileChangeRequests = pgTable(
+  'profile_change_requests',
+  {
+    id: text('id').primaryKey(),
+    memberId: text('member_id')
+      .notNull()
+      .references(() => members.id),
+    fields: jsonb('fields').$type<ProfileFieldChange[]>().notNull(),
+    reason: text('reason').notNull(),
+    documentName: text('document_name'),
+    route: text('route').$type<ProfileChangeRequest['route']>().notNull(),
+    status: text('status').$type<ProfileChangeRequest['status']>().notNull(),
+    createdAt: ts('created_at').notNull(),
+    ddoCertified: jsonb('ddo_certified').$type<NonNullable<ProfileChangeRequest['ddoCertified']>>(),
+    decidedByName: text('decided_by_name'),
+    decidedAt: ts('decided_at'),
+    remarks: text('remarks'),
+  },
+  (t) => [index('profile_change_requests_member_idx').on(t.memberId), index('profile_change_requests_status_idx').on(t.status)],
 );

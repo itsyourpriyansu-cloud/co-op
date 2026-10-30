@@ -1,5 +1,6 @@
 # 22 · Production backend plan
 
+> Version 0.10 · 2026-10-30 · v0.10: P4b built (change requests + my profile).
 > Version 0.9 · 2026-10-30 · v0.9: P4a built (members).
 > Version 0.8 · 2026-10-30 · v0.8: §5.4 P4 design (members, change requests, joining) and the record sync to the mock.
 > Version 0.7 · 2026-10-30 · v0.7: §5.3 P3 ledger as built.
@@ -260,7 +261,7 @@ P4 is the first move of everyday records, so it is split in three, each tested a
 | Step | Builds | Endpoints |
 |---|---|---|
 | **P4a** Members ✅ built 2026-10-30 (D-081) | `members` (scalar columns + jsonb for addresses, nominee, pay profile), `service_events`, `recovery_mandates`, `member_transfers`; seed from the demo dataset; new members get a Member App account (mobile) | `GET /members`, `GET /members/:id`, `POST /members`, `PUT /members/:id`, `POST /members/:id/transfers`, `POST /members/:id/mandate/agree` |
-| **P4b** Change requests + my profile | `profile_change_requests` (DDO-then-office routing, D-057) | `/profile-change-requests*`, `/me/profile*` |
+| **P4b** Change requests + my profile ✅ built 2026-10-30 (D-082) | `profile_change_requests` (DDO-then-office routing, D-057) | `/profile-change-requests*`, `/me/profile*` |
 | **P4c** Joining | `membership_applications`, documents (local storage), share payment (receipt posted to the ledger), General No. allotment, applicant → member | `/joining/*`, `/membership/*`, demo stage controls |
 
 **Keeping the mock in step (dev only, until P5–P7):** the mock still owns loans, deposits, share accounts and demand sheets, and reads members for them. So:

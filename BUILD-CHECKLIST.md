@@ -11,9 +11,9 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | **P4a done** (D-081): members on the backend. Next: **P4b** profile change requests + my profile (`docs/22` §5.4) |
+| **Next action** | **P4b done** (D-082): change requests + my profile on the backend. Next: **P4c** joining (`docs/22` §5.4) |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
-| **Last updated** | 2026-10-29 |
+| **Last updated** | 2026-10-30 |
 
 ---
 
@@ -97,3 +97,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-10-30 | **P2 built** (D-079): 5 master tables (migration 0002), versioned settings/loan products with history APIs, departments (member counts from the mock until P4), templates, rates; dev mirror of master/user writes to the mock; demo reset reseeds the backend and resets the mock; demo failure switch honoured by the backend. Tests: backend 50/50, root 264/264, typecheck green; full e2e through the backend 187/188 — the one failure (phone /rates error state: backend ignored the demo failure switch) fixed, then the error-state specs re-run 22/22 | P3 |
 | 2026-10-30 | **P3 built** (D-080): ledger tables + DB guards (balance at commit, append-only), posting/reversal service, trial balance, account ledger, member statement, manual journals; chart of accounts [P]; opening balances from the demo dataset (605 entries); permissions ledger.view / ledger.post. Exit test passed: backend 59/59 (every entry balances, reversal works, trial balance agrees, DB refuses edits); domain 100% covered; root 270/270; console smoke + sign-in e2e through the backend 41/41 | P4 |
 | 2026-10-30 | **P4a built** (D-081): members, service history, mandates, transfers in PostgreSQL (migration 0005, 605 members); list/detail/create/edit/transfer/mandate APIs; record sync + legacy reads with the mock; member import after mock joining; fresh Member App sessions. Tests: backend 69/69, root 270/270, domain 100%, typecheck green; full e2e through the backend 182 passed + 2 failed + 4 not run: Act 3 race fixed in the test (demo script then 7/7), composer test was a one-off (3/3 on rerun) | P4b |
+| 2026-10-30 | **P4b built** (D-082): profile change requests (migration 0006) with DDO certify → Accountant decide (approval writes the member + service events in one transaction); my profile, contact update, mobile change by OTP to the new number (becomes the sign-in); change-request counts from the backend; requests synced to the mock, notifications via the mock until P8. Tests: backend 75/75, root 270/270, typecheck green; **full e2e through the backend 188/188** (26.5 min) | P4c |

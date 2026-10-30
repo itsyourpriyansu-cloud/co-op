@@ -8,6 +8,9 @@ import { LedgerService } from '../modules/ledger/ledger.service';
 import { MastersRepository } from '../modules/masters/masters.repository';
 import { MembersImport } from '../modules/members/members.import';
 import { MembersRepository } from '../modules/members/members.repository';
+import { MembersService } from '../modules/members/members.service';
+import { ProfileChangesRepository } from '../modules/profile-changes/profile-changes.repository';
+import { ProfileChangesService } from '../modules/profile-changes/profile-changes.service';
 import { MastersService } from '../modules/masters/masters.service';
 
 declare module 'fastify' {
@@ -21,6 +24,8 @@ declare module 'fastify' {
     appAccounts: AppAccountsService;
     /** Dev only until P4c: import members the mock's joining flow created. */
     membersImport: MembersImport;
+    members: MembersService;
+    profileChanges: ProfileChangesService;
   }
 }
 
@@ -30,8 +35,10 @@ export const servicesPlugin = fp(
     app.decorate('masters', new MastersService(app, new MastersRepository(app.db)));
     app.decorate('ledger', new LedgerService(app, new LedgerRepository(app.db)));
     app.decorate('departments', new DepartmentsService(app, new DepartmentsRepository(app.db)));
-    app.decorate('appAccounts', new AppAccountsService(new AuthRepository(app.db)));
+    app.decorate('appAccounts', new AppAccountsService(app, new AuthRepository(app.db)));
     app.decorate('membersImport', new MembersImport(app, new MembersRepository(app.db)));
+    app.decorate('members', new MembersService(app, new MembersRepository(app.db)));
+    app.decorate('profileChanges', new ProfileChangesService(app, new ProfileChangesRepository(app.db)));
   },
   { name: 'services', dependencies: ['db', 'auth'] },
 );

@@ -1,16 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import {
   ageOn,
+  applyProfileChange,
   calculateLeftoverService,
   expectedRetirementDate,
   formatCycle,
   formatDisplayDate,
   maskMobile,
+  PROFILE_FIELDS,
   REQUIRED_DOCUMENTS,
   transferEffectiveCycle,
   validateMemberInput,
 } from '@tgs/domain';
 import type {
+  Address,
   Member,
   MemberDetail,
   MemberDocument,
@@ -19,7 +22,9 @@ import type {
   MemberListParams,
   MemberLoanRow,
   MemberRow,
+  MyProfile,
   ProfileChangeRequest,
+  ProfileFieldChange,
   RecoveryMandate,
   ServiceEvent,
   SessionUser,
@@ -31,7 +36,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
 import { businessToday } from '../../common/utils/business-date';
-import { withTransaction } from '../../db/transaction';
+import { withTransaction, type Tx } from '../../db/transaction';
 import type { MembersRepository } from './members.repository';
 
 /** What the mock still owns for a member until P5–P7 (dev bridge, docs/22 §5.4). */
@@ -81,7 +86,9 @@ export class MembersService {
   async list(user: SessionUser, q: MemberListParams & { sort?: string; page?: number; pageSize?: number }): Promise<MemberList> {
     await this.requireView(user);
     const scope = user.role === 'DDO' ? user.departmentId : undefined;
-    const [membersInScope, mandates, departments, summary] = await Promise.all([this.repo.list(scope), this.repo.currentMandates(scope), this.app.departments.all(), this.summary()]);
+    const [membersInScope, mandates, departments, summary, pendingChanges] = await Promise.all([this.repo.list(scope), this.repo.currentMandates(scope), this.app.departments.all(), this.summary(), this.app.profileChanges.pending()]);
+    const pendingByMember = new Map<string, number>();
+    for (const r of pendingChanges) pendingByMember.set(r.memberId, (pendingByMember.get(r.memberId) ?? 0) + 1);
     const deptName = new Map(departments.map((d) => [d.id, d.name]));
     const scoped: MemberRow[] = membersInScope.map((m) => {
       const extra = summary.rows[m.id];
@@ -102,7 +109,7 @@ export class MembersService {
         outstanding: extra?.outstanding ?? 0,
         status: m.status,
         ...(mandate ? { mandateStatus: mandate.status } : {}),
-        pendingChanges: extra?.pendingChanges ?? 0,
+        pendingChanges: pendingByMember.get(m.id) ?? 0,
       };
     });
     const text = (q.q ?? '').trim().toLowerCase();
@@ -127,8 +134,7 @@ export class MembersService {
     const pageSize = Math.min(100, Math.max(1, q.pageSize ?? 25));
     const page = Math.max(1, q.page ?? 1);
     const scopeIds = new Set(scoped.map((r) => r.id));
-    // TODO(P4b): change requests move to the backend; until then the counts come from the mock.
-    const changeRequests = summary.pendingChangeRequests.filter((r) => scopeIds.has(r.memberId) && (user.role !== 'DDO' || r.route === 'DDO_THEN_OFFICE')).length;
+    const changeRequests = pendingChanges.filter((r) => scopeIds.has(r.memberId) && (user.role !== 'DDO' || r.route === 'DDO_THEN_OFFICE')).length;
     const dept = scope ? departments.find((d) => d.id === scope) : undefined;
     return {
       asOf: summary.today,
@@ -313,6 +319,115 @@ export class MembersService {
     return this.toDetail(user, m);
   }
 
+  // ---- P4b: changes from change requests and the member app ----
+
+  /**
+   * Approved change request (D-057): write the values and log service events inside the caller's
+   * transaction. Returns the records to sync to the mock once the transaction has committed.
+   */
+  async applyApprovedChanges(tx: Tx, memberId: string, fields: ProfileFieldChange[], byName: string): Promise<Record<string, unknown[]>> {
+    let m = (await this.repo.find(memberId, tx)) ?? fail('NOT_FOUND', 'Member record not found.');
+    const today = await businessToday(this.app);
+    const events: ServiceEvent[] = [];
+    for (const f of fields) {
+      m = applyProfileChange(m, f);
+      const label = PROFILE_FIELDS[f.field].label;
+      const base = { id: 'sev-' + randomUUID().slice(0, 8), memberId, date: today, byName };
+      if (f.field === 'designation') events.push({ ...base, type: 'DESIGNATION_CHANGED', summary: 'Designation changed from ' + f.oldValue + ' to ' + f.newValue });
+      else if (f.field === 'dor') events.push({ ...base, type: 'RETIREMENT_DATE_CHANGED', summary: 'Date of retirement changed to ' + formatDisplayDate(f.newValue) });
+      else events.push({ ...base, type: 'PROFILE_UPDATED', summary: label + ' updated on request' });
+    }
+    if (fields.some((f) => f.field.startsWith('payProfile.'))) m = { ...m, payProfile: { ...m.payProfile, certifiedAt: today } };
+    await this.repo.update(tx, m);
+    for (const e of events) await this.repo.addEvent(tx, e);
+    await this.app.appAccounts.upsertMember(tx, { id: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, mobile: m.mobile, active: m.status === 'ACTIVE' });
+    return { members: [m], serviceEvents: events };
+  }
+
+  /** Record sync for callers that changed members inside their own transaction. */
+  async sync(records: Record<string, unknown[]>): Promise<void> {
+    await this.syncToMock(records);
+  }
+
+  /** MB-02 My profile. */
+  async myProfile(user: SessionUser): Promise<MyProfile> {
+    const m = await this.mine(user);
+    const [legacy, events, mandate, changeRequests, dept] = await Promise.all([this.legacy(m.id), this.repo.events(m.id), this.repo.currentMandate(m.id), this.app.profileChanges.forMember(m.id), this.app.departments.get(m.departmentId)]);
+    return {
+      member: m,
+      departmentName: dept?.name ?? m.departmentId,
+      leftover: calculateLeftoverService(m.dor, legacy.today),
+      shares: legacy.shares,
+      serviceEvents: events,
+      mandate,
+      documents: documentsOf(m),
+      changeRequests,
+      pendingFields: changeRequests.filter((r) => r.status === 'PENDING').flatMap((r) => r.fields.map((f) => f.field)),
+    };
+  }
+
+  /** MB-19: email and present address are saved straight away (D-044). */
+  async updateContact(request: FastifyRequest, body: { email?: string; presentAddress?: Address }): Promise<MyProfile> {
+    const user = sessionOf(request);
+    const m = await this.mine(user);
+    const fieldErrors: Record<string, string> = {};
+    if (body.email !== undefined && body.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim())) fieldErrors.email = 'Enter a valid email or leave it blank';
+    if (body.presentAddress) {
+      const a = body.presentAddress;
+      if (!a.line1?.trim()) fieldErrors['presentAddress.line1'] = 'Required';
+      if (!a.city?.trim()) fieldErrors['presentAddress.city'] = 'Required';
+      if (!/^\d{6}$/.test(a.pincode ?? '')) fieldErrors['presentAddress.pincode'] = 'PIN code must be 6 digits';
+    }
+    if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
+    const next: Member = { ...m };
+    const parts: string[] = [];
+    if (body.email !== undefined && body.email.trim() !== (m.email ?? '')) {
+      if (body.email.trim()) next.email = body.email.trim();
+      else delete next.email;
+      parts.push('email');
+    }
+    if (body.presentAddress && JSON.stringify(body.presentAddress) !== JSON.stringify(m.presentAddress)) {
+      next.presentAddress = body.presentAddress;
+      parts.push('present address');
+    }
+    if (parts.length) {
+      const event: ServiceEvent = { id: 'sev-' + randomUUID().slice(0, 8), memberId: m.id, type: 'PROFILE_UPDATED', date: await businessToday(this.app), summary: 'Updated ' + parts.join(' and ') + ' in the app', byName: m.name };
+      await withTransaction(this.app.db, async (tx) => {
+        await this.repo.update(tx, next);
+        await this.repo.addEvent(tx, event);
+        await this.app.audit.record(request, { action: 'contact', entity: 'member', entityId: m.id, summary: m.name + ' updated ' + parts.join(', ') }, tx);
+      });
+      await this.syncToMock({ members: [next], serviceEvents: [event] });
+    }
+    return this.myProfile(user);
+  }
+
+  /** MB-19: the new mobile is proven by a code; it becomes the Member App sign-in too. */
+  async changeMobile(request: FastifyRequest, mobile: string): Promise<MyProfile> {
+    const user = sessionOf(request);
+    const m = await this.mine(user);
+    const next: Member = { ...m, mobile, mobileMasked: maskMobile(mobile) };
+    const event: ServiceEvent = { id: 'sev-' + randomUUID().slice(0, 8), memberId: m.id, type: 'PROFILE_UPDATED', date: await businessToday(this.app), summary: 'Mobile number changed to ' + next.mobileMasked + ' (verified by OTP)', byName: m.name };
+    await withTransaction(this.app.db, async (tx) => {
+      await this.repo.update(tx, next);
+      await this.repo.addEvent(tx, event);
+      await this.app.appAccounts.upsertMember(tx, { id: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, mobile, active: m.status === 'ACTIVE' });
+      await this.app.audit.record(request, { action: 'mobile', entity: 'member', entityId: m.id, summary: m.name + ' changed mobile (OTP verified)' }, tx);
+    });
+    await this.syncToMock({ members: [next], serviceEvents: [event] });
+    return this.myProfile(user);
+  }
+
+  /** The signed-in member's record (Member App). */
+  async mine(user: SessionUser): Promise<Member> {
+    if (user.role !== 'MEMBER' || !user.memberId) fail('FORBIDDEN', 'Members only.');
+    return (await this.repo.find(user.memberId!)) ?? fail('NOT_FOUND', 'Member record not found.');
+  }
+
+  async byId(id: string): Promise<Member | undefined> {
+    return this.repo.find(id);
+  }
+
   // ---- helpers ----
   private async toDetail(user: SessionUser, m: Member): Promise<MemberDetail> {
     const [legacy, settings, department, events, mandate, transfers, canEdit, canDemo] = await Promise.all([
@@ -347,7 +462,7 @@ export class MembersService {
       mandate,
       ...(upcoming ? { upcomingTransfer: { ...upcoming, toDepartmentName: await deptName(upcoming.toDepartmentId), fromDepartmentName: await deptName(upcoming.fromDepartmentId) } } : {}),
       documents: documentsOf(m),
-      changeRequests: legacy.changeRequests,
+      changeRequests: await this.app.profileChanges.forMember(m.id),
       ledger: legacy.ledger,
       can: {
         edit: canEdit && m.status === 'ACTIVE',

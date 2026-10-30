@@ -30,6 +30,11 @@ export class DepartmentsRepository {
     await tx.update(departments).set({ ...values, updatedAt: sql`now()` }).where(eq(departments.id, id));
   }
 
+  async ddoLoginNames(): Promise<Map<string, string>> {
+    const rows = await this.db.select({ name: staffUsers.name, departmentId: staffUsers.departmentId }).from(staffUsers).where(and(eq(staffUsers.role, 'DDO'), eq(staffUsers.status, 'ACTIVE')));
+    return new Map(rows.filter((r) => r.departmentId).map((r) => [r.departmentId!, r.name]));
+  }
+
   /** DDO staff logins by department (docs/03 R5). */
   async ddoLogins(): Promise<Map<string, string>> {
     const rows = await this.db.select({ id: staffUsers.id, departmentId: staffUsers.departmentId }).from(staffUsers).where(and(eq(staffUsers.role, 'DDO'), eq(staffUsers.status, 'ACTIVE')));
