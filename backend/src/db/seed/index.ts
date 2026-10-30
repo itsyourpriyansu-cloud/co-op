@@ -5,6 +5,7 @@ import { systemInfo } from '../../models';
 import { createDb, type Database } from '../client';
 import { withTransaction, type Tx } from '../transaction';
 import { authSeeders } from './auth.seed';
+import { masterSeeders } from './masters.seed';
 
 /**
  * Seed runner (dev and test only). Each phase adds seeders that load its tables from the
@@ -22,7 +23,7 @@ export interface Seeder {
 }
 
 /** Registered per phase: P1 auth · P2 masters + departments · P4 members · … */
-export const seeders: Seeder[] = [...authSeeders];
+export const seeders: Seeder[] = [...authSeeders, ...masterSeeders];
 
 export async function runSeed(db: Database, ctx: SeedContext, list: Seeder[] = seeders): Promise<string[]> {
   return withTransaction(db, async (tx) => {

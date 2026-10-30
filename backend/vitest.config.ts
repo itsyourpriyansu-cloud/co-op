@@ -11,6 +11,7 @@ export default defineConfig({
     globalSetup: ['./tests/helpers/global-setup.ts'],
     // One database: test files run one after another.
     fileParallelism: false,
+    hookTimeout: 30_000,
     env: { NODE_ENV: 'test', DATABASE_URL: process.env.TEST_DATABASE_URL ?? '', MOCK_FALLBACK_URL: '' },
   },
 });

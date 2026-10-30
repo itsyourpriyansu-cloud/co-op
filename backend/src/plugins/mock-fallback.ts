@@ -4,6 +4,10 @@ import type { FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 
 declare module 'fastify' {
+  interface FastifyInstance {
+    /** Dev only (docs/22 §4, §5.1): talks to the mock API for routes and data not moved yet. */
+    mockBridge?: SessionBridge;
+  }
   interface FastifyRequest {
     /** Session bridge: the mock API token for this request's user. */
     mockToken?: string;
@@ -11,15 +15,31 @@ declare module 'fastify' {
 }
 
 /**
+ * Backend writes the mock still depends on (it calculates loans, deposits and demand with its own
+ * copy of settings, departments and staff). After the backend saves one, the same request is sent
+ * to the mock so both agree. Removed with the fallback in P9 (each route leaves this list when the
+ * modules reading it move to the backend).
+ */
+const MIRRORED_ROUTES = new Set([
+  'PUT /api/v1/settings/society',
+  'PUT /api/v1/settings/values',
+  'PUT /api/v1/settings/loan-products/:code',
+  'POST /api/v1/departments',
+  'PUT /api/v1/departments/:id',
+  'PUT /api/v1/notification-templates/:key',
+  'POST /api/v1/users',
+  'PUT /api/v1/users/:id',
+]);
+
+/**
  * Session bridge (docs/22 §5.1): the backend signs users in, but routes the backend has not built
- * yet still run on the mock API, which only accepts its own session tokens. For a signed-in
- * request we ask the mock for a session of the same user (cached per user) and swap the
- * Authorization header on the way through.
+ * yet still run on the mock API, which only accepts its own session tokens. For a signed-in user
+ * we ask the mock for a session of the same user (cached per user).
  */
 export class SessionBridge {
   private readonly cache = new Map<string, Promise<string>>();
 
-  constructor(private readonly upstream: string) {}
+  constructor(readonly upstream: string) {}
 
   private key(u: SessionUser): string {
     return [u.id, u.role, u.name, u.departmentId ?? '', u.memberId ?? '', u.generalNo ?? ''].join('|');
@@ -47,20 +67,68 @@ export class SessionBridge {
   clear(): void {
     this.cache.clear();
   }
+
+  /** Calls the mock as `user` (or anonymously), retrying once with a fresh session after a 401. */
+  async send(user: SessionUser | undefined, method: string, path: string, body?: unknown): Promise<Response> {
+    const attempt = async () => {
+      const headers: Record<string, string> = { accept: 'application/json' };
+      if (body !== undefined) headers['content-type'] = 'application/json';
+      if (user) headers.authorization = `Bearer ${await this.tokenFor(user)}`;
+      return fetch(`${this.upstream}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    };
+    let res = await attempt();
+    if (res.status === 401 && user) {
+      this.clear();
+      res = await attempt();
+    }
+    return res;
+  }
+
+  async getAs<T>(user: SessionUser, path: string): Promise<T> {
+    const res = await this.send(user, 'GET', path);
+    if (!res.ok) throw new Error(`mock GET ${path}: ${res.status}`);
+    return (await res.json()) as T;
+  }
 }
 
 /**
- * Dev-only strangler fallback (docs/22 §4): any request the backend has no route for yet is
- * forwarded to the mock API, so both apps work end to end against :4100 from P0 on.
- * Routes the backend does implement always win (static routes beat the `/*` wildcard).
- * Removed in P9; never registered in production (config/env.ts).
+ * Registered BEFORE the modules: creates the bridge and the mirror hook (hooks only apply to
+ * routes registered after them). Never registered in production (config/env.ts).
  */
-export const mockFallbackPlugin = fp<{ upstream: string }>(
+export const mockBridgePlugin = fp<{ upstream: string }>(
   async (app, { upstream }) => {
     const bridge = new SessionBridge(upstream);
+    app.decorate('mockBridge', bridge);
+
+    // Mirror: runs before the reply leaves, so the caller's next request sees both servers agree.
+    app.addHook('onSend', async (request, reply, payload) => {
+      const route = `${request.method} ${request.routeOptions.url ?? ''}`;
+      if (reply.statusCode >= 300 || !MIRRORED_ROUTES.has(route)) return payload;
+      try {
+        const res = await bridge.send(request.session, request.method, request.url.split('?')[0]!, request.body);
+        if (!res.ok) request.log.warn({ route, status: res.status, body: await res.text() }, 'mock mirror refused the change');
+      } catch (err) {
+        request.log.warn({ route, err }, 'mock mirror failed');
+      }
+      return payload;
+    });
+  },
+  { name: 'mock-bridge' },
+);
+
+/**
+ * Dev-only strangler fallback (docs/22 §4): any request the backend has no route for yet is
+ * forwarded to the mock API, so both apps work end to end against :4100.
+ * Routes the backend does implement always win (static routes beat the `/*` wildcard).
+ * Registered LAST. Removed in P9; never registered in production (config/env.ts).
+ */
+export const mockFallbackPlugin = fp(
+  async (app) => {
+    const bridge = app.mockBridge;
+    if (!bridge) throw new Error('mock-fallback needs mock-bridge');
 
     await app.register(proxy, {
-      upstream,
+      upstream: bridge.upstream,
       prefix: '/',
       // OPTIONS stays with @fastify/cors so preflight answers come from this server.
       httpMethods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -82,14 +150,13 @@ export const mockFallbackPlugin = fp<{ upstream: string }>(
           return out as typeof headers;
         },
         onResponse: (request, reply, res) => {
-          const fr = request as FastifyRequest;
-          // A demo reset wipes the mock's sessions; a 401 on a bridged token means they are gone.
-          if (fr.url.startsWith('/api/v1/__demo/reset') || (fr.mockToken && res.statusCode === 401)) bridge.clear();
+          // A 401 on a bridged token means the mock forgot its sessions (restart).
+          if ((request as FastifyRequest).mockToken && res.statusCode === 401) bridge.clear();
           reply.send(res.stream);
         },
       },
     });
-    app.log.warn({ upstream }, 'mock fallback ON: unbuilt routes are forwarded to the mock API');
+    app.log.warn({ upstream: bridge.upstream }, 'mock fallback ON: unbuilt routes are forwarded to the mock API');
   },
-  { name: 'mock-fallback' },
+  { name: 'mock-fallback', dependencies: ['mock-bridge'] },
 );

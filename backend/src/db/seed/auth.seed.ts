@@ -1,5 +1,5 @@
 import { ROLE_PERMISSIONS } from '@tgs/domain';
-import { createSeed } from '@tgs/mock-data';
+import { demoDataset } from './dataset';
 import type { Role } from '@tgs/types';
 import { sql } from 'drizzle-orm';
 import { hashPassword } from '../../common/utils/password';
@@ -24,7 +24,7 @@ const staff: Seeder = {
   name: 'staff-users',
   run: async (tx, { staffPassword }) => {
     const passwordHash = await hashPassword(staffPassword);
-    const rows = createSeed().staffUsers.map((u) => ({
+    const rows = demoDataset().staffUsers.map((u) => ({
       id: u.id,
       username: u.userId,
       name: u.name,
@@ -65,7 +65,7 @@ const applicantMobile = (masked: string) => masked.replaceAll('X', '0');
 const apps: Seeder = {
   name: 'app-accounts',
   run: async (tx) => {
-    const data = createSeed();
+    const data = demoDataset();
     const members = data.members
       .filter((m) => m.status === 'ACTIVE')
       .map((m) => ({

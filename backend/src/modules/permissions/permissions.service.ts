@@ -38,6 +38,11 @@ export class PermissionsService {
     return this.cache;
   }
 
+  /** Forget the cached matrix (after an edit or a demo reset). */
+  reload(): void {
+    this.cache = undefined;
+  }
+
   async has(role: Role, permission: Permission): Promise<boolean> {
     return (await this.load()).get(role)?.has(permission) ?? false;
   }

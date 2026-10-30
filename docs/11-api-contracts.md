@@ -2,6 +2,7 @@
 
 > Version 0.10 · 2026-10-29 · `GET /health` also answered by the backend (`service: tgseccsl-backend`, plus `database` status, D-073) · Status: **[P] HTTP contracts served by `apps/mock-api` (D-021)** and consumed by both apps through `packages/api-client`.
 > v0.11 · 2026-10-29 · Backend auth endpoints (P1a, D-076): staff login + TOTP, member mobile OTP, refresh/logout, users reset-password/reset-totp, PUT /permissions/:role. Contracts and examples in the backend OpenAPI at `/docs`. `Session` gains optional `refreshToken`, `expiresInSeconds`.
+> v0.12 · 2026-10-30 · Backend P2 (D-079): settings, loan products, society, departments, templates and rates served by the backend with the same shapes; new `GET /settings/versions`, `GET /settings/loan-products/:code/versions`; demo reset resets both servers.
 > These are **not** the production backend API. Production endpoints must come from the backend owner (Q-005). If Fusil has an existing API, these contracts are adapted to it before M1.
 
 ## 1. Conventions

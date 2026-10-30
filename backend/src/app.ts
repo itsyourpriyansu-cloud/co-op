@@ -7,9 +7,11 @@ import { createDb, type DbHandle } from './db/client';
 import { registerModules } from './modules';
 import { authPlugin } from './plugins/auth';
 import { dbPlugin } from './plugins/db';
+import { demoFailuresPlugin } from './plugins/demo-failures';
 import { errorHandlerPlugin } from './plugins/error-handler';
-import { mockFallbackPlugin } from './plugins/mock-fallback';
+import { mockBridgePlugin, mockFallbackPlugin } from './plugins/mock-fallback';
 import { securityPlugin } from './plugins/security';
+import { servicesPlugin } from './plugins/services';
 import { swaggerPlugin } from './plugins/swagger';
 
 export interface BuildAppOptions {
@@ -44,11 +46,16 @@ export async function buildApp({ env, dbHandle, logger = true }: BuildAppOptions
   // Off by default; sign-in routes opt in with `config.rateLimit` (docs/22 §5.1).
   // Not registered under NODE_ENV=test, where one IP signs in hundreds of times.
   if (env.NODE_ENV !== 'test') await app.register(rateLimit, { global: false });
+  await app.register(servicesPlugin);
   await app.register(swaggerPlugin);
+  // Dev only: the bridge and its mirror hook must exist before the module routes (docs/22 §4).
+  if (env.MOCK_FALLBACK_URL) await app.register(mockBridgePlugin, { upstream: env.MOCK_FALLBACK_URL });
+  // Demo "simulate network errors" must sit before every route it can fail (docs/20).
+  if (env.DEMO_MODE) await app.register(demoFailuresPlugin);
 
   await registerModules(app);
 
-  if (env.MOCK_FALLBACK_URL) await app.register(mockFallbackPlugin, { upstream: env.MOCK_FALLBACK_URL });
+  if (env.MOCK_FALLBACK_URL) await app.register(mockFallbackPlugin);
 
   return app;
 }

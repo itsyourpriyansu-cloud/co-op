@@ -1,5 +1,6 @@
 # 08 · Data Model
 
+> Version 0.6 · 2026-10-30 · Production tables: see `docs/22` §5.1 (P1 auth) and §5.2 (P2 masters: versioned settings and loan products, REQ-130)
 > Version 0.5 · 2026-10-24
 > Entities for the mock store and TypeScript types. Fields tagged [A] are contractual, [P] proposed, `?` optional. All money values are stored as **integer paise** [P] to avoid floating-point errors, and displayed as ₹.
 > 22 entities in MVP (26 with the P2 accounting entities).

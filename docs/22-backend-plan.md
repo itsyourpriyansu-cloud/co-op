@@ -1,5 +1,6 @@
 # 22 · Production backend plan
 
+> Version 0.6 · 2026-10-30 · v0.6: §5.2 P2 as built (masters, departments, mirror to the mock, demo reset).
 > Version 0.5 · 2026-10-29 · v0.5: §5.1 P1 design (auth, users, permissions, audit; session bridge; P1a/b/c).
 > Version 0.4 · 2026-10-29 · v0.4: local server is PostgreSQL 18.1, user `postgres`; `tgseccsl_dev` and `tgseccsl_test` exist; URLs in `backend/.env`.
 > Version 0.3 · 2026-10-29 · Status: **[P] Proposed (D-068, D-069)**.
@@ -172,7 +173,7 @@ Each phase ends with its exit test passing. Never start the next phase before th
 |---|---|---|---|
 | **P0 Foundation** ✅ built 2026-10-29 (D-073) | `backend/` scaffold, env validation, Postgres + Drizzle, migrations, seed, error envelope, pino logs, swagger, guards skeleton, test DB helpers, mock fallback, root scripts | Console works fully on :4100 (everything via fallback) | `GET /health` reports database OK; `npm test -w @tgs/backend` green; `/docs` opens |
 | **P1 Auth, users, audit** | Staff login (password + TOTP for signers), member login (mobile + OTP, simulated WhatsApp), refresh tokens, `/me`, permission map (docs/03), users admin, audit log | Console + phone sign in against the backend | Every persona signs in; role guards return 403 correctly; e2e login tests pass on :4100 |
-| **P2 Masters & departments** | Versioned masters (loan products, FD rates, insurance ₹200/₹1,000, joining fee ₹0, penal %), society profile, departments, templates, reference rates | Settings screens + MB-16 rates | Editing a product creates a new ACTIVE version; old loans keep their version |
+| **P2 Masters & departments** ✅ built 2026-10-30 (D-079) | Versioned masters (loan products, FD rates, insurance ₹200/₹1,000, joining fee ₹0, penal %), society profile, departments, templates, reference rates | Settings screens + MB-16 rates | Editing a product creates a new ACTIVE version; old loans keep their version |
 | **P3 Ledger core** | Chart of accounts, member sub-accounts, posting service, statements, trial balance | — (used by P4–P7) | Every posting balances; reversal works; trial balance = 0 |
 | **P4 Members & joining** | Members, service history, mandates, documents (Aadhaar, PAN, service particulars), joining workflow (Accountant → Secretary → President, D-070), share payment, profile change requests, search | Joining board, member pages, MJ screens on the phone | Joining journey e2e passes on :4100; General No. allotted; share receipt posted to ledger |
 | **P5 Loans & sureties** | Applications, eligibility, sureties (FD check for retiring sureties), workflow, assessment with counter-offer, sanction, disbursement (10% share + insurance deducted, ledger posting), schedule (EMI method per product: reducing, amortised or flat, D-071), top-up, multiple loans per type | Loans screens, work queue, MB-03…07 | Loan journeys e2e pass; disbursement entries balance; remaining balance + months shown |
@@ -220,6 +221,20 @@ Member passwords go away (D-067): MA-03 forgot password, MB-17 change password a
 **P1c member app:** MA-01 becomes mobile → OTP; applicants sign up the same way; demo member cards still sign in with one tap; retire MA-03 and MB-17 (screen count changes in docs/05).
 
 **Exit test (after P1c):** backend tests for every flow (wrong password, lockout, TOTP, OTP expiry and attempts, refresh rotation and reuse, permission guard, DDO scope, audit rows); console e2e suite green on :4100 (personas through the backend + bridge) plus a new real staff sign-in test with TOTP; phone e2e for mobile + OTP sign-in.
+
+### 5.2 P2 as built: masters, departments, templates (D-079)
+
+| Table | Holds |
+|---|---|
+| `settings_versions` | The whole society settings document (shares, admission fee, insurance, RRF/CRD/SRDS, FD slabs, limits, placeholders) as **one version per change**; exactly one ACTIVE (partial unique index). FD rates, insurance and fees live here, so a deposit or demand line can store the one version id it used |
+| `loan_product_versions` | One row per version of each loan product; one ACTIVE per code. Loans will store the version id (P5) |
+| `society_profile` | One row; changes audited |
+| `departments` | ST-67 departments and DDO name/designation (code unique) |
+| `notification_templates` | ST-63 wording per event; placeholders limited to the event's own |
+
+Endpoints (same contracts as the mock): `GET /settings`, `PUT /settings/society`, `PUT /settings/values` (new version), `PUT /settings/loan-products/:code` (new version), `GET /settings/versions`, `GET /settings/loan-products/:code/versions`, `GET|POST /departments`, `PUT /departments/:id`, `GET /notification-templates`, `PUT /notification-templates/:key`, `GET /reference/rates`, demo `POST /__demo/reset`.
+
+**Keeping the mock in step (dev only, until the modules that read these move):** the mock still calculates loans, FDs and demand with its own copy of settings, products, departments and staff. After the backend saves a change on those routes, the same request is replayed to the mock as the same user before the reply leaves (`MIRRORED_ROUTES` in `plugins/mock-fallback.ts`; also P1's `/users`). **Demo reset** reseeds the backend tables and then resets the mock. Department **member counts** come from the mock until members move (P4).
 
 ## 6. Rules carried over
 
