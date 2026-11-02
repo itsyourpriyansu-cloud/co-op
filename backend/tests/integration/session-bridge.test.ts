@@ -2,10 +2,6 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bearer, reseed, signInAs } from '../helpers/auth';
 import { buildTestApp } from '../helpers/test-app';
-import { demoDataset } from '../../src/db/seed/dataset';
-
-/** A loan the mock's collections paid off (P5 reverse sync). */
-const repaid = { ...demoDataset().loans.find((l) => l.status === 'ACTIVE')!, outstandingPrincipal: 0, status: 'CLOSED' as const, closedOn: '2026-10-24' };
 
 /** A stand-in mock API: issues bridge sessions and echoes the Authorization it receives. */
 async function fakeMock() {
@@ -34,27 +30,13 @@ async function fakeMock() {
     return { ok: true };
   });
   mock.get('/api/v1/departments', async () => [{ id: 'dept-fin', memberCount: 42 }]);
-  // P4a record sync and combined reads.
+  // Record sync (P4–P7).
   const synced: Array<Record<string, unknown[]>> = [];
   mock.post('/api/v1/__demo/sync', async (req) => {
     synced.push(req.body as Record<string, unknown[]>);
     return { ok: true };
   });
   mock.get('/api/v1/__demo/state', async () => ({ today: '2026-10-24' }));
-  mock.get('/api/v1/__demo/legacy/members-summary', async () => ({ today: '2026-10-24', currentCycle: '2026-10', rows: { 'mem-1101': { activeLoans: 2, outstanding: 1234500, pendingChanges: 1 } }, pendingChangeRequests: [{ id: 'pcr-1', memberId: 'mem-1101', route: 'OFFICE' }] }));
-  mock.get('/api/v1/__demo/legacy/member/:id', async () => ({ today: '2026-10-24', currentCycle: '2026-10', loans: [{ id: 'loan-x', applicationNo: 'APP-1', product: 'ORDINARY', productName: 'Ordinary Loan', status: 'ACTIVE', amount: 100, outstanding: 50, appliedOn: '2026-01-01' }], guarantees: [], deposits: [], shares: null, ledger: [], changeRequests: [], demandCycles: ['2026-10'] }));
-  // P5 reverse sync: a receipt here closes a loan; the backend pulls it after the write.
-  let dirty = false;
-  mock.post('/api/v1/receipts', async (req, reply) => {
-    if (!sessions.get((req.headers.authorization ?? '').replace('Bearer ', ''))) return reply.status(401).send({ code: 'UNAUTHENTICATED' });
-    dirty = true;
-    return { ok: true };
-  });
-  mock.get('/api/v1/__demo/legacy/dirty', async () => {
-    const loans = dirty ? [repaid] : [];
-    dirty = false;
-    return { loans, deposits: [] };
-  });
   await mock.listen({ port: 0, host: '127.0.0.1' });
   return { mock, url: `http://127.0.0.1:${(mock.server.address() as { port: number }).port}`, issuedCount: () => issued, mirrored: () => mirrored, synced: () => synced };
 }
@@ -109,17 +91,21 @@ describe('session bridge (docs/22 §5.1)', () => {
     expect(rows.find((d: { id: string }) => d.id === 'dept-fin').memberCount).toBe(42);
   });
 
-  it('member list and page combine backend records with loans the mock still owns (P4a)', async () => {
+  it('member list and page read loans, shares and demand history from the backend (P7)', async () => {
     const acc = await signInAs(app, 'stf-accountant');
     const list = (await app.inject({ method: 'GET', url: '/api/v1/members?q=1101', headers: bearer(acc) })).json();
     expect(list.asOf).toBe('2026-10-24');
-    expect(list.items[0]).toMatchObject({ generalNo: '1101', activeLoans: 2, outstanding: 1234500 });
+    const loans = (await app.inject({ method: 'GET', url: '/api/v1/loans?q=1101&pageSize=100', headers: bearer(acc) })).json().items as Array<{ generalNo: string; status: string; outstanding: number }>;
+    const open = loans.filter((l) => l.generalNo === '1101' && (l.status === 'ACTIVE' || l.status === 'SANCTIONED'));
+    expect(list.items[0]).toMatchObject({ generalNo: '1101', activeLoans: open.length, outstanding: open.reduce((s, l) => s + l.outstanding, 0) });
     // P4b: change requests are the backend's own records now, not the mock's.
     const changes = (await app.inject({ method: 'GET', url: '/api/v1/profile-change-requests', headers: bearer(acc) })).json();
     expect(list.counts.changeRequests).toBe(changes.counts.pending);
     expect(list.items[0].pendingChanges).toBe(changes.rows.filter((r: { generalNo: string; status: string }) => r.generalNo === '1101' && r.status === 'PENDING').length);
     const detail = (await app.inject({ method: 'GET', url: '/api/v1/members/1101', headers: bearer(acc) })).json();
-    expect(detail.loans[0].id).toBe('loan-x');
+    expect(detail.loans.length).toBeGreaterThan(0);
+    expect(detail.shares).toMatchObject({ memberId: 'mem-1101' });
+    expect(detail.ledger.length).toBeGreaterThan(0);
   });
 
   it('pushes a changed member to the mock (record sync)', async () => {
@@ -143,12 +129,11 @@ describe('session bridge (docs/22 §5.1)', () => {
     expect(sent.some((s) => (s.membershipApplications as Array<{ applicantId: string }> | undefined)?.some((a) => a.applicantId === 'apl-divya'))).toBe(true);
   });
 
-  it('pulls loans the mock changed after a write it served (P5 reverse sync)', async () => {
+  it('owns collections now (P7): receipts are served by the backend, not the mock', async () => {
     const acc = await signInAs(app, 'stf-accountant');
-    const res = await app.inject({ method: 'POST', url: '/api/v1/receipts', headers: bearer(acc), payload: {} });
-    expect(res.headers['x-served-by']).toBe('mock-fallback');
-    const loan = (await app.inject({ method: 'GET', url: `/api/v1/loans/${repaid.id}`, headers: bearer(acc) })).json().loan;
-    expect(loan).toMatchObject({ status: 'CLOSED', outstandingPrincipal: 0 });
+    const res = await app.inject({ method: 'GET', url: '/api/v1/receipts?pageSize=10', headers: bearer(acc) });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['x-served-by']).toBeUndefined();
   });
 
   it('forwards signed-out requests unchanged', async () => {

@@ -1,3 +1,5 @@
+import { CollectionsRepository } from '../modules/collections/collections.repository';
+import { CollectionsService } from '../modules/collections/collections.service';
 import { DepositsRepository } from '../modules/deposits/deposits.repository';
 import { DepositsService } from '../modules/deposits/deposits.service';
 import { LoanWorkflowService } from '../modules/loans/loan-workflow.service';
@@ -33,6 +35,7 @@ declare module 'fastify' {
     loans: LoansService;
     loanWorkflow: LoanWorkflowService;
     deposits: DepositsService;
+    collections: CollectionsService;
     members: MembersService;
     profileChanges: ProfileChangesService;
   }
@@ -52,6 +55,7 @@ export const servicesPlugin = fp(
     app.decorate('loans', loans);
     app.decorate('loanWorkflow', new LoanWorkflowService(app, loans));
     app.decorate('deposits', new DepositsService(app, new DepositsRepository(app.db)));
+    app.decorate('collections', new CollectionsService(app, new CollectionsRepository(app.db)));
   },
   { name: 'services', dependencies: ['db', 'auth'] },
 );

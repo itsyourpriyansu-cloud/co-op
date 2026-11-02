@@ -1,5 +1,5 @@
 import proxy from '@fastify/http-proxy';
-import type { DepositAccount, Loan, SessionUser } from '@tgs/types';
+import type { SessionUser } from '@tgs/types';
 import type { FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 
@@ -167,18 +167,6 @@ export const mockFallbackPlugin = fp(
         onResponse: (request, reply, res) => {
           // A 401 on a bridged token means the mock forgot its sessions (restart).
           if ((request as FastifyRequest).mockToken && res.statusCode === 401) bridge.clear();
-          // Until P7 the mock's collections change loans and CRD / SRDS: pull them back before replying (docs/22 §5.5).
-          if (request.method !== 'GET' && res.statusCode < 300) {
-            void bridge
-              .getPublic<{ loans: Loan[]; deposits: DepositAccount[] }>('/api/v1/__demo/legacy/dirty')
-              .then(async ({ loans, deposits }) => {
-                await app.loans.importMany(loans);
-                await app.deposits.importMany(deposits);
-              })
-              .catch((err) => request.log.warn({ err }, 'loan pull from the mock failed'))
-              .finally(() => reply.send(res.stream));
-            return;
-          }
           reply.send(res.stream);
         },
       },

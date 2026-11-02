@@ -77,6 +77,15 @@ export class LoansRepository {
       .where(conds.length ? and(...conds) : undefined);
   }
 
+  /** ACTIVE loans' schedule row for a cycle (BR-009 demand generation). */
+  async dueRows(cycle: string): Promise<Array<{ loanId: string; memberId: string; product: Loan['product']; interest: number; principal: number }>> {
+    const rows = await this.db
+      .select({ loanId: loans.id, memberId: loans.memberId, product: loans.product, row: sql<{ interest: number; principal: number } | null>`(select r from jsonb_array_elements(${loans.data}->'schedule') r where r->>'dueCycle' = ${cycle} limit 1)` })
+      .from(loans)
+      .where(eq(loans.status, 'ACTIVE'));
+    return rows.filter((r) => r.row).map((r) => ({ loanId: r.loanId, memberId: r.memberId, product: r.product, interest: Number(r.row!.interest), principal: Number(r.row!.principal) }));
+  }
+
   /** By id or application number. */
   async find(idOrNo: string, tx?: Tx): Promise<Loan | undefined> {
     const [row] = await (tx ?? this.db).select({ data: loans.data }).from(loans).where(or(eq(loans.id, idOrNo), eq(loans.applicationNo, idOrNo)));

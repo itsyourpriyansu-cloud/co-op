@@ -37,6 +37,12 @@ export class DepositsRepository {
     return row?.data;
   }
 
+  /** A member's CRD or SRDS account, locked for a recovery. */
+  async lockCompulsory(tx: Tx, memberId: string, scheme: DepositScheme): Promise<DepositAccount | undefined> {
+    const [row] = await tx.select({ data: deposits.data }).from(deposits).where(and(eq(deposits.memberId, memberId), eq(deposits.scheme, scheme))).limit(1).for('update');
+    return row?.data;
+  }
+
   async forMember(memberId: string): Promise<DepositAccount[]> {
     return (await this.db.select({ data: deposits.data }).from(deposits).where(eq(deposits.memberId, memberId))).map((r) => r.data);
   }

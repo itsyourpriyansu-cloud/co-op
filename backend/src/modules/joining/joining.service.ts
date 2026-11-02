@@ -427,8 +427,8 @@ export class JoiningService {
         tx,
       );
     }
-    // TODO(P5): share accounts move with loans; until then the mock keeps them.
     const share: ShareAccount = { memberId: member.id, numberOfShares: member.numberOfShares, shareCapital: paidNow ? receipt.amount : 0, shareDepositBalance: 0 };
+    await this.app.collections.saveShare(tx, share);
     return { member, records: { members: [member], mandates: [mandate], serviceEvents: [event], shareAccounts: [share] } };
   }
 

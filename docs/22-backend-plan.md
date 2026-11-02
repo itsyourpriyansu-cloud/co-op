@@ -1,5 +1,7 @@
 # 22 · Production backend plan
 
+> Version 0.17 · 2026-11-02 · v0.17: P7a built (demand & collections as in the prototype); P7b extras wait for rules.
+> Version 0.16 · 2026-11-02 · v0.16: §5.6 P7 design (demand & collections).
 > Version 0.15 · 2026-11-02 · v0.15: P6b built (FD maturity job, premature withdrawal); P6 complete.
 > Version 0.14 · 2026-10-31 · v0.14: P6a built (deposits as in the prototype); maturity job and premature withdrawal wait for a decision.
 > Version 0.13 · 2026-10-30 · v0.13: P5 built (loans).
@@ -187,7 +189,7 @@ Each phase ends with its exit test passing. Never start the next phase before th
 | **P4 Members & joining** ✅ built 2026-10-30 (D-081…D-083) | Members, service history, mandates, documents (Aadhaar, PAN, service particulars), joining workflow (Accountant → Secretary → President, D-070), share payment, profile change requests, search | Joining board, member pages, MJ screens on the phone | Joining journey e2e passes on :4100; General No. allotted; share receipt posted to ledger |
 | **P5 Loans & sureties** ✅ built 2026-10-30 (D-084) | Applications, eligibility, sureties (FD check for retiring sureties), workflow, assessment with counter-offer, sanction, disbursement (10% share + insurance deducted, ledger posting), schedule (EMI method per product: reducing, amortised or flat, D-071), top-up, multiple loans per type | Loans screens, work queue, MB-03…07 | Loan journeys e2e pass; disbursement entries balance; remaining balance + months shown |
 | **P6 Deposits** ✅ built 2026-11-02 (P6a D-085, P6b D-086) | FD request, payment (cash denominations / transfer), acceptance, FDR, maturity job, premature withdrawal with penalty, loan against FD | Deposits screens, MB-08/09/15 | FD journey e2e passes; interest and penalty posted to ledger |
-| **P7 Collections** | Demand sheets per department, send-by date, **DDO enters actual deduction**, allocation (BR-011), dues (not carried forward), counter receipts, member payment reports (QR, no screenshot), daily penal job, defaulter after 1 month, guarantor notices | Demand screens, DDO console, MB-10/18 | Month-end journey e2e passes; reports match ledger totals |
+| **P7 Collections** — P7a ✅ built 2026-11-02 (D-087); P7b extras open | Demand sheets per department, send-by date, **DDO enters actual deduction**, allocation (BR-011), dues (not carried forward), counter receipts, member payment reports (QR, no screenshot), daily penal job, defaulter after 1 month, guarantor notices | Demand screens, DDO console, MB-10/18 | Month-end journey e2e passes; reports match ledger totals |
 | **P8 Notifications, dashboards, reports** | Work queue + dashboards (48 h / 4–5 day alerts), in-app notifications, WhatsApp/email/push providers (simulated + real adapters), support tickets, 8 reports, CSV/Excel, PDFs | Every remaining screen | Full Playwright suite (188 tests) green against :4100 with fallback **switched off** |
 | **P9 Hardening & go-live prep** | Remove fallback, security review (rate limits, headers, OWASP checks), backups, Dockerfile, data import tool for the society's registers (F-11), performance check, Azure deployment (Bicep) when asked | Apps default to the backend | e2e green; restore drill; import of a sample register succeeds |
 
@@ -292,6 +294,24 @@ A loan is one record from draft to closure, so P5 moves every loan route at once
 - **Share accounts and deposits stay with the mock** (collections post share capital until P7; deposits move in P6). The backend reads them through `/__demo/legacy/member/:id`; a disbursement pushes the member's increased share deposit back; an FD pledge is set or released through `POST /__demo/legacy/pledge`.
 - **Reverse sync:** the mock's collections still reduce outstanding, mark schedule rows paid and close repaid loans. The mock marks each loan it touches; after any write the mock serves, the backend pulls those loans (`GET /__demo/legacy/dirty-loans`) and saves them, so the backend never shows a stale balance. Until P7 those recoveries are not yet posted to the backend ledger.
 - The billing cycle comes from the mock while it owns the demo clock (`/__demo/state`).
+
+### 5.6 P7 design: demand & collections (D-087) ✅ P7a built
+
+P7a moves what the prototype does; the extras in the P7 row that the prototype never had (send-by date, the DDO entering the actual deduction, the daily penal job, defaulter after one month, guarantor notices) come in P7b once their rules are agreed.
+
+| Part | Built |
+|---|---|
+| Tables | `share_accounts` (one per member), `demand_sheets` (cycle × department, status, totals, sign-offs), `demand_lines` (one per member per sheet: components with amount and allocated), `receipts` (salary recovery, counter, FD, verified member payments; allocations as jsonb), `payment_reports` (MB-18) |
+| Console | `/demand` overview, `/demand/preview`, `/demand/generate`, `/demand/sheets/:id` (+ certify, send to DDO, post recovery, demo act), `/receipts` list / detail / counter receipt, `/members/:id/dues`, `/payment-reports` (+ verify, reject) |
+| Member App | `/me/payments`, `/me/receipts/:id`, `/me/payments/reports` |
+| Rules | `@tgs/domain`: buildDemandComponents (BR-009), departmentForCycle (BR-010), allocateRecovery (BR-011), allocateArrears (D-061), validateDenominations (BR-029), demand sheet workflow (BR-030) |
+| Money | one place applies an allocation: loan principal, schedule status and closure, CRD / SRDS balances, share capital; **posted to the ledger** in the same transaction: Dr bank (salary recovery, transfers) or cash, Cr the loan account (principal), interest on loans, penal interest, CRD / SRDS (member), RRF, insurance, share capital (member). An Accountant adjustment is Dr unidentified receipts (2900) [P] |
+
+**What changes in the dev bridge:**
+- Collections leave the mock, so the reverse sync (`/__demo/legacy/dirty`) and its hook are removed.
+- Share accounts move to the backend: loans, joining and the member page read them here; disbursement and admission write them here.
+- The member page reads loans, guarantees, deposits, shares and demand history from the backend; `/__demo/legacy/member` and `members-summary` are no longer read.
+- Changed sheets, receipts, payment reports, loans, deposits and share accounts are still synced to the mock, which keeps the work queue, dashboards and reports until P8.
 
 ## 6. Rules carried over
 

@@ -121,7 +121,7 @@ function stagesFor(d: DepositAccount): LoanStage[] {
   return steps.map((x, i) => ({ key: x.key, title: x.title, status: x.done ? ('done' as const) : i === next ? (stopped ? ('failed' as const) : ('current' as const)) : ('todo' as const), ...x.meta }));
 }
 
-export function depositLedger(db: Db, d: DepositAccount): DepositLedgerRow[] {
+function depositLedger(db: Db, d: DepositAccount): DepositLedgerRow[] {
   if (d.scheme === 'FD') {
     const rows: DepositLedgerRow[] = [];
     if (d.payment || ['ACTIVE', 'MATURED', 'CLOSED'].includes(d.status)) rows.push({ date: d.payment?.date ?? d.openedOn, particulars: `Deposit received${d.payment ? ` (${d.payment.mode.toLowerCase()}, receipt ${d.payment.receiptNo})` : ''}`, credit: d.principal ?? 0, balance: d.principal ?? 0 });

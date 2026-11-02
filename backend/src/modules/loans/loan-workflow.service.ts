@@ -17,7 +17,7 @@ import {
   type JournalLineInput,
   type LoanAction,
 } from '@tgs/domain';
-import type { ConsoleRole, Loan, LoanActionInput, LoanDetail, Member, OtpChallenge, Role, SanctionPreview, SessionUser, SuretyRequest, SuretyRequests } from '@tgs/types';
+import type { ConsoleRole, Loan, ShareAccount, LoanActionInput, LoanDetail, Member, OtpChallenge, Role, SanctionPreview, SessionUser, SuretyRequest, SuretyRequests } from '@tgs/types';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
@@ -150,7 +150,7 @@ export class LoanWorkflowService {
     const notes: Array<[string, string, Record<string, string>, string]> = [];
     const changed: Loan[] = [];
     let pledgeRelease: string | undefined;
-    let shareDeposit: number | undefined;
+    let shareDeposit: ShareAccount | null = null;
     let certified: Member | undefined;
     const saved = await withTransaction(this.app.db, async (tx) => {
       const l = (await this.repo.lock(tx, id)) ?? fail('NOT_FOUND', 'Loan not found.');
@@ -253,7 +253,7 @@ export class LoanWorkflowService {
           l.outstandingPrincipal = amount;
           l.disbursement = { mode: d!.mode, reference: d!.reference.trim(), date: d!.date, amount: l.netDisbursable ?? amount, byName: actor.name, at };
           // BR-004: the share deposit deduction is credited to the member's share deposit.
-          if (l.shareDepositDeduction) shareDeposit = l.shareDepositDeduction;
+          if (l.shareDepositDeduction) shareDeposit = await this.app.collections.creditShareDeposit(tx, m.id, l.shareDepositDeduction);
           // J-07: a top-up closes the loan it settles.
           const parent = l.parentLoanId ? await this.repo.lock(tx, l.parentLoanId) : undefined;
           const settled = parent?.status === 'ACTIVE' ? { principal: parent.outstandingPrincipal, interest: l.sanctionSheet?.topup?.accruedInterest ?? 0, account: LOAN_ACCOUNT[parent.product] } : undefined;
@@ -279,7 +279,7 @@ export class LoanWorkflowService {
     await this.loans.sync([saved, ...changed]);
     if (certified) await this.app.members.sync({ members: [certified] });
     if (pledgeRelease) await this.loans.pledge(pledgeRelease, null);
-    if (shareDeposit) await this.creditShareDeposit(saved.memberId, shareDeposit);
+    if (shareDeposit) await this.app.members.sync({ shareAccounts: [shareDeposit] });
     for (const [to, key, vars, link] of notes) await notifyMember(this.app, to, key, vars, link);
     return saved;
   }
@@ -298,12 +298,6 @@ export class LoanWorkflowService {
     if (settled?.principal) lines.push({ accountCode: settled.account, debit: 0, credit: settled.principal, memberId: m.id, refType: 'LOAN', refId: l.parentLoanId! });
     if (settled?.interest) lines.push({ accountCode: INTEREST_INCOME, debit: 0, credit: settled.interest });
     await this.app.ledger.post({ entryDate: l.disbursedOn!, narration: `Disbursed ${l.loanNo} to ${m.name} (General No. ${m.generalNo}), ${l.disbursement!.mode} ${l.disbursement!.reference}`, source: 'LOAN_DISBURSEMENT', sourceRef: l.loanNo!, postedBy: { id: actor.id, name: actor.name }, lines }, tx);
-  }
-
-  /** TODO(P7): share accounts move to the backend with collections; until then the mock holds them. */
-  private async creditShareDeposit(memberId: string, amount: number): Promise<void> {
-    const { shares } = await this.loans.holdings(memberId);
-    if (shares) await this.app.members.sync({ shareAccounts: [{ ...shares, shareDepositBalance: shares.shareDepositBalance + amount }] });
   }
 
   // ---- surety side (MB-07) ----

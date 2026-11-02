@@ -14,6 +14,7 @@ import {
 } from '@tgs/domain';
 import type {
   Address,
+  Loan,
   Member,
   MemberDetail,
   MemberDocument,
@@ -35,11 +36,11 @@ import type {
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
-import { businessToday } from '../../common/utils/business-date';
+import { businessCycle, businessToday } from '../../common/utils/business-date';
 import { withTransaction, type Tx } from '../../db/transaction';
 import type { MembersRepository } from './members.repository';
 
-/** What the mock still owns for a member until P5–P7 (dev bridge, docs/22 §5.4). */
+/** A member's loans, deposits, shares and demand history (backend since P5–P7, docs/22 §5.6). */
 interface LegacyMember {
   today: string;
   currentCycle: string;
@@ -59,7 +60,7 @@ interface LegacySummary {
   pendingChangeRequests: Array<{ id: string; memberId: string; route: 'OFFICE' | 'DDO_THEN_OFFICE' }>;
 }
 
-const EMPTY_LEGACY = (today: string): LegacyMember => ({ today, currentCycle: today.slice(0, 7), loans: [], guarantees: [], deposits: [], shares: null, ledger: [], changeRequests: [], demandCycles: [] });
+const OPEN_LOAN = new Set(['ACTIVE', 'SANCTIONED']);
 
 function documentsOf(m: Member): MemberDocument[] {
   return REQUIRED_DOCUMENTS.filter((d) => d.required || m.employmentType === 'APPROVED_PROBATIONER').map((d) => ({
@@ -208,6 +209,7 @@ export class MembersService {
     });
     // TODO(P5): share accounts move with loans; until then the mock keeps them.
     const share: ShareAccount = { memberId: created.member.id, numberOfShares: created.member.numberOfShares, shareCapital: created.member.numberOfShares * settings.shareValue, shareDepositBalance: 0 };
+    await withTransaction(this.app.db, (tx) => this.app.collections.saveShare(tx, share));
     await this.syncToMock({ members: [created.member], mandates: [created.mandate], serviceEvents: [created.event], shareAccounts: [share] });
     return this.toDetail(user, created.member);
   }
@@ -456,6 +458,13 @@ export class MembersService {
     return next;
   }
 
+  /** Each member's latest transfer (BR-010: which department's sheet they are on in a cycle). */
+  async latestTransfers(): Promise<Map<string, TransferEvent>> {
+    const out = new Map<string, TransferEvent>();
+    for (const t of await this.repo.allTransfers()) out.set(t.memberId, t);
+    return out;
+  }
+
   /** Every member (loan lists name their borrowers and sureties). */
   async all(): Promise<Member[]> {
     return this.repo.list();
@@ -541,19 +550,51 @@ export class MembersService {
 
   /** TODO(P5–P7): loans, deposits, shares and demand move to the backend; until then from the mock. */
   private async legacy(memberId: string): Promise<LegacyMember> {
-    const bridge = this.app.mockBridge;
-    if (!bridge) return EMPTY_LEGACY(await businessToday(this.app));
-    return bridge.getPublic<LegacyMember>(`/api/v1/__demo/legacy/member/${encodeURIComponent(memberId)}`).catch(async () => EMPTY_LEGACY(await businessToday(this.app)));
+    const m = await this.repo.find(memberId);
+    const [today, currentCycle, own, asSurety, deposits, shares, history, products, depts] = await Promise.all([
+      businessToday(this.app),
+      businessCycle(this.app),
+      this.app.loans.repo.forMember(memberId),
+      this.app.loans.repo.asSurety(memberId),
+      this.app.deposits.forMember(memberId),
+      this.app.collections.share(memberId),
+      this.app.collections.memberHistory(memberId),
+      this.app.masters.loanProducts(),
+      this.app.departments.all(),
+    ]);
+    const productName = (code: string) => products.find((p) => p.code === code)?.name ?? code;
+    const deptName = (id: string) => depts.find((d) => d.id === id)?.name ?? '';
+    const base = (l: Loan): MemberLoanRow => ({ id: l.id, applicationNo: l.applicationNo, ...(l.loanNo ? { loanNo: l.loanNo } : {}), product: l.product, productName: productName(l.product), status: l.status, amount: l.sanctionedAmount ?? l.appliedAmount, outstanding: l.outstandingPrincipal, ...(l.emi ? { emi: l.emi } : {}), appliedOn: l.appliedOn });
+    const recent = (a: MemberLoanRow, b: MemberLoanRow) => b.appliedOn.localeCompare(a.appliedOn);
+    const guarantees: MemberLoanRow[] = [];
+    for (const l of asSurety) {
+      const b = await this.repo.find(l.memberId);
+      guarantees.push({ ...base(l), ...(b ? { borrower: { id: b.id, name: b.name, generalNo: b.generalNo } } : {}), suretyStatus: l.sureties.find((s) => s.memberId === memberId)!.status });
+    }
+    return {
+      today,
+      currentCycle,
+      loans: own.map(base).sort(recent),
+      guarantees: guarantees.sort(recent),
+      deposits: deposits.map(({ id, accountNo, scheme, status, balance, principal, monthlyAmount, ratePercent, maturityDate, openedOn }) => ({ id, accountNo, scheme, status, balance, ratePercent, openedOn, ...(principal !== undefined ? { principal } : {}), ...(monthlyAmount !== undefined ? { monthlyAmount } : {}), ...(maturityDate ? { maturityDate } : {}) })),
+      shares,
+      ledger: history.map(({ departmentId, ...h }) => ({ ...h, departmentName: deptName(departmentId) })),
+      changeRequests: [],
+      demandCycles: m ? await this.app.collections.departmentCycles(m.departmentId) : [],
+    };
   }
 
+  /** Member list: open loans and outstanding per member, from the backend's loans (P5). */
   private async summary(): Promise<LegacySummary> {
-    const bridge = this.app.mockBridge;
-    const empty = async (): Promise<LegacySummary> => {
-      const today = await businessToday(this.app);
-      return { today, currentCycle: today.slice(0, 7), rows: {}, pendingChangeRequests: [] };
-    };
-    if (!bridge) return empty();
-    return bridge.getPublic<LegacySummary>('/api/v1/__demo/legacy/members-summary').catch(empty);
+    const [today, currentCycle] = await Promise.all([businessToday(this.app), businessCycle(this.app)]);
+    const rows: LegacySummary['rows'] = {};
+    for (const l of await this.app.loans.repo.lite(currentCycle)) {
+      if (!OPEN_LOAN.has(l.status)) continue;
+      const r = (rows[l.memberId] ??= { activeLoans: 0, outstanding: 0, pendingChanges: 0 });
+      r.activeLoans++;
+      r.outstanding += l.outstandingPrincipal;
+    }
+    return { today, currentCycle, rows, pendingChangeRequests: [] };
   }
 
   /** Record sync (dev, docs/22 §5.4): the mock's loans, deposits and demand read these. */

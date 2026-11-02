@@ -164,6 +164,11 @@ export class MembersRepository {
     return (await this.db.select().from(memberTransfers).where(eq(memberTransfers.memberId, memberId))).map(toTransfer);
   }
 
+  /** All transfers, oldest first (the last one per member wins). */
+  async allTransfers(): Promise<TransferEvent[]> {
+    return (await this.db.select().from(memberTransfers).orderBy(memberTransfers.recordedAt)).map(toTransfer);
+  }
+
   async insertTransfer(tx: Tx, t: TransferEvent): Promise<void> {
     await tx.insert(memberTransfers).values({ ...t, effectiveDate: t.effectiveDate ?? null, remarks: t.remarks ?? null, recordedAt: t.recordedAt ? new Date(t.recordedAt) : null, recordedByName: t.recordedByName ?? null });
   }

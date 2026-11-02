@@ -8,3 +8,4 @@ export * from './ledger.model';
 export * from './members.model';
 export * from './loans.model';
 export * from './deposits.model';
+export * from './collections.model';

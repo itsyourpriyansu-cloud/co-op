@@ -85,6 +85,13 @@
       "when": 1793614289618,
       "tag": "0011_p6b_fd_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793618119059,
+      "tag": "0012_p7_collections",
+      "breakpoints": true
     }
   ]
 }

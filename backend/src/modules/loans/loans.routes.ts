@@ -37,7 +37,7 @@ export const loansRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get('/members/search', { ...pre, schema: { tags: st, summary: 'Pick a member or a surety (those who can still stand surety first)', security, querystring: z.object({ q: z.string().optional() }), response: ok('MemberPick[]') } }, c.search);
   app.get('/members/:id/loan-context', { ...pre, schema: { tags: st, summary: 'Loan context for an application on a member’s behalf', security, params: idParams, response: ok('LoanContext') } }, c.memberContext);
   app.get('/loans/:id/sanction-preview', { ...pre, schema: { tags: st, summary: 'ST-26 sanction sheet for an amount / tenure', security, params: idParams, querystring: z.object({ amount: z.coerce.number().optional(), instalments: z.coerce.number().optional() }), response: ok('SanctionPreview') } }, c.sanctionPreview);
-  app.post('/loans/:id/actions/:action', { ...pre, schema: { tags: st, summary: 'Act on the current stage (disburse posts to the ledger)', security, params: z.object({ id: z.string().min(1), action: z.enum(ACTIONS) }), body: z.record(z.string(), z.unknown()).optional(), response: ok('LoanDetail') } }, c.act as never);
+  app.post('/loans/:id/actions/:action', { ...pre, schema: { tags: st, summary: 'Act on the current stage (disburse posts to the ledger)', security, params: z.object({ id: z.string().min(1), action: z.enum(ACTIONS) }), body: z.record(z.string(), z.unknown()).nullish(), response: ok('LoanDetail') } }, c.act as never);
   app.post('/loans/:id/demo-act', { ...pre, schema: { tags: st, summary: 'Demo: complete the stage as its owner', security, params: idParams, response: ok('LoanDetail') } }, c.demoAct);
 
   app.get('/me/loans', { ...pre, schema: { tags: mb, summary: 'My loans and applications', security, response: ok('LoanRow[]') } }, c.mine);
@@ -49,7 +49,7 @@ export const loansRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post('/me/loans/:id/sign/request', { ...pre, schema: { tags: mb, summary: 'Send the signing code once the application passes every check (D-031)', security, params: idParams, response: ok('OtpChallenge') } }, c.requestSign);
   app.post('/me/loans/:id/submit', { ...pre, schema: { tags: mb, summary: 'Sign with the code and submit', security, params: idParams, body: otpBody, response: ok('LoanDetail') } }, c.submitMine);
   app.post('/me/loans/:id/sureties/replace', { ...pre, schema: { tags: mb, summary: 'Replace a surety who declined', security, params: idParams, body: z.object({ oldId: z.string().optional(), newId: z.string().optional() }), response: ok('LoanDetail') } }, c.replaceSurety);
-  app.post('/me/loans/:id/withdraw', { ...pre, schema: { tags: mb, summary: 'Withdraw my application', security, params: idParams, body: reasonBody.optional(), response: ok('LoanDetail') } }, c.withdraw as never);
+  app.post('/me/loans/:id/withdraw', { ...pre, schema: { tags: mb, summary: 'Withdraw my application', security, params: idParams, body: reasonBody.nullish(), response: ok('LoanDetail') } }, c.withdraw as never);
 
   app.get('/me/surety-requests', { ...pre, schema: { tags: mb, summary: 'Loans I am asked to guarantee, and those I guarantee', security, response: ok('SuretyRequests') } }, c.suretyRequests);
   app.post('/me/surety-requests/:loanId/sign/request', { ...pre, schema: { tags: mb, summary: 'Send the code to sign as surety', security, params: loanIdParams, response: ok('OtpChallenge') } }, c.suretySign);

@@ -32,6 +32,7 @@ import {
   type LoanStage,
   type Member,
   type OtpChallenge,
+  type Receipt,
   type Role,
   type SessionUser,
 } from '@tgs/types';
@@ -126,6 +127,19 @@ export class DepositsService {
     return this.repo.forMember(memberId);
   }
 
+  byScheme(scheme: 'CRD' | 'SRDS'): Promise<DepositAccount[]> {
+    return this.repo.list(scheme);
+  }
+
+  /** P7: collections credit CRD / SRDS inside their own transaction. */
+  lockCompulsory(tx: Tx, memberId: string, scheme: 'CRD' | 'SRDS'): Promise<DepositAccount | undefined> {
+    return this.repo.lockCompulsory(tx, memberId, scheme);
+  }
+
+  saveInTx(tx: Tx, d: DepositAccount): Promise<void> {
+    return this.repo.save(tx, d);
+  }
+
   /** An FD reserved for a loan against it (or released with loanId null). */
   async pledge(depositId: string, loanId: string | null): Promise<void> {
     const saved = await withTransaction(this.app.db, async (tx) => {
@@ -186,11 +200,16 @@ export class DepositsService {
       if (d.status === 'CANCELLED' && d.payment) rows.push({ date: d.closedOn ?? d.payment.date, particulars: 'Refunded', debit: d.principal ?? 0, balance: 0 });
       return rows;
     }
-    // TODO(P7): receipts move to the backend; until then the passbook comes from the mock.
-    const fallback: DepositLedgerRow[] = [{ date: d.openedOn, particulars: 'Balance', credit: Math.max(0, d.balance), balance: d.balance }];
-    const bridge = this.app.mockBridge;
-    if (!bridge) return fallback;
-    return bridge.getPublic<DepositLedgerRow[]>(`/api/v1/__demo/legacy/deposit-ledger/${encodeURIComponent(d.id)}`).catch(() => fallback);
+    // CRD / SRDS: credits come from the monthly salary recovery and counter receipts (P7).
+    const head = d.scheme === 'CRD' || d.scheme === 'SRDS' ? d.scheme : undefined;
+    const credits = head
+      ? (await this.app.collections.repo.receiptsOfMember(d.memberId))
+          .flatMap((r) => r.allocations.filter((a) => a.head === head).map((a) => ({ date: r.date, particulars: `${r.cycle ? `Salary recovery ${r.cycle}` : 'Receipt'} · ${r.receiptNo}`, amount: a.amount })))
+          .sort((a, b) => a.date.localeCompare(b.date))
+      : [];
+    const opening = d.balance - credits.reduce((s, c) => s + c.amount, 0);
+    let bal = opening;
+    return [{ date: d.openedOn, particulars: credits.length ? 'Opening balance' : 'Balance', credit: Math.max(0, opening), balance: opening }, ...credits.map((c) => ({ date: c.date, particulars: c.particulars, credit: c.amount, balance: (bal += c.amount) }))];
   }
 
   private async detail(d: DepositAccount, user: SessionUser): Promise<DepositDetail> {
@@ -488,8 +507,7 @@ export class DepositsService {
   private async apply(request: FastifyRequest, id: string, action: DepositAction, actor: Actor, input: DepositActionInput, opts: { demo?: boolean } = {}): Promise<DepositAccount> {
     const [at, today] = await Promise.all([businessNow(this.app), businessToday(this.app)]);
     let note: [string, string, Record<string, string>, string] | undefined;
-    // TODO(P7): receipts move to the backend; until then the mock numbers the FD receipt.
-    let receiptNo: string | undefined;
+    const receipts: Receipt[] = [];
     const saved = await withTransaction(this.app.db, async (tx) => {
       const d = (await this.repo.lock(tx, id)) ?? fail('NOT_FOUND', 'Deposit not found.');
       if (action === 'withdraw') await this.assertWithdrawable(d, actor);
@@ -518,8 +536,10 @@ export class DepositsService {
             { accountCode: p!.mode === 'CASH' ? ACCOUNT.CASH : ACCOUNT.BANK, debit: amount, credit: 0 },
             { accountCode: DEPOSIT_ACCOUNT.FD, debit: 0, credit: amount, memberId: m.id, refType: 'DEPOSIT', refId: d.id },
           ]);
-          receiptNo = await this.receipt({ memberId: m.id, date: p!.date, mode: p!.mode, amount, ...(p!.mode === 'CASH' ? { denominations: p!.denominations } : {}), ...(p!.reference?.trim() ? { reference: p!.reference.trim() } : {}), depositId: d.id });
-          d.payment = { mode: p!.mode, amount, date: p!.date, ...(p!.mode === 'CASH' ? { denominations: p!.denominations } : { reference: p!.reference!.trim() }), receiptNo: receiptNo ?? `RCT-${entry}`, byName: actor.name, at };
+          const receipt = await this.app.collections.fdReceipt(tx, { memberId: m.id, date: p!.date, source: p!.mode === 'CASH' ? 'CASH' : 'BANK_TRANSFER', amount, ...(p!.mode === 'CASH' ? { denominations: p!.denominations } : {}), ...(p!.reference?.trim() ? { reference: p!.reference.trim() } : {}), purpose: 'FD', depositId: d.id, byName: actor.name, byId: actor.id, at });
+          receipts.push(receipt);
+          void entry;
+          d.payment = { mode: p!.mode, amount, date: p!.date, ...(p!.mode === 'CASH' ? { denominations: p!.denominations } : { reference: p!.reference!.trim() }), receiptNo: receipt.receiptNo, byName: actor.name, at };
           break;
         }
         case 'accept':
@@ -590,6 +610,7 @@ export class DepositsService {
       return d;
     });
     await this.sync([saved]);
+    if (receipts.length) await this.app.members.sync({ receipts });
     if (note) await notifyMember(this.app, ...note);
     return saved;
   }
@@ -599,22 +620,8 @@ export class DepositsService {
     return String(e.entryNo);
   }
 
-  private async receipt(body: Record<string, unknown>): Promise<string | undefined> {
-    const res = await this.app.mockBridge?.send(undefined, 'POST', '/api/v1/__demo/legacy/receipts', body).catch(() => undefined);
-    return res?.ok ? ((await res.json()) as { receiptNo: string }).receiptNo : undefined;
-  }
-
   /** TODO(P7): the mock's work queue, dashboards, home and collections read deposits; keep them in step. */
   async sync(changed: DepositAccount[]): Promise<void> {
     await this.app.members.sync({ deposits: changed });
-  }
-
-  /** Reverse sync until P7: CRD / SRDS balances the mock's collections credited. */
-  async importMany(list: DepositAccount[]): Promise<void> {
-    if (!list.length) return;
-    await withTransaction(this.app.db, async (tx) => {
-      const known = new Set((await this.repo.byIds(list.map((d) => d.id), tx)).map((d) => d.id));
-      for (const d of list) await (known.has(d.id) ? this.repo.save(tx, d) : this.repo.insert(tx, d));
-    });
   }
 }
