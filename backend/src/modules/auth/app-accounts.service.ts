@@ -46,19 +46,19 @@ export class AppAccountsService {
 
   /** The verified new mobile. */
   async verifyMobileChange(memberId: string, otpRef: string, otp: string): Promise<string> {
-    return this.verifyCode('MOBILE_CHANGE', memberId, otpRef, otp);
+    return (await this.verifyCode('MOBILE_CHANGE', memberId, otpRef, otp)).mobile;
   }
 
   // ---- a code bound to one thing (a member's new mobile, an application to sign, D-031) ----
-  async startCode(mobile: string, purpose: CodePurpose, subjectId: string): Promise<OtpChallenge> {
+  async startCode(mobile: string, purpose: CodePurpose, subjectId: string, payload?: unknown): Promise<OtpChallenge> {
     const code = this.app.env.DEMO_MODE ? DEMO_OTP : randomCode();
-    const row = await this.repo.insertOtp({ mobile, purpose, subjectId, codeHash: sha256(`${mobile}:${code}`), channel: 'SIMULATED', expiresAt: new Date(Date.now() + this.app.env.OTP_TTL_SECONDS * 1000) });
+    const row = await this.repo.insertOtp({ mobile, purpose, subjectId, ...(payload !== undefined ? { payload } : {}), codeHash: sha256(`${mobile}:${code}`), channel: 'SIMULATED', expiresAt: new Date(Date.now() + this.app.env.OTP_TTL_SECONDS * 1000) });
     if (this.app.env.NODE_ENV !== 'production') this.app.log.info({ code, purpose }, 'simulated OTP');
     return { otpRef: row.id, expiresInSeconds: this.app.env.OTP_TTL_SECONDS, ...(this.app.env.DEMO_MODE ? { demoOtp: code } : {}) };
   }
 
-  /** Consumes the code; returns the mobile it was sent to. */
-  async verifyCode(purpose: CodePurpose, subjectId: string, otpRef: string, otp: string): Promise<string> {
+  /** Consumes the code; returns the mobile it was sent to and what it signed. */
+  async verifyCode(purpose: CodePurpose, subjectId: string, otpRef: string, otp: string): Promise<{ mobile: string; payload: unknown }> {
     const row = await this.repo.otpById(otpRef);
     if (!row || row.purpose !== purpose || row.subjectId !== subjectId || row.consumedAt || row.expiresAt < new Date()) {
       fail('VALIDATION_ERROR', 'This code has expired. Request a new one.', { fieldErrors: { otp: 'Expired' } });
@@ -71,6 +71,6 @@ export class AppAccountsService {
     await withTransaction(this.app.db, async (tx) => {
       if (!(await this.repo.consumeOtp(row!.id, tx))) fail('VALIDATION_ERROR', 'This code has already been used.', { fieldErrors: { otp: 'Already used' } });
     });
-    return row!.mobile;
+    return { mobile: row!.mobile, payload: row!.payload };
   }
 }

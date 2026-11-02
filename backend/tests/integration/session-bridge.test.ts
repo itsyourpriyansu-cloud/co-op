@@ -50,10 +50,10 @@ async function fakeMock() {
     dirty = true;
     return { ok: true };
   });
-  mock.get('/api/v1/__demo/legacy/dirty-loans', async () => {
+  mock.get('/api/v1/__demo/legacy/dirty', async () => {
     const loans = dirty ? [repaid] : [];
     dirty = false;
-    return { loans };
+    return { loans, deposits: [] };
   });
   await mock.listen({ port: 0, host: '127.0.0.1' });
   return { mock, url: `http://127.0.0.1:${(mock.server.address() as { port: number }).port}`, issuedCount: () => issued, mirrored: () => mirrored, synced: () => synced };

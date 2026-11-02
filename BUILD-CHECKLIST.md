@@ -11,9 +11,9 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | **P5 done** (D-084): loans on the backend, disbursement in the ledger. Next: **P6** deposits (`docs/22`) |
+| **Next action** | **P6a done** (D-085): deposits on the backend, money steps in the ledger. Open: maturity job + premature withdrawal (not in the prototype; F-06). Then **P7** demand & collections |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
-| **Last updated** | 2026-10-30 |
+| **Last updated** | 2026-10-31 |
 
 ---
 
@@ -100,3 +100,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-10-30 | **P4b built** (D-082): profile change requests (migration 0006) with DDO certify → Accountant decide (approval writes the member + service events in one transaction); my profile, contact update, mobile change by OTP to the new number (becomes the sign-in); change-request counts from the backend; requests synced to the mock, notifications via the mock until P8. Tests: backend 75/75, root 270/270, typecheck green; **full e2e through the backend 188/188** (26.5 min) | P4c |
 | 2026-10-30 | **P4c built, P4 exit passed** (D-083): membership applications on the backend (migration 0007), applicant draft + OTP signature + submit, staff stages and demo controls; share payment admits the member in one transaction (General No., mandate, JOINED event, same sign-in) and posts a counter receipt to the ledger; reverse import removed. Also fixed a flaky members test (events in one transaction share a timestamp). Tests: backend 80/80, root 270/270, typecheck green; **full e2e through the backend 188/188** (25.5 min) | P5 |
 | 2026-10-30 | **P5 built, P5 exit passed** (D-084): loans on the backend (migration 0008, 775 loans): member drafts + OTP signature + submit, surety signing, withdraw / replace, staff stages, sanction, disbursement posted to the ledger (balanced; top-up closes the parent), schedules; loans synced to the mock, collections changes pulled back. Fixed number allocation (substring position read as a regex). Tests: backend 87/87, root 270/270, typecheck green; **full e2e through the backend 188/188** (31.4 min) | P6 |
+| 2026-11-02 | **P6a built** (D-085): deposits on the backend (migrations 0009-0010, 983 accounts): FD request with OTP (request kept with the code), counter opening, payment, Secretary → President acceptance with FDR, reject / refund / cancel / payout, all money steps posted to the ledger; loans read and pledge FDs here; CRD / SRDS changes from mock collections pulled back. Tests: backend 92/92, root 270/270, typecheck green; **full e2e through the backend 188/188** (33.4 min). Open: maturity job + premature withdrawal (user asked for a plan first) | P6b |

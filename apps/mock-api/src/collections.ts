@@ -2,7 +2,7 @@
 // ST-43 recovery entry & posting, ST-44 receipts, ST-45 counter receipt, ST-46 receipt, ST-47 verify a
 // member-reported payment; MB-10 payments & statements and MB-18 report a payment on the phone.
 // All money movement goes through `postComponents`, so sheets, loans, CRD/SRDS and shares agree.
-import { markLoanDirty } from './dev-sync';
+import { markDepositDirty, markLoanDirty } from './dev-sync';
 import {
   allocateArrears,
   allocateRecovery,
@@ -135,7 +135,10 @@ function postComponents(db: Db, memberId: string, cycle: Cycle, before: DemandCo
     }
     if (c.head === 'CRD' || c.head === 'SRDS') {
       const dep = db.deposits.find((d) => d.memberId === memberId && d.scheme === c.head);
-      if (dep) dep.balance += delta;
+      if (dep) {
+        dep.balance += delta;
+        markDepositDirty(dep.id);
+      }
     }
     if (c.head === 'SHARE_CAPITAL') {
       const sh = db.shareAccounts.find((s) => s.memberId === memberId);

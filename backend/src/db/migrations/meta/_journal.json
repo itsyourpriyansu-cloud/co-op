@@ -64,6 +64,20 @@
       "when": 1793355347558,
       "tag": "0008_p5_loans",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793426555403,
+      "tag": "0009_p6_deposits",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793426601040,
+      "tag": "0010_p6_otp_payload",
+      "breakpoints": true
     }
   ]
 }

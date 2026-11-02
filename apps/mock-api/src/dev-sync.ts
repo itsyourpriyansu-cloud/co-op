@@ -1,8 +1,10 @@
 // Dev-only bridge for the production backend (docs/22 §4, §5.4). While the backend moves modules
 // over phase by phase, it pushes the records it now owns here (so the mock's loans, deposits and
 // demand still see them) and reads the parts the mock still owns. Removed with the fallback in P9.
-import type { Loan, Member, MembershipApplication, ProfileChangeRequest, RecoveryMandate, ServiceEvent, ShareAccount, TransferEvent } from '@tgs/types';
+import type { DepositAccount, DepositLedgerRow, Loan, Member, MembershipApplication, ProfileChangeRequest, RecoveryMandate, ServiceEvent, ShareAccount, TransferEvent } from '@tgs/types';
+import { randomUUID } from 'node:crypto';
 import { notify, type Api } from './common';
+import { depositLedger } from './deposits';
 import { fail } from './errors';
 import { legacyMemberExtras, legacyMembersSummary } from './members';
 import type { Store } from './store';
@@ -16,13 +18,16 @@ interface SyncBody {
   profileChangeRequests?: ProfileChangeRequest[];
   membershipApplications?: MembershipApplication[];
   loans?: Loan[];
+  deposits?: DepositAccount[];
   /** Discarded loan drafts. */
   deleteLoans?: string[];
 }
 
-/** Loans this mock changed (collections, until P7); the backend pulls them after each write. */
+/** Loans and deposits this mock changed (collections, until P7); the backend pulls them after each write. */
 const dirtyLoans = new Set<string>();
+const dirtyDeposits = new Set<string>();
 export const markLoanDirty = (id: string) => dirtyLoans.add(id);
+export const markDepositDirty = (id: string) => dirtyDeposits.add(id);
 
 function upsert<T>(list: T[], items: T[] | undefined, key: (x: T) => string) {
   for (const item of items ?? []) {
@@ -44,6 +49,7 @@ export function registerDevSync(api: Api, store: Store) {
     upsert(db.profileChangeRequests, body.profileChangeRequests, (r) => r.id);
     upsert(db.membershipApplications, body.membershipApplications, (a) => a.id);
     upsert(db.loans, body.loans, (l) => l.id);
+    upsert(db.deposits, body.deposits, (d) => d.id);
     if (body.deleteLoans?.length) db.loans = db.loans.filter((l) => !body.deleteLoans!.includes(l.id));
     store.save();
     return c.json({ ok: true as const });
@@ -58,27 +64,35 @@ export function registerDevSync(api: Api, store: Store) {
     return c.json({ ok: true as const, id: n?.id ?? null });
   });
 
-  /** Reverse sync until P7: loans collections changed here since the last pull. */
-  api.get('/__demo/legacy/dirty-loans', (c) => {
+  /** Reverse sync until P7: loans and deposits collections changed here since the last pull. */
+  api.get('/__demo/legacy/dirty', (c) => {
     const loans = store.db.loans.filter((l) => dirtyLoans.has(l.id));
+    const deposits = store.db.deposits.filter((d) => dirtyDeposits.has(d.id));
     dirtyLoans.clear();
-    return c.json({ loans });
+    dirtyDeposits.clear();
+    return c.json({ loans, deposits });
   });
 
-  /** Until P6 / P7: a member's deposits (with pledges) and share account, for the backend's loan rules. */
+  /** Receipts stay here until P7: the backend records an FD payment and gets its receipt number. */
+  api.post('/__demo/legacy/receipts', async (c) => {
+    const b = await c.req.json<{ memberId: string; date: string; mode: 'CASH' | 'TRANSFER' | 'CHEQUE'; amount: number; denominations?: Record<string, number>; reference?: string; depositId: string }>();
+    const db = store.db;
+    const receiptNo = `RCT-${db.demo.today.slice(0, 4)}-${String(db.receipts.length + 1).padStart(5, '0')}`;
+    db.receipts.push({ id: `rct-${randomUUID().slice(0, 8)}`, receiptNo, memberId: b.memberId, date: b.date, source: b.mode === 'CASH' ? 'CASH' : 'BANK_TRANSFER', amount: b.amount, ...(b.denominations ? { denominations: b.denominations } : {}), allocations: [], purpose: 'FD', depositId: b.depositId, ...(b.reference ? { reference: b.reference } : {}) });
+    store.save();
+    return c.json({ receiptNo });
+  });
+
+  /** CRD / SRDS passbook from the salary-recovery receipts (receipts move in P7). */
+  api.get('/__demo/legacy/deposit-ledger/:id', (c) => {
+    const d = store.db.deposits.find((x) => x.id === c.req.param('id'));
+    return c.json<DepositLedgerRow[]>(d ? depositLedger(store.db, d) : []);
+  });
+
+  /** Until P7: a member's share account, for the backend's loan rules. */
   api.get('/__demo/legacy/holdings/:memberId', (c) => {
     const id = c.req.param('memberId');
-    return c.json({ shares: store.db.shareAccounts.find((s) => s.memberId === id) ?? null, deposits: store.db.deposits.filter((d) => d.memberId === id) });
-  });
-
-  /** Deposits stay here until P6: the backend pledges an FD to a loan, or releases it (loanId null). */
-  api.post('/__demo/legacy/pledge', async (c) => {
-    const body = await c.req.json<{ depositId?: string; loanId?: string | null }>().catch(() => ({}) as { depositId?: string });
-    const d = store.db.deposits.find((x) => x.id === body.depositId) ?? fail('NOT_FOUND', 'Unknown deposit.');
-    if ('loanId' in body && body.loanId) d.pledgedToLoanId = body.loanId;
-    else if (d.pledgedToLoanId) delete d.pledgedToLoanId;
-    store.save();
-    return c.json({ ok: true as const });
+    return c.json({ shares: store.db.shareAccounts.find((s) => s.memberId === id) ?? null });
   });
 
   api.get('/__demo/legacy/members-summary', (c) => c.json(legacyMembersSummary(store.db)));

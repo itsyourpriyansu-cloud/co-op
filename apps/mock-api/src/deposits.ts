@@ -121,7 +121,7 @@ function stagesFor(d: DepositAccount): LoanStage[] {
   return steps.map((x, i) => ({ key: x.key, title: x.title, status: x.done ? ('done' as const) : i === next ? (stopped ? ('failed' as const) : ('current' as const)) : ('todo' as const), ...x.meta }));
 }
 
-function ledgerOf(db: Db, d: DepositAccount): DepositLedgerRow[] {
+export function depositLedger(db: Db, d: DepositAccount): DepositLedgerRow[] {
   if (d.scheme === 'FD') {
     const rows: DepositLedgerRow[] = [];
     if (d.payment || ['ACTIVE', 'MATURED', 'CLOSED'].includes(d.status)) rows.push({ date: d.payment?.date ?? d.openedOn, particulars: `Deposit received${d.payment ? ` (${d.payment.mode.toLowerCase()}, receipt ${d.payment.receiptNo})` : ''}`, credit: d.principal ?? 0, balance: d.principal ?? 0 });
@@ -156,7 +156,7 @@ export function depositDetail(db: Db, d: DepositAccount, user: SessionUser): Dep
     member: { id: m.id, name: m.name, generalNo: m.generalNo, departmentName: deptOf(db, m.id)?.name ?? '', designation: m.designation, mobileMasked: m.mobileMasked, fatherName: m.fatherName },
     ...(mat ? { maturity: { date: mat.date, value: mat.value, totalInterest: mat.totalInterest, periodicInterest: mat.periodicInterest } } : {}),
     payouts: mat && d.payoutFrequency && d.principal && d.tenureMonths ? fdPayoutSchedule({ principal: d.principal, ratePercent: d.ratePercent, tenureMonths: d.tenureMonths, payout: d.payoutFrequency, openedOn: mat.openedOn }).map((p) => ({ ...p, paid: d.status !== 'REQUESTED' && p.date <= db.demo.today })) : [],
-    ledger: ledgerOf(db, d),
+    ledger: depositLedger(db, d),
     stages: d.scheme === 'FD' ? stagesFor(d) : [],
     actions,
     ...(waitingOn ? { waitingOn } : {}),

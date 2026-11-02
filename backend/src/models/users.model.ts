@@ -1,6 +1,6 @@
 import type { AppRole, ConsoleRole, Permission, Role } from '@tgs/types';
 import { sql } from 'drizzle-orm';
-import { boolean, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid, jsonb } from 'drizzle-orm/pg-core';
 
 // P1 identity tables (docs/22 §5.1). Primary keys keep the readable IDs the apps already use
 // (stf-admin, mem-1101, apl-ravi), so the mock API and the backend agree on who is who.
@@ -64,6 +64,8 @@ export const otpChallenges = pgTable(
     purpose: text('purpose').$type<'LOGIN' | 'SIGNUP' | 'MOBILE_CHANGE' | 'SIGN'>().notNull(),
     /** MOBILE_CHANGE: the member asking to move to this new mobile (MB-19). */
     subjectId: text('subject_id'),
+    /** What the code signs, kept server-side until it is verified (e.g. an FD request, MB-15). */
+    payload: jsonb('payload'),
     codeHash: text('code_hash').notNull(),
     channel: text('channel').$type<'WHATSAPP' | 'PUSH' | 'SIMULATED'>().notNull(),
     attempts: integer('attempts').notNull().default(0),

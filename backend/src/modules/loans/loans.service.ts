@@ -133,11 +133,14 @@ export class LoansService {
     return w.products.find((p) => p.code === code) ?? fail('VALIDATION_ERROR', 'Unknown loan type.', { fieldErrors: { product: 'Choose a loan type' } });
   }
 
-  /** TODO(P6/P7): deposits and share accounts move to the backend; until then from the mock. */
+  /** A member's deposits (P6) and share account (TODO(P7): from the mock until collections move). */
   async holdings(memberId: string): Promise<Holdings> {
     const bridge = this.app.mockBridge;
-    if (!bridge) return { shares: null, deposits: [] };
-    return bridge.getPublic<Holdings>(`/api/v1/__demo/legacy/holdings/${encodeURIComponent(memberId)}`).catch(() => ({ shares: null, deposits: [] }));
+    const [deposits, held] = await Promise.all([
+      this.app.deposits.forMember(memberId),
+      bridge ? bridge.getPublic<{ shares: ShareAccount | null }>(`/api/v1/__demo/legacy/holdings/${encodeURIComponent(memberId)}`).catch(() => ({ shares: null })) : { shares: null },
+    ]);
+    return { shares: held.shares, deposits };
   }
 
   async member(id: string): Promise<Member> {
@@ -643,9 +646,9 @@ export class LoansService {
     if (l.events.at(-1)?.action === 'submit') await notifyMember(this.app, m.id, 'loan.submitted', { product: product.name, applicationNo: l.applicationNo, amount: formatINR(l.appliedAmount) }, `/loan/${l.id}`);
   }
 
-  /** TODO(P6): FDs move to the backend; until then the mock holds the pledge. */
+  /** Reserve or release an FD for a loan against it. */
   async pledge(depositId: string, loanId: string | null): Promise<void> {
-    await this.app.mockBridge?.send(undefined, 'POST', '/api/v1/__demo/legacy/pledge', { depositId, loanId }).catch((err) => this.app.log.warn({ err }, 'mock pledge failed'));
+    await this.app.deposits.pledge(depositId, loanId);
   }
 
   /** TODO(P7): the mock's work queue, dashboards, demand and collections read loans; keep them in step. */
@@ -654,15 +657,11 @@ export class LoansService {
   }
 
   /** Reverse sync until P7: loans the mock's collections changed (outstanding, schedule, closure). */
-  async pullFromMock(): Promise<number> {
-    const bridge = this.app.mockBridge;
-    if (!bridge) return 0;
-    const { loans } = await bridge.getPublic<{ loans: Loan[] }>('/api/v1/__demo/legacy/dirty-loans');
-    if (!loans.length) return 0;
+  async importMany(list: Loan[]): Promise<void> {
+    if (!list.length) return;
     await withTransaction(this.app.db, async (tx) => {
-      const known = new Set((await this.repo.byIds(loans.map((l) => l.id), tx)).map((l) => l.id));
-      for (const l of loans) await (known.has(l.id) ? this.repo.save(tx, l) : this.repo.insert(tx, l));
+      const known = new Set((await this.repo.byIds(list.map((l) => l.id), tx)).map((l) => l.id));
+      for (const l of list) await (known.has(l.id) ? this.repo.save(tx, l) : this.repo.insert(tx, l));
     });
-    return loans.length;
   }
 }
