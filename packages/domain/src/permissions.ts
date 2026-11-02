@@ -26,6 +26,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'members.edit',
     'loans.create',
     'deposits.open',
+    'deposits.withdraw',
   ],
   // R2 keeps the member master and decides profile change requests (docs/03, D-057).
   // P3 (D-080) [P]: the Accountant keeps the books; signers and the Cashier read them, the Super Admin only reads.
@@ -55,6 +56,7 @@ export const PERMISSION_LABELS: Array<{ key: Permission; label: string; group: s
   { key: 'loans.create', label: 'Enter loan applications on behalf', group: 'Records' },
   { key: 'deposits.view', label: 'Deposits', group: 'Records' },
   { key: 'deposits.open', label: 'Open deposits at the counter', group: 'Records' },
+  { key: 'deposits.withdraw', label: 'Premature FD withdrawal', group: 'Records' },
   { key: 'collections.view', label: 'Demand sheets & payments', group: 'Money' },
   { key: 'reports.view', label: 'Reports', group: 'Insight' },
   { key: 'ledger.view', label: 'Books of account (read)', group: 'Money' },

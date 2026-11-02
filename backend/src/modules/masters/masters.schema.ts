@@ -27,6 +27,11 @@ export const societySettingsSchema = z.object({
   emiToNetSalaryMaxPercent: z.number(),
   penalGraceDays: z.number().int(),
   financialYearStartMonth: z.number().int(),
+  fdMaturityJobEnabled: z.boolean(),
+  fdMaturityRunHour: z.number().int(),
+  fdPrematureWithdrawalEnabled: z.boolean(),
+  fdPrematurePenaltyMethod: z.enum(['RATE_CUT', 'SHARE_OF_INTEREST']),
+  fdPrematurePenaltyPercent: z.number(),
   placeholders: z.array(z.string()),
 });
 

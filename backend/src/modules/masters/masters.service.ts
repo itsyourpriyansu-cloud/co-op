@@ -14,6 +14,7 @@ const CHANGE_ENTITIES = ['settings', 'loanProduct', 'society', 'department', 'us
 const SETTINGS_KEYS: Array<keyof SocietySettings> = [
   'shareValue', 'admissionFee', 'minShares', 'maxShares', 'retirementAge', 'financialYearStartMonth', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent',
   'insurance', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'defaulterCycles', 'fdSlabs', 'fdMinAmount', 'savingsRatePercent', 'crdRatePercent', 'srdsRatePercent', 'penalGraceDays',
+  'fdMaturityJobEnabled', 'fdMaturityRunHour', 'fdPrematureWithdrawalEnabled', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent',
 ];
 
 const PRODUCT_FIELDS: Array<keyof LoanProduct> = [

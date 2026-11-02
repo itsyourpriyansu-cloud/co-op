@@ -5,6 +5,7 @@ import {
   denominationsFor,
   depositActionsFor,
   fdPayoutSchedule,
+  fdPrematureSettlement,
   fdRateFor,
   formatDisplayDate,
   formatINR,
@@ -27,18 +28,21 @@ import {
   type DepositRow,
   type DepositTab,
   type FdRequestInput,
+  type FdSettlement,
   type LoanStage,
   type Member,
   type OtpChallenge,
   type Role,
   type SessionUser,
 } from '@tgs/types';
+import { eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
 import { businessNow, businessToday } from '../../common/utils/business-date';
 import { notifyMember } from '../../common/utils/notify';
 import { withTransaction, type Tx } from '../../db/transaction';
+import { systemInfo } from '../../models';
 import { ACCOUNT, DEPOSIT_ACCOUNT } from '../ledger/ledger.accounts';
 import type { DepositsRepository } from './deposits.repository';
 
@@ -53,6 +57,10 @@ export const FD_RULES = [
 /** Fictional demo account for transfers (D-054: demo only). */
 const PAY_TO = { accountName: 'TGSECCSL Fixed Deposits', accountNo: 'XXXXXXXX4021', ifsc: 'DEMO0000929', counter: 'Society cash counter, 2nd Floor, West Ancillary Building' };
 const FD_INTEREST_EXPENSE = '5100';
+const FD_INTEREST_PAYABLE = '2210';
+const FD_PENALTY_INCOME = '4400';
+const SYSTEM: Actor = { id: 'system', name: 'System', role: 'SUPER_ADMIN' };
+const LAST_RUN_KEY = 'fd.maturity.lastRunOn';
 
 interface Actor {
   id: string;
@@ -171,7 +179,10 @@ export class DepositsService {
     if (d.scheme === 'FD') {
       const rows: DepositLedgerRow[] = [];
       if (d.payment || ['ACTIVE', 'MATURED', 'CLOSED'].includes(d.status)) rows.push({ date: d.payment?.date ?? d.openedOn, particulars: `Deposit received${d.payment ? ` (${d.payment.mode.toLowerCase()}, receipt ${d.payment.receiptNo})` : ''}`, credit: d.principal ?? 0, balance: d.principal ?? 0 });
-      if (d.status === 'CLOSED') rows.push({ date: d.closedOn ?? d.maturityDate ?? d.openedOn, particulars: 'Paid out on maturity', debit: d.maturityValue ?? d.principal ?? 0, balance: 0 });
+      if (d.maturityInterestAccrued) rows.push({ date: d.maturityDate ?? d.openedOn, particulars: 'Interest credited on maturity', credit: d.maturityInterestAccrued, balance: (d.principal ?? 0) + d.maturityInterestAccrued });
+      const w = d.prematureWithdrawal;
+      if (w) rows.push({ date: w.date, particulars: `Premature withdrawal: interest ${formatINR(w.interestEarned - w.alreadyPaid)}${w.penalty ? `, less penalty ${formatINR(w.penalty)}` : ''}`, debit: w.payable, balance: 0 });
+      else if (d.status === 'CLOSED') rows.push({ date: d.closedOn ?? d.maturityDate ?? d.openedOn, particulars: 'Paid out on maturity', debit: d.maturityValue ?? d.principal ?? 0, balance: 0 });
       if (d.status === 'CANCELLED' && d.payment) rows.push({ date: d.closedOn ?? d.payment.date, particulars: 'Refunded', debit: d.principal ?? 0, balance: 0 });
       return rows;
     }
@@ -188,7 +199,8 @@ export class DepositsService {
     const dept = await this.app.departments.get(m.departmentId);
     const mat = maturityOf(d, today);
     const staffUser = isStaff(user);
-    const actions = staffUser ? depositActionsFor(d.status, { role: user.role }) : [];
+    const actions: DepositAction[] = staffUser ? depositActionsFor(d.status, { role: user.role }) : [];
+    if (staffUser && (await this.withdrawable(d, user))) actions.push('withdraw');
     const owner = DEPOSIT_STAGE_OWNER[d.status];
     const loan = d.pledgedToLoanId ? await this.app.loans.repo.find(d.pledgedToLoanId) : undefined;
     const product = products.find((p) => p.code === 'DEPOSIT');
@@ -362,6 +374,80 @@ export class DepositsService {
     return this.detail(await this.apply(request, d.id, 'cancel', { id: m.id, name: m.name, role: 'MEMBER' }, { remarks: reason?.trim() || 'Cancelled by the member' }, { demo: true }), user);
   }
 
+  // ---- P6b: premature withdrawal (D-086) ----
+  private async settlement(d: DepositAccount, today: string): Promise<FdSettlement> {
+    const settings = await this.app.masters.settings();
+    return fdPrematureSettlement({ principal: d.principal ?? d.balance, ratePercent: d.ratePercent, payout: d.payoutFrequency ?? 'ON_MATURITY', openedOn: d.openedOn, today, method: settings.fdPrematurePenaltyMethod, penaltyPercent: settings.fdPrematurePenaltyPercent });
+  }
+
+  private async withdrawable(d: DepositAccount, user: { role: Role }): Promise<boolean> {
+    if (d.scheme !== 'FD' || d.status !== 'ACTIVE' || d.pledgedToLoanId) return false;
+    const [settings, allowed] = await Promise.all([this.app.masters.settings(), this.app.permissions.has(user.role, 'deposits.withdraw')]);
+    return settings.fdPrematureWithdrawalEnabled && allowed;
+  }
+
+  private async assertWithdrawable(d: DepositAccount, actor: Actor): Promise<void> {
+    if (!(await this.app.permissions.has(actor.role, 'deposits.withdraw'))) fail('FORBIDDEN', 'You are not allowed to withdraw deposits early.');
+    if (!(await this.app.masters.settings()).fdPrematureWithdrawalEnabled) fail('RULE_VIOLATION', 'Premature withdrawal is switched off in Settings.');
+    if (d.scheme !== 'FD' || d.status !== 'ACTIVE') fail('INVALID_TRANSITION', 'Only an active fixed deposit can be withdrawn early.');
+    if (d.pledgedToLoanId) fail('RULE_VIOLATION', 'This deposit is pledged for a loan. Close the loan first.');
+  }
+
+  /** ST-32: what an early withdrawal would pay today, before anyone confirms it. */
+  async withdrawalPreview(user: SessionUser, id: string): Promise<FdSettlement> {
+    const d = await this.staffDeposit(user, id);
+    await this.assertWithdrawable(d, { id: user.id, name: user.name, role: user.role });
+    return this.settlement(d, await businessToday(this.app));
+  }
+
+  // ---- P6b: maturity job (D-086) ----
+  /**
+   * Marks every active FD whose maturity date has come as MATURED, once: each FD is locked and its
+   * status re-checked, so a second run (or a second server) changes nothing. Interest on FDs paid at
+   * maturity is booked as payable to the member (Dr FD interest, Cr interest payable on FDs).
+   */
+  async runMaturity(request?: FastifyRequest, opts: { manual?: boolean } = {}): Promise<{ matured: number; date: string }> {
+    const settings = await this.app.masters.settings();
+    if (!settings.fdMaturityJobEnabled) return opts.manual ? fail('RULE_VIOLATION', 'FD maturity processing is switched off in Settings.') : { matured: 0, date: '' };
+    const [today, at] = await Promise.all([businessToday(this.app), businessNow(this.app)]);
+    const due = (await this.repo.list('FD')).filter((d) => d.status === 'ACTIVE' && d.maturityDate && d.maturityDate <= today);
+    const changed: DepositAccount[] = [];
+    for (const x of due) {
+      const saved = await withTransaction(this.app.db, async (tx) => {
+        const d = await this.repo.lock(tx, x.id);
+        if (!d || !nextDepositStatus(d.status, 'mature') || !d.maturityDate || d.maturityDate > today) return undefined;
+        const m = await this.app.members.byId(d.memberId);
+        const interest = d.payoutFrequency === 'ON_MATURITY' ? Math.max(0, (d.maturityValue ?? 0) - (d.principal ?? 0)) : 0;
+        if (interest > 0) {
+          await this.post(tx, `Interest on FD ${d.fdrNo ?? d.accountNo} (${m?.name ?? d.memberId}) at maturity`, 'FD_MATURITY', d.fdrNo ?? d.accountNo, d.maturityDate, SYSTEM, [
+            { accountCode: FD_INTEREST_EXPENSE, debit: interest, credit: 0 },
+            { accountCode: FD_INTEREST_PAYABLE, debit: 0, credit: interest, memberId: d.memberId, refType: 'DEPOSIT', refId: d.id },
+          ]);
+          d.maturityInterestAccrued = interest;
+        }
+        d.events = [...(d.events ?? []), { at, actorId: SYSTEM.id, actorName: SYSTEM.name, actorRole: 'SYSTEM', action: 'mature', fromStatus: d.status, toStatus: 'MATURED' }];
+        d.status = 'MATURED';
+        await this.repo.save(tx, d);
+        await this.app.audit.record(request, { action: 'deposit.mature', entity: 'deposit', entityId: d.id, summary: `FD ${d.fdrNo ?? d.accountNo} matured on ${d.maturityDate}${interest ? ` (interest ${formatINR(interest)} booked)` : ''}`, actor: { id: SYSTEM.id, name: SYSTEM.name, role: 'SYSTEM' as never } }, tx);
+        return d;
+      });
+      if (saved) changed.push(saved);
+    }
+    await this.app.db.insert(systemInfo).values({ key: LAST_RUN_KEY, value: { date: today } }).onConflictDoUpdate({ target: systemInfo.key, set: { value: { date: today }, updatedAt: new Date() } });
+    await this.sync(changed);
+    return { matured: changed.length, date: today };
+  }
+
+  /** The scheduler runs the job once a day, after the configured hour (IST). */
+  async maturityDue(): Promise<boolean> {
+    const settings = await this.app.masters.settings();
+    if (!settings.fdMaturityJobEnabled) return false;
+    const hourIst = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }).format(new Date()));
+    if (hourIst < settings.fdMaturityRunHour) return false;
+    const [row] = await this.app.db.select().from(systemInfo).where(eq(systemInfo.key, LAST_RUN_KEY));
+    return (row?.value as { date?: string } | undefined)?.date !== (await businessToday(this.app));
+  }
+
   // ---- writes ----
   private async newRequest(request: FastifyRequest, m: Member, input: FdRequestInput, channel: 'APP' | 'COUNTER', actor: Actor, summary: string): Promise<DepositAccount> {
     const [at, today, settings] = await Promise.all([businessNow(this.app), businessToday(this.app), this.app.masters.settings()]);
@@ -406,7 +492,8 @@ export class DepositsService {
     let receiptNo: string | undefined;
     const saved = await withTransaction(this.app.db, async (tx) => {
       const d = (await this.repo.lock(tx, id)) ?? fail('NOT_FOUND', 'Deposit not found.');
-      if (!opts.demo) {
+      if (action === 'withdraw') await this.assertWithdrawable(d, actor);
+      else if (!opts.demo) {
         const allowed = depositActionsFor(d.status, { role: actor.role });
         if (!allowed.includes(action)) fail(allowed.length ? 'FORBIDDEN' : 'INVALID_TRANSITION', allowed.length ? 'That action is not yours at this stage.' : `Nothing for you to do at "${d.status}".`);
       }
@@ -472,9 +559,25 @@ export class DepositsService {
           const principal = d.principal ?? d.balance;
           const value = Math.max(d.maturityValue ?? principal, principal);
           const lines: JournalLineInput[] = [{ accountCode: DEPOSIT_ACCOUNT.FD, debit: principal, credit: 0, memberId: m.id, refType: 'DEPOSIT', refId: d.id }];
-          if (value > principal) lines.push({ accountCode: FD_INTEREST_EXPENSE, debit: value - principal, credit: 0 });
+          // Interest booked as payable by the maturity job (P6b) is paid from there; otherwise it is expensed now.
+          const accrued = Math.min(d.maturityInterestAccrued ?? 0, value - principal);
+          if (accrued > 0) lines.push({ accountCode: FD_INTEREST_PAYABLE, debit: accrued, credit: 0, memberId: m.id, refType: 'DEPOSIT', refId: d.id });
+          if (value - principal - accrued > 0) lines.push({ accountCode: FD_INTEREST_EXPENSE, debit: value - principal - accrued, credit: 0 });
           lines.push({ accountCode: ACCOUNT.BANK, debit: 0, credit: value });
           await this.post(tx, `FD ${d.fdrNo ?? d.accountNo} paid out to ${m.name} on maturity`, 'FD_PAYOUT', d.fdrNo ?? d.accountNo, today, actor, lines);
+          d.closedOn = today;
+          d.balance = 0;
+          break;
+        }
+        case 'withdraw': {
+          // P6b (D-086): the penalty comes only out of interest; the method and rate used are kept on the account.
+          const s = await this.settlement(d, today);
+          const lines: JournalLineInput[] = [{ accountCode: DEPOSIT_ACCOUNT.FD, debit: s.principal, credit: 0, memberId: m.id, refType: 'DEPOSIT', refId: d.id }];
+          if (s.interestPayable + s.penalty > 0) lines.push({ accountCode: FD_INTEREST_EXPENSE, debit: s.interestPayable + s.penalty, credit: 0 });
+          if (s.penalty > 0) lines.push({ accountCode: FD_PENALTY_INCOME, debit: 0, credit: s.penalty });
+          lines.push({ accountCode: ACCOUNT.BANK, debit: 0, credit: s.payable });
+          await this.post(tx, `FD ${d.fdrNo ?? d.accountNo} withdrawn early by ${m.name} after ${s.monthsHeld} months${s.penalty ? ` (penalty ${formatINR(s.penalty)})` : ''}`, 'FD_PREMATURE', d.fdrNo ?? d.accountNo, today, actor, lines);
+          d.prematureWithdrawal = { ...s, date: today, byName: actor.name, at };
           d.closedOn = today;
           d.balance = 0;
           break;

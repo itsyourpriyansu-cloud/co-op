@@ -1,20 +1,36 @@
 // ST-65 Deposit schemes & rates: FD slabs (BR-017) with a maturity preview, plus CRD, SRDS and
-// savings rates.
+// savings rates, and (P6b, D-086) the FD maturity job and premature withdrawal.
 import { Plus, Trash2 } from 'lucide-react';
-import { ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type } from '@juspay/blend-design-system';
+import { ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type, SingleSelectV2 } from '@juspay/blend-design-system';
 import { calculateFdMaturity, formatINR, toPaise } from '@tgs/domain';
 import type { SettingsBundle, SocietySettings } from '@tgs/types';
 import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, useEditable } from '@/components/Form';
 import { api } from '@/lib/api';
 import { isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'fdSlabs' | 'fdMinAmount' | 'savingsRatePercent' | 'crdRatePercent' | 'srdsRatePercent'>;
+type Values = Pick<
+  SocietySettings,
+  'fdSlabs' | 'fdMinAmount' | 'savingsRatePercent' | 'crdRatePercent' | 'srdsRatePercent' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent'
+>;
+const ON_OFF = [{ items: [{ label: 'On', value: 'on' }, { label: 'Off', value: 'off' }] }];
+const METHODS = [{ items: [{ label: 'Cut the interest rate by the penalty', value: 'RATE_CUT' }, { label: 'Take a share of the interest earned', value: 'SHARE_OF_INTEREST' }] }];
 const PRINCIPAL = toPaise(100000);
 
 export function DepositsSection({ bundle }: { bundle: SettingsBundle }) {
   const ro = !bundle.canEdit;
   const s = bundle.settings;
-  const form = useEditable<Values>({ fdSlabs: s.fdSlabs, fdMinAmount: s.fdMinAmount, savingsRatePercent: s.savingsRatePercent, crdRatePercent: s.crdRatePercent, srdsRatePercent: s.srdsRatePercent });
+  const form = useEditable<Values>({
+    fdSlabs: s.fdSlabs,
+    fdMinAmount: s.fdMinAmount,
+    savingsRatePercent: s.savingsRatePercent,
+    crdRatePercent: s.crdRatePercent,
+    srdsRatePercent: s.srdsRatePercent,
+    fdMaturityJobEnabled: s.fdMaturityJobEnabled,
+    fdMaturityRunHour: s.fdMaturityRunHour,
+    fdPrematureWithdrawalEnabled: s.fdPrematureWithdrawalEnabled,
+    fdPrematurePenaltyMethod: s.fdPrematurePenaltyMethod,
+    fdPrematurePenaltyPercent: s.fdPrematurePenaltyPercent,
+  });
   const save = useSettingsSave(api.settings.updateValues, 'Deposit rates saved');
   const v = form.draft!;
   const set = (patch: Partial<Values>) => form.setDraft({ ...v, ...patch });
@@ -94,6 +110,22 @@ export function DepositsSection({ bundle }: { bundle: SettingsBundle }) {
         <NumberField label="CRD" name="crdRatePercent" value={v.crdRatePercent} onChange={(crdRatePercent) => set({ crdRatePercent })} errors={errors} unit="% a year" decimals disabled={ro} />
         <NumberField label="SRDS" name="srdsRatePercent" value={v.srdsRatePercent} onChange={(srdsRatePercent) => set({ srdsRatePercent })} errors={errors} unit="% a year" decimals disabled={ro} />
         <NumberField label="Savings" name="savingsRatePercent" value={v.savingsRatePercent} onChange={(savingsRatePercent) => set({ savingsRatePercent })} errors={errors} unit="% a year" decimals disabled={ro} />
+      </FormSection>
+
+      <FormSection title="FD maturity" description="Each day after this hour (India time) the society marks fixed deposits that have reached their maturity date as matured and books their interest. Running it again changes nothing." columns={3}>
+        <SingleSelectV2 label="Daily maturity processing" placeholder="Choose" items={ON_OFF} selected={v.fdMaturityJobEnabled ? 'on' : 'off'} onSelect={(x) => set({ fdMaturityJobEnabled: x === 'on' })} disabled={ro} />
+        <NumberField label="Run after" name="fdMaturityRunHour" value={v.fdMaturityRunHour} onChange={(fdMaturityRunHour) => set({ fdMaturityRunHour })} errors={errors} unit="o'clock" hint="0 to 23" disabled={ro} />
+      </FormSection>
+
+      <FormSection
+        title="Premature withdrawal"
+        description={`The penalty comes only out of the interest: the member always gets the full principal back. ${v.fdPrematurePenaltyMethod === 'RATE_CUT' ? 'Interest is paid at the FD rate less this many percentage points.' : 'This percent of the interest earned is kept as the penalty.'} 0 means no penalty (F-06: the society has not confirmed the rate yet).`}
+        tag={isPlaceholder(bundle, 'fdPrematurePenaltyPercent') || isPlaceholder(bundle, 'fdPrematurePenaltyMethod') ? <PlaceholderTag /> : undefined}
+        columns={3}
+      >
+        <SingleSelectV2 label="Premature withdrawal" placeholder="Choose" items={ON_OFF} selected={v.fdPrematureWithdrawalEnabled ? 'on' : 'off'} onSelect={(x) => set({ fdPrematureWithdrawalEnabled: x === 'on' })} disabled={ro} />
+        <SingleSelectV2 label="How the penalty is worked out" placeholder="Choose" items={METHODS} selected={v.fdPrematurePenaltyMethod} onSelect={(x) => set({ fdPrematurePenaltyMethod: x as Values['fdPrematurePenaltyMethod'] })} disabled={ro} />
+        <NumberField label="Penalty" name="fdPrematurePenaltyPercent" value={v.fdPrematurePenaltyPercent} onChange={(fdPrematurePenaltyPercent) => set({ fdPrematurePenaltyPercent })} errors={errors} unit={v.fdPrematurePenaltyMethod === 'RATE_CUT' ? 'points' : '% of interest'} decimals disabled={ro} />
       </FormSection>
 
       <SaveBar dirty={form.dirty} saving={save.isPending} onSave={() => save.mutate(v)} onDiscard={form.reset} />

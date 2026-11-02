@@ -75,7 +75,13 @@ export const SETTINGS: SocietySettings = {
   emiToNetSalaryMaxPercent: 50,
   penalGraceDays: 0,
   financialYearStartMonth: 4,
-  placeholders: ['shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'defaulterCycles', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'loanProducts'],
+  fdMaturityJobEnabled: true,
+  fdMaturityRunHour: 1,
+  fdPrematureWithdrawalEnabled: true,
+  fdPrematurePenaltyMethod: 'RATE_CUT',
+  // F-06: 0 until the society confirms the rate (D-086).
+  fdPrematurePenaltyPercent: 0,
+  placeholders: ['shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'defaulterCycles', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'loanProducts'],
 };
 
 export const LOAN_PURPOSES = {

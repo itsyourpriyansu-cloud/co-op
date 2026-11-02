@@ -260,6 +260,26 @@ export interface LoanApplicationForm {
   salary?: { substantivePay: Paise; compulsoryDeductions: Array<{ label: string; amount: Paise }>; netPayEarnedToDate: Paise };
 }
 
+/** F-06 [P]: RATE_CUT = interest at the FD rate less this many points; SHARE_OF_INTEREST = this % of the interest earned. */
+export type FdPenaltyMethod = 'RATE_CUT' | 'SHARE_OF_INTEREST';
+
+/** P6b: what a premature withdrawal pays (preview, and kept on the account once done). */
+export interface FdSettlement {
+  principal: Paise;
+  monthsHeld: number;
+  ratePercent: number;
+  method: FdPenaltyMethod;
+  penaltyPercent: number;
+  /** Interest for the months held at the FD rate. */
+  interestEarned: Paise;
+  /** Periodic payouts already due to the member in that time. */
+  alreadyPaid: Paise;
+  /** What is actually deducted (never more than the interest still owed). */
+  penalty: Paise;
+  interestPayable: Paise;
+  payable: Paise;
+}
+
 export type DepositScheme = 'FD' | 'CRD' | 'SRDS' | 'SAVINGS';
 export type PayoutFrequency = 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'ON_MATURITY';
 
@@ -297,6 +317,10 @@ export interface DepositAccount {
   rejection?: StaffSignOff;
   cancelledReason?: string;
   closedOn?: ISODate;
+  /** P6b: interest booked as payable when the maturity job matured it (paid out at payout). */
+  maturityInterestAccrued?: Paise;
+  /** P6b: a premature withdrawal, with the method and rate used at the time. */
+  prematureWithdrawal?: FdSettlement & { date: ISODate; byName: string; at: ISODateTime };
   /** Request → acceptance history (ST-32 activity, MB-09 tracker). */
   events?: WorkflowEvent[];
 }
@@ -579,6 +603,13 @@ export interface SocietySettings {
   penalGraceDays: number;
   /** ST-60: financial year starts in this month (4 = April). */
   financialYearStartMonth: number;
+  /** P6b (D-086): daily job that marks FDs MATURED on their maturity date, run after this hour (IST). */
+  fdMaturityJobEnabled: boolean;
+  fdMaturityRunHour: number;
+  /** P6b (D-086, F-06 [P]): premature FD withdrawal; the penalty comes out of interest, never the principal. */
+  fdPrematureWithdrawalEnabled: boolean;
+  fdPrematurePenaltyMethod: FdPenaltyMethod;
+  fdPrematurePenaltyPercent: number;
   placeholders: string[];
 }
 

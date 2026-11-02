@@ -114,7 +114,8 @@ export function nextLoanStatus(
 
 // ---- Fixed deposits: request → acceptance (docs/10 §3) ------------------------------------------
 
-export type DepositAction = 'recordPayment' | 'cancel' | 'accept' | 'reject' | 'refund' | 'payout';
+/** `mature` is the daily job (system); `withdraw` is premature withdrawal (P6b, permission deposits.withdraw). */
+export type DepositAction = 'recordPayment' | 'cancel' | 'accept' | 'reject' | 'refund' | 'payout' | 'mature' | 'withdraw';
 
 /** Owner and actions of each FD stage that needs someone (docs/10 §3). */
 const DEPOSIT_STAGES: Partial<Record<DepositStatus, { owner: Role; actions: DepositAction[] }>> = {
@@ -156,6 +157,10 @@ export function nextDepositStatus(status: DepositStatus, action: DepositAction):
       return status === 'REFUND_PENDING' ? 'CANCELLED' : undefined;
     case 'payout':
       return status === 'MATURED' ? 'CLOSED' : undefined;
+    case 'mature':
+      return status === 'ACTIVE' ? 'MATURED' : undefined;
+    case 'withdraw':
+      return status === 'ACTIVE' ? 'CLOSED' : undefined;
   }
 }
 

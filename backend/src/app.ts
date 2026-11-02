@@ -11,6 +11,7 @@ import { demoFailuresPlugin } from './plugins/demo-failures';
 import { errorHandlerPlugin } from './plugins/error-handler';
 import { mockBridgePlugin, mockFallbackPlugin } from './plugins/mock-fallback';
 import { securityPlugin } from './plugins/security';
+import { jobsPlugin } from './plugins/jobs';
 import { servicesPlugin } from './plugins/services';
 import { swaggerPlugin } from './plugins/swagger';
 
@@ -54,6 +55,8 @@ export async function buildApp({ env, dbHandle, logger = true }: BuildAppOptions
   if (env.DEMO_MODE) await app.register(demoFailuresPlugin);
 
   await registerModules(app);
+  // Daily jobs; tests run them on demand instead.
+  if (env.NODE_ENV !== 'test') await app.register(jobsPlugin);
 
   if (env.MOCK_FALLBACK_URL) await app.register(mockFallbackPlugin);
 

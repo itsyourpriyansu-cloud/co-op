@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.7 · 2026-11-02 · BR-035 FD maturity and premature withdrawal (D-086).
 > Version 0.6 · 2026-10-25
 > **Only rules tagged [A] are confirmed.** Everything else is a configurable placeholder, so the prototype can show numbers. Placeholders must never be presented to the client as society policy.
 > Each rule maps to a pure function in `packages/domain` and a settings key.
@@ -226,3 +227,11 @@ Sign-in with General No. or Employee ID + password. Password rule PW-1 ≥ 8 cha
 
 ### BR-034 Reports and messages [P, D-063]
 Report figures come from the posted demand sheets and ledgers. Unpaid = demand − allocated (counter and verified member payments included, D-061). Defaulter (BR-020) = short in the last `settings.defaulterCycles` posted cycles in a row; the report filter can lower or raise it. Messages to members are simulated: SMS ≤ 480 characters, Email needs an email on the profile, every message also lands in the member's in-app notifications. Placeholders `{name} {generalNo} {department} {overdue} {cycle} {dor}`.
+
+### BR-035 FD maturity and premature withdrawal [P, D-086, F-06]
+- **Maturity:** once a day (setting `fdMaturityJobEnabled`, after `fdMaturityRunHour` IST) every ACTIVE FD whose maturity date has come becomes MATURED. FDs paid at maturity get their interest booked as payable to the member; the Cashier then pays it out (BR-027). A repeat run changes nothing.
+- **Premature withdrawal** (`fdPrematureWithdrawalEnabled`; an FD pledged for a loan cannot be withdrawn): interest counts for **completed months held**, worked out like maturity (quarterly compounding for "on maturity", simple for periodic payouts, Q-313). The penalty is `fdPrematurePenaltyPercent` by `fdPrematurePenaltyMethod`:
+  - `RATE_CUT` (default): interest at (FD rate − penalty points); the penalty is the difference.
+  - `SHARE_OF_INTEREST`: the penalty is that % of the interest earned.
+- The penalty comes only out of interest, once: **the principal is always returned in full.** Periodic payouts already due are subtracted, never recovered from the principal. 0 means no penalty. **Placeholder 0 until the society confirms F-06.**
+- Example (simple interest, for illustration): ₹1,00,000 at 7.5% held 12 months, RATE_CUT 1 point → interest at 6.5% = ₹6,500 (penalty ₹1,000, i.e. ₹7,500 − ₹6,500), paid ₹1,06,500.

@@ -69,6 +69,7 @@ import {
   type DepositListParams,
   type DepositRow,
   type FdRequestInput,
+  type FdSettlement,
   type DemandCycleOverview,
   type DemandPreview,
   type DemandSheetDetail,
@@ -359,6 +360,10 @@ export function createApiClient(options: ApiClientOptions) {
       open: (memberId: string, input: FdRequestInput) => request<DepositDetail>('POST', '/deposits', { memberId, ...input }),
       act: (id: string, action: string, input: DepositActionInput = {}) => request<DepositDetail>('POST', `/deposits/${id}/actions/${action}`, input),
       demoAct: (id: string) => request<DepositDetail>('POST', `/deposits/${id}/demo-act`),
+      /** P6b (D-086): what an early withdrawal would pay today. */
+      withdrawalPreview: (id: string) => request<FdSettlement>('GET', `/deposits/${id}/withdrawal-preview`),
+      /** P6b: run the daily FD maturity job now (Admin). */
+      runMaturity: () => request<{ matured: number; date: string }>('POST', '/deposits/maturity/run'),
     },
     /** Staff: demand sheets (ST-40 … ST-43). */
     demand: {

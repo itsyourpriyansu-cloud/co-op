@@ -49,6 +49,8 @@ export type Permission =
   | 'loans.create'
   | 'deposits.view'
   | 'deposits.open'
+  /** P6b (D-086): premature FD withdrawal. */
+  | 'deposits.withdraw'
   | 'collections.view'
   | 'reports.view'
   /** Backend P3 (D-080): read the books (accounts, journals, statements, trial balance). */

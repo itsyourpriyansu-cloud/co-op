@@ -1,6 +1,6 @@
 // BR-017 / BR-027: fixed deposit maturity. Compounding is a placeholder (quarterly, Q-313).
-import type { ISODate, Paise, PayoutFrequency } from '@tgs/types';
-import { addMonths } from './dates';
+import type { FdPenaltyMethod, FdSettlement, ISODate, Paise, PayoutFrequency } from '@tgs/types';
+import { addMonths, fullMonthsBetween } from './dates';
 import { roundToRupee } from './rules';
 
 const MONTHS_PER_PAYOUT: Record<Exclude<PayoutFrequency, 'ON_MATURITY'>, number> = {
@@ -81,4 +81,22 @@ export function validateFdRequest(input: FdRequestShape, ctx: { slabs: Array<{ f
   if (!input.nominee.name.trim()) e['nominee.name'] = 'Enter a nominee';
   if (!input.nominee.relation.trim()) e['nominee.relation'] = 'Required';
   return e;
+}
+
+/**
+ * P6b premature withdrawal (D-086, F-06 [P]). Interest counts for completed months held, the same
+ * way maturity is worked out (quarterly compounding for ON_MATURITY, simple for periodic payouts).
+ * RATE_CUT: interest at (rate − penalty points); SHARE_OF_INTEREST: penalty is that % of the interest.
+ * The penalty only ever comes out of interest: the principal is always returned in full.
+ */
+export function fdPrematureSettlement(input: { principal: Paise; ratePercent: number; payout: PayoutFrequency; openedOn: ISODate; today: ISODate; method: FdPenaltyMethod; penaltyPercent: number }): FdSettlement {
+  const monthsHeld = Math.max(0, fullMonthsBetween(input.openedOn, input.today));
+  const interestAt = (rate: number) => (monthsHeld === 0 ? 0 : calculateFdMaturity({ principal: input.principal, ratePercent: rate, tenureMonths: monthsHeld, payout: input.payout === 'ON_MATURITY' ? 'ON_MATURITY' : 'MONTHLY', openedOn: input.openedOn }).totalInterest);
+  const interestEarned = interestAt(input.ratePercent);
+  const rawPenalty = input.method === 'RATE_CUT' ? interestEarned - interestAt(Math.max(0, input.ratePercent - input.penaltyPercent)) : roundToRupee((interestEarned * input.penaltyPercent) / 100);
+  const alreadyPaid = fdPayoutSchedule({ principal: input.principal, ratePercent: input.ratePercent, tenureMonths: monthsHeld, payout: input.payout, openedOn: input.openedOn }).reduce((s, p) => s + p.amount, 0);
+  const owed = Math.max(0, interestEarned - alreadyPaid);
+  const penalty = Math.min(Math.max(0, rawPenalty), owed);
+  const interestPayable = owed - penalty;
+  return { principal: input.principal, monthsHeld, ratePercent: input.ratePercent, method: input.method, penaltyPercent: input.penaltyPercent, interestEarned, alreadyPaid, penalty, interestPayable, payable: input.principal + interestPayable };
 }

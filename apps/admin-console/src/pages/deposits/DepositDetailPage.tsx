@@ -40,7 +40,8 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Initials } from '@/components/Initials';
 
-const ACTION_LABEL: Record<string, string> = { recordPayment: 'Record payment', accept: 'Accept', reject: 'Reject', cancel: 'Cancel request', refund: 'Refund', payout: 'Pay out' };
+const ACTION_LABEL: Record<string, string> = { recordPayment: 'Record payment', accept: 'Accept', reject: 'Reject', cancel: 'Cancel request', refund: 'Refund', payout: 'Pay out', withdraw: 'Withdraw early' };
+const METHOD: Record<string, string> = { RATE_CUT: 'rate cut', SHARE_OF_INTEREST: 'share of interest' };
 const SCHEME: Record<string, string> = { FD: 'Fixed deposit', CRD: 'CRD', SRDS: 'SRDS', SAVINGS: 'Savings' };
 const PAYOUT: Record<string, string> = { MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', HALF_YEARLY: 'Half-yearly', ON_MATURITY: 'On maturity' };
 
@@ -79,11 +80,13 @@ function ActionDrawer({ d, action, onClose, today }: { d: DepositDetail; action:
       onClose();
     },
   });
+  // P6b (D-086): the settlement is worked out on the server and shown before anyone confirms.
+  const preview = useQuery({ queryKey: ['deposit-withdrawal', dep.id], queryFn: () => api.deposits.withdrawalPreview(dep.id), enabled: action === 'withdraw' });
   if (!action) return null;
   const fe = isApiError(m.error) ? (m.error.fieldErrors ?? {}) : {};
   const total = Object.entries(counts).reduce((s, [k, v]) => s + Number(k) * 100 * (v ?? 0), 0);
   const needsReason = action === 'reject';
-  const ready = action === 'recordPayment' ? (mode === 'CASH' ? total === dep.principal : Boolean(reference.trim())) && Boolean(date) : needsReason ? Boolean(remarks.trim()) : true;
+  const ready = action === 'recordPayment' ? (mode === 'CASH' ? total === dep.principal : Boolean(reference.trim())) && Boolean(date) : action === 'withdraw' ? Boolean(preview.data) : needsReason ? Boolean(remarks.trim()) : true;
   const input = (): DepositActionInput => ({
     ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
     ...(action === 'recordPayment' ? { payment: { mode, date, ...(mode === 'CASH' ? { denominations: counts } : { reference: reference.trim() }) } } : {}),
@@ -98,7 +101,7 @@ function ActionDrawer({ d, action, onClose, today }: { d: DepositDetail; action:
       footer={
         <div className="flex justify-end gap-2">
           <ButtonV2 text="Cancel" buttonType={ButtonV2Type.SECONDARY} onClick={onClose} disabled={m.isPending} />
-          <ButtonV2 text={ACTION_LABEL[action] ?? action} buttonType={action === 'reject' ? ButtonV2Type.DANGER : ButtonV2Type.PRIMARY} disabled={!ready} loading={m.isPending} onClick={() => m.mutate(input())} />
+          <ButtonV2 text={ACTION_LABEL[action] ?? action} buttonType={action === 'reject' || action === 'withdraw' ? ButtonV2Type.DANGER : ButtonV2Type.PRIMARY} disabled={!ready} loading={m.isPending} onClick={() => m.mutate(input())} />
         </div>
       }
     >
@@ -134,6 +137,40 @@ function ActionDrawer({ d, action, onClose, today }: { d: DepositDetail; action:
             <Field label="President">{dep.status === 'ACCEPTANCE_PRESIDENT' ? 'Your signature issues the FDR' : 'Next'}</Field>
           </dl>
         )}
+        {action === 'withdraw' && (
+          <>
+            {preview.isError && <AlertV2 type={AlertV2Type.ERROR} subType={AlertV2SubType.SUBTLE} heading="Cannot withdraw" description={isApiError(preview.error) ? preview.error.message : 'Try again.'} />}
+            {preview.data && (
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-card border border-line px-4 py-3">
+                <Field label="Principal (returned in full)">
+                  <Money value={preview.data.principal} />
+                </Field>
+                <Field label="Held">{`${preview.data.monthsHeld} completed months at ${preview.data.ratePercent}%`}</Field>
+                <Field label="Interest earned">
+                  <Money value={preview.data.interestEarned} />
+                </Field>
+                {preview.data.alreadyPaid > 0 && (
+                  <Field label="Interest already paid out">
+                    <Money value={preview.data.alreadyPaid} />
+                  </Field>
+                )}
+                <Field label={`Penalty (${preview.data.penaltyPercent}${preview.data.method === 'RATE_CUT' ? ' points' : '%'}, ${METHOD[preview.data.method]})`}>
+                  <Money value={preview.data.penalty} />
+                </Field>
+                <Field label="Interest paid">
+                  <Money value={preview.data.interestPayable} />
+                </Field>
+                <div className="col-span-2 border-t border-line-subtle pt-3">
+                  <Field label="Paid to the member">
+                    <span className="text-card-title">
+                      <Money value={preview.data.payable} />
+                    </span>
+                  </Field>
+                </div>
+              </dl>
+            )}
+          </>
+        )}
         <TextAreaV2 label={needsReason ? 'Reason (the member sees this)' : 'Remarks'} value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={2} placeholder={needsReason ? 'e.g. KYC does not match' : 'Optional'} required={needsReason} />
       </div>
     </SideDrawer>
@@ -160,8 +197,8 @@ export function DepositDetailPage() {
   const dep = d?.deposit;
   const notFound = isApiError(q.error) && q.error.status === 404;
   const isFd = dep?.scheme === 'FD';
-  const primary = d?.actions.filter((a) => a !== 'reject' && a !== 'cancel') ?? [];
-  const secondary = d?.actions.filter((a) => a === 'reject' || a === 'cancel') ?? [];
+  const primary = d?.actions.filter((a) => a !== 'reject' && a !== 'cancel' && a !== 'withdraw') ?? [];
+  const secondary = d?.actions.filter((a) => a === 'reject' || a === 'cancel' || a === 'withdraw') ?? [];
 
   return (
     <>
@@ -213,6 +250,7 @@ export function DepositDetailPage() {
             </header>
 
             {dep.status === 'REFUND_PENDING' && <AlertV2 type={AlertV2Type.WARNING} subType={AlertV2SubType.SUBTLE} heading={`Not accepted by ${dep.rejection?.byName ?? ''}`} description={`${dep.rejection?.remarks ?? ''} The Cashier refunds the money.`} />}
+            {dep.prematureWithdrawal && <AlertV2 type={AlertV2Type.NEUTRAL} subType={AlertV2SubType.SUBTLE} heading={`Withdrawn early on ${formatDisplayDate(dep.prematureWithdrawal.date)} by ${dep.prematureWithdrawal.byName}`} description={`Paid ${formatINR(dep.prematureWithdrawal.payable)}: principal ${formatINR(dep.prematureWithdrawal.principal)} + interest ${formatINR(dep.prematureWithdrawal.interestPayable)} (penalty ${formatINR(dep.prematureWithdrawal.penalty)}, ${dep.prematureWithdrawal.penaltyPercent}${dep.prematureWithdrawal.method === 'RATE_CUT' ? ' points' : '%'} ${METHOD[dep.prematureWithdrawal.method]}).`} />}
             {dep.status === 'CANCELLED' && <AlertV2 type={AlertV2Type.NEUTRAL} subType={AlertV2SubType.SUBTLE} heading="Cancelled" description={dep.cancelledReason ?? ''} />}
 
             {isFd && d.stages.length > 0 && !['ACTIVE', 'MATURED', 'CLOSED'].includes(dep.status) && (

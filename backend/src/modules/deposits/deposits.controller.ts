@@ -15,6 +15,8 @@ export class DepositsController {
   open = (r: FastifyRequest<{ Body: Partial<FdRequestInput> & { memberId?: string } }>) => this.service.open(r, r.body ?? {});
   act = (r: FastifyRequest<{ Params: { id: string; action: DepositAction }; Body: DepositActionInput }>) => this.service.act(r, r.params.id, r.params.action, r.body ?? {});
   demoAct = (r: ById) => this.service.demoAct(r, r.params.id);
+  withdrawalPreview = (r: ById) => this.service.withdrawalPreview(sessionOf(r), r.params.id);
+  runMaturity = (r: FastifyRequest) => this.service.runMaturity(r, { manual: true });
 
   mine = (r: FastifyRequest) => this.service.mine(sessionOf(r));
   context = (r: FastifyRequest) => this.service.context(sessionOf(r));
