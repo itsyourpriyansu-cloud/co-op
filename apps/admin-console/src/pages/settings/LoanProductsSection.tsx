@@ -108,6 +108,7 @@ function EditDrawer({ product, onClose }: { product: LoanProduct | null; onClose
           <NumberField label="Maximum instalments" name="maxInstalments" value={p.maxInstalments} onChange={(maxInstalments) => set({ maxInstalments })} errors={errors} unit="months" />
           <MoneyField label="Minimum amount" name="minAmount" value={p.minAmount} onChange={(minAmount) => set({ minAmount })} errors={errors} />
           <MoneyField label="Maximum amount" name="maxAmount" value={p.maxAmount} onChange={(maxAmount) => set({ maxAmount })} errors={errors} />
+          <NumberField label="Penal interest" name="penalRatePercent" value={p.penalRatePercent} onChange={(penalRatePercent) => set({ penalRatePercent })} errors={errors} unit="% a year on unpaid instalments" decimals hint="0 until the society confirms (F-06)" />
           <NumberField label="Share deposit" name="shareDepositPercent" value={p.shareDepositPercent} onChange={(shareDepositPercent) => set({ shareDepositPercent })} errors={errors} unit="% of loan" decimals />
           <NumberField label="Running loans allowed" name="maxConcurrent" value={p.maxConcurrent} onChange={(maxConcurrent) => set({ maxConcurrent })} errors={errors} unit="at once" />
           {p.code === 'DEPOSIT' && <NumberField label="Loan limit" name="depositMarginPercent" value={p.depositMarginPercent} onChange={(depositMarginPercent) => set({ depositMarginPercent })} errors={errors} unit="% of the FD" />}

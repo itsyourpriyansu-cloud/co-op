@@ -12,6 +12,8 @@ export default defineConfig({
     // One database: test files run one after another.
     fileParallelism: false,
     hookTimeout: 30_000,
+    // Demo-reset tests reseed the whole database (~8 s with the P7 data), like the hooks.
+    testTimeout: 30_000,
     env: { NODE_ENV: 'test', DATABASE_URL: process.env.TEST_DATABASE_URL ?? '', MOCK_FALLBACK_URL: '' },
   },
 });

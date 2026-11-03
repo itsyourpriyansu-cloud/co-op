@@ -11,9 +11,9 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | **P7a done** (D-087): demand & collections on the backend, every receipt in the ledger. Open: P7b extras need rules (send-by date, DDO enters the deduction, daily penal job, defaulter after 1 month, guarantor notices). Then **P8** |
+| **Next action** | **P7 done** (D-087, D-088): collections, DDO deduction entry, penal interest, defaulter notices on the backend. Next: **P8** (`docs/22`). Waiting on the society: F-06 rates, F-13 guarantor liability |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
-| **Last updated** | 2026-11-02 |
+| **Last updated** | 2026-11-03 |
 
 ---
 
@@ -103,3 +103,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-11-02 | **P6a built** (D-085): deposits on the backend (migrations 0009-0010, 983 accounts): FD request with OTP (request kept with the code), counter opening, payment, Secretary → President acceptance with FDR, reject / refund / cancel / payout, all money steps posted to the ledger; loans read and pledge FDs here; CRD / SRDS changes from mock collections pulled back. Tests: backend 92/92, root 270/270, typecheck green; **full e2e through the backend 188/188** (33.4 min). Open: maturity job + premature withdrawal (user asked for a plan first) | P6b |
 | 2026-11-02 | **P6b built, P6 exit passed** (D-086): Admin-configured FD maturity job (daily, idempotent, interest booked to 2210, paid from there) and premature withdrawal (rate cut by default or share of interest, penalty 0 until F-06, principal always in full, penalty to 4400, preview drawer); migration 0011; BR-035. Tests: domain 131 (100% coverage), backend 97/97, root 277/277, typecheck green; **full e2e through the backend 189/189** (32.9 min, new deposits-backend spec) | P7 |
 | 2026-11-02 | **P7a built** (D-087): demand & collections on the backend (migration 0012: share accounts, sheets + lines, receipts, payment reports); generate / certify / send / post recovery, counter receipts, dues, member payment reports, all money posted to the ledger; share accounts and the member page now read backend data; reverse sync and four mock reads removed. Fixed: date LIKE (cast), empty optional bodies. Tests: backend 103/103, root 277/277, typecheck green; **full e2e through the backend 189/189** (25.3 min). Open: P7b extras need rules | P7b / P8 |
+| 2026-11-03 | **P7b built, P7 complete** (D-088, user-approved R1–R6): DDO online / Accountant paper-sheet deduction entry with review and one-step approve-and-post, salary limit with minimum take-home pay, partial deductions kept as dues, send-by date; penal interest on read (loan instalments only, per-product rate 0 until F-06, grace days, penal first, posted to 4200, waivable with a reason); defaulter after 1 unpaid cycle with notices to borrower and sureties (no guarantor charge, F-13). Migrations 0013–0017. Tests: domain 146 (100%), backend 115/115, root 292/292; **full e2e through the backend 190/190** (35.4 min) | P8 |

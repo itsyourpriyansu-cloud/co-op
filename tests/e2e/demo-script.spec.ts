@@ -251,8 +251,8 @@ test('Act 5 · month end: demand and recovery (console → phone)', async ({ pag
   await page.getByRole('dialog').getByRole('button', { name: 'Send' }).click();
   await page.getByRole('button', { name: 'Enter recovery' }).click();
   await page.getByRole('button', { name: 'Import DDO statement' }).click();
-  await page.getByRole('button', { name: 'Post recovery' }).click();
-  await page.getByRole('button', { name: 'Yes, post' }).click();
+  await page.getByRole('button', { name: 'Approve and post' }).click();
+  await page.getByRole('button', { name: 'Yes, approve and post' }).click();
   await expect(page.getByText(/recovery posted/)).toBeVisible();
 
   await phoneAs(phone, request, 'mem-1104', '/payments');

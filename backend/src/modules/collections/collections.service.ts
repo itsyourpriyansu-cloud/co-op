@@ -1,8 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import {
-  allocateArrears,
+  allocateDuesPayment,
   allocateRecovery,
   amountInWords,
+  availableSalary,
+  checkDeduction,
+  deductionEntryActionsFor,
+  demandSendByDate,
+  loanDefaulter,
+  loanUnpaid,
+  nextDeductionEntryStatus,
+  penalDue,
+  type DeductionEntryAction,
   buildDemandComponents,
   demandSheetActionsFor,
   departmentForCycle,
@@ -17,6 +26,9 @@ import {
 } from '@tgs/domain';
 import type {
   Cycle,
+  DeductionEntryInput,
+  DeductionEntrySource,
+  Paise,
   DemandComponent,
   DemandCycleOverview,
   DemandHead,
@@ -29,9 +41,12 @@ import type {
   Department,
   DepositAccount,
   Loan,
+  LoanProductCode,
   LoanStage,
   Member,
   MemberDues,
+  MemberNotice,
+  MemberNotices,
   MyPayments,
   NewReceiptInput,
   PaymentReport,
@@ -59,7 +74,7 @@ import type { CollectionsRepository, SheetHead } from './collections.repository'
 const HEAD_LABEL: Record<DemandHead, string> = { RRF: 'RRF', INSURANCE: 'Insurance', CRD: 'CRD', SRDS: 'SRDS', SHARE_CAPITAL: 'Share capital', PENAL: 'Penal interest', INTEREST: 'Interest', PRINCIPAL: 'Principal' };
 const PRODUCT_LABEL: Record<string, string> = { ORDINARY: 'Ordinary', EDUCATION: 'Education', SALARY: 'Salary', DEPOSIT: 'Deposit' };
 const PAY_TO = { accountName: 'TGSECCSL Dues Collection', accountNo: 'XXXXXXXX3307', ifsc: 'DEMO0000929', upi: 'tgseccsl.dues@demo', counter: 'Society cash counter, 2nd Floor, West Ancillary Building' };
-const ACTION_TEXT: Record<DemandSheetAction, string> = { certify: 'Certify', sendToDdo: 'Send to DDO', postRecovery: 'Enter recovery' };
+const ACTION_TEXT: Record<DemandSheetAction | DeductionEntryAction, string> = { certify: 'Certify', sendToDdo: 'Send to DDO', postRecovery: 'Enter recovery', saveEntry: 'Enter deductions', submitEntry: 'Submit deductions', rejectEntry: 'Review deductions' };
 /** Where each demand head is credited when money comes in (docs/22 §5.6). */
 const HEAD_ACCOUNT: Partial<Record<DemandHead, string>> = { INTEREST: '4100', PENAL: '4200', CRD: DEPOSIT_ACCOUNT.CRD, SRDS: DEPOSIT_ACCOUNT.SRDS, RRF: '2320', INSURANCE: '2400', SHARE_CAPITAL: ACCOUNT.SHARE_CAPITAL };
 const MEMBER_HEADS = new Set<DemandHead>(['PRINCIPAL', 'CRD', 'SRDS', 'SHARE_CAPITAL']);
@@ -157,8 +172,9 @@ export class CollectionsService {
     return (id && v.depts.get(id)?.name) || '';
   }
 
-  private lineView(v: View, line: DemandLine, posted: boolean): DemandLineView {
+  private lineView(v: View, line: DemandLine, posted: boolean, pay?: { minTakeHome: Paise; previous: Map<string, number> }): DemandLineView {
     const m = v.members.get(line.memberId);
+    const available = m && pay ? availableSalary(m.payProfile, pay.minTakeHome) : undefined;
     return {
       memberId: line.memberId,
       generalNo: m?.generalNo ?? '',
@@ -168,7 +184,29 @@ export class CollectionsService {
       components: inPriority(line.components.map((c) => ({ ...c, ...this.labelOf(v, c) }))),
       totalDemand: line.totalDemand,
       ...(posted && line.recovered !== undefined ? { recovered: line.recovered, short: Math.max(0, line.totalDemand - line.recovered) } : {}),
+      ...(line.deducted !== undefined ? { deducted: line.deducted } : {}),
+      ...(line.entrySource ? { entrySource: line.entrySource } : {}),
+      ...(line.enteredByName ? { enteredByName: line.enteredByName } : {}),
+      ...(line.note ? { note: line.note } : {}),
+      ...(m?.payProfile.grossSalary ? { grossSalary: m.payProfile.grossSalary } : {}),
+      ...(available !== undefined ? { availableSalary: available } : {}),
+      ...(pay ? { previousOutstanding: pay.previous.get(line.memberId) ?? 0 } : {}),
     };
+  }
+
+  /** P7b: the sheet's actions for this user, from the workflow rules and the user's permissions. */
+  private async actionsFor(sh: SheetHead, user: SessionUser): Promise<string[]> {
+    const [enter, post] = await Promise.all([this.app.permissions.has(user.role, 'collections.enterDeduction'), this.app.permissions.has(user.role, 'collections.postRecovery')]);
+    const sheet = demandSheetActionsFor(sh.status, { role: user.role }).filter((a) => a !== 'postRecovery' || post);
+    const entry = deductionEntryActionsFor(sh.status, sh.entry?.status, { role: user.role }).filter((a) => (a === 'rejectEntry' ? post : enter));
+    return [...sheet, ...entry];
+  }
+
+  /** P7b: send-by date (settings) and whether the sheet missed it. */
+  private sendBy(sh: SheetHead | undefined, cycle: Cycle, days: number, today: string): { sendBy: string; sendLate: boolean } {
+    const sendBy = demandSendByDate(cycle, days);
+    const sentOn = sh?.sent?.at.slice(0, 10);
+    return { sendBy, sendLate: sentOn ? sentOn > sendBy : today > sendBy && (!sh || sh.status === 'GENERATED' || sh.status === 'CERTIFIED') };
   }
 
   private async requireView(user: SessionUser): Promise<void> {
@@ -192,7 +230,7 @@ export class CollectionsService {
   // ---- ST-40 ----
   async overview(user: SessionUser, cycleParam?: string): Promise<DemandCycleOverview> {
     await this.requireView(user);
-    const [v, gen, sheetCycles] = await Promise.all([this.view(), this.generatableCycles(), this.repo.cycles()]);
+    const [v, gen, sheetCycles, settings] = await Promise.all([this.view(), this.generatableCycles(), this.repo.cycles(), this.app.masters.settings()]);
     const cycle = cycleParam || v.cycle;
     const sheets = await this.repo.sheetsForCycle(cycle);
     const depts = [...v.depts.values()].filter((d) => user.role !== 'DDO' || d.id === user.departmentId);
@@ -200,7 +238,7 @@ export class CollectionsService {
     for (const d of depts) {
       const sh = sheets.find((s) => s.departmentId === d.id);
       const full = sh?.status === 'RECOVERY_POSTED' ? await this.repo.sheet(sh.id) : undefined;
-      const actions = sh ? demandSheetActionsFor(sh.status, { role: user.role }) : [];
+      const actions = sh ? await this.actionsFor(sh, user) : [];
       rows.push({
         ...(sh ? { id: sh.id } : {}),
         cycle,
@@ -213,7 +251,9 @@ export class CollectionsService {
         recovered: sh?.totalRecovered ?? 0,
         short: full ? sum(full.lines.map((l) => Math.max(0, l.totalDemand - (l.recovered ?? 0)))) : 0,
         shortMembers: full ? full.lines.filter((l) => (l.recovered ?? 0) < l.totalDemand).length : 0,
-        ...(actions[0] ? { myAction: ACTION_TEXT[actions[0]] } : {}),
+        ...(actions[0] ? { myAction: ACTION_TEXT[actions[0] as keyof typeof ACTION_TEXT] } : {}),
+        ...(sh?.entry ? { entryStatus: sh.entry.status, entrySource: sh.entry.source } : {}),
+        ...this.sendBy(sh, cycle, settings.demandSendByDays, v.today),
       });
     }
     const own = user.role === 'DDO' && user.departmentId ? v.depts.get(user.departmentId) : undefined;
@@ -325,8 +365,9 @@ export class CollectionsService {
 
   private async detail(v: View, sh: DemandSheet, user: SessionUser): Promise<DemandSheetDetail> {
     const posted = sh.status === 'RECOVERY_POSTED';
-    const lines = sh.lines.map((l) => this.lineView(v, l, posted)).sort((a, b) => a.generalNo.localeCompare(b.generalNo));
-    const actions = demandSheetActionsFor(sh.status, { role: user.role });
+    const [settings, previous] = await Promise.all([this.app.masters.settings(), this.repo.outstandingBefore(sh.lines.map((l) => l.memberId), sh.cycle)]);
+    const lines = sh.lines.map((l) => this.lineView(v, l, posted, { minTakeHome: settings.minTakeHomePay, previous })).sort((a, b) => a.generalNo.localeCompare(b.generalNo));
+    const actions = await this.actionsFor(sh, user);
     const { lines: _l, ...rest } = sh;
     const dept = v.depts.get(sh.departmentId);
     const accountant = await this.accountantName();
@@ -340,7 +381,70 @@ export class CollectionsService {
       actions,
       ...(sh.status !== 'RECOVERY_POSTED' ? { waitingOn: sh.status === 'SENT_TO_DDO' ? `${dept?.ddoName ?? 'the DDO'} (deduction) and ${accountant} (post recovery)` : accountant } : {}),
       ...(demo ? { demoActAs: accountant } : {}),
+      ...this.sendBy(sh, sh.cycle, settings.demandSendByDays, v.today),
     };
+  }
+
+  // ---- P7b deduction entry (D-088, REQ-132): DDO online or the Accountant from a paper sheet ----
+  async entryAction(request: FastifyRequest, id: string, action: DeductionEntryAction, body: Partial<DeductionEntryInput> & { reason?: string }): Promise<DemandSheetDetail> {
+    const user = sessionOf(request);
+    await this.requireView(user);
+    const [at, settings, v] = await Promise.all([businessNow(this.app), this.app.masters.settings(), this.view()]);
+    const saved = await withTransaction(this.app.db, async (tx) => {
+      const sh = await this.loadSheet(user, id, tx, true);
+      if (!(await this.actionsFor(sh, user)).includes(action)) fail(sh.status === 'SENT_TO_DDO' ? 'FORBIDDEN' : 'INVALID_TRANSITION', sh.status === 'SENT_TO_DDO' ? 'This step is not yours now.' : 'The sheet must be sent to the DDO first.');
+      const next = nextDeductionEntryStatus(sh.entry?.status, action, user.role)!;
+      const from = sh.entry?.status ?? 'NONE';
+      const so = signOff(user, at);
+      const dept = v.depts.get(sh.departmentId);
+      const changes: Array<{ memberId: string; before?: number; after: number }> = [];
+      if (action === 'saveEntry') {
+        const deductions = body.deductions ?? {};
+        const notes = body.notes ?? {};
+        const fieldErrors: Record<string, string> = {};
+        for (const [memberId, amount] of Object.entries(deductions)) {
+          const line = sh.lines.find((l) => l.memberId === memberId);
+          const m = v.members.get(memberId);
+          if (!line || !m) fieldErrors[`deductions.${memberId}`] = 'Not on this sheet';
+          else {
+            const err = checkDeduction(amount, line.totalDemand, availableSalary(m.payProfile, settings.minTakeHomePay));
+            if (err) fieldErrors[`deductions.${memberId}`] = err;
+          }
+        }
+        if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted amounts.', { fieldErrors });
+        const source: DeductionEntrySource = user.role === 'DDO' ? 'DDO_ONLINE' : 'PHYSICAL_SHEET';
+        for (const line of sh.lines) {
+          const amount = deductions[line.memberId];
+          const note = notes[line.memberId]?.trim();
+          if (amount === undefined && note === undefined) continue;
+          if (amount !== undefined && amount !== line.deducted) {
+            changes.push({ memberId: line.memberId, ...(line.deducted !== undefined ? { before: line.deducted } : {}), after: amount });
+            // A reviewer's correction keeps the line's original source; the audit trail keeps both amounts.
+            Object.assign(line, { deducted: amount, entrySource: line.entrySource ?? source, enteredByName: user.name, enteredAt: at });
+          }
+          if (note !== undefined) {
+            if (note) line.note = note;
+            else delete line.note;
+          }
+          await this.repo.saveLine(tx, sh.id, line);
+        }
+        sh.entry = { ...(sh.entry ?? { source }), status: next, savedBy: so, ...(next === 'UNDER_REVIEW' ? { reviewed: so } : {}) };
+      }
+      if (action === 'submitEntry') sh.entry = { ...(sh.entry ?? { source: 'DDO_ONLINE' }), status: next, submitted: so };
+      if (action === 'rejectEntry') {
+        const reason = body.reason?.trim() ?? '';
+        if (reason.length < 10) fail('VALIDATION_ERROR', 'Tell the DDO what to correct (at least 10 characters).', { fieldErrors: { reason: 'At least 10 characters' } });
+        sh.entry = { ...sh.entry!, status: next, rejection: { ...so, remarks: reason } };
+      }
+      sh.events = [...(sh.events ?? []), { at, actorId: user.id, actorName: user.name, actorRole: user.role, action, fromStatus: from, toStatus: next, ...(action === 'rejectEntry' ? { remarks: body.reason?.trim() } : {}) }];
+      const { lines: _l, ...head } = sh;
+      await this.repo.saveSheetHead(tx, head);
+      const what = action === 'saveEntry' ? `saved ${changes.length} deduction${changes.length === 1 ? '' : 's'}` : action === 'submitEntry' ? 'submitted the deductions' : 'sent the deductions back';
+      await this.app.audit.record(request, { action, entity: 'demandSheet', entityId: sh.id, summary: `${user.name} ${what} · ${dept?.name ?? ''} ${formatCycle(sh.cycle)}`, ...(changes.length ? { before: Object.fromEntries(changes.map((c) => [c.memberId, c.before ?? null])), after: Object.fromEntries(changes.map((c) => [c.memberId, c.after])) } : {}) }, tx);
+      return sh;
+    });
+    await this.sync({ demandSheets: [saved] });
+    return this.detail(await this.view(), saved, user);
   }
 
   async sheetDetail(user: SessionUser, id: string): Promise<DemandSheetDetail> {
@@ -373,11 +477,12 @@ export class CollectionsService {
     const changed: Changed = { loans: new Map(), deposits: new Map(), shares: new Map() };
     const newReceipts: Receipt[] = [];
     const notes: Array<[string, string, Record<string, string | number>, string]> = [];
+    const notices: MemberNotice[] = [];
     const saved = await withTransaction(this.app.db, async (tx) => {
       const sh = await this.loadSheet(user, id, tx, true);
       const next = nextDemandSheetStatus(sh.status, action);
       if (!next) fail('INVALID_TRANSITION', `This sheet is "${sh.status}". Refresh to see the latest.`);
-      if (!opts.demo && !demandSheetActionsFor(sh.status, { role: user.role }).includes(action)) fail('FORBIDDEN', 'This step belongs to the Accountant.');
+      if (!opts.demo && !(await this.actionsFor(sh, user)).includes(action)) fail('FORBIDDEN', 'This step belongs to the Accountant.');
       const so = signOff(actor, at, input?.remarks?.trim() || undefined);
       const dept = await this.app.departments.get(sh.departmentId);
       if (action === 'certify') {
@@ -390,20 +495,25 @@ export class CollectionsService {
         if (ddo) notes.push([ddo, 'demand.sent', { cycle: formatCycle(sh.cycle), department: dept?.name ?? '', members: sh.lines.length, amount: formatINR(sh.totalDemand) }, `/demand-sheets/${sh.id}`]);
       }
       if (action === 'postRecovery') {
+        // R6 approve-and-post: amounts given now, else the saved entry, else the full demand; each
+        // within the demand and the available salary (R1).
         const recovered = input?.recovered ?? {};
+        const [settings, everyone] = await Promise.all([this.app.masters.settings(), this.app.members.all()]);
+        const members = new Map(everyone.map((x) => [x.id, x]));
+        const amountOf = (l: DemandLine) => recovered[l.memberId] ?? l.deducted ?? l.totalDemand;
         const fieldErrors: Record<string, string> = {};
-        for (const [memberId, amount] of Object.entries(recovered)) {
-          const line = sh.lines.find((l) => l.memberId === memberId);
-          if (!line) fieldErrors[`recovered.${memberId}`] = 'Not on this sheet';
-          else if (!Number.isInteger(amount) || amount < 0) fieldErrors[`recovered.${memberId}`] = 'Enter ₹0 or more';
-          else if (amount > line.totalDemand) fieldErrors[`recovered.${memberId}`] = `More than the demand of ${formatINR(line.totalDemand)}. The DDO refunds any excess (D-061).`;
+        for (const memberId of Object.keys(recovered)) if (!sh.lines.some((l) => l.memberId === memberId)) fieldErrors[`recovered.${memberId}`] = 'Not on this sheet';
+        for (const line of sh.lines) {
+          const m = members.get(line.memberId);
+          const err = checkDeduction(amountOf(line), line.totalDemand, m ? availableSalary(m.payProfile, settings.minTakeHomePay) : undefined);
+          if (err) fieldErrors[`recovered.${line.memberId}`] = err;
         }
         if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted amounts.', { fieldErrors });
         const date = lastDayOf(sh.cycle) > today ? today : lastDayOf(sh.cycle);
         const credit: JournalLineInput[] = [];
         let seq = await this.repo.nextReceiptSeq(tx);
         for (const line of sh.lines) {
-          const amount = recovered[line.memberId] ?? line.totalDemand;
+          const amount = amountOf(line);
           const before = line.components.map((c) => ({ ...c }));
           line.components = allocateRecovery(line.components, amount).components;
           line.recovered = amount;
@@ -419,6 +529,8 @@ export class CollectionsService {
         }
         sh.totalRecovered = sum(sh.lines.map((l) => l.recovered ?? 0));
         sh.posted = so;
+        sh.entry = { ...(sh.entry ?? { source: 'PHYSICAL_SHEET' }), status: 'POSTED', approved: so };
+        notices.push(...(await this.raiseNotices(tx, request, sh, at)));
         // The DDO remits the month's recovery to the society's bank: one entry per sheet.
         if (sh.totalRecovered > 0) await this.app.ledger.post({ entryDate: date, narration: `Salary recovery ${formatCycle(sh.cycle)}, ${dept?.name ?? sh.departmentId}`, source: 'SALARY_RECOVERY', sourceRef: sh.id, postedBy: { id: actor.id, name: actor.name }, lines: [{ accountCode: ACCOUNT.BANK, debit: sh.totalRecovered, credit: 0 }, ...credit] }, tx);
       }
@@ -431,7 +543,71 @@ export class CollectionsService {
     });
     await this.syncChanged(changed, { demandSheets: [saved], receipts: newReceipts });
     for (const n of notes) await notifyMember(this.app, ...n);
+    await this.deliverNotices(request, notices);
     return saved;
+  }
+
+  // ---- P7b-3 defaulters and notices (D-088, BR-020, Q-310; guarantor recovery waits for F-13) ----
+
+  /** Posted loan-unpaid history of a member, oldest first (`extra` = the sheet being posted now). */
+  private async loanHistory(memberId: string, tx?: Tx, extra?: DemandSheet) {
+    const rows = (await this.repo.linesOfMember(memberId, tx)).filter(({ sheet }) => sheet.status === 'RECOVERY_POSTED' || sheet.id === extra?.id);
+    return rows.map(({ sheet, line }) => ({ cycle: sheet.cycle, components: sheet.id === extra?.id ? extra.lines.find((l) => l.memberId === memberId)!.components : line.components }));
+  }
+
+  /**
+   * After a recovery is posted: every borrower who is now a defaulter (settings.defaulterCycles
+   * unpaid cycles in a row) gets a notice for each loan left unpaid, and so does every surety who
+   * signed for it. Inside the posting transaction, at most once per recipient, loan and cycle.
+   */
+  private async raiseNotices(tx: Tx, request: FastifyRequest, sh: DemandSheet, at: string): Promise<MemberNotice[]> {
+    const threshold = (await this.app.masters.settings()).defaulterCycles;
+    const created: MemberNotice[] = [];
+    for (const line of sh.lines) {
+      if (loanUnpaid(line.components) <= 0) continue;
+      const history = await this.loanHistory(line.memberId, tx, sh);
+      const status = loanDefaulter(history.map((h) => ({ cycle: h.cycle, loanUnpaid: loanUnpaid(h.components) })), threshold);
+      if (!status.isDefaulter) continue;
+      const borrower = await this.app.members.byId(line.memberId);
+      for (const loanId of new Set(line.components.filter((c) => c.loanId && loanUnpaid(line.components, c.loanId) > 0).map((c) => c.loanId!))) {
+        const loan = await this.app.loans.repo.find(loanId, tx);
+        if (!loan || !borrower) continue;
+        const overdue = history.reduce((s, h) => s + loanUnpaid(h.components, loanId), 0);
+        const base = { borrowerId: borrower.id, borrowerName: borrower.name, loanId, loanNo: loan.loanNo ?? loan.applicationNo, cycle: sh.cycle, overdue, consecutiveCycles: status.consecutiveCycles, createdAt: at, delivery: { inApp: 'PENDING' as const, whatsapp: 'NOT_CONNECTED' as const, email: 'NOT_CONNECTED' as const } };
+        const recipients: Array<[MemberNotice['kind'], string]> = [['DEFAULTER', borrower.id], ...loan.sureties.filter((s) => s.status === 'ACCEPTED').map((s) => ['GUARANTOR', s.memberId] as [MemberNotice['kind'], string])];
+        for (const [kind, memberId] of recipients) {
+          const n: MemberNotice = { id: `ntc-${randomUUID().slice(0, 8)}`, kind, memberId, ...base };
+          if (await this.repo.insertNotice(tx, n)) created.push(n);
+        }
+      }
+    }
+    if (created.length) await this.app.audit.record(request, { action: 'defaulterNotices', entity: 'demandSheet', entityId: sh.id, summary: `${created.length} defaulter notice${created.length === 1 ? '' : 's'} raised for ${formatCycle(sh.cycle)} (${created.filter((n) => n.kind === 'GUARANTOR').length} to sureties)`, after: created.map((n) => ({ id: n.id, kind: n.kind, memberId: n.memberId, loanNo: n.loanNo, overdue: n.overdue })) }, tx);
+    return created;
+  }
+
+  /** In-app now (WhatsApp / email in P8); each notice keeps its delivery status, and the audit trail the outcome. */
+  private async deliverNotices(request: FastifyRequest, notices: MemberNotice[]): Promise<void> {
+    if (!notices.length) return;
+    const members = new Map((await this.app.members.all()).map((m) => [m.id, m]));
+    for (const n of notices) {
+      const b = members.get(n.borrowerId);
+      const vars: Record<string, string | number> = n.kind === 'DEFAULTER' ? { overdue: formatINR(n.overdue), cycles: n.consecutiveCycles } : { borrower: n.borrowerName, generalNo: b?.generalNo ?? '', loanNo: n.loanNo, overdue: formatINR(n.overdue), cycles: n.consecutiveCycles };
+      const sent = await notifyMember(this.app, n.memberId, n.kind === 'DEFAULTER' ? 'defaulter.notice' : 'defaulter.guarantorNotice', vars, '/payments');
+      n.delivery = { ...n.delivery, inApp: sent === undefined ? 'PENDING' : sent ? 'SENT' : 'FAILED' };
+      await this.repo.saveNotice(n);
+    }
+    const sent = notices.filter((n) => n.delivery.inApp === 'SENT').length;
+    await this.app.audit.record(request, { action: 'noticeDelivery', entity: 'memberNotice', entityId: notices[0]!.cycle, summary: `Defaulter notices ${notices[0]!.cycle}: ${sent} of ${notices.length} delivered in the app${notices.length - sent ? `, ${notices.length - sent} pending or failed` : ''}; WhatsApp and email not connected yet (P8)` });
+  }
+
+  /** ST-11 member page: defaulter status and the notices the member received (as borrower or surety). */
+  async memberNotices(user: SessionUser, memberId: string): Promise<MemberNotices> {
+    if (user.role === 'MEMBER' || user.role === 'APPLICANT') fail('FORBIDDEN', 'Staff only.');
+    if (!(await this.app.permissions.has(user.role, 'members.view'))) fail('FORBIDDEN', 'You do not have access to members.');
+    const m = (await this.app.members.byId(memberId)) ?? fail('NOT_FOUND', 'Member not found.');
+    if (user.role === 'DDO' && m.departmentId !== user.departmentId) fail('NOT_FOUND', 'Member not found.');
+    const [history, notices, settings] = await Promise.all([this.loanHistory(m.id), this.repo.noticesOf(m.id), this.app.masters.settings()]);
+    return { defaulter: { ...loanDefaulter(history.map((h) => ({ cycle: h.cycle, loanUnpaid: loanUnpaid(h.components) })), settings.defaulterCycles), threshold: settings.defaulterCycles }, notices };
   }
 
   /**
@@ -493,17 +669,55 @@ export class CollectionsService {
   }
 
   // ---- dues (ST-45, MB-10) ----
-  private async dues(v: View, memberId: string, tx?: Tx): Promise<MemberDues> {
+  /** Penal inputs (P7b-2): each loan product's yearly penal rate and the grace days. */
+  private async penalRules(): Promise<{ rates: Partial<Record<LoanProductCode, number>>; graceDays: number }> {
+    const [products, settings] = await Promise.all([this.app.masters.loanProducts(), this.app.masters.settings()]);
+    return { rates: Object.fromEntries(products.map((p) => [p.code, p.penalRatePercent])), graceDays: settings.penalGraceDays };
+  }
+
+  /** What a member owes from posted cycles as of a date: unpaid instalments plus penal on the loan part (R3). */
+  private async dues(v: View, memberId: string, tx?: Tx, asOf = v.today): Promise<MemberDues> {
     const m = v.members.get(memberId) ?? fail('NOT_FOUND', 'Member not found.');
-    const [rows, share, settings] = await Promise.all([this.repo.linesOfMember(memberId, tx), this.repo.share(memberId, tx), this.app.masters.settings()]);
+    const [rows, share, settings, rules] = await Promise.all([this.repo.linesOfMember(memberId, tx), this.repo.share(memberId, tx), this.app.masters.settings(), this.penalRules()]);
     const arrears: MemberDues['arrears'] = [];
     for (const { sheet, line } of rows) {
       if (sheet.status !== 'RECOVERY_POSTED') continue;
       const unpaid = line.totalDemand - sum(line.components.map((c) => c.allocated));
-      if (unpaid > 0) arrears.push({ cycle: sheet.cycle, sheetId: sheet.id, unpaid, components: inPriority(line.components.map((c) => ({ ...c, ...this.labelOf(v, c), unpaid: c.amount - c.allocated }))) });
+      const penal = penalDue({ cycle: sheet.cycle, components: line.components, ...rules, ...(line.penal ? { penal: line.penal } : {}), asOf });
+      if (unpaid > 0 || penal > 0) arrears.push({ cycle: sheet.cycle, sheetId: sheet.id, unpaid, penal, ...(line.penal?.waived ? { penalWaived: line.penal.waived } : {}), components: inPriority(line.components.map((c) => ({ ...c, ...this.labelOf(v, c), unpaid: c.amount - c.allocated }))) });
     }
     const shareCapitalDue = share ? Math.max(0, share.numberOfShares * settings.shareValue - share.shareCapital) : 0;
-    return { memberId, name: m.name, generalNo: m.generalNo, departmentName: this.deptName(v, m.departmentId), arrears, totalArrears: sum(arrears.map((a) => a.unpaid)), shareCapitalDue };
+    const totalPenal = sum(arrears.map((a) => a.penal));
+    return { memberId, name: m.name, generalNo: m.generalNo, departmentName: this.deptName(v, m.departmentId), arrears, totalArrears: sum(arrears.map((a) => a.unpaid)) + totalPenal, totalPenal, shareCapitalDue };
+  }
+
+  /**
+   * R5: the Accountant waives penal on one cycle, with a reason. Penal is never booked before it is
+   * collected, so a waiver changes no ledger entry; the line keeps the original and waived amounts.
+   */
+  async waivePenal(request: FastifyRequest, memberId: string, body: { sheetId?: string; amount?: number; reason?: string }): Promise<MemberDues> {
+    const user = sessionOf(request);
+    await this.requireView(user);
+    if (!(await this.app.permissions.has(user.role, 'collections.waivePenal'))) fail('FORBIDDEN', 'You are not allowed to waive penal interest.');
+    const reason = body.reason?.trim() ?? '';
+    const amount = Number(body.amount);
+    const fieldErrors: Record<string, string> = {};
+    if (reason.length < 10) fieldErrors.reason = 'Give the reason (at least 10 characters)';
+    if (!Number.isInteger(amount) || amount <= 0) fieldErrors.amount = 'Enter the amount to waive';
+    if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
+    const [v, at, rules] = await Promise.all([this.view(), businessNow(this.app), this.penalRules()]);
+    await withTransaction(this.app.db, async (tx) => {
+      const sh = await this.repo.sheet(body.sheetId ?? '', tx, true);
+      const line = sh?.lines.find((l) => l.memberId === memberId);
+      if (!sh || !line || sh.status !== 'RECOVERY_POSTED') return fail('NOT_FOUND', 'No posted cycle with dues for this member.');
+      const due = penalDue({ cycle: sh.cycle, components: line.components, ...rules, ...(line.penal ? { penal: line.penal } : {}), asOf: v.today });
+      if (amount > due) fail('VALIDATION_ERROR', `Only ${formatINR(due)} penal is owed for ${formatCycle(sh.cycle)}.`, { fieldErrors: { amount: `At most ${formatINR(due)}` } });
+      const prev = line.penal;
+      line.penal = { settledTo: v.today, carried: due - amount, collected: prev?.collected ?? 0, waived: (prev?.waived ?? 0) + amount, waivers: [...(prev?.waivers ?? []), { amount, original: due, reason, byName: user.name, at }] };
+      await this.repo.saveLine(tx, sh.id, line);
+      await this.app.audit.record(request, { action: 'waivePenal', entity: 'demandSheet', entityId: sh.id, summary: `${user.name} waived ${formatINR(amount)} of ${formatINR(due)} penal for ${v.members.get(memberId)?.name ?? memberId}, ${formatCycle(sh.cycle)}: ${reason}`, before: { memberId, penal: due }, after: { memberId, penal: due - amount, waived: amount, reason } }, tx);
+    });
+    return this.dues(await this.view(), memberId);
   }
 
   async memberDues(user: SessionUser, memberId: string): Promise<MemberDues> {
@@ -561,7 +775,7 @@ export class CollectionsService {
 
   /** Dues payment: arrears oldest first (D-061); share capital: the first-demand shares (D-029). */
   private async takePayment(tx: Tx, v: View, memberId: string, purpose: 'DUES' | 'SHARE_CAPITAL', amount: number, debitAccount: string, receipt: Omit<Receipt, 'id' | 'receiptNo' | 'memberId' | 'amount' | 'allocations' | 'purpose'>, changed: Changed, sheetsOut: DemandSheet[]): Promise<Receipt> {
-    const dues = await this.dues(v, memberId, tx);
+    const dues = await this.dues(v, memberId, tx, receipt.date);
     let allocations: Receipt['allocations'] = [];
     const credit: JournalLineInput[] = [];
     if (purpose === 'SHARE_CAPITAL') {
@@ -579,12 +793,20 @@ export class CollectionsService {
       if (amount > dues.totalArrears) fail('VALIDATION_ERROR', `More than the dues of ${formatINR(dues.totalArrears)}.`, { fieldErrors: { amount: `At most ${formatINR(dues.totalArrears)}` } });
       const sheets: DemandSheet[] = [];
       for (const a of dues.arrears) sheets.push((await this.repo.sheet(a.sheetId, tx, true))!);
-      const result = allocateArrears(sheets.map((s) => ({ key: s.id, components: s.lines.find((l) => l.memberId === memberId)!.components })), amount);
+      // R4: penal first (oldest cycle first), then the instalments in the agreement's order.
+      const result = allocateDuesPayment(sheets.map((s, i) => ({ key: s.id, penal: dues.arrears[i]!.penal, components: s.lines.find((l) => l.memberId === memberId)!.components })), amount);
       for (const [i, cyc] of result.cycles.entries()) {
         const sh = sheets[i]!;
         const line = sh.lines.find((l) => l.memberId === memberId)!;
         const before = line.components.map((c) => ({ ...c }));
         line.components = cyc.components;
+        // Settle penal to the payment date: what is left keeps accruing only on what is still unpaid.
+        const owed = dues.arrears[i]!.penal;
+        if (owed > 0 || line.penal) line.penal = { ...line.penal, settledTo: receipt.date, carried: owed - cyc.penalPaid, collected: (line.penal?.collected ?? 0) + cyc.penalPaid, waived: line.penal?.waived ?? 0 };
+        if (cyc.penalPaid > 0) {
+          allocations.push({ head: 'PENAL', amount: cyc.penalPaid, cycle: sh.cycle });
+          credit.push({ accountCode: HEAD_ACCOUNT.PENAL!, debit: 0, credit: cyc.penalPaid });
+        }
         const applied = await this.applyAllocation(tx, memberId, sh.cycle, before, line.components, v.today, changed);
         allocations.push(...applied.allocations);
         credit.push(...applied.lines);

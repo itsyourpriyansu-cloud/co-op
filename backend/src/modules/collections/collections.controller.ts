@@ -1,5 +1,5 @@
-import type { DemandSheetAction } from '@tgs/domain';
-import type { NewReceiptInput, ReceiptListParams, RecoveryInput, ReportPaymentInput } from '@tgs/types';
+import type { DeductionEntryAction, DemandSheetAction } from '@tgs/domain';
+import type { DeductionEntryInput, NewReceiptInput, ReceiptListParams, RecoveryInput, ReportPaymentInput } from '@tgs/types';
 import type { FastifyRequest } from 'fastify';
 import { sessionOf } from '../../common/guards';
 import type { CollectionsService } from './collections.service';
@@ -15,11 +15,14 @@ export class CollectionsController {
   sheet = (r: ById) => this.service.sheetDetail(sessionOf(r), r.params.id);
   act = (r: FastifyRequest<{ Params: { id: string; action: DemandSheetAction }; Body: RecoveryInput }>) => this.service.act(r, r.params.id, r.params.action, r.body);
   demoAct = (r: ById) => this.service.demoAct(r, r.params.id);
+  entry = (r: FastifyRequest<{ Params: { id: string; action: DeductionEntryAction }; Body: Partial<DeductionEntryInput> & { reason?: string } }>) => this.service.entryAction(r, r.params.id, r.params.action, r.body ?? {});
 
   receipts = (r: FastifyRequest<{ Querystring: ReceiptListParams }>) => this.service.receipts(sessionOf(r), r.query);
   receipt = (r: ById) => this.service.receipt(sessionOf(r), r.params.id);
   counterReceipt = (r: FastifyRequest<{ Body: Partial<NewReceiptInput> }>) => this.service.counterReceipt(r, r.body ?? {});
   dues = (r: ById) => this.service.memberDues(sessionOf(r), r.params.id);
+  notices = (r: ById) => this.service.memberNotices(sessionOf(r), r.params.id);
+  waivePenal = (r: FastifyRequest<{ Params: { id: string }; Body: { sheetId?: string; amount?: number; reason?: string } }>) => this.service.waivePenal(r, r.params.id, r.body ?? {});
 
   reports = (r: FastifyRequest<{ Querystring: { status?: string } }>) => this.service.reports(sessionOf(r), r.query.status);
   verify = (r: FastifyRequest<{ Params: { id: string }; Body: { remarks?: string } }>) => this.service.verifyReport(r, r.params.id, r.body?.remarks);

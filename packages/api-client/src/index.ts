@@ -68,12 +68,14 @@ import {
   type DepositList,
   type DepositListParams,
   type DepositRow,
+  type DeductionEntryInput,
   type FdRequestInput,
   type FdSettlement,
   type DemandCycleOverview,
   type DemandPreview,
   type DemandSheetDetail,
   type MemberDues,
+  type MemberNotices,
   type MyPayments,
   type NewReceiptInput,
   type PaymentReport,
@@ -373,6 +375,8 @@ export function createApiClient(options: ApiClientOptions) {
       sheet: (id: string) => request<DemandSheetDetail>('GET', `/demand/sheets/${id}`),
       act: (id: string, action: 'certify' | 'sendToDdo' | 'postRecovery', input: Partial<RecoveryInput> = {}) => request<DemandSheetDetail>('POST', `/demand/sheets/${id}/actions/${action}`, input),
       demoAct: (id: string) => request<DemandSheetDetail>('POST', `/demand/sheets/${id}/demo-act`),
+      /** P7b (D-088): save, submit or send back the deduction entry. */
+      entry: (id: string, action: 'saveEntry' | 'submitEntry' | 'rejectEntry', body: Partial<DeductionEntryInput> & { reason?: string } = {}) => request<DemandSheetDetail>('POST', `/demand/sheets/${id}/entry/${action}`, body),
     },
     /** Staff: receipts and member-reported payments (ST-44 … ST-47). */
     receipts: {
@@ -380,6 +384,10 @@ export function createApiClient(options: ApiClientOptions) {
       get: (id: string) => request<ReceiptDetail>('GET', `/receipts/${id}`),
       create: (input: NewReceiptInput) => request<ReceiptDetail>('POST', '/receipts', input),
       dues: (memberId: string) => request<MemberDues>('GET', `/members/${memberId}/dues`),
+      /** P7b-3 (D-088): defaulter status and notices received as borrower or surety (backend only). */
+      notices: (memberId: string) => request<MemberNotices>('GET', `/members/${memberId}/notices`),
+      /** P7b-2 (D-088, R5): waive penal interest on one cycle, with a reason. */
+      waivePenal: (memberId: string, input: { sheetId: string; amount: number; reason: string }) => request<MemberDues>('POST', `/members/${memberId}/dues/penal-waiver`, input),
       reports: (status?: string) => request<PaymentReportRow[]>('GET', `/payment-reports${toQuery({ status })}`),
       verify: (id: string, remarks?: string) => request<ReceiptDetail>('POST', `/payment-reports/${id}/verify`, { remarks }),
       reject: (id: string, reason: string) => request<PaymentReportRow>('POST', `/payment-reports/${id}/reject`, { reason }),

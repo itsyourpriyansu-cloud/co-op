@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, BadgeCheck, ChevronDown, ChevronRight, Download, FileSearch, FlaskConical, Printer, Send } from 'lucide-react';
 import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type, SnackbarV2Variant, StepperV2, StepperV2StepStatus, TextAreaV2, addSnackbarV2 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { formatDisplayDateTime, formatINR, formatDisplayDate } from '@tgs/domain';
 import type { DemandSheetDetail } from '@tgs/types';
 import { Letterhead } from '@/components/Letterhead';
 import { Money } from '@/components/Money';
@@ -16,7 +16,7 @@ import { StatusTag } from '@/components/StatusTag';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { HEAD_COLUMNS, cycleLabel, downloadCsv } from './collections';
+import { ENTRY_LABEL, HEAD_COLUMNS, cycleLabel, downloadCsv } from './collections';
 
 type Drawer = 'certify' | 'sendToDdo' | null;
 
@@ -88,7 +88,8 @@ export function DemandSheetPage() {
                 <ButtonV2 text="Print" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => window.print()} />
                 {d.actions.includes('certify') && <ButtonV2 text="Certify" leftSlot={{ slot: <BadgeCheck size={16} /> }} onClick={() => setDrawer('certify')} />}
                 {d.actions.includes('sendToDdo') && <ButtonV2 text="Send to DDO" leftSlot={{ slot: <Send size={16} /> }} onClick={() => setDrawer('sendToDdo')} />}
-                {d.actions.includes('postRecovery') && <ButtonV2 text="Enter recovery" onClick={() => navigate(`/demand-sheets/${id}/recovery`)} />}
+                {d.actions.includes('postRecovery') && <ButtonV2 text={sh.entry?.status === 'SUBMITTED' || sh.entry?.status === 'UNDER_REVIEW' ? 'Review and post' : 'Enter recovery'} onClick={() => navigate(`/demand-sheets/${id}/recovery`)} />}
+                {!d.actions.includes('postRecovery') && d.actions.includes('saveEntry') && <ButtonV2 text="Enter deductions" onClick={() => navigate(`/demand-sheets/${id}/recovery`)} />}
                 {d.demoActAs && <ButtonV2 text={`Act as ${d.demoActAs}`} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FlaskConical size={16} /> }} loading={demo.isPending} onClick={() => demo.mutate()} />}
               </div>
             </header>
@@ -97,7 +98,15 @@ export function DemandSheetPage() {
               <StepperV2 steps={d.stages.map((s, i) => ({ id: i + 1, title: s.title, status: s.status === 'done' ? StepperV2StepStatus.COMPLETED : s.status === 'current' ? StepperV2StepStatus.CURRENT : StepperV2StepStatus.PENDING, ...(s.by ? { description: `${s.by}${s.date ? ` · ${s.date}` : ''}` } : {}) }))} />
             </div>
 
-            {sh.status === 'SENT_TO_DDO' && <AlertV2 type={AlertV2Type.PRIMARY} subType={AlertV2SubType.SUBTLE} heading="With the DDO for deduction" description="When the department reports what it deducted, enter the recovered amounts and post them. Short amounts become the member's dues." />}
+            {sh.status === 'SENT_TO_DDO' && (
+              <AlertV2
+                type={sh.entry?.status === 'REJECTED' ? AlertV2Type.WARNING : AlertV2Type.PRIMARY}
+                subType={AlertV2SubType.SUBTLE}
+                heading={sh.entry ? `Deductions ${ENTRY_LABEL[sh.entry.status]}${sh.entry.source === 'PHYSICAL_SHEET' ? ' (paper sheet)' : ' (entered online by the DDO)'}` : 'With the DDO for deduction'}
+                description={sh.entry?.status === 'REJECTED' ? `${sh.entry.rejection?.byName}: ${sh.entry.rejection?.remarks ?? ''}` : "The DDO enters what was actually deducted (or sends a paper sheet the Accountant enters). The Accountant checks and posts. Short amounts become the member's dues."}
+              />
+            )}
+            {d.sendBy && sh.status !== 'RECOVERY_POSTED' && <p className={d.sendLate ? 'text-caption text-danger-fg' : 'text-caption text-fg-tertiary'}>To reach the DDO by {formatDisplayDate(d.sendBy)}{d.sendLate ? ' · sent late' : ''}</p>}
 
             <section className="rounded-card border border-line bg-surface shadow-raised print:border-0 print:shadow-none">
               <div className="hidden px-5 pt-5 print:block">

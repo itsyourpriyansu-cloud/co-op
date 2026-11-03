@@ -51,6 +51,12 @@ export type Permission =
   | 'deposits.open'
   /** P6b (D-086): premature FD withdrawal. */
   | 'deposits.withdraw'
+  /** P7b (D-088): enter actual deductions on a sheet sent to the DDO. */
+  | 'collections.enterDeduction'
+  /** P7b (D-088): approve and post a recovery (Accountant). */
+  | 'collections.postRecovery'
+  /** P7b-2 (D-088, R5): waive penal interest, with a reason. */
+  | 'collections.waivePenal'
   | 'collections.view'
   | 'reports.view'
   /** Backend P3 (D-080): read the books (accounts, journals, statements, trial balance). */

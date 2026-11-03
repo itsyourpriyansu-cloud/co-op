@@ -1,17 +1,28 @@
 // ST-40 Demand sheets index: one row per department for the chosen cycle — members, demand,
 // recovered, short, status — and the next step for the signed-in user. Generate → ST-41, row → ST-42.
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Banknote, CircleAlert, FileSpreadsheet, Plus, TrendingDown } from 'lucide-react';
 import { ButtonV2, SingleSelectV2, StatCardV2, StatCardV2Variant, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type } from '@juspay/blend-design-system';
-import { formatINRCompact } from '@tgs/domain';
+import { formatDisplayDate, formatINRCompact } from '@tgs/domain';
+import type { DemandSheetRow } from '@tgs/types';
 import { Money } from '@/components/Money';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusTag } from '@/components/StatusTag';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { cycleLabel } from './collections';
+import { cycleLabel, ENTRY_LABEL } from './collections';
+
+/** P7b filters: pending verification, source, missed send-by date. */
+const FILTERS: Array<{ label: string; value: string; match: (r: DemandSheetRow) => boolean }> = [
+  { label: 'All departments', value: 'all', match: () => true },
+  { label: 'Pending verification', value: 'pending', match: (r) => r.entryStatus === 'SUBMITTED' || r.entryStatus === 'UNDER_REVIEW' },
+  { label: 'Entered online by the DDO', value: 'online', match: (r) => r.entrySource === 'DDO_ONLINE' },
+  { label: 'Entered from a paper sheet', value: 'paper', match: (r) => r.entrySource === 'PHYSICAL_SHEET' },
+  { label: 'Not sent on time', value: 'late', match: (r) => Boolean(r.sendLate) },
+];
 
 export function DemandSheetsPage() {
   const navigate = useNavigate();
@@ -20,6 +31,8 @@ export function DemandSheetsPage() {
   const q = useQuery({ queryKey: ['demand-overview', cycle ?? 'current'], queryFn: () => api.demand.overview(cycle), refetchInterval: 10_000 });
   const d = q.data;
   const pct = d && d.totals.demand ? (d.totals.recovered / d.totals.demand) * 100 : 0;
+  const [filter, setFilter] = useState('all');
+  const rows = (d?.rows ?? []).filter(FILTERS.find((f) => f.value === filter)!.match);
 
   return (
     <>
@@ -28,6 +41,9 @@ export function DemandSheetsPage() {
         description={`Monthly salary deductions by department: generate, certify (BR-030), send to the DDO, then post what was recovered${d?.scope.departmentName ? ` · ${d.scope.departmentName} only` : ''}.`}
         actions={
           <div className="flex items-center gap-2">
+            <div className="w-56">
+              <SingleSelectV2 placeholder="Show" items={[{ items: FILTERS.map(({ label, value }) => ({ label, value })) }]} selected={filter} onSelect={setFilter} />
+            </div>
             <div className="w-44">
               <SingleSelectV2 placeholder="Cycle" items={[{ items: (d?.cycles ?? []).map((c) => ({ label: `${cycleLabel(c)}${c === d?.currentCycle ? ' (current)' : ''}`, value: c })) }]} selected={d?.cycle ?? ''} onSelect={(c) => setParams({ cycle: c })} />
             </div>
@@ -60,7 +76,12 @@ export function DemandSheetsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line-subtle">
-                  {d.rows.map((r) => (
+                  {!rows.length && (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-6 text-center text-body text-fg-tertiary">No department matches this filter.</td>
+                    </tr>
+                  )}
+                  {rows.map((r) => (
                     <tr
                       key={r.departmentId}
                       className={cn('text-body', r.id ? 'cursor-pointer hover:bg-surface-subtle' : 'text-fg-tertiary')}
@@ -73,6 +94,8 @@ export function DemandSheetsPage() {
                       </td>
                       <td className="px-3 py-3">
                         <StatusTag entity="demandSheet" status={r.status} />
+                        {r.entryStatus && r.status === 'SENT_TO_DDO' && <p className="mt-1 text-caption text-fg-secondary">Deductions: {ENTRY_LABEL[r.entryStatus]}</p>}
+                        {r.sendBy && r.status !== 'RECOVERY_POSTED' && <p className={cn('mt-1 text-caption', r.sendLate ? 'text-danger-fg' : 'text-fg-tertiary')}>Send by {formatDisplayDate(r.sendBy)}{r.sendLate ? ' · late' : ''}</p>}
                       </td>
                       <td className="tabular px-3 py-3 text-right">{r.members || '—'}</td>
                       <td className="px-3 py-3 text-right">{r.demand ? <Money value={r.demand} /> : '—'}</td>

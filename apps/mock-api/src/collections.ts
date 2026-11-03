@@ -175,11 +175,12 @@ export function memberDues(db: Db, memberId: string): MemberDues {
     if (!line) continue;
     const unpaid = line.totalDemand - sum(line.components.map((c) => c.allocated));
     if (unpaid <= 0) continue;
-    arrears.push({ cycle: sh.cycle, sheetId: sh.id, unpaid, components: inPriority(line.components.map((c) => ({ ...c, ...labelOf(db, c), unpaid: c.amount - c.allocated }))) });
+    // Penal interest is a backend feature (P7b-2, D-088); the demo mock has none.
+    arrears.push({ cycle: sh.cycle, sheetId: sh.id, unpaid, penal: 0, components: inPriority(line.components.map((c) => ({ ...c, ...labelOf(db, c), unpaid: c.amount - c.allocated }))) });
   }
   const share = db.shareAccounts.find((s) => s.memberId === memberId);
   const shareCapitalDue = share ? Math.max(0, share.numberOfShares * db.settings.shareValue - share.shareCapital) : 0;
-  return { memberId, name: m.name, generalNo: m.generalNo, departmentName: deptName(db, m.departmentId), arrears, totalArrears: sum(arrears.map((a) => a.unpaid)), shareCapitalDue };
+  return { memberId, name: m.name, generalNo: m.generalNo, departmentName: deptName(db, m.departmentId), arrears, totalArrears: sum(arrears.map((a) => a.unpaid)), totalPenal: 0, shareCapitalDue };
 }
 
 function sheetStages(sh: DemandSheet): LoanStage[] {

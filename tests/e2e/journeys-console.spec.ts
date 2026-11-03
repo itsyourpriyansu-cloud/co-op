@@ -110,8 +110,8 @@ test.describe('staff journeys', () => {
     await page.getByRole('button', { name: 'Enter recovery' }).click();
     await page.getByRole('button', { name: 'Import DDO statement' }).click();
     await expect(page.getByText(/came short/).first()).toBeVisible();
-    await page.getByRole('button', { name: 'Post recovery' }).click();
-    await page.getByRole('button', { name: 'Yes, post' }).click();
+    await page.getByRole('button', { name: 'Approve and post' }).click();
+    await page.getByRole('button', { name: 'Yes, approve and post' }).click();
     await page.waitForURL(`**/demand-sheets/${sheet.id}`);
     await expect(page.getByText(/recovery posted/)).toBeVisible();
     await shot(page, 'j10-posted');

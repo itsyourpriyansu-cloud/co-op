@@ -34,3 +34,6 @@ export function downloadCsv(fileName: string, rows: Array<Array<string | number>
   a.click();
   URL.revokeObjectURL(url);
 }
+
+/** P7b (D-088): the deduction entry's status in plain words. */
+export const ENTRY_LABEL: Record<string, string> = { DRAFT: 'draft saved', SUBMITTED: 'submitted, waiting for the Accountant', UNDER_REVIEW: 'under review', REJECTED: 'sent back to the DDO', APPROVED: 'approved', POSTED: 'posted' };

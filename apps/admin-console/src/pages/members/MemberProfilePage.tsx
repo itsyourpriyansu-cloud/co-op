@@ -28,7 +28,7 @@ import {
   addSnackbarV2,
 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { formatCycle, formatDisplayDate, formatDisplayDateTime } from '@tgs/domain';
+import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { MemberDetail, MemberLoanRow } from '@tgs/types';
 import { Money } from '@/components/Money';
 import { Panel } from '@/components/Panel';
@@ -324,6 +324,10 @@ export function MemberProfilePage() {
   const [tab, setTab] = useState('overview');
   const [transfer, setTransfer] = useState(false);
   const q = useQuery({ queryKey: ['member', id], queryFn: () => api.members.get(id), retry: (n, e) => !(isApiError(e) && e.status === 404) && n < 2 });
+  // P7b (D-088): what they owe today (penal included) and defaulter notices; the notices come from the backend only.
+  const memberId = q.data?.member.id;
+  const dues = useQuery({ queryKey: ['dues', memberId], queryFn: () => api.receipts.dues(memberId!), enabled: Boolean(memberId), retry: false });
+  const notices = useQuery({ queryKey: ['notices', memberId], queryFn: () => api.receipts.notices(memberId!), enabled: Boolean(memberId), retry: false });
   const demo = useQuery({ queryKey: ['demo-state'], queryFn: api.demo.state });
   const agree = useMutation({
     mutationFn: () => api.members.agreeMandate(id),
@@ -362,6 +366,7 @@ export function MemberProfilePage() {
                     <StatusTag entity="member" status={m.status} size={TagV2Size.MD} />
                     <TagV2 text={activeLoans ? 'Loanee' : 'Non-loanee'} size={TagV2Size.SM} color={activeLoans ? TagV2Color.PRIMARY : TagV2Color.NEUTRAL} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
                     {soon && <TagV2 text={soon} size={TagV2Size.SM} color={TagV2Color.WARNING} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />}
+                    {notices.data?.defaulter.isDefaulter && <TagV2 text={`Defaulter · ${notices.data.defaulter.consecutiveCycles} month${notices.data.defaulter.consecutiveCycles === 1 ? '' : 's'} unpaid`} size={TagV2Size.SM} color={TagV2Color.ERROR} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />}
                   </div>
                   <p className="mt-1 text-body text-fg-secondary">
                     <span className="tabular">General No. {m.generalNo}</span> · {m.designation} · {d.department?.name}
@@ -472,6 +477,39 @@ export function MemberProfilePage() {
                     <ButtonV2 text="Print F1" buttonType={ButtonV2Type.SECONDARY} size={ButtonV2Size.SMALL} leftSlot={{ slot: <Printer size={14} /> }} onClick={() => navigate(`/reports/print/membership?member=${d.member.id}`)} />
                   </div>
                 </Panel>
+                {(dues.data || notices.data) && (
+                  <Panel title="Outstanding & notices" subtitle="Unpaid from posted months; penal grows daily until paid (BR-012)">
+                    {dues.data && (
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        <Field label="Unpaid instalments">{formatINR(dues.data.totalArrears - (dues.data.totalPenal ?? 0))}</Field>
+                        <Field label="Penal interest">{formatINR(dues.data.totalPenal ?? 0)}</Field>
+                        <Field label="Total outstanding">{formatINR(dues.data.totalArrears)}</Field>
+                        <Field label="Months unpaid">{String(dues.data.arrears.length)}</Field>
+                      </dl>
+                    )}
+                    {notices.data && (
+                      <div className="mt-4">
+                        <p className="mb-2 text-caption-strong text-fg-secondary">Notices</p>
+                        {notices.data.notices.length ? (
+                          <ul className="divide-y divide-line-subtle">
+                            {notices.data.notices.map((n) => (
+                              <li key={n.id} className="py-2">
+                                <p className="text-label text-fg">
+                                  {n.kind === 'DEFAULTER' ? 'Defaulter notice' : `Surety notice · ${n.borrowerName}`} · {formatCycle(n.cycle)}
+                                </p>
+                                <p className="text-caption text-fg-secondary">
+                                  {n.loanNo} · {formatINR(n.overdue)} overdue · {n.delivery.inApp === 'SENT' ? 'sent in the app' : n.delivery.inApp === 'FAILED' ? 'app delivery failed' : 'app delivery pending'}; WhatsApp and email from P8
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-caption text-fg-tertiary">No notices. Defaulter after {notices.data.defaulter.threshold} unpaid month{notices.data.defaulter.threshold === 1 ? '' : 's'}.</p>
+                        )}
+                      </div>
+                    )}
+                  </Panel>
+                )}
                 <Panel title="At a glance">
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                     <Field label="Left-over service">{d.leftover.label}</Field>

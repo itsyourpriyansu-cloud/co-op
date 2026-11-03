@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.8 · 2026-11-03 · BR-012 penal interest, BR-020 defaulter, BR-036 deduction entry (D-088).
 > Version 0.7 · 2026-11-02 · BR-035 FD maturity and premature withdrawal (D-086).
 > Version 0.6 · 2026-10-25
 > **Only rules tagged [A] are confirmed.** Everything else is a configurable placeholder, so the prototype can show numbers. Placeholders must never be presented to the client as society policy.
@@ -134,7 +135,10 @@ if remaining > 0 → excess handling (Q-309; placeholder: unallocated credit on 
 - Deposit/Share Capital loan and SRDS positions: UNKNOWN. Placeholder: Deposit loan after Ordinary. SRDS after CRD.
 - Unit test required: the A §3.6 order with a ₹ amount that stops mid-way through Interest.
 
-## BR-012 Penal charges [UNKNOWN]
+## BR-012 Penal charges [S] yes / rate [UNKNOWN] (D-088, F-06)
+**Built (P7b-2):** simple interest per day on the unpaid loan instalment only (principal + interest; never RRF, CRD, SRDS, insurance, share capital), at the loan product's `penalRatePercent` (0 until F-06), from the cycle's last day + `penalGraceDays`, until paid. Worked out on read (no daily job), settled per demand line when paid or waived. A dues payment pays penal first (oldest first), then BR-011; collected penal → penal income 4200. The Accountant may waive with a reason (original, waived, who, when and why recorded). [ASSUMPTION] a backdated receipt settles penal to the receipt date.
+
+_Earlier text:_
 Trigger, rate and base are UNKNOWN (Q-307). Placeholder: disabled (0%). The head still appears so the allocation order is demonstrable when the seed injects penal amounts.
 
 ## BR-013 Approval workflow [A][F]
@@ -158,7 +162,10 @@ Placeholder: one active loan per product type. A second Ordinary loan must be a 
 ## BR-019 Segregation of duties [P]
 See `03-roles-permissions.md` §3.
 
-## BR-020 Due / Defaulter [UNKNOWN]
+## BR-020 Due / Defaulter [S] (D-088, Q-310)
+**Built (P7b-3):** a defaulter has an unpaid loan instalment in the latest `defaulterCycles` posted cycles in a row (society: every unpaid month → default 1; Admin setting). When a recovery is posted, each defaulting loan raises a notice to the borrower and to every surety who signed (once per recipient, loan and cycle). Charging the guarantors waits for F-13.
+
+_Earlier text:_
 Placeholder: *Due* = unpaid amount in the latest posted cycle. *Defaulter* = unpaid in ≥ 3 consecutive posted cycles (Q-310).
 
 ## BR-021 Insurance eligibility via service period [A mention / UNKNOWN rule]
@@ -235,3 +242,9 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand �
   - `SHARE_OF_INTEREST`: the penalty is that % of the interest earned.
 - The penalty comes only out of interest, once: **the principal is always returned in full.** Periodic payouts already due are subtracted, never recovered from the principal. 0 means no penalty. **Placeholder 0 until the society confirms F-06.**
 - Example (simple interest, for illustration): ₹1,00,000 at 7.5% held 12 months, RATE_CUT 1 point → interest at 6.5% = ₹6,500 (penalty ₹1,000, i.e. ₹7,500 − ₹6,500), paid ₹1,06,500.
+
+### BR-036 Deduction entry and salary limit [S] / [P] (D-088, REQ-132)
+- The DDO enters each member's actual deduction on a sheet sent to them, saves and submits; or the Accountant enters it from the DDO's paper sheet. The Accountant reviews (may correct or send back with a reason) and alone approves-and-posts, once.
+- **R1 [P]:** a deduction may not exceed the member's demand, nor the available salary = gross − other recorded deductions − `minTakeHomePay` (0 until set). Pay not certified: only the demand applies [ASSUMPTION].
+- **R2 [S]:** what is not deducted stays as the member's dues for that month (shown as earlier dues), paid at the counter; it is never added to the next sheet.
+- The sheet must reach the DDO `demandSendByDays` (society: 3–5, default 4) before the 1st; late sheets are flagged.

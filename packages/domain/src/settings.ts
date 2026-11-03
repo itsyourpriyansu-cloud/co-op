@@ -33,7 +33,7 @@ export function validateFdSlabs(slabs: SocietySettings['fdSlabs']): Record<strin
 }
 
 /** ST-60 / ST-66: society-wide numbers. */
-export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 'minShares' | 'maxShares' | 'retirementAge' | 'defaulterCycles' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'insurance' | 'savingsRatePercent' | 'fdMinAmount' | 'admissionFee' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'financialYearStartMonth'> & Partial<Pick<SocietySettings, 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent'>>): Record<string, string> {
+export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 'minShares' | 'maxShares' | 'retirementAge' | 'defaulterCycles' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'insurance' | 'savingsRatePercent' | 'fdMinAmount' | 'admissionFee' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'financialYearStartMonth'> & Partial<Pick<SocietySettings, 'demandSendByDays' | 'minTakeHomePay' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent'>>): Record<string, string> {
   const e: Record<string, string> = {};
   const money = (k: string, v: number, allowZero = true) => {
     if (!(Number.isInteger(v) && (allowZero ? v >= 0 : v > 0))) e[k] = allowZero ? 'Enter ₹0 or more.' : 'Enter more than ₹0.';
@@ -55,6 +55,9 @@ export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 
   if (!(s.savingsRatePercent >= 0 && s.savingsRatePercent <= MAX_RATE)) e.savingsRatePercent = `Use 0% to ${MAX_RATE}%.`;
   if (!(Number.isInteger(s.maxGuaranteesPerSurety) && s.maxGuaranteesPerSurety >= 1 && s.maxGuaranteesPerSurety <= 10)) e.maxGuaranteesPerSurety = 'Use 1 to 10 loans.';
   if (!(s.emiToNetSalaryMaxPercent > 0 && s.emiToNetSalaryMaxPercent <= 100)) e.emiToNetSalaryMaxPercent = 'Use 1% to 100%.';
+  // P7b (D-088): send-by days and the minimum take-home pay (R1).
+  if (s.demandSendByDays !== undefined && !(Number.isInteger(s.demandSendByDays) && s.demandSendByDays >= 0 && s.demandSendByDays <= 15)) e.demandSendByDays = 'Use 0 to 15 days.';
+  if (s.minTakeHomePay !== undefined) money('minTakeHomePay', s.minTakeHomePay);
   // P6b (D-086): FD maturity job and premature withdrawal.
   if (s.fdMaturityJobEnabled !== undefined && typeof s.fdMaturityJobEnabled !== 'boolean') e.fdMaturityJobEnabled = 'Choose on or off.';
   if (s.fdMaturityRunHour !== undefined && !(Number.isInteger(s.fdMaturityRunHour) && s.fdMaturityRunHour >= 0 && s.fdMaturityRunHour <= 23)) e.fdMaturityRunHour = 'Use an hour from 0 to 23.';

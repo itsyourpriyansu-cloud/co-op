@@ -58,7 +58,8 @@ export const SETTINGS: SocietySettings = {
   crdMonthly: R(500),
   srdsMonthly: R(300),
   retirementAge: 61,
-  defaulterCycles: 3,
+  // Society (Q-310, D-067): every unpaid month makes a defaulter (D-088).
+  defaulterCycles: 1,
   fdSlabs: [
     { fromMonths: 12, toMonths: 23, ratePercent: 7 },
     { fromMonths: 24, toMonths: 35, ratePercent: 7.25 },
@@ -75,13 +76,17 @@ export const SETTINGS: SocietySettings = {
   emiToNetSalaryMaxPercent: 50,
   penalGraceDays: 0,
   financialYearStartMonth: 4,
+  // Society: the sheet reaches DDOs 3–5 days before the 1st (D-088).
+  demandSendByDays: 4,
+  // R1 [P]: 0 until the society sets a minimum take-home pay (D-088).
+  minTakeHomePay: 0,
   fdMaturityJobEnabled: true,
   fdMaturityRunHour: 1,
   fdPrematureWithdrawalEnabled: true,
   fdPrematurePenaltyMethod: 'RATE_CUT',
   // F-06: 0 until the society confirms the rate (D-086).
   fdPrematurePenaltyPercent: 0,
-  placeholders: ['shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'defaulterCycles', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'loanProducts'],
+  placeholders: ['shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'demandSendByDays', 'minTakeHomePay', 'loanProducts'],
 };
 
 export const LOAN_PURPOSES = {
@@ -113,6 +118,7 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
   { key: 'payment.verified', event: 'Reported payment verified', title: 'Payment verified', body: 'Your payment of {amount} (ref {reference}) is verified. Receipt {receiptNo}.', channels: ['IN_APP'], audience: 'MEMBER' },
   { key: 'payment.rejected', event: 'Reported payment rejected', title: 'Payment not verified', body: 'We could not verify your payment of {amount}: {reason}', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
   { key: 'defaulter.notice', event: 'Defaulter notice (ST-52, Q-310 wording placeholder)', title: 'Overdue dues: {overdue}', body: 'Our records show that {overdue} due to the society from your salary deductions has not been recovered in full for {cycles} month(s), as detailed below. Please pay this amount at the society counter or by bank transfer within 15 days of this notice, and report the payment in the member app. If it is not paid, the society will recover it from your salary and, where applicable, from your sureties, as per the bye-laws and your agreement with the society.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
+  { key: 'defaulter.guarantorNotice', event: 'Notice to the sureties of a defaulter (P7b-3, Q-310)', title: 'Surety notice: {borrower}', body: '{borrower} (General No. {generalNo}), whose loan {loanNo} you stand surety for, has not repaid {overdue} for {cycles} month(s). Please ask them to clear it at the society counter. As a surety you may be asked to repay it as per the bye-laws and your agreement with the society.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
   { key: 'dues.reminder', event: 'Dues reminder (composer)', title: 'Dues reminder', body: 'Dear {name} (General No. {generalNo}), {overdue} is unpaid on your society account. Please pay at the counter or by bank transfer and report it in the app.', channels: ['SMS', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'demand.sent', event: 'Demand sheet sent to the DDO', title: 'Demand sheet for {cycle}', body: 'The {cycle} demand for {department} ({members} members, {amount}) is ready to deduct.', channels: ['EMAIL'], audience: 'STAFF' },
 ];

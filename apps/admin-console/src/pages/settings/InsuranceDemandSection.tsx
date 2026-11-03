@@ -8,7 +8,7 @@ import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, useEdita
 import { api } from '@/lib/api';
 import { MONTH_ITEMS, isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'insurance' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'defaulterCycles'>;
+type Values = Pick<SocietySettings, 'insurance' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'defaulterCycles' | 'penalGraceDays' | 'demandSendByDays' | 'minTakeHomePay'>;
 
 const HEAD_LABEL: Record<DemandHead, string> = {
   RRF: 'RRF',
@@ -24,7 +24,7 @@ const HEAD_LABEL: Record<DemandHead, string> = {
 export function InsuranceDemandSection({ bundle }: { bundle: SettingsBundle }) {
   const ro = !bundle.canEdit;
   const s = bundle.settings;
-  const form = useEditable<Values>({ insurance: s.insurance, rrfMonthly: s.rrfMonthly, crdMonthly: s.crdMonthly, srdsMonthly: s.srdsMonthly, defaulterCycles: s.defaulterCycles });
+  const form = useEditable<Values>({ insurance: s.insurance, rrfMonthly: s.rrfMonthly, crdMonthly: s.crdMonthly, srdsMonthly: s.srdsMonthly, defaulterCycles: s.defaulterCycles, penalGraceDays: s.penalGraceDays, demandSendByDays: s.demandSendByDays, minTakeHomePay: s.minTakeHomePay });
   const save = useSettingsSave(api.settings.updateValues, 'Demand rules saved');
   const v = form.draft!;
   const set = (patch: Partial<Values>) => form.setDraft({ ...v, ...patch });
@@ -48,6 +48,15 @@ export function InsuranceDemandSection({ bundle }: { bundle: SettingsBundle }) {
 
       <FormSection title="Defaulters" description="BR-020: a member becomes a defaulter after this many short cycles in a row." tag={ph('defaulterCycles')}>
         <NumberField label="Short cycles in a row" name="defaulterCycles" value={v.defaulterCycles} onChange={(defaulterCycles) => set({ defaulterCycles })} errors={errors} unit="cycles" disabled={ro} />
+      </FormSection>
+
+      <FormSection title="Sending and deductions" description="The sheet must reach the DDO this many days before the 1st (society: 3–5). A deduction may never leave the member less than the minimum take-home pay (R1)." tag={ph('demandSendByDays') ?? ph('minTakeHomePay')} columns={3}>
+        <NumberField label="Send to the DDO" name="demandSendByDays" value={v.demandSendByDays} onChange={(demandSendByDays) => set({ demandSendByDays })} errors={errors} unit="days before the 1st" disabled={ro} />
+        <MoneyField label="Minimum take-home pay" name="minTakeHomePay" value={v.minTakeHomePay} onChange={(minTakeHomePay) => set({ minTakeHomePay })} errors={errors} disabled={ro} hint="₹0 = only the salary limit applies" />
+      </FormSection>
+
+      <FormSection title="Penal interest" description="BR-012 (F-06): simple interest per day on the unpaid loan instalment only, from the cycle's last day plus these grace days, until paid. The rate is set per loan product (Loan products)." tag={ph('penalGraceDays')}>
+        <NumberField label="Grace days" name="penalGraceDays" value={v.penalGraceDays} onChange={(penalGraceDays) => set({ penalGraceDays })} errors={errors} unit="days" disabled={ro} />
       </FormSection>
 
       <section className="rounded-card border border-line bg-surface shadow-raised">

@@ -1,0 +1,1 @@
+ALTER TABLE "demand_lines" ADD COLUMN "entry" jsonb;

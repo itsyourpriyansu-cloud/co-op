@@ -349,6 +349,57 @@ export interface DemandLine {
   components: DemandComponent[];
   totalDemand: Paise;
   recovered?: Paise;
+  /** P7b (D-088, REQ-132): the actual deduction entered before posting, and who entered it. */
+  deducted?: Paise;
+  entrySource?: DeductionEntrySource;
+  enteredByName?: string;
+  enteredAt?: ISODateTime;
+  /** Accountant's note on a line (e.g. why it was sent back). */
+  note?: string;
+  /** P7b-2 (D-088, BR-012): penal interest settled up to a date (worked out on read, no daily job). */
+  penal?: LinePenal;
+}
+
+/** P7b-2: penal interest on a line's unpaid loan instalment. `carried` = owed up to `settledTo`, not yet paid. */
+export interface LinePenal {
+  settledTo: ISODate;
+  carried: Paise;
+  collected: Paise;
+  waived: Paise;
+  waivers?: Array<{ amount: Paise; original: Paise; reason: string; byName: string; at: ISODateTime }>;
+}
+
+/** P7b-3 (D-088, Q-310): a notice to a defaulting borrower or to a surety of their loan. */
+export interface MemberNotice {
+  id: string;
+  kind: 'DEFAULTER' | 'GUARANTOR';
+  /** Who receives it (the borrower, or a surety). */
+  memberId: string;
+  borrowerId: string;
+  borrowerName: string;
+  loanId: string;
+  loanNo: string;
+  cycle: Cycle;
+  overdue: Paise;
+  consecutiveCycles: number;
+  createdAt: ISODateTime;
+  /** In-app now; WhatsApp and email come with P8. */
+  delivery: { inApp: 'PENDING' | 'SENT' | 'FAILED'; whatsapp: 'NOT_CONNECTED'; email: 'NOT_CONNECTED' };
+}
+
+/** P7b: where a deduction amount came from. */
+export type DeductionEntrySource = 'DDO_ONLINE' | 'PHYSICAL_SHEET';
+/** P7b: the deduction entry inside a sheet sent to the DDO (the sheet's own status does not change until posting). */
+export type DeductionEntryStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'REJECTED' | 'APPROVED' | 'POSTED';
+
+export interface DeductionEntry {
+  status: DeductionEntryStatus;
+  source: DeductionEntrySource;
+  savedBy?: StaffSignOff;
+  submitted?: StaffSignOff;
+  reviewed?: StaffSignOff;
+  rejection?: StaffSignOff;
+  approved?: StaffSignOff;
 }
 
 export interface DemandSheet {
@@ -366,6 +417,8 @@ export interface DemandSheet {
   sent?: StaffSignOff;
   posted?: StaffSignOff;
   events?: WorkflowEvent[];
+  /** P7b (D-088): the DDO's or the Accountant's deduction entry before posting. */
+  entry?: DeductionEntry;
 }
 
 export type ReceiptSource = 'SALARY_RECOVERY' | 'CASH' | 'BANK_TRANSFER' | 'ADJUSTMENT';
@@ -603,6 +656,10 @@ export interface SocietySettings {
   penalGraceDays: number;
   /** ST-60: financial year starts in this month (4 = April). */
   financialYearStartMonth: number;
+  /** P7b (D-088): the sheet must reach the DDO this many days before the 1st of the cycle (society: 3–5). */
+  demandSendByDays: number;
+  /** P7b (D-088, R1 [P]): a deduction may not leave the member less than this take-home pay. 0 until set. */
+  minTakeHomePay: Paise;
   /** P6b (D-086): daily job that marks FDs MATURED on their maturity date, run after this hour (IST). */
   fdMaturityJobEnabled: boolean;
   fdMaturityRunHour: number;

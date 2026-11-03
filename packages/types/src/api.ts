@@ -1,6 +1,6 @@
 // API envelope types shared by the mock API and both clients (docs/11-api-contracts.md).
 import type { Channel, Permission, Role } from './roles';
-import type { Address, AppNotification, AuditEntry, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, TransferEvent } from './entities';
+import type { Address, AppNotification, AuditEntry, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, TransferEvent } from './entities';
 import type { DemandSheetStatus, DepositStatus, LoanStatus, MemberStatus, MembershipStatus, SuretyStatus } from './status';
 
 export const API_PREFIX = '/api/v1';
@@ -830,6 +830,11 @@ export interface DemandSheetRow {
   shortMembers: number;
   /** Next step for the signed-in user, if any (certify / send / post). */
   myAction?: string;
+  /** P7b: deduction entry status, and the send-by date. */
+  entryStatus?: DeductionEntryStatus;
+  entrySource?: DeductionEntrySource;
+  sendBy?: ISODate;
+  sendLate?: boolean;
 }
 
 export interface DemandCycleOverview {
@@ -871,6 +876,16 @@ export interface DemandLineView {
   totalDemand: Paise;
   recovered?: Paise;
   short?: Paise;
+  /** P7b (D-088): the deduction entered so far, its source, and the member's pay picture. */
+  deducted?: Paise;
+  entrySource?: DeductionEntrySource;
+  enteredByName?: string;
+  note?: string;
+  /** Gross less other recorded deductions less the minimum take-home; missing when pay is not certified. */
+  availableSalary?: Paise;
+  grossSalary?: Paise;
+  /** Unpaid dues from earlier posted cycles. */
+  previousOutstanding?: Paise;
 }
 
 export interface DemandSheetDetail {
@@ -882,6 +897,9 @@ export interface DemandSheetDetail {
   actions: string[];
   waitingOn?: string;
   demoActAs?: string;
+  /** P7b: must reach the DDO by this date; late when not sent by then. */
+  sendBy?: ISODate;
+  sendLate?: boolean;
 }
 
 /** Recovery entry (ST-43): recovered amount per member, in paise. Missing = recovered in full. */
@@ -890,14 +908,29 @@ export interface RecoveryInput {
   remarks?: string;
 }
 
+/** P7b-3: a member's defaulter status and the notices they received (as borrower or surety). */
+export interface MemberNotices {
+  defaulter: { isDefaulter: boolean; consecutiveCycles: number; threshold: number };
+  notices: MemberNotice[];
+}
+
+/** P7b (D-088): save the deduction entry (DDO online or Accountant from a paper sheet). */
+export interface DeductionEntryInput {
+  deductions: Record<string, Paise>;
+  notes?: Record<string, string>;
+}
+
 /** What a member still owes from posted sheets (short recoveries), oldest first (ST-45, MB-10). */
 export interface MemberDues {
   memberId: string;
   name: string;
   generalNo: string;
   departmentName: string;
-  arrears: Array<{ cycle: Cycle; sheetId: string; components: Array<DemandComponent & { loanNo?: string; label: string; unpaid: Paise }>; unpaid: Paise }>;
+  /** P7b-2: `penal` is penal interest owed today on the cycle's unpaid loan instalment; `unpaid` excludes it. */
+  arrears: Array<{ cycle: Cycle; sheetId: string; components: Array<DemandComponent & { loanNo?: string; label: string; unpaid: Paise }>; unpaid: Paise; penal: Paise; penalWaived?: Paise }>;
+  /** Everything owed from past cycles, penal included. */
   totalArrears: Paise;
+  totalPenal: Paise;
   /** New member who chose shares on the first demand and has not paid yet (D-029). */
   shareCapitalDue: Paise;
 }

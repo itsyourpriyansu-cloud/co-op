@@ -32,6 +32,8 @@ export const societySettingsSchema = z.object({
   fdPrematureWithdrawalEnabled: z.boolean(),
   fdPrematurePenaltyMethod: z.enum(['RATE_CUT', 'SHARE_OF_INTEREST']),
   fdPrematurePenaltyPercent: z.number(),
+  demandSendByDays: z.number().int(),
+  minTakeHomePay: paise,
   placeholders: z.array(z.string()),
 });
 

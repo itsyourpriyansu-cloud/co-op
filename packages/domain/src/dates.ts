@@ -64,6 +64,11 @@ export function addMonths(iso: ISODate, months: number): ISODate {
   return toISODate({ y: ny, m: nm, d: Math.min(d, daysInMonth(ny, nm)) });
 }
 
+/** Adds (or with a negative number, subtracts) calendar days. */
+export function addDays(iso: ISODate, days: number): ISODate {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
 /** Whole months from `from` to `to` (floor). Negative when `to` is earlier. */
 export function fullMonthsBetween(from: ISODate, to: ISODate): number {
   const a = parseISODate(from);

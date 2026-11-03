@@ -1,15 +1,17 @@
-import type { DemandLine, DemandSheet, PaymentReport, PaymentReportStatus, Receipt, ShareAccount } from '@tgs/types';
+import type { DemandLine, DemandSheet, MemberNotice, PaymentReport, PaymentReportStatus, Receipt, ShareAccount } from '@tgs/types';
 import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
 import type { Tx } from '../../db/transaction';
-import { demandLines, demandSheets, members, paymentReports, receipts, shareAccounts } from '../../models';
+import { demandLines, demandSheets, memberNotices, members, paymentReports, receipts, shareAccounts } from '../../models';
 
 type SheetRow = typeof demandSheets.$inferSelect;
 type LineRow = typeof demandLines.$inferSelect;
 export type SheetHead = Omit<DemandSheet, 'lines'>;
 
 const toSheet = (r: SheetRow): SheetHead => ({ ...r.data, status: r.status, totalDemand: r.totalDemand, totalRecovered: r.totalRecovered });
-const toLine = (l: LineRow): DemandLine => ({ memberId: l.memberId, components: l.components, totalDemand: l.totalDemand, ...(l.recovered !== null ? { recovered: l.recovered } : {}) });
+const toLine = (l: LineRow): DemandLine => ({ memberId: l.memberId, components: l.components, totalDemand: l.totalDemand, ...(l.recovered !== null ? { recovered: l.recovered } : {}), ...(l.entry ?? {}) });
+/** The line's P7b entry fields, or null when nothing was entered. */
+const entryOf = (l: DemandLine) => (l.deducted !== undefined || l.note || l.penal ? { ...(l.deducted !== undefined ? { deducted: l.deducted } : {}), ...(l.entrySource ? { entrySource: l.entrySource } : {}), ...(l.enteredByName ? { enteredByName: l.enteredByName } : {}), ...(l.enteredAt ? { enteredAt: l.enteredAt } : {}), ...(l.note ? { note: l.note } : {}), ...(l.penal ? { penal: l.penal } : {}) } : null);
 const toShare = (r: typeof shareAccounts.$inferSelect): ShareAccount => ({ memberId: r.memberId, numberOfShares: r.numberOfShares, shareCapital: r.shareCapital, shareDepositBalance: r.shareDepositBalance });
 const receiptColumns = (r: Receipt) => ({ receiptNo: r.receiptNo, memberId: r.memberId, date: r.date, source: r.source, amount: r.amount, cycle: r.cycle ?? null, sheetId: r.sheetId ?? null, sortAt: r.at ?? r.date, data: r });
 
@@ -77,7 +79,19 @@ export class CollectionsRepository {
   }
 
   async saveLine(tx: Tx, sheetId: string, l: DemandLine): Promise<void> {
-    await tx.update(demandLines).set({ components: l.components, recovered: l.recovered ?? null }).where(and(eq(demandLines.sheetId, sheetId), eq(demandLines.memberId, l.memberId)));
+    await tx.update(demandLines).set({ components: l.components, recovered: l.recovered ?? null, entry: entryOf(l) }).where(and(eq(demandLines.sheetId, sheetId), eq(demandLines.memberId, l.memberId)));
+  }
+
+  /** Each member's unpaid dues from posted sheets before a cycle (P7b: "previous outstanding"). */
+  async outstandingBefore(memberIds: string[], cycle: string): Promise<Map<string, number>> {
+    if (!memberIds.length) return new Map();
+    const rows = await this.db
+      .select({ memberId: demandLines.memberId, unpaid: sql<number>`sum(${demandLines.totalDemand} - (select coalesce(sum((c->>'allocated')::bigint), 0) from jsonb_array_elements(${demandLines.components}) c))::bigint` })
+      .from(demandLines)
+      .innerJoin(demandSheets, eq(demandSheets.id, demandLines.sheetId))
+      .where(and(inArray(demandLines.memberId, memberIds), eq(demandSheets.status, 'RECOVERY_POSTED'), sql`${demandLines.cycle} < ${cycle}`))
+      .groupBy(demandLines.memberId);
+    return new Map(rows.map((r) => [r.memberId, Number(r.unpaid)]));
   }
 
   /** A member's lines with their sheet, oldest cycle first (dues, statements, member page). */
@@ -171,5 +185,20 @@ export class CollectionsRepository {
     const values = { memberId: p.memberId, status: p.status, reference: p.reference, data: p };
     if (insert) await tx.insert(paymentReports).values({ id: p.id, ...values });
     else await tx.update(paymentReports).set(values).where(eq(paymentReports.id, p.id));
+  }
+
+  // ---- P7b-3 notices ----
+  /** Inserts a notice unless the same one (kind, recipient, loan, cycle) exists; true when created. */
+  async insertNotice(tx: Tx, n: MemberNotice): Promise<boolean> {
+    const rows = await tx.insert(memberNotices).values({ id: n.id, kind: n.kind, memberId: n.memberId, borrowerId: n.borrowerId, loanId: n.loanId, cycle: n.cycle, data: n }).onConflictDoNothing().returning({ id: memberNotices.id });
+    return rows.length > 0;
+  }
+
+  async noticesOf(memberId: string): Promise<MemberNotice[]> {
+    return (await this.db.select({ data: memberNotices.data }).from(memberNotices).where(eq(memberNotices.memberId, memberId)).orderBy(desc(memberNotices.createdAt))).map((r) => r.data);
+  }
+
+  async saveNotice(n: MemberNotice): Promise<void> {
+    await this.db.update(memberNotices).set({ data: n }).where(eq(memberNotices.id, n.id));
   }
 }

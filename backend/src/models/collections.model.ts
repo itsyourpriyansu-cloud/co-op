@@ -1,4 +1,4 @@
-import type { DemandComponent, DemandSheet, DemandSheetStatus, PaymentReport, PaymentReportStatus, Receipt, ReceiptSource } from '@tgs/types';
+import type { DemandComponent, DemandLine, DemandSheet, MemberNotice, DemandSheetStatus, PaymentReport, PaymentReportStatus, Receipt, ReceiptSource } from '@tgs/types';
 import { bigint, date, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { departments } from './masters.model';
 import { members } from './members.model';
@@ -51,6 +51,8 @@ export const demandLines = pgTable(
     components: jsonb('components').$type<DemandComponent[]>().notNull(),
     totalDemand: money('total_demand').notNull(),
     recovered: money('recovered'),
+    /** P7b (D-088): the deduction entered before posting (amount, source, who, note). */
+    entry: jsonb('entry').$type<Pick<DemandLine, 'deducted' | 'entrySource' | 'enteredByName' | 'enteredAt' | 'note' | 'penal'>>(),
   },
   (t) => [primaryKey({ columns: [t.sheetId, t.memberId] }), index('demand_lines_member_idx').on(t.memberId)],
 );
@@ -88,4 +90,25 @@ export const paymentReports = pgTable(
     data: jsonb('data').$type<PaymentReport>().notNull(),
   },
   (t) => [index('payment_reports_member_idx').on(t.memberId), index('payment_reports_status_idx').on(t.status)],
+);
+
+/**
+ * P7b-3 (D-088, Q-310): notices to a defaulting borrower and to every surety of the loan. One per
+ * recipient, loan and cycle, so posting again (or a retry) never sends a second one.
+ */
+export const memberNotices = pgTable(
+  'member_notices',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').$type<MemberNotice['kind']>().notNull(),
+    memberId: text('member_id')
+      .notNull()
+      .references(() => members.id),
+    borrowerId: text('borrower_id').notNull(),
+    loanId: text('loan_id').notNull(),
+    cycle: text('cycle').notNull(),
+    data: jsonb('data').$type<MemberNotice>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('member_notices_once_idx').on(t.kind, t.memberId, t.loanId, t.cycle), index('member_notices_member_idx').on(t.memberId)],
 );

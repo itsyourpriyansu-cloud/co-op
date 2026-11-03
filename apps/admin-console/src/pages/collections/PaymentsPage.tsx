@@ -32,7 +32,7 @@ import {
   type ColumnDefinition,
 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { allocateArrears, formatDisplayDate, formatDisplayDateTime, formatINR, formatINRCompact } from '@tgs/domain';
+import { allocateDuesPayment, formatDisplayDate, formatDisplayDateTime, formatINR, formatINRCompact } from '@tgs/domain';
 import type { PaymentReportRow, ReceiptRow, ReceiptTab } from '@tgs/types';
 import { useDebounced } from '@/components/MemberSearch';
 import { Money } from '@/components/Money';
@@ -60,8 +60,9 @@ function VerifyDrawer({ report, onClose }: { report: PaymentReportRow | null; on
   }, [report?.id]);
   const preview = useMemo(() => {
     if (!dues.data || !report || report.towards === 'SHARE_CAPITAL') return undefined;
-    const r = allocateArrears(dues.data.arrears.map((a) => ({ key: a.cycle, components: a.components })), report.amount);
-    return r.cycles.flatMap((c, i) => c.components.map((x, j) => ({ cycle: c.key, label: dues.data!.arrears[i]!.components[j]!.label, delta: x.allocated - dues.data!.arrears[i]!.components[j]!.allocated }))).filter((x) => x.delta > 0);
+    // R4 (D-088): penal first, then the instalments in the agreement's order.
+    const r = allocateDuesPayment(dues.data.arrears.map((a) => ({ key: a.cycle, penal: a.penal, components: a.components })), report.amount);
+    return r.cycles.flatMap((c, i) => [{ cycle: c.key, label: 'Penal interest', delta: c.penalPaid }, ...c.components.map((x, j) => ({ cycle: c.key, label: dues.data!.arrears[i]!.components[j]!.label, delta: x.allocated - dues.data!.arrears[i]!.components[j]!.allocated }))]).filter((x) => x.delta > 0);
   }, [dues.data, report]);
   const done = (header: string) => {
     void qc.invalidateQueries({ queryKey: ['payment-reports'] });

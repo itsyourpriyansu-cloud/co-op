@@ -3,11 +3,11 @@
 // adjustment) → live allocation (oldest month first, BR-011) → Save → ST-46.
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, X } from 'lucide-react';
-import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type, TextAreaV2, TextInputV2 } from '@juspay/blend-design-system';
+import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type, ModalV2, TextAreaV2, TextInputV2 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { allocateArrears, amountInWords, formatINR } from '@tgs/domain';
+import { allocateDuesPayment, amountInWords, formatINR } from '@tgs/domain';
 import type { MemberPick, NewReceiptInput } from '@tgs/types';
 import { useAuth } from '@/app/auth';
 import { DenominationCounter, type Counts } from '@/components/DenominationCounter';
@@ -42,7 +42,7 @@ function Chips<T extends string>({ value, options, onChange }: { value: T; optio
 
 export function NewReceiptPage() {
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, can } = useAuth();
   const [member, setMember] = useState<MemberPick | null>(null);
   const dues = useQuery({ queryKey: ['dues', member?.id], queryFn: () => api.receipts.dues(member!.id), enabled: Boolean(member) });
   const [purpose, setPurpose] = useState<NewReceiptInput['purpose']>('DUES');
@@ -61,9 +61,23 @@ export function NewReceiptPage() {
 
   const preview = useMemo(() => {
     if (!dues.data || purpose !== 'DUES' || !(amt > 0)) return [];
-    const r = allocateArrears(dues.data.arrears.map((a) => ({ key: a.cycle, components: a.components })), amt);
-    return r.cycles.flatMap((c, i) => c.components.map((x, j) => ({ cycle: c.key, label: dues.data!.arrears[i]!.components[j]!.label, loanNo: dues.data!.arrears[i]!.components[j]!.loanNo, delta: x.allocated - dues.data!.arrears[i]!.components[j]!.allocated }))).filter((x) => x.delta > 0);
+    // R4 (D-088): penal first, then the instalments in the agreement's order.
+    const r = allocateDuesPayment(dues.data.arrears.map((a) => ({ key: a.cycle, penal: a.penal, components: a.components })), amt);
+    return r.cycles.flatMap((c, i) => [{ cycle: c.key, label: 'Penal interest', loanNo: undefined as string | undefined, delta: c.penalPaid }, ...c.components.map((x, j) => ({ cycle: c.key, label: dues.data!.arrears[i]!.components[j]!.label, loanNo: dues.data!.arrears[i]!.components[j]!.loanNo, delta: x.allocated - dues.data!.arrears[i]!.components[j]!.allocated }))]).filter((x) => x.delta > 0);
   }, [dues.data, purpose, amt]);
+
+  // R5 (D-088): waive penal on one cycle, with a reason (permission collections.waivePenal).
+  const qc = useQueryClient();
+  const [waive, setWaive] = useState<{ sheetId: string; cycle: string; max: number } | null>(null);
+  const [waiveAmount, setWaiveAmount] = useState<number>(0);
+  const [waiveReason, setWaiveReason] = useState('');
+  const waiver = useMutation({
+    mutationFn: () => api.receipts.waivePenal(member!.id, { sheetId: waive!.sheetId, amount: waiveAmount, reason: waiveReason.trim() }),
+    onSuccess: (next) => {
+      qc.setQueryData(['dues', member?.id], next);
+      setWaive(null);
+    },
+  });
 
   const save = useMutation({
     mutationFn: () => api.receipts.create({ memberId: member!.id, purpose, mode, amount: amt, date, ...(mode === 'CASH' ? { denominations: counts } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(remarks.trim() ? { remarks: remarks.trim() } : {}) }),
@@ -162,9 +176,31 @@ export function NewReceiptPage() {
                   <div key={a.cycle} className="px-5 py-3">
                     <div className="flex items-center justify-between">
                       <p className="text-label text-fg">{cycleLabel(a.cycle)}</p>
-                      <Money value={a.unpaid} tone="debit" className="text-label" />
+                      <Money value={a.unpaid + a.penal} tone="debit" className="text-label" />
                     </div>
                     <ul className="mt-1 space-y-0.5">
+                      {a.penal > 0 && (
+                        <li className="flex items-center justify-between gap-2 text-caption text-danger-fg">
+                          <span>
+                            Penal interest (to today)
+                            {can('collections.waivePenal') && (
+                              <button
+                                type="button"
+                                className="ml-2 text-link underline underline-offset-2"
+                                onClick={() => {
+                                  setWaive({ sheetId: a.sheetId, cycle: a.cycle, max: a.penal });
+                                  setWaiveAmount(a.penal);
+                                  setWaiveReason('');
+                                }}
+                              >
+                                Waive
+                              </button>
+                            )}
+                          </span>
+                          <span className="tabular">{formatINR(a.penal)}</span>
+                        </li>
+                      )}
+                      {a.penalWaived ? <li className="text-caption text-fg-tertiary">Penal waived so far: {formatINR(a.penalWaived)}</li> : null}
                       {a.components.filter((c) => c.unpaid > 0).map((c, i) => (
                         <li key={i} className="flex justify-between text-caption text-fg-secondary">
                           <span>{c.label}</span>
@@ -202,6 +238,20 @@ export function NewReceiptPage() {
           )}
         </div>
       </div>
+      <ModalV2
+        isOpen={Boolean(waive)}
+        onClose={() => setWaive(null)}
+        title={waive ? `Waive penal for ${cycleLabel(waive.cycle)}?` : ''}
+        subtitle={waive ? `Owed today: ${formatINR(waive.max)}. The original and waived amounts and your reason are kept in the audit trail.` : ''}
+        primaryAction={{ text: waiver.isPending ? 'Waiving…' : 'Waive', onClick: () => waiver.mutate(), disabled: !(waiveAmount > 0) || waiveReason.trim().length < 10 }}
+        secondaryAction={{ text: 'Cancel', buttonType: ButtonV2Type.SECONDARY, onClick: () => setWaive(null) }}
+      >
+        <div className="flex flex-col gap-3">
+          <MoneyField label="Amount to waive" name="amount" value={waiveAmount} onChange={setWaiveAmount} errors={fieldErrorsOf(waiver.error)} />
+          <TextAreaV2 label="Reason" value={waiveReason} onChange={(e) => setWaiveReason(e.target.value)} rows={2} placeholder="e.g. Delay caused by the department's late pay bill" />
+          {waiver.error && !Object.keys(fieldErrorsOf(waiver.error)).length && <p className="text-caption text-danger-fg">{isApiError(waiver.error) ? waiver.error.message : 'Try again.'}</p>}
+        </div>
+      </ModalV2>
     </>
   );
 }

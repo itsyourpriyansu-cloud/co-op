@@ -92,6 +92,41 @@
       "when": 1793618119059,
       "tag": "0012_p7_collections",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793626660385,
+      "tag": "0013_p7b_deduction_entry",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793626745433,
+      "tag": "0014_p7b_line_entry",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1793689289226,
+      "tag": "0015_p7b_waive_penal",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793697076792,
+      "tag": "0016_p7b_member_notices",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793697078894,
+      "tag": "0017_p7b_defaulter_defaults",
+      "breakpoints": true
     }
   ]
 }
