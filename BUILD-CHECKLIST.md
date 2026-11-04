@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | **P8a done** (D-089): notifications, messages, member questions, preferences and member home on the backend; WhatsApp / email / SMS simulated behind `backend/src/integrations`. P8b done (D-090): work queue, dashboards, search, service targets. P8c done (D-091): reports and the defaulter notice. Next: **P8d** fallback off (`docs/22` §5.7). Waiting on the society: F-06, F-09, F-10, F-13, F-14 |
+| **Next action** | **P8a done** (D-089): notifications, messages, member questions, preferences and member home on the backend; WhatsApp / email / SMS simulated behind `backend/src/integrations`. P8b done (D-090): work queue, dashboards, search, service targets. P8c done (D-091): reports and the defaulter notice. P8 done (D-089…D-092): the backend runs without the mock. Next: **P9** hardening (`docs/22`). Waiting on the society: F-06, F-09, F-10, F-13, F-14 |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
 | **Last updated** | 2026-11-04 |
 
@@ -107,3 +107,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-11-03 | **P8 planned, P8a built** (D-089, user-approved D1–D4): migration 0018 (notifications, deliveries, messages, support tickets, member preferences) seeded from the demo; `integrations/messaging.ts` sender interface, all channels simulated; notifyMember stops calling the mock; composer, questions, preferences, staff + member notifications, bell count and `/me/home` on the backend; OTPs through the WhatsApp sender; notices record per-channel delivery. Tests: backend 120, root 292 | P8b |
 | 2026-11-04 | **P8b built** (D-090): insight module (work queue, role dashboard, summary, search) on backend data; REQ-135 service targets (settings 48 h / 5 days, migration 0019, domain `serviceTarget`, "Over the … target" tag, dashboard count); DDO deduction entry shows on the work queue. Tests: domain 150, backend 126, root 296 | P8c |
 | 2026-11-04 | **P8c built** (D-091): reports module (catalogue, 8 table reports, defaulter notice) on backend data, audited runs, DDO scope; defaulters follow BR-020 as built. Tests: backend 132, root 296 | P8d |
+| 2026-11-04 | **P8d built, P8 exit passed** (D-092): demo clock / reset / failure rate / scenarios / dataset / sample on the backend; department counts from PostgreSQL; full Playwright suite green on :4101 with the fallback off and no mock running. Bridge code removal left to P9 | P9 |

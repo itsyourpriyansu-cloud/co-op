@@ -4,7 +4,6 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bearer, reseed, signInAs } from '../../../tests/helpers/auth';
 import { buildTestApp } from '../../../tests/helpers/test-app';
-import { todayIST } from '../../common/utils/dates';
 import { demoDataset } from '../../db/seed/dataset';
 
 // P7b-2 (D-088, BR-012, F-06 [P]): penal interest worked out on read, collected first at the counter,
@@ -21,7 +20,9 @@ describe('penal interest (P7b-2)', () => {
   const call = (method: 'GET' | 'POST' | 'PUT', url: string, s: Session, payload?: object) => app.inject({ method, url: `/api/v1${url}`, headers: bearer(s), ...(payload ? { payload } : {}) });
   const dues = async () => (await call('GET', `/members/${MEMBER}/dues`, accountant)).json() as MemberDues;
   const septDues = (d: MemberDues) => d.arrears.find((a) => a.cycle === '2026-09')!;
-  const pay = (amount: number, reference: string) => call('POST', '/receipts', cashier, { memberId: MEMBER, purpose: 'DUES', mode: 'BANK_TRANSFER', amount, date: todayIST(), reference });
+  // The demo clock (DEMO_MODE): the dataset's date.
+  const today = demoDataset().today;
+  const pay = (amount: number, reference: string) => call('POST', '/receipts', cashier, { memberId: MEMBER, purpose: 'DUES', mode: 'BANK_TRANSFER', amount, date: today, reference });
   const lastEntryLines = async (source: string) => {
     const j = (await call('GET', `/ledger/journals?source=${source}`, accountant)).json();
     return (await call('GET', `/ledger/journals/${j.items[0].id}`, accountant)).json().lines as Array<{ accountCode: string; debit: number; credit: number }>;
@@ -43,7 +44,7 @@ describe('penal interest (P7b-2)', () => {
   it('with a rate: simple interest per day on the unpaid loan instalment only, from the cycle end', async () => {
     await call('PUT', '/settings/loan-products/ORDINARY', admin, { penalRatePercent: 12 });
     const d = await dues();
-    const expected = penalDue({ cycle: '2026-09', components: sept.components, rates: { ORDINARY: 12 }, graceDays: 0, asOf: todayIST() });
+    const expected = penalDue({ cycle: '2026-09', components: sept.components, rates: { ORDINARY: 12 }, graceDays: 0, asOf: today });
     expect(expected).toBeGreaterThan(0);
     expect(septDues(d).penal).toBe(expected);
     expect(d.totalPenal).toBeGreaterThanOrEqual(expected);

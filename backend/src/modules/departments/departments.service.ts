@@ -15,7 +15,7 @@ export class DepartmentsService {
   ) {}
 
   async list(user: SessionUser): Promise<DepartmentRow[]> {
-    const [rows, ddos, counts] = await Promise.all([this.repo.list(), this.repo.ddoLogins(), this.memberCounts(user)]);
+    const [rows, ddos, counts] = await Promise.all([this.repo.list(), this.repo.ddoLogins(), this.memberCounts()]);
     return rows.map((d) => ({ ...toDepartment(d), memberCount: counts.get(d.id) ?? 0, ...(ddos.get(d.id) ? { ddoUserId: ddos.get(d.id)! } : {}) }));
   }
 
@@ -77,13 +77,10 @@ export class DepartmentsService {
     return { code, name: d.name!.trim(), kind: d.kind === 'EXTERNAL_OFFICE' ? 'EXTERNAL_OFFICE' : 'SECRETARY_DEPT', ddoName: d.ddoName!.trim(), ddoDesignation: d.ddoDesignation!.trim() };
   }
 
-  /**
-   * Active members per department. Members move into PostgreSQL in P4; until then the count comes
-   * from the mock API through the dev bridge (0 when there is no mock, e.g. in production).
-   * TODO(P4): count from the members table.
-   */
-  private async memberCounts(user: SessionUser): Promise<Map<string, number>> {
-    const rows = await this.app.mockBridge?.getAs<DepartmentRow[]>(user, '/api/v1/departments').catch(() => undefined);
-    return new Map((rows ?? []).map((r) => [r.id, r.memberCount]));
+  /** Active members per department. */
+  private async memberCounts(): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    for (const m of await this.app.members.all()) if (m.status === 'ACTIVE') counts.set(m.departmentId, (counts.get(m.departmentId) ?? 0) + 1);
+    return counts;
   }
 }

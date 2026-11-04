@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bearer, reseed, signInAs } from '../../../tests/helpers/auth';
 import { buildTestApp } from '../../../tests/helpers/test-app';
+import { demoDataset } from '../../db/seed/dataset';
 
 describe('settings & master files (P2, REQ-130)', () => {
   let app: FastifyInstance;
@@ -120,7 +121,7 @@ describe('departments (P2, ST-67)', () => {
     const ddo = await signInAs(app, 'stf-ddo-fin');
     const res = await app.inject({ method: 'GET', url: '/api/v1/departments', headers: bearer(ddo) });
     expect(res.statusCode).toBe(200);
-    expect(res.json().find((d: { id: string }) => d.id === 'dept-fin')).toMatchObject({ ddoUserId: 'stf-ddo-fin', memberCount: 0 });
+    expect(res.json().find((d: { id: string }) => d.id === 'dept-fin')).toMatchObject({ ddoUserId: 'stf-ddo-fin', memberCount: demoDataset().members.filter((m) => m.departmentId === 'dept-fin' && m.status === 'ACTIVE').length });
     const member = await signInAs(app, 'mem-1103');
     expect((await app.inject({ method: 'GET', url: '/api/v1/departments', headers: bearer(member) })).statusCode).toBe(403);
   });
