@@ -53,7 +53,7 @@ export class AppAccountsService {
   async startCode(mobile: string, purpose: CodePurpose, subjectId: string, payload?: unknown): Promise<OtpChallenge> {
     const code = this.app.env.DEMO_MODE ? DEMO_OTP : randomCode();
     const row = await this.repo.insertOtp({ mobile, purpose, subjectId, ...(payload !== undefined ? { payload } : {}), codeHash: sha256(`${mobile}:${code}`), channel: 'SIMULATED', expiresAt: new Date(Date.now() + this.app.env.OTP_TTL_SECONDS * 1000) });
-    if (this.app.env.NODE_ENV !== 'production') this.app.log.info({ code, purpose }, 'simulated OTP');
+    await this.app.notifications.senders.WHATSAPP.send({ channel: 'WHATSAPP', to: mobile, title: 'TGSECCSL one-time code', body: `Your TGSECCSL one-time code is ${code}. Do not share it with anyone.` });
     return { otpRef: row.id, expiresInSeconds: this.app.env.OTP_TTL_SECONDS, ...(this.app.env.DEMO_MODE ? { demoOtp: code } : {}) };
   }
 

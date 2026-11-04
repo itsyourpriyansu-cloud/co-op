@@ -384,7 +384,8 @@ export interface MemberNotice {
   consecutiveCycles: number;
   createdAt: ISODateTime;
   /** In-app now; WhatsApp and email come with P8. */
-  delivery: { inApp: 'PENDING' | 'SENT' | 'FAILED'; whatsapp: 'NOT_CONNECTED'; email: 'NOT_CONNECTED' };
+  /** P8a: in-app, then each channel of the template the member has switched on (MB-14). */
+  delivery: { inApp: 'PENDING' | 'SENT' | 'FAILED'; via?: Partial<Record<'SMS' | 'WHATSAPP' | 'EMAIL', DeliveryStatus>> };
 }
 
 /** P7b: where a deduction amount came from. */
@@ -683,6 +684,9 @@ export interface SupportTicket {
 }
 
 export type NotificationChannel = 'IN_APP' | 'SMS' | 'EMAIL' | 'WHATSAPP';
+
+/** P8a: what a WhatsApp / email / SMS provider did with one message. SIMULATED until F-10 names a provider. */
+export type DeliveryStatus = 'SENT' | 'SIMULATED' | 'FAILED';
 
 /** ST-63: message text per event. `{name}`-style placeholders are filled when sent (simulated). */
 export interface NotificationTemplate {

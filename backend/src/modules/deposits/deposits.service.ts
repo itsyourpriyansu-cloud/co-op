@@ -119,7 +119,7 @@ function stagesFor(d: DepositAccount): LoanStage[] {
 export class DepositsService {
   constructor(
     private readonly app: FastifyInstance,
-    private readonly repo: DepositsRepository,
+    readonly repo: DepositsRepository,
   ) {}
 
   // ---- reads for other modules (loans) ----

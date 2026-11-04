@@ -117,7 +117,7 @@ Details and context: `docs/21-society-answers-impact.md` §3–4.
 | F-06 | Penal interest rate on overdue dues; FD premature-withdrawal penalty % | 0% (setting) | S | Open. **[ASSUMPTION] D-088 (penal on dues):** simple interest per day on unpaid loan principal + interest only, rate per loan product, after the grace days, penal paid first, waivable by the Accountant with a reason; a backdated receipt settles penal to its date. Confirm the rate(s), grace days and whether waivers are allowed. **[ASSUMPTION] D-086:** the FD penalty comes only out of interest (principal always in full), default method = rate cut (interest at FD rate − penalty points), Admin may switch to "share of interest"; completed months count. Confirm the rate and the method |
 | F-07 | Caste visible to all staff only, or also members? (C-3) | All staff only | S | Open |
 | F-08 | Loan settlement on resignation or death | Not modelled | S | Open |
-| F-09 | Which events send WhatsApp / email? | ST-63 event list | S | Open |
+| F-09 | Which events send WhatsApp / email? Templates and member defaults still include SMS (prototype: SMS on, WhatsApp off) although the society said no SMS (D-089): should SMS become WhatsApp everywhere? | ST-63 event list | S | Open |
 | F-10 | Society's WhatsApp Business number and sender email | Simulated | S | Open |
 | F-11 | Samples: registers/Excel, demand sheet, sanction letter, DDO statement, recovery agreement, back of F1 | Layouts from forms | S | Open |
 | F-12 | Do ex-employees (~1,200) keep accounts the system must hold? | Members with status RETIRED/LEFT | S | Open |

@@ -47,7 +47,7 @@ describe('defaulters and notices (P7b-3)', () => {
     const mine = await notices(memberId);
     expect(mine.defaulter).toMatchObject({ isDefaulter: true, threshold: 1 });
     const own = mine.notices.find((n) => n.kind === 'DEFAULTER' && n.loanId === loan.id)!;
-    expect(own).toMatchObject({ cycle: '2026-10', borrowerId: memberId, loanNo: loan.loanNo, delivery: { inApp: 'PENDING', whatsapp: 'NOT_CONNECTED' } });
+    expect(own).toMatchObject({ cycle: '2026-10', borrowerId: memberId, loanNo: loan.loanNo, delivery: { inApp: 'SENT', via: { SMS: 'SIMULATED' } } });
     expect(own.overdue).toBeGreaterThan(0);
     for (const s of sureties) {
       const theirs = await notices(s);

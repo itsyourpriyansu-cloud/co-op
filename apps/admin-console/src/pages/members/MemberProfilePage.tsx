@@ -498,7 +498,8 @@ export function MemberProfilePage() {
                                   {n.kind === 'DEFAULTER' ? 'Defaulter notice' : `Surety notice · ${n.borrowerName}`} · {formatCycle(n.cycle)}
                                 </p>
                                 <p className="text-caption text-fg-secondary">
-                                  {n.loanNo} · {formatINR(n.overdue)} overdue · {n.delivery.inApp === 'SENT' ? 'sent in the app' : n.delivery.inApp === 'FAILED' ? 'app delivery failed' : 'app delivery pending'}; WhatsApp and email from P8
+                                  {n.loanNo} · {formatINR(n.overdue)} overdue · {n.delivery.inApp === 'SENT' ? 'sent in the app' : n.delivery.inApp === 'FAILED' ? 'app delivery failed' : 'app delivery pending'}
+                                  {Object.entries(n.delivery.via ?? {}).map(([ch, s]) => ` · ${ch === 'WHATSAPP' ? 'WhatsApp' : ch === 'EMAIL' ? 'email' : ch} ${s === 'SIMULATED' ? 'simulated' : s.toLowerCase()}`)}
                                 </p>
                               </li>
                             ))}

@@ -12,12 +12,13 @@ import { loansRoutes } from './loans/loans.routes';
 import { depositsRoutes } from './deposits/deposits.routes';
 import { collectionsRoutes } from './collections/collections.routes';
 import { profileChangesRoutes } from './profile-changes/profile-changes.routes';
+import { notificationsRoutes } from './notifications/notifications.routes';
 import { permissionsRoutes } from './permissions/permissions.routes';
 import { usersRoutes } from './users/users.routes';
 
 /**
  * Registers every business module. Unversioned system routes first, then `/api/v1/*`
- * modules as each phase builds them (docs/22 §5): P1 auth, users, permissions · P2 masters, departments, demo reset · P3 ledger · P4a members · P4b change requests + my profile · P4c joining · P5 loans · P6 deposits · P7 collections · …
+ * modules as each phase builds them (docs/22 §5): P1 auth, users, permissions · P2 masters, departments, demo reset · P3 ledger · P4a members · P4b change requests + my profile · P4c joining · P5 loans · P6 deposits · P7 collections · P8a notifications · …
  */
 export async function registerModules(app: FastifyInstance): Promise<void> {
   await app.register(healthRoutes);
@@ -35,6 +36,7 @@ export async function registerModules(app: FastifyInstance): Promise<void> {
       await api.register(loansRoutes);
       await api.register(depositsRoutes);
       await api.register(collectionsRoutes);
+      await api.register(notificationsRoutes);
       await api.register(demoRoutes);
     },
     { prefix: API_PREFIX },

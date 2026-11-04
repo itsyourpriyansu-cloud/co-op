@@ -105,6 +105,16 @@ export class CollectionsRepository {
     return rows.map((r) => ({ sheet: toSheet(r.s), line: toLine(r.l) }));
   }
 
+  /** Loan components of every line on a posted sheet, oldest cycle first (defaulters for all members). */
+  async postedLines(): Promise<Array<{ memberId: string; cycle: string; components: DemandLine['components'] }>> {
+    return this.db
+      .select({ memberId: demandLines.memberId, cycle: demandLines.cycle, components: demandLines.components })
+      .from(demandLines)
+      .innerJoin(demandSheets, eq(demandSheets.id, demandLines.sheetId))
+      .where(eq(demandSheets.status, 'RECOVERY_POSTED'))
+      .orderBy(asc(demandLines.cycle));
+  }
+
   // ---- receipts ----
   private receiptWhere(f: ReceiptFilter) {
     const needle = (f.q ?? '').trim();

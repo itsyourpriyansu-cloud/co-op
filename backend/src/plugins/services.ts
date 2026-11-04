@@ -20,6 +20,8 @@ import { MembersService } from '../modules/members/members.service';
 import { ProfileChangesRepository } from '../modules/profile-changes/profile-changes.repository';
 import { ProfileChangesService } from '../modules/profile-changes/profile-changes.service';
 import { MastersService } from '../modules/masters/masters.service';
+import { NotificationsRepository } from '../modules/notifications/notifications.repository';
+import { NotificationsService } from '../modules/notifications/notifications.service';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -38,6 +40,8 @@ declare module 'fastify' {
     collections: CollectionsService;
     members: MembersService;
     profileChanges: ProfileChangesService;
+    /** In-app notifications and WhatsApp / email / SMS delivery (P8a). */
+    notifications: NotificationsService;
   }
 }
 
@@ -45,6 +49,7 @@ declare module 'fastify' {
 export const servicesPlugin = fp(
   async (app) => {
     app.decorate('masters', new MastersService(app, new MastersRepository(app.db)));
+    app.decorate('notifications', new NotificationsService(app, new NotificationsRepository(app.db)));
     app.decorate('ledger', new LedgerService(app, new LedgerRepository(app.db)));
     app.decorate('departments', new DepartmentsService(app, new DepartmentsRepository(app.db)));
     app.decorate('appAccounts', new AppAccountsService(app, new AuthRepository(app.db)));

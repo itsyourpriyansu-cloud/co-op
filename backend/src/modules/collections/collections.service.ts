@@ -573,7 +573,7 @@ export class CollectionsService {
         const loan = await this.app.loans.repo.find(loanId, tx);
         if (!loan || !borrower) continue;
         const overdue = history.reduce((s, h) => s + loanUnpaid(h.components, loanId), 0);
-        const base = { borrowerId: borrower.id, borrowerName: borrower.name, loanId, loanNo: loan.loanNo ?? loan.applicationNo, cycle: sh.cycle, overdue, consecutiveCycles: status.consecutiveCycles, createdAt: at, delivery: { inApp: 'PENDING' as const, whatsapp: 'NOT_CONNECTED' as const, email: 'NOT_CONNECTED' as const } };
+        const base = { borrowerId: borrower.id, borrowerName: borrower.name, loanId, loanNo: loan.loanNo ?? loan.applicationNo, cycle: sh.cycle, overdue, consecutiveCycles: status.consecutiveCycles, createdAt: at, delivery: { inApp: 'PENDING' as const } };
         const recipients: Array<[MemberNotice['kind'], string]> = [['DEFAULTER', borrower.id], ...loan.sureties.filter((s) => s.status === 'ACCEPTED').map((s) => ['GUARANTOR', s.memberId] as [MemberNotice['kind'], string])];
         for (const [kind, memberId] of recipients) {
           const n: MemberNotice = { id: `ntc-${randomUUID().slice(0, 8)}`, kind, memberId, ...base };
@@ -585,7 +585,7 @@ export class CollectionsService {
     return created;
   }
 
-  /** In-app now (WhatsApp / email in P8); each notice keeps its delivery status, and the audit trail the outcome. */
+  /** In the app and on the member's channels (P8a); each notice keeps its delivery status, and the audit trail the outcome. */
   private async deliverNotices(request: FastifyRequest, notices: MemberNotice[]): Promise<void> {
     if (!notices.length) return;
     const members = new Map((await this.app.members.all()).map((m) => [m.id, m]));
@@ -593,11 +593,11 @@ export class CollectionsService {
       const b = members.get(n.borrowerId);
       const vars: Record<string, string | number> = n.kind === 'DEFAULTER' ? { overdue: formatINR(n.overdue), cycles: n.consecutiveCycles } : { borrower: n.borrowerName, generalNo: b?.generalNo ?? '', loanNo: n.loanNo, overdue: formatINR(n.overdue), cycles: n.consecutiveCycles };
       const sent = await notifyMember(this.app, n.memberId, n.kind === 'DEFAULTER' ? 'defaulter.notice' : 'defaulter.guarantorNotice', vars, '/payments');
-      n.delivery = { ...n.delivery, inApp: sent === undefined ? 'PENDING' : sent ? 'SENT' : 'FAILED' };
+      n.delivery = sent ? { inApp: 'SENT', via: sent.via } : { inApp: 'FAILED' };
       await this.repo.saveNotice(n);
     }
     const sent = notices.filter((n) => n.delivery.inApp === 'SENT').length;
-    await this.app.audit.record(request, { action: 'noticeDelivery', entity: 'memberNotice', entityId: notices[0]!.cycle, summary: `Defaulter notices ${notices[0]!.cycle}: ${sent} of ${notices.length} delivered in the app${notices.length - sent ? `, ${notices.length - sent} pending or failed` : ''}; WhatsApp and email not connected yet (P8)` });
+    await this.app.audit.record(request, { action: 'noticeDelivery', entity: 'memberNotice', entityId: notices[0]!.cycle, summary: `Defaulter notices ${notices[0]!.cycle}: ${sent} of ${notices.length} delivered in the app${notices.length - sent ? `, ${notices.length - sent} failed` : ''}` });
   }
 
   /** ST-11 member page: defaulter status and the notices the member received (as borrower or surety). */
@@ -718,6 +718,26 @@ export class CollectionsService {
       await this.app.audit.record(request, { action: 'waivePenal', entity: 'demandSheet', entityId: sh.id, summary: `${user.name} waived ${formatINR(amount)} of ${formatINR(due)} penal for ${v.members.get(memberId)?.name ?? memberId}, ${formatCycle(sh.cycle)}: ${reason}`, before: { memberId, penal: due }, after: { memberId, penal: due - amount, waived: amount, reason } }, tx);
     });
     return this.dues(await this.view(), memberId);
+  }
+
+  /** Dues of several members without a permission check (P8 messages, member home). */
+  async duesOf(memberIds: string[]): Promise<Map<string, MemberDues>> {
+    const v = await this.view();
+    const out = new Map<string, MemberDues>();
+    for (const id of memberIds) out.set(id, await this.dues(v, id));
+    return out;
+  }
+
+  /** Members who are defaulters today (BR-020, settings.defaulterCycles), from every posted sheet at once. */
+  async defaulterIds(): Promise<Set<string>> {
+    const [rows, settings] = await Promise.all([this.repo.postedLines(), this.app.masters.settings()]);
+    const byMember = new Map<string, Array<{ cycle: string; loanUnpaid: number }>>();
+    for (const r of rows) {
+      const list = byMember.get(r.memberId) ?? [];
+      list.push({ cycle: r.cycle, loanUnpaid: loanUnpaid(r.components) });
+      byMember.set(r.memberId, list);
+    }
+    return new Set([...byMember].filter(([, h]) => loanDefaulter(h, settings.defaulterCycles).isDefaulter).map(([id]) => id));
   }
 
   async memberDues(user: SessionUser, memberId: string): Promise<MemberDues> {

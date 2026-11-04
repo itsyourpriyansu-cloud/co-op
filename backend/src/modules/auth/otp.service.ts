@@ -44,8 +44,8 @@ export class OtpService {
       channel: 'SIMULATED',
       expiresAt: new Date(Date.now() + this.app.env.OTP_TTL_SECONDS * 1000),
     });
-    // Simulated delivery (P8 sends it by WhatsApp / push). Never logged in production.
-    if (this.app.env.NODE_ENV !== 'production') this.app.log.info({ mobile: maskMobile(mobile), code }, 'simulated OTP');
+    // By WhatsApp (D-067) through integrations/messaging: simulated until F-10, the text never logged in production.
+    await this.app.notifications.senders.WHATSAPP.send({ channel: 'WHATSAPP', to: mobile, title: 'TGSECCSL one-time code', body: `Your TGSECCSL one-time code is ${code}. Do not share it with anyone.` });
     return {
       otpRef: row.id,
       expiresInSeconds: this.app.env.OTP_TTL_SECONDS,
