@@ -11,9 +11,9 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | **P8a done** (D-089): notifications, messages, member questions, preferences and member home on the backend; WhatsApp / email / SMS simulated behind `backend/src/integrations`. Next: **P8b** work queue, dashboards, search, service-target alerts (`docs/22` §5.7). Waiting on the society: F-06, F-09, F-10, F-13 |
+| **Next action** | **P8a done** (D-089): notifications, messages, member questions, preferences and member home on the backend; WhatsApp / email / SMS simulated behind `backend/src/integrations`. P8b done (D-090): work queue, dashboards, search, service targets. Next: **P8c** reports (`docs/22` §5.7). Waiting on the society: F-06, F-09, F-10, F-13, F-14 |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
-| **Last updated** | 2026-11-03 |
+| **Last updated** | 2026-11-04 |
 
 ---
 
@@ -105,3 +105,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-11-02 | **P7a built** (D-087): demand & collections on the backend (migration 0012: share accounts, sheets + lines, receipts, payment reports); generate / certify / send / post recovery, counter receipts, dues, member payment reports, all money posted to the ledger; share accounts and the member page now read backend data; reverse sync and four mock reads removed. Fixed: date LIKE (cast), empty optional bodies. Tests: backend 103/103, root 277/277, typecheck green; **full e2e through the backend 189/189** (25.3 min). Open: P7b extras need rules | P7b / P8 |
 | 2026-11-03 | **P7b built, P7 complete** (D-088, user-approved R1–R6): DDO online / Accountant paper-sheet deduction entry with review and one-step approve-and-post, salary limit with minimum take-home pay, partial deductions kept as dues, send-by date; penal interest on read (loan instalments only, per-product rate 0 until F-06, grace days, penal first, posted to 4200, waivable with a reason); defaulter after 1 unpaid cycle with notices to borrower and sureties (no guarantor charge, F-13). Migrations 0013–0017. Tests: domain 146 (100%), backend 115/115, root 292/292; **full e2e through the backend 190/190** (35.4 min) | P8 |
 | 2026-11-03 | **P8 planned, P8a built** (D-089, user-approved D1–D4): migration 0018 (notifications, deliveries, messages, support tickets, member preferences) seeded from the demo; `integrations/messaging.ts` sender interface, all channels simulated; notifyMember stops calling the mock; composer, questions, preferences, staff + member notifications, bell count and `/me/home` on the backend; OTPs through the WhatsApp sender; notices record per-channel delivery. Tests: backend 120, root 292 | P8b |
+| 2026-11-04 | **P8b built** (D-090): insight module (work queue, role dashboard, summary, search) on backend data; REQ-135 service targets (settings 48 h / 5 days, migration 0019, domain `serviceTarget`, "Over the … target" tag, dashboard count); DDO deduction entry shows on the work queue. Tests: domain 150, backend 126, root 296 | P8c |

@@ -134,6 +134,13 @@
       "when": 1793711260705,
       "tag": "0018_p8a_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793773858570,
+      "tag": "0019_p8b_service_targets",
+      "breakpoints": true
     }
   ]
 }

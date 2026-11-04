@@ -95,7 +95,7 @@ function demoInputFor(action: MembershipAction): MembershipActionInput {
 export class JoiningService {
   constructor(
     private readonly app: FastifyInstance,
-    private readonly repo: JoiningRepository,
+    readonly repo: JoiningRepository,
   ) {}
 
   // ---- MJ reference (public) ----

@@ -195,7 +195,7 @@ export class CollectionsService {
   }
 
   /** P7b: the sheet's actions for this user, from the workflow rules and the user's permissions. */
-  private async actionsFor(sh: SheetHead, user: SessionUser): Promise<string[]> {
+  async actionsFor(sh: SheetHead, user: SessionUser): Promise<string[]> {
     const [enter, post] = await Promise.all([this.app.permissions.has(user.role, 'collections.enterDeduction'), this.app.permissions.has(user.role, 'collections.postRecovery')]);
     const sheet = demandSheetActionsFor(sh.status, { role: user.role }).filter((a) => a !== 'postRecovery' || post);
     const entry = deductionEntryActionsFor(sh.status, sh.entry?.status, { role: user.role }).filter((a) => (a === 'rejectEntry' ? post : enter));

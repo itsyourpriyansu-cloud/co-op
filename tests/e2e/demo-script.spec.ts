@@ -183,7 +183,10 @@ test('Act 3 · a loan from application to money (phone ↔ console)', async ({ p
   for (const surety of ['mem-1103', 'mem-1104']) {
     await phoneAs(phone, request, surety, '/home');
     await phone.getByText(/asked you to be a surety|^\d+ surety requests?$/i).first().click();
-    if (!phone.url().includes(loanId)) await phone.getByRole('button', { name: /Lakshmi Devi/ }).first().click();
+    // The tap opens the loan or the list of requests; wait for either before reading the URL.
+    const borrower = phone.getByRole('button', { name: /Lakshmi Devi/ }).first();
+    await expect(phone.getByText('Agree & sign with OTP').or(borrower).first()).toBeVisible();
+    if (!phone.url().includes(loanId)) await borrower.click();
     await tap(phone, 'Agree & sign with OTP');
     await otp(phone);
     await tap(phone, 'Confirm & sign');

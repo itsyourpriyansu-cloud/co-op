@@ -121,6 +121,7 @@ Details and context: `docs/21-society-answers-impact.md` §3–4.
 | F-10 | Society's WhatsApp Business number and sender email | Simulated | S | Open |
 | F-11 | Samples: registers/Excel, demand sheet, sanction letter, DDO statement, recovery agreement, back of F1 | Layouts from forms | S | Open |
 | F-12 | Do ex-employees (~1,200) keep accounts the system must hold? | Members with status RETIRED/LEFT | S | Open |
+| F-14 | Service targets (REQ-135): calendar or working days/hours, and does the clock pause while a loan waits on the member (sureties, corrections)? | Calendar time, never paused (D-090) | S | Open |
 | F-13 | Guarantor liability (Q-310 "the society starts charging the guarantor"): when does a surety start paying, how is the borrower's unpaid amount split between sureties (equally? in order?), from which cycle, and does the borrower's own share / FD go first? Also confirm the defaulter and surety notice wording | Notices only (D-088); no surety is charged | S | Open |
 | C-1 | EMI flat (society) vs reducing balance (agreement): which one? | Both in the engine; product setting | S/E | **Resolved → D-071:** all methods built, society picks per product; default reducing balance |
 | C-2 | Membership: one signature (society) vs two (form F1) | Setting `membershipApprovals` | S/E | **Resolved → D-070:** two signatures (Secretary → President) as in the prototype; 1 is optional |

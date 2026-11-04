@@ -90,7 +90,7 @@ export function RoleDashboardView({ d, summary }: { d: RoleDashboard; summary?: 
         <div className="xl:col-span-2">
           <Panel
             title={d.variant === 'SIGNER' ? 'Awaiting your signature' : d.variant === 'CASHIER' ? 'Waiting on you' : d.variant === 'DDO' ? 'Pending validations' : 'Your queue'}
-            subtitle={totalWaiting ? `${totalWaiting} item${totalWaiting === 1 ? '' : 's'} · oldest first` : 'Nothing waiting'}
+            subtitle={totalWaiting ? `${totalWaiting} item${totalWaiting === 1 ? '' : 's'} · oldest first${d.overTarget ? ` · ${d.overTarget} over the service target` : ''}` : 'Nothing waiting'}
             action={<ButtonV2 text="Open work queue" buttonType={ButtonV2Type.PRIMARY} subType={ButtonV2SubType.INLINE} size={ButtonV2Size.SMALL} rightSlot={{ slot: <ArrowRight size={14} /> }} onClick={() => navigate('/queue')} />}
           >
             {d.oldest.length === 0 ? (

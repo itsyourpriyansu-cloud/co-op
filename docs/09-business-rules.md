@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.9 · 2026-11-04 · BR-037 service targets (D-090).
 > Version 0.8 · 2026-11-03 · BR-012 penal interest, BR-020 defaulter, BR-036 deduction entry (D-088).
 > Version 0.7 · 2026-11-02 · BR-035 FD maturity and premature withdrawal (D-086).
 > Version 0.6 · 2026-10-25
@@ -248,3 +249,8 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand �
 - **R1 [P]:** a deduction may not exceed the member's demand, nor the available salary = gross − other recorded deductions − `minTakeHomePay` (0 until set). Pay not certified: only the demand applies [ASSUMPTION].
 - **R2 [S]:** what is not deducted stays as the member's dues for that month (shown as earlier dues), paid at the counter; it is never added to the next sheet.
 - The sheet must reach the DDO `demandSendByDays` (society: 3–5, default 4) before the 1st; late sheets are flagged.
+
+### BR-037 Service targets [S] (D-090, REQ-135, Q-514)
+- A membership should be decided within `membershipTargetHours` (society: 48 h) of being submitted; a loan within `loanTargetDays` (society: 4–5 days, default 5) of its application. 0 switches a target off.
+- Counted in calendar time [ASSUMPTION]; a date without a time counts from the start of that day in India.
+- Work past its target is flagged on the Work Queue and counted on the role dashboard; nothing is blocked.

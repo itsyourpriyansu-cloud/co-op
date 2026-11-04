@@ -97,6 +97,11 @@ export class LoansRepository {
     return row?.data;
   }
 
+  /** Every loan, whole (P8b work queue and dashboards). */
+  async all(): Promise<Loan[]> {
+    return (await this.db.select({ data: loans.data }).from(loans)).map((r) => r.data);
+  }
+
   async forMember(memberId: string): Promise<Loan[]> {
     return (await this.db.select({ data: loans.data }).from(loans).where(eq(loans.memberId, memberId))).map((r) => r.data);
   }

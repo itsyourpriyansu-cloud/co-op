@@ -657,6 +657,10 @@ export interface SocietySettings {
   penalGraceDays: number;
   /** ST-60: financial year starts in this month (4 = April). */
   financialYearStartMonth: number;
+  /** P8b (D-089, REQ-135 [S]): membership decided within this many hours of submission (society: 48 h). 0 = no target. */
+  membershipTargetHours: number;
+  /** P8b (D-089, REQ-135 [S]): a loan disbursed within this many days of application (society: 4–5). 0 = no target. */
+  loanTargetDays: number;
   /** P7b (D-088): the sheet must reach the DDO this many days before the 1st of the cycle (society: 3–5). */
   demandSendByDays: number;
   /** P7b (D-088, R1 [P]): a deduction may not leave the member less than this take-home pay. 0 until set. */

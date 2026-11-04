@@ -680,6 +680,10 @@ export interface WorkItem {
   days: number;
   actionLabel: string;
   link: string;
+  /** P8b (D-089, REQ-135): past the service target (membership from submission, loan from application). */
+  overTarget?: boolean;
+  /** e.g. "48 h target", with overTarget. */
+  targetLabel?: string;
 }
 
 export interface WorkQueue {
@@ -1089,6 +1093,8 @@ export interface RoleDashboard {
   /** Work Queue stages waiting on this role. */
   queue: Array<{ key: string; label: string; count: number; amount: Paise; oldestDays: number; link: string }>;
   oldest: WorkItem[];
+  /** P8b (D-089, REQ-135): items in this role's queue past their service target. */
+  overTarget?: number;
   /** What this role finished in the current month (signed, disbursed, certified …). */
   done: { label: string; count: number; amount: Paise };
   /** Accountant / DDO: this cycle's demand sheets. */

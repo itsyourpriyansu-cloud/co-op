@@ -20,7 +20,7 @@ const fieldLabels = (r: ProfileChangeRequest) => r.fields.map((f) => PROFILE_FIE
 export class ProfileChangesService {
   constructor(
     private readonly app: FastifyInstance,
-    private readonly repo: ProfileChangesRepository,
+    readonly repo: ProfileChangesRepository,
   ) {}
 
   // ---- reads for other modules ----

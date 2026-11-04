@@ -74,6 +74,7 @@ export function WorkQueuePage() {
       renderCell: (_v, r) => (
         <div className="flex flex-col items-start gap-0.5">
           <Age days={r.days} />
+          {r.overTarget && <TagV2 text={`Over the ${r.targetLabel ?? "target"}`} size={TagV2Size.XS} color={TagV2Color.ERROR} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />}
           <span className="text-caption text-fg-tertiary">{formatDisplayDate(r.since)}</span>
         </div>
       ),

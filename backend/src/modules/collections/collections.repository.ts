@@ -94,6 +94,22 @@ export class CollectionsRepository {
     return new Map(rows.map((r) => [r.memberId, Number(r.unpaid)]));
   }
 
+  /** Members short (recovered below demand) per sheet of one cycle (P8b dashboard). */
+  async shortMembers(cycle: string): Promise<Map<string, number>> {
+    const rows = await this.db
+      .select({ sheetId: demandLines.sheetId, n: sql<number>`count(*)::int` })
+      .from(demandLines)
+      .where(and(eq(demandLines.cycle, cycle), sql`coalesce(${demandLines.recovered}, 0) < ${demandLines.totalDemand}`))
+      .groupBy(demandLines.sheetId);
+    return new Map(rows.map((r) => [r.sheetId, r.n]));
+  }
+
+  /** Lines per sheet (P8b work queue subtitle). */
+  async lineCounts(): Promise<Map<string, number>> {
+    const rows = await this.db.select({ sheetId: demandLines.sheetId, n: sql<number>`count(*)::int` }).from(demandLines).groupBy(demandLines.sheetId);
+    return new Map(rows.map((r) => [r.sheetId, r.n]));
+  }
+
   /** A member's lines with their sheet, oldest cycle first (dues, statements, member page). */
   async linesOfMember(memberId: string, tx?: Tx): Promise<Array<{ sheet: SheetHead; line: DemandLine }>> {
     const rows = await (tx ?? this.db)

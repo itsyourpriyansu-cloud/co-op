@@ -80,7 +80,7 @@ function documentsOf(m: Member): MemberDocument[] {
 export class MembersService {
   constructor(
     private readonly app: FastifyInstance,
-    private readonly repo: MembersRepository,
+    readonly repo: MembersRepository,
   ) {}
 
   // ---- ST-10 list ----

@@ -5,7 +5,7 @@ import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, TextFiel
 import { api } from '@/lib/api';
 import { MONTH_ITEMS, isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent'>;
+type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays'>;
 const pick = (s: SocietySettings): Values => ({
   shareValue: s.shareValue,
   admissionFee: s.admissionFee,
@@ -15,6 +15,8 @@ const pick = (s: SocietySettings): Values => ({
   financialYearStartMonth: s.financialYearStartMonth,
   maxGuaranteesPerSurety: s.maxGuaranteesPerSurety,
   emiToNetSalaryMaxPercent: s.emiToNetSalaryMaxPercent,
+  membershipTargetHours: s.membershipTargetHours,
+  loanTargetDays: s.loanTargetDays,
 });
 
 export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
@@ -57,6 +59,11 @@ export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
       <FormSection title="Service and year" tag={ph('retirementAge')}>
         <NumberField label="Retirement age" name="retirementAge" value={v.retirementAge} onChange={(retirementAge) => setV({ retirementAge })} errors={errors} unit="years" disabled={ro} hint="Used for left-over service (BR-001, BR-002)" />
         <SingleSelectV2 label="Financial year starts in" placeholder="Month" items={[{ items: MONTH_ITEMS }]} selected={String(v.financialYearStartMonth)} onSelect={(m) => setV({ financialYearStartMonth: Number(m) })} disabled={ro} />
+      </FormSection>
+
+      <FormSection title="Service targets" description="REQ-135: the society aims to decide a membership within 48 hours and a loan within 4–5 days. Work past the target is flagged on the Work Queue and dashboards. 0 = no target.">
+        <NumberField label="Membership" name="membershipTargetHours" value={v.membershipTargetHours} onChange={(membershipTargetHours) => setV({ membershipTargetHours })} errors={errors} unit="hours from submission" disabled={ro} />
+        <NumberField label="Loan" name="loanTargetDays" value={v.loanTargetDays} onChange={(loanTargetDays) => setV({ loanTargetDays })} errors={errors} unit="days from application" disabled={ro} />
       </FormSection>
 
       <FormSection title="Risk guards" description="Placeholders until the society confirms them (D-055)." tag={ph('maxGuaranteesPerSurety')}>

@@ -17,7 +17,7 @@ async function fakeMock() {
     sessions.clear();
     return { ok: true };
   });
-  mock.get('/api/v1/work-queue', async (req, reply) => {
+  mock.get('/api/v1/reports', async (req, reply) => {
     const token = (req.headers.authorization ?? '').replace('Bearer ', '');
     const user = sessions.get(token);
     return user ? { items: [], for: user.id } : reply.status(401).send({ code: 'UNAUTHENTICATED' });
@@ -56,7 +56,7 @@ describe('session bridge (docs/22 §5.1)', () => {
 
   it('lets a backend sign-in use routes still served by the mock', async () => {
     const s = await signInAs(app, 'stf-accountant');
-    const res = await app.inject({ method: 'GET', url: '/api/v1/work-queue', headers: bearer(s) });
+    const res = await app.inject({ method: 'GET', url: '/api/v1/reports', headers: bearer(s) });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ items: [], for: 'stf-accountant' });
     expect(res.headers['x-served-by']).toBe('mock-fallback');
@@ -64,13 +64,13 @@ describe('session bridge (docs/22 §5.1)', () => {
 
   it('reuses one mock session per user and makes a new one after a demo reset', async () => {
     const s = await signInAs(app, 'stf-cashier');
-    await app.inject({ method: 'GET', url: '/api/v1/work-queue', headers: bearer(s) });
+    await app.inject({ method: 'GET', url: '/api/v1/reports', headers: bearer(s) });
     const before = fake.issuedCount();
-    await app.inject({ method: 'GET', url: '/api/v1/work-queue', headers: bearer(s) });
+    await app.inject({ method: 'GET', url: '/api/v1/reports', headers: bearer(s) });
     expect(fake.issuedCount()).toBe(before);
 
     await app.inject({ method: 'POST', url: '/api/v1/__demo/reset' });
-    const after = await app.inject({ method: 'GET', url: '/api/v1/work-queue', headers: bearer(s) });
+    const after = await app.inject({ method: 'GET', url: '/api/v1/reports', headers: bearer(s) });
     expect(after.statusCode).toBe(200);
     expect(fake.issuedCount()).toBe(before + 1);
   });
@@ -137,7 +137,7 @@ describe('session bridge (docs/22 §5.1)', () => {
   });
 
   it('forwards signed-out requests unchanged', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/work-queue' });
+    const res = await app.inject({ method: 'GET', url: '/api/v1/reports' });
     expect(res.statusCode).toBe(401);
   });
 });

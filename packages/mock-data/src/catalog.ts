@@ -76,6 +76,9 @@ export const SETTINGS: SocietySettings = {
   emiToNetSalaryMaxPercent: 50,
   penalGraceDays: 0,
   financialYearStartMonth: 4,
+  // Society: membership within 48 h, loans within 4–5 days (REQ-135, D-089).
+  membershipTargetHours: 48,
+  loanTargetDays: 5,
   // Society: the sheet reaches DDOs 3–5 days before the 1st (D-088).
   demandSendByDays: 4,
   // R1 [P]: 0 until the society sets a minimum take-home pay (D-088).
