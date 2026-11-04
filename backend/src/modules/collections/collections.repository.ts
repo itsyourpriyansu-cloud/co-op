@@ -94,6 +94,15 @@ export class CollectionsRepository {
     return new Map(rows.map((r) => [r.memberId, Number(r.unpaid)]));
   }
 
+  /** Every line with its sheet's cycle, department and status, oldest cycle first (P8c reports). */
+  async allLines(): Promise<Array<{ sheetId: string; departmentId: string; status: DemandSheet['status']; cycle: string; memberId: string; components: DemandLine['components']; totalDemand: number; recovered: number | null }>> {
+    return this.db
+      .select({ sheetId: demandLines.sheetId, departmentId: demandSheets.departmentId, status: demandSheets.status, cycle: demandLines.cycle, memberId: demandLines.memberId, components: demandLines.components, totalDemand: demandLines.totalDemand, recovered: demandLines.recovered })
+      .from(demandLines)
+      .innerJoin(demandSheets, eq(demandSheets.id, demandLines.sheetId))
+      .orderBy(asc(demandLines.cycle));
+  }
+
   /** Members short (recovered below demand) per sheet of one cycle (P8b dashboard). */
   async shortMembers(cycle: string): Promise<Map<string, number>> {
     const rows = await this.db

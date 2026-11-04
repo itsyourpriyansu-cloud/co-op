@@ -1,5 +1,6 @@
 # 22 · Production backend plan
 
+> Version 0.21 · 2026-11-04 · v0.21: P8c built (reports, defaulter notice, D-091).
 > Version 0.20 · 2026-11-04 · v0.20: P8b built (work queue, dashboards, search, service targets, D-090).
 > Version 0.19 · 2026-11-03 · v0.19: §5.7 P8 design (P8a–P8d, D-089); P8a built (notifications).
 > Version 0.18 · 2026-11-03 · v0.18: P7b built (deduction entry, salary limit, penal, defaulters, notices); P7 complete.
@@ -193,7 +194,7 @@ Each phase ends with its exit test passing. Never start the next phase before th
 | **P5 Loans & sureties** ✅ built 2026-10-30 (D-084) | Applications, eligibility, sureties (FD check for retiring sureties), workflow, assessment with counter-offer, sanction, disbursement (10% share + insurance deducted, ledger posting), schedule (EMI method per product: reducing, amortised or flat, D-071), top-up, multiple loans per type | Loans screens, work queue, MB-03…07 | Loan journeys e2e pass; disbursement entries balance; remaining balance + months shown |
 | **P6 Deposits** ✅ built 2026-11-02 (P6a D-085, P6b D-086) | FD request, payment (cash denominations / transfer), acceptance, FDR, maturity job, premature withdrawal with penalty, loan against FD | Deposits screens, MB-08/09/15 | FD journey e2e passes; interest and penalty posted to ledger |
 | **P7 Collections** ✅ built 2026-11-03 (P7a D-087, P7b D-088; guarantor recovery waits for F-13) | Demand sheets per department, send-by date, **DDO enters actual deduction**, allocation (BR-011), dues (not carried forward), counter receipts, member payment reports (QR, no screenshot), daily penal job, defaulter after 1 month, guarantor notices | Demand screens, DDO console, MB-10/18 | Month-end journey e2e passes; reports match ledger totals |
-| **P8 Notifications, dashboards, reports** — P8a ✅ 2026-11-03 (D-089), P8b ✅ 2026-11-04 (D-090); P8c–P8d next | Work queue + dashboards (48 h / 4–5 day alerts), in-app notifications, WhatsApp/email/push providers (simulated + real adapters), support tickets, 8 reports, CSV/Excel, PDFs | Every remaining screen | Full Playwright suite (188 tests) green against :4100 with fallback **switched off** |
+| **P8 Notifications, dashboards, reports** — P8a ✅ 2026-11-03 (D-089), P8b ✅ 2026-11-04 (D-090), P8c ✅ 2026-11-04 (D-091); P8d next | Work queue + dashboards (48 h / 4–5 day alerts), in-app notifications, WhatsApp/email/push providers (simulated + real adapters), support tickets, 8 reports, CSV/Excel, PDFs | Every remaining screen | Full Playwright suite (188 tests) green against :4100 with fallback **switched off** |
 | **P9 Hardening & go-live prep** | Remove fallback, security review (rate limits, headers, OWASP checks), backups, Dockerfile, data import tool for the society's registers (F-11), performance check, Azure deployment (Bicep) when asked | Apps default to the backend | e2e green; restore drill; import of a sample register succeeds |
 
 ### 5.1 P1 design: auth, users, permissions, audit
@@ -322,7 +323,7 @@ P7a moves what the prototype does; the extras in the P7 row that the prototype n
 |---|---|
 | **P8a Notifications** ✅ | Tables `notifications`, `deliveries`, `messages`, `support_tickets`, `member_preferences` (0018). `integrations/messaging.ts`: one sender per channel (WhatsApp, email, SMS), all simulated until F-10. `notifyMember` = in-app + each template channel the member switched on; defaulter notices keep each channel's result. Routes: `/notifications` (+ count, read), `/messages` (+ preview), `/support/tickets` (+ reply), `/me/home`, `/me/notifications` (+ read), `/me/preferences`, `/me/support` (+ tickets). OTP codes go through the WhatsApp sender |
 | **P8b Work queue, dashboards, search** ✅ | `/work-queue`, `/dashboard/role`, `/dashboard/summary`, `/search` from the backend's tables; REQ-135 service targets (Admin settings: membership 48 h, loan 5 days; "Over target" on the work queue, count on dashboards) |
-| **P8c Reports** | The 8 available reports (`/reports`, `/reports/:id`) and `/print/defaulter-notice/:memberId`; CSV / Excel and PDF stay in the browser (already built) |
+| **P8c Reports** ✅ | The 8 available reports (`/reports`, `/reports/:id`) and `/print/defaulter-notice/:memberId`; CSV / Excel and PDF stay in the browser (already built) |
 | **P8d Fallback off** | Demo controls on the backend (clock in the database, failure rate, personas, scenarios, dataset, sample, state) when `DEMO_MODE` is on; remove the record sync, session bridge and `/__demo/notify`; exit test: the full Playwright suite with the fallback switched off |
 
 Not in P8: server-side Excel / PDF, SMS provider (society: no SMS), push (needs the signed APK), Telugu.
