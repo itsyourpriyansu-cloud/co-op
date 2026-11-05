@@ -35,7 +35,7 @@ export const demoRoutes: FastifyPluginAsyncZod = async (app) => {
 
   app.post('/__demo/reset', { schema: { tags, summary: 'Put every table back to the demo dataset; the clock back to its date', response: anyResponse } }, async (request) => {
     demoOnly();
-    await runSeed(app.db, { staffPassword: app.env.SEED_STAFF_PASSWORD });
+    await runSeed(app.db, { staffPassword: app.env.SEED_STAFF_PASSWORD, dataKey: app.env.DATA_ENCRYPTION_KEY });
     app.permissions.reload();
     app.demoFailure.rate = 0;
     await setClock(app, null);

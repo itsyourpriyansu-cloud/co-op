@@ -39,3 +39,18 @@ export function decrypt(sealed: string, secret: string): string {
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
 }
+
+/** AES-256-GCM over bytes (stored files, F-01). Output: iv (12) · tag (16) · ciphertext. */
+export function sealBytes(plain: Buffer, secret: string): Buffer {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', keyFrom(secret), iv);
+  const data = Buffer.concat([cipher.update(plain), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), data]);
+}
+
+export function openBytes(sealed: Buffer, secret: string): Buffer {
+  if (sealed.length < 28) throw new Error('Malformed encrypted file');
+  const decipher = createDecipheriv('aes-256-gcm', keyFrom(secret), sealed.subarray(0, 12));
+  decipher.setAuthTag(sealed.subarray(12, 28));
+  return Buffer.concat([decipher.update(sealed.subarray(28)), decipher.final()]);
+}

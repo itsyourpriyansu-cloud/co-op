@@ -89,6 +89,7 @@ export default function Profile() {
           <View style={styles.actions}>
             <Button text="Edit contact" buttonType="secondary" leftSlot={PenLine} style={{ flex: 1 }} onPress={() => router.push('/profile/edit')} />
             <Button text="Request a change" style={{ flex: 1 }} onPress={() => router.push('/profile/request')} />
+            <Button text="My signature" buttonType="secondary" style={{ flex: 1 }} onPress={() => router.push('/profile/signature')} />
           </View>
 
           {p.changeRequests.length ? (

@@ -17,7 +17,7 @@ import {
   type JournalLineInput,
   type LoanAction,
 } from '@tgs/domain';
-import type { ConsoleRole, Loan, ShareAccount, LoanActionInput, LoanDetail, Member, OtpChallenge, Role, SanctionPreview, SessionUser, SuretyRequest, SuretyRequests } from '@tgs/types';
+import type { ConsoleRole, Loan, ShareAccount, LoanActionInput, LoanDetail, Member, OtpChallenge, Role, SanctionPreview, SessionUser, StaffSignOff, SuretyRequest, SuretyRequests } from '@tgs/types';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
@@ -163,7 +163,7 @@ export class LoanWorkflowService {
       const next = nextLoanStatus(l.status, action, { product, allSuretiesAccepted: suretyProgress(l.sureties, product.suretiesRequired).allAccepted });
       if (!next) return fail('INVALID_TRANSITION', `"${action}" is not possible at "${l.status}".`);
       const remarks = input.remarks?.trim();
-      const signOff = { byId: actor.id, byName: actor.name, role: actor.role, at, ...(remarks ? { remarks } : {}) };
+      const signOff: StaffSignOff = { byId: actor.id, byName: actor.name, role: actor.role, at, ...(remarks ? { remarks } : {}) };
       const needReason = () => {
         if (!remarks) fail('VALIDATION_ERROR', 'Give a reason. The member sees it.', { fieldErrors: { remarks: 'Required' } });
       };
@@ -189,6 +189,10 @@ export class LoanWorkflowService {
           notes.push([m.id, 'loan.rejected', { applicationNo: l.applicationNo, reason: remarks! }, `/loan/${l.id}`]);
           break;
         case 'ddoCertify':
+          if (actor.role === 'DDO') {
+            const fileId = await this.app.signatures.signOff(actor.id, opts.demo);
+            if (fileId) signOff.signatureFileId = fileId;
+          }
           if (input.recoveryFeasible !== true) fail('VALIDATION_ERROR', 'Confirm that the loan can be recovered from salary, or return the application.', { fieldErrors: { recoveryFeasible: 'Required' } });
           l.signOffs.ddo = { ...signOff, recoveryFeasible: true };
           // The DDO's certificate refreshes the member's pay profile (F2 items 4–5).
@@ -222,11 +226,19 @@ export class LoanWorkflowService {
           break;
         }
         case 'secretarySign':
+          if (actor.role === 'SECRETARY') {
+            const fileId = await this.app.signatures.signOff(actor.id, opts.demo);
+            if (fileId) signOff.signatureFileId = fileId;
+          }
           l.signOffs.secretary = signOff;
           break;
         case 'presidentSign':
           // SOD-1 (D-027): two different people sign.
           if (l.signOffs.secretary?.byId === actor.id) fail('FORBIDDEN', 'The President cannot be the same person as the Secretary (SOD-1).');
+          if (actor.role === 'PRESIDENT') {
+            const fileId = await this.app.signatures.signOff(actor.id, opts.demo);
+            if (fileId) signOff.signatureFileId = fileId;
+          }
           l.signOffs.president = signOff;
           l.sanctionLetterNo = await this.repo.nextNumber(tx, 'sanction', w.today.slice(0, 4));
           notes.push([m.id, 'loan.sanctioned', { product: product.name, amount: formatINR(l.sanctionedAmount ?? l.appliedAmount), emi: formatINR(l.emi ?? 0), firstCycle: formatCycle(l.sanctionSheet?.firstDueCycle ?? w.cycle) }, `/loan/${l.id}`]);
@@ -327,7 +339,7 @@ export class LoanWorkflowService {
     };
   }
 
-  private async respond(request: FastifyRequest, w: World, loanId: string, memberId: string, accept: boolean, reason?: string): Promise<Loan> {
+  private async respond(request: FastifyRequest, w: World, loanId: string, memberId: string, accept: boolean, reason?: string, signatureFileId?: string): Promise<Loan> {
     const at = await businessNow(this.app);
     let note: [string, string, Record<string, string>, string] | undefined;
     const saved = await withTransaction(this.app.db, async (tx) => {
@@ -342,7 +354,7 @@ export class LoanWorkflowService {
         const [card] = await this.loans.suretyCards(w, { id: l.id, memberId: l.memberId, sureties: l.sureties, instalments: l.appliedInstalments }, [memberId]);
         const check = card?.checks.find((c) => !c.pass && c.severity === 'block');
         if (check) fail('RULE_VIOLATION', check.message, { ruleId: check.ruleId });
-        Object.assign(s, { status: 'ACCEPTED', respondedAt: at });
+        Object.assign(s, { status: 'ACCEPTED', respondedAt: at, ...(signatureFileId ? { signatureFileId } : {}) });
       } else {
         if (!reason?.trim()) fail('VALIDATION_ERROR', 'Tell the applicant why.', { fieldErrors: { reason: 'Required' } });
         Object.assign(s, { status: 'DECLINED', respondedAt: at, declineReason: reason!.trim() });
@@ -380,6 +392,7 @@ export class LoanWorkflowService {
     const me = this.loans.memberIdOf(user);
     await this.openRequest(me, loanId);
     const m = await this.loans.member(me);
+    await this.app.signatures.require(me);
     // The code is bound to this surety and this loan.
     return this.app.appAccounts.startCode(m.mobile, 'SIGN', `${loanId}:${me}`);
   }
@@ -388,8 +401,9 @@ export class LoanWorkflowService {
     const me = this.loans.memberIdOf(sessionOf(request));
     await this.openRequest(me, loanId);
     await this.app.appAccounts.verifyCode('SIGN', `${loanId}:${me}`, body.otpRef ?? '', body.otp ?? '');
+    const fileId = await this.app.signatures.require(me);
     const w = await this.loans.world();
-    return this.suretyRequest(w, await this.respond(request, w, loanId, me, true), me);
+    return this.suretyRequest(w, await this.respond(request, w, loanId, me, true, undefined, fileId), me);
   }
 
   async suretyDecline(request: FastifyRequest, loanId: string, reason?: string): Promise<SuretyRequest> {

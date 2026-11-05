@@ -7,6 +7,7 @@ import { isApiError } from '@tgs/api-client';
 import { amountInWords, formatDisplayDate, formatINR, validateMembershipForm } from '@tgs/domain';
 import type { JoiningReference, MembershipDocumentType, MembershipForm, Nominee } from '@tgs/types';
 import { api } from '@/lib/api';
+import { SignatureCard } from '@/components/SignatureCard';
 import { errorsForStep, firstIncompleteStep, STEPS, useJoiningReference, useMyApplication, useSaveDraft } from '@/lib/joining';
 import { Alert, Button, Card, Checkbox, ChoiceCard, DateField, Divider, Header, KeyValue, NumberStepper, OtpInput, Screen, Segmented, SelectField, Skeleton, Text, TextField, WizardProgress } from '@/ui';
 import { color, radius, space } from '@/theme';
@@ -155,6 +156,7 @@ export default function Apply() {
       {step === 4 && <DocumentsStep {...props} />}
       {step === 5 && <AgreementsStep {...props} />}
       {isReview && <ReviewStep {...props} errors={allErrors} goTo={(s) => setStep(s)} />}
+      {isReview && <SignatureCard purpose="You sign this application with a code; your signature is printed on it." />}
 
       <SignSheet
         signing={signing}

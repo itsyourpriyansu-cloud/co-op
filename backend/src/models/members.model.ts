@@ -86,6 +86,9 @@ export const recoveryMandates = pgTable(
     signedOn: day('signed_on').notNull(),
     agreedOn: day('agreed_on'),
     agreedByName: text('agreed_by_name'),
+    /** F-01 (D-096): the member's and the DDO's signature images. */
+    signatureFileId: text('signature_file_id'),
+    agreedSignatureFileId: text('agreed_signature_file_id'),
   },
   (t) => [index('recovery_mandates_member_idx').on(t.memberId), index('recovery_mandates_department_idx').on(t.departmentId, t.status)],
 );

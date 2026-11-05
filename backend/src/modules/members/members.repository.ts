@@ -56,6 +56,8 @@ const toMandate = (m: typeof recoveryMandates.$inferSelect): RecoveryMandate => 
   signedOn: m.signedOn,
   ...(m.agreedOn ? { agreedOn: m.agreedOn } : {}),
   ...(m.agreedByName ? { agreedByName: m.agreedByName } : {}),
+  ...(m.signatureFileId ? { signatureFileId: m.signatureFileId } : {}),
+  ...(m.agreedSignatureFileId ? { agreedSignatureFileId: m.agreedSignatureFileId } : {}),
 });
 
 const toTransfer = (t: typeof memberTransfers.$inferSelect): TransferEvent => ({
@@ -149,15 +151,15 @@ export class MembersRepository {
   }
 
   async insertMandate(tx: Tx, m: RecoveryMandate): Promise<void> {
-    await tx.insert(recoveryMandates).values({ ...m, agreedOn: m.agreedOn ?? null, agreedByName: m.agreedByName ?? null });
+    await tx.insert(recoveryMandates).values({ ...m, agreedOn: m.agreedOn ?? null, agreedByName: m.agreedByName ?? null, signatureFileId: m.signatureFileId ?? null, agreedSignatureFileId: m.agreedSignatureFileId ?? null });
   }
 
   async supersedeMandates(tx: Tx, memberId: string): Promise<void> {
     await tx.update(recoveryMandates).set({ status: 'SUPERSEDED' }).where(and(eq(recoveryMandates.memberId, memberId), ne(recoveryMandates.status, 'SUPERSEDED')));
   }
 
-  async agreeMandate(tx: Tx, id: string, on: string, byName: string): Promise<void> {
-    await tx.update(recoveryMandates).set({ status: 'AGREED', agreedOn: on, agreedByName: byName }).where(eq(recoveryMandates.id, id));
+  async agreeMandate(tx: Tx, id: string, on: string, byName: string, signatureFileId?: string): Promise<void> {
+    await tx.update(recoveryMandates).set({ status: 'AGREED', agreedOn: on, agreedByName: byName, agreedSignatureFileId: signatureFileId ?? null }).where(eq(recoveryMandates.id, id));
   }
 
   // ---- transfers ----

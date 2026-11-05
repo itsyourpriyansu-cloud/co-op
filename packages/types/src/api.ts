@@ -1226,3 +1226,20 @@ export interface SearchHit {
   status?: string;
   link: string;
 }
+
+/** F-01 (D-096): my signature on file. */
+export interface MySignature {
+  fileId: string;
+  uploadedAt: ISODateTime;
+  width: number;
+  height: number;
+  sha256: string;
+  /** The PNG as a data URL (only ever sent to its owner or to staff). */
+  dataUrl: string;
+}
+
+/** F-01 (D-096): a signature shown on a printed form. */
+export interface SignatureImage {
+  fileId: string;
+  dataUrl: string;
+}

@@ -165,6 +165,8 @@ export interface LoanSurety {
   retiresDuringLoan: boolean;
   respondedAt?: ISODateTime;
   declineReason?: string;
+  /** F-01 (D-096): the surety's signature image when they signed. */
+  signatureFileId?: string;
 }
 
 export interface WorkflowEvent {
@@ -209,7 +211,7 @@ export interface Loan {
   channel?: 'APP' | 'COUNTER';
   createdByName?: string;
   submittedAt?: ISODateTime;
-  signature?: { signedAt: ISODateTime; textVersion: string };
+  signature?: { signedAt: ISODateTime; textVersion: string; fileId?: string };
   /** M5 workflow records (ST-24 … ST-28), each with name and time. */
   signOffs?: LoanSignOffs;
   /** ST-26 assessment = "For Office Use" (F2/F3 back side). */
@@ -311,7 +313,7 @@ export interface DepositAccount {
   /** Where the request came from: the member in the app (MB-15) or the office counter (ST-31). */
   channel?: 'APP' | 'COUNTER';
   requestedAt?: ISODateTime;
-  signature?: { signedAt: ISODateTime; textVersion: string };
+  signature?: { signedAt: ISODateTime; textVersion: string; fileId?: string };
   /** ST-33 step 1: the cashier's receipt (cash with denominations, BR-029, or transfer). */
   payment?: { mode: 'CASH' | 'TRANSFER' | 'CHEQUE'; amount: Paise; date: ISODate; denominations?: Partial<Record<500 | 200 | 100 | 50 | 20 | 10, number>>; reference?: string; receiptNo: string; byName: string; at: ISODateTime };
   /** ST-33 steps 2–3 (D-027). */
@@ -474,6 +476,8 @@ export interface SignatureRecord {
   signedAt: ISODateTime;
   textVersion: string;
   method: 'OTP';
+  /** F-01 (D-096): the signature image on file when it was signed. */
+  fileId?: string;
 }
 
 /** F1 items 1–7 that the DDO certifies (docs/16 §F1 "Certified that items 1 to 7 are correct"). */
@@ -487,6 +491,8 @@ export interface StaffSignOff {
   role: string;
   at: ISODateTime;
   remarks?: string;
+  /** F-01 (D-096): the signer's signature image (sanction, DDO certificate). */
+  signatureFileId?: string;
 }
 
 export interface MembershipApplication {
@@ -629,6 +635,10 @@ export interface RecoveryMandate {
   signedOn: ISODate;
   agreedOn?: ISODate;
   agreedByName?: string;
+  /** F-01 (D-096): the member's signature (signed with the joining application). */
+  signatureFileId?: string;
+  /** F-01 (D-096): the DDO's signature on "AGREED". */
+  agreedSignatureFileId?: string;
 }
 
 /** Society settings seed (docs/13 §3). `placeholders` lists values awaiting the society (docs/09). */

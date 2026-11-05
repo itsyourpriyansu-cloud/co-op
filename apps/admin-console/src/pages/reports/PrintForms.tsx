@@ -15,6 +15,7 @@ import { MemberSearch } from '@/components/MemberSearch';
 import { PageHeader } from '@/components/PageHeader';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
+import { SignatureMark } from '@/components/SignatureMark';
 
 const addr = (a?: Partial<Address>) => (a ? [a.line1, a.line2, a.city, a.district].filter(Boolean).join(', ') + (a.pincode ? ` - ${a.pincode}` : '') : '');
 const upper = (s?: string) => (s ?? '').toUpperCase();
@@ -46,12 +47,12 @@ function Line({ no, label, value, wide }: { no?: string; label: string; value?: 
   );
 }
 
-function Signatures({ items }: { items: Array<{ label: string; name?: string; at?: string }> }) {
+function Signatures({ items }: { items: Array<{ label: string; name?: string; at?: string; fileId?: string }> }) {
   return (
     <div className={`mt-10 grid gap-6 text-center text-caption ${items.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
       {items.map((s) => (
         <div key={s.label}>
-          <div className="min-h-[2.5rem] border-b border-[#555] pb-1 text-body italic">{s.name ? `Signed: ${s.name}` : ''}</div>
+          <div className="flex min-h-[2.5rem] items-end justify-center border-b border-[#555] pb-1 text-body italic">{s.fileId && s.name ? <SignatureMark fileId={s.fileId} name={s.name} /> : s.name ? `Signed: ${s.name}` : ''}</div>
           <p className="mt-1 font-medium">{s.label}</p>
           {s.at && <p className="text-[#555]">{s.at}</p>}
         </div>
@@ -199,7 +200,7 @@ export function DefaulterNoticePrintPage() {
 
 // ---- F1 Membership application -----------------------------------------------------------------
 
-type F1 = { applicationNo?: string; generalNo?: string; name: string; fatherName: string; dob?: string; present: string; permanent: string; mobile: string; designation: string; office: string; appointment?: string; probation?: string; shares?: number; nominee: string; signedAt?: string; ddo?: { name: string; at: string; designation?: string }; secretary?: string; president?: string };
+type F1 = { applicationNo?: string; generalNo?: string; name: string; fatherName: string; dob?: string; present: string; permanent: string; mobile: string; designation: string; office: string; appointment?: string; probation?: string; shares?: number; nominee: string; signedAt?: string; signatureFileId?: string; ddo?: { name: string; at: string; designation?: string; fileId?: string }; secretary?: string; president?: string; secretaryFileId?: string; presidentFileId?: string };
 
 function fromApplication(d: MembershipDetail): F1 {
   const a = d.application;
@@ -219,10 +220,10 @@ function fromApplication(d: MembershipDetail): F1 {
     ...(f.employment?.employmentType === 'APPROVED_PROBATIONER' ? { probation: `${f.employment.probationServiceMonths ?? 0} months` } : {}),
     shares: a.sharesProposed,
     nominee: f.nominee?.name ? `${f.nominee.name} (${f.nominee.relation ?? ''})${f.nominee.address ? `, ${f.nominee.address}` : ''}` : '',
-    ...(a.signature ? { signedAt: formatDisplayDateTime(a.signature.signedAt) } : {}),
-    ...(a.ddoCertification ? { ddo: { name: a.ddoCertification.byName, at: formatDisplayDateTime(a.ddoCertification.at), designation: a.ddoCertification.designation } } : {}),
-    ...(a.secretaryApproval ? { secretary: a.secretaryApproval.byName } : {}),
-    ...(a.presidentApproval ? { president: a.presidentApproval.byName } : {}),
+    ...(a.signature ? { signedAt: formatDisplayDateTime(a.signature.signedAt), ...(a.signature.fileId ? { signatureFileId: a.signature.fileId } : {}) } : {}),
+    ...(a.ddoCertification ? { ddo: { name: a.ddoCertification.byName, at: formatDisplayDateTime(a.ddoCertification.at), designation: a.ddoCertification.designation, ...(a.ddoCertification.signatureFileId ? { fileId: a.ddoCertification.signatureFileId } : {}) } } : {}),
+    ...(a.secretaryApproval ? { secretary: a.secretaryApproval.byName, ...(a.secretaryApproval.signatureFileId ? { secretaryFileId: a.secretaryApproval.signatureFileId } : {}) } : {}),
+    ...(a.presidentApproval ? { president: a.presidentApproval.byName, ...(a.presidentApproval.signatureFileId ? { presidentFileId: a.presidentApproval.signatureFileId } : {}) } : {}),
   };
 }
 
@@ -296,14 +297,14 @@ export function MembershipFormPrintPage() {
             <div className="mt-4 text-body leading-relaxed">
               <p>I declare that (a) I accept the Bye-laws of the society as binding upon me; (b) I am not a member of any other co-operative credit society and no dues are payable by me to any such society.</p>
             </div>
-            <Signatures items={[{ label: 'Signature of the applicant', ...(f.signedAt ? { name: f.name, at: f.signedAt } : {}) }, { label: 'Date', name: f.signedAt ? ' ' : '' }]} />
+            <Signatures items={[{ label: 'Signature of the applicant', ...(f.signedAt ? { name: f.name, at: f.signedAt, ...(f.signatureFileId ? { fileId: f.signatureFileId } : {}) } : {}) }, { label: 'Date', name: f.signedAt ? ' ' : '' }]} />
             <div className="mt-8 rounded border border-[#999] px-4 py-3 text-body">
               <p className="font-medium">CERTIFICATE</p>
               <p>Certified that the information against items 1 to 7 is correct.</p>
-              <Signatures items={[{ label: `Asst. Secretary to Government${f.ddo?.designation ? ` · ${f.ddo.designation}` : ''}`, ...(f.ddo ? { name: f.ddo.name, at: f.ddo.at } : {}) }, { label: `Department: ${f.office}` }]} />
+              <Signatures items={[{ label: `Asst. Secretary to Government${f.ddo?.designation ? ` · ${f.ddo.designation}` : ''}`, ...(f.ddo ? { name: f.ddo.name, at: f.ddo.at, ...(f.ddo.fileId ? { fileId: f.ddo.fileId } : {}) } : {}) }, { label: `Department: ${f.office}` }]} />
             </div>
-            {(f.secretary || f.president) && <Signatures items={[{ label: 'Secretary', ...(f.secretary ? { name: f.secretary } : {}) }, { label: 'President', ...(f.president ? { name: f.president } : {}) }]} />}
-            <p className="mt-6 text-[10px] text-[#777]">Digital twin of the society's white membership form. Signatures are recorded as Sign with OTP (D-031) and printed as "Signed".</p>
+            {(f.secretary || f.president) && <Signatures items={[{ label: 'Secretary', ...(f.secretary ? { name: f.secretary, ...(f.secretaryFileId ? { fileId: f.secretaryFileId } : {}) } : {}) }, { label: 'President', ...(f.president ? { name: f.president, ...(f.presidentFileId ? { fileId: f.presidentFileId } : {}) } : {}) }]} />}
+            <p className="mt-6 text-[10px] text-[#777]">Digital twin of the society's white membership form. Signatures are recorded as Sign with OTP (D-031) and printed from the signature on file (D-096).</p>
           </PrintSheet>
         )}
       </ViewState>
@@ -420,11 +421,11 @@ function F2({ d, m }: { d: LoanDetail; m?: MemberDetail }) {
       <p className="mt-3 text-body leading-relaxed">
         12. We, the applicant and the sureties, jointly authorise the Drawing & Disbursing Officer and our future pay officers to recover the instalments of this loan from our salaries. On transfer, the new pay officer will recover as per the society's demand; on deputation, the sureties will inform the society of the applicant's address.
       </p>
-      <Signatures items={[{ label: 'Applicant', ...(l.signature ? { name: d.member.name, at: formatDisplayDateTime(l.signature.signedAt) } : {}) }, ...d.sureties.slice(0, 2).map((s, i) => ({ label: `Surety ${i + 1}`, ...(s.status === 'ACCEPTED' && s.respondedAt ? { name: s.name, at: formatDisplayDateTime(s.respondedAt) } : {}) }))]} />
+      <Signatures items={[{ label: 'Applicant', ...(l.signature ? { name: d.member.name, at: formatDisplayDateTime(l.signature.signedAt), ...(l.signature.fileId ? { fileId: l.signature.fileId } : {}) } : {}) }, ...d.sureties.slice(0, 2).map((s, i) => { const fileId = l.sureties.find((x) => x.memberId === s.memberId)?.signatureFileId; return { label: `Surety ${i + 1}`, ...(s.status === 'ACCEPTED' && s.respondedAt ? { name: s.name, at: formatDisplayDateTime(s.respondedAt), ...(fileId ? { fileId } : {}) } : {}) }; })]} />
       <div className="mt-8 rounded border border-[#999] px-4 py-3 text-body">
         <p className="font-medium">CERTIFICATE</p>
         <p>Certified that the particulars from item 1 to 5 are true and correct.</p>
-        <Signatures items={[{ label: ddo?.manual ? `${ddo.manual.designation} (paper certificate ${ddo.manual.reference})` : 'Asst. Secretary (DDO) / Section Officer (Claims)', ...(ddo ? { name: ddo.manual?.ddoName ?? ddo.byName, at: ddo.manual ? formatDisplayDate(ddo.manual.date) : formatDisplayDateTime(ddo.at) } : {}) }, { label: `Department: ${d.member.departmentName}` }]} />
+        <Signatures items={[{ label: ddo?.manual ? `${ddo.manual.designation} (paper certificate ${ddo.manual.reference})` : 'Asst. Secretary (DDO) / Section Officer (Claims)', ...(ddo ? { name: ddo.manual?.ddoName ?? ddo.byName, at: ddo.manual ? formatDisplayDate(ddo.manual.date) : formatDisplayDateTime(ddo.at), ...(ddo.signatureFileId ? { fileId: ddo.signatureFileId } : {}) } : {}) }, { label: `Department: ${d.member.departmentName}` }]} />
       </div>
       <OfficeUse d={d} />
     </PrintSheet>
@@ -455,7 +456,7 @@ function F3({ d, m }: { d: LoanDetail; m?: MemberDetail }) {
         <Line no="11" label="Purpose (mention clearly)" value={l.purpose} />
       </div>
       <p className="mt-4 text-body">I hereby authorise the Pay Disbursing Officer to have the above loan recovered from my salary.</p>
-      <Signatures items={[{ label: 'Signature of the applicant', ...(l.signature ? { name: d.member.name, at: formatDisplayDateTime(l.signature.signedAt) } : {}) }, { label: 'Date' }]} />
+      <Signatures items={[{ label: 'Signature of the applicant', ...(l.signature ? { name: d.member.name, at: formatDisplayDateTime(l.signature.signedAt), ...(l.signature.fileId ? { fileId: l.signature.fileId } : {}) } : {}) }, { label: 'Date' }]} />
       <OfficeUse d={d} salary />
     </PrintSheet>
   );
@@ -485,8 +486,8 @@ function OfficeUse({ d, salary }: { d: LoanDetail; salary?: boolean }) {
       <Signatures
         items={[
           { label: 'Accountant (assessed)', ...(so?.assessment ? { name: so.assessment.byName, at: formatDisplayDateTime(so.assessment.at) } : {}) },
-          { label: 'Secretary (sanctioned)', ...(so?.secretary ? { name: so.secretary.byName, at: formatDisplayDateTime(so.secretary.at) } : {}) },
-          { label: 'President (sanctioned)', ...(so?.president ? { name: so.president.byName, at: formatDisplayDateTime(so.president.at) } : {}) },
+          { label: 'Secretary (sanctioned)', ...(so?.secretary ? { name: so.secretary.byName, at: formatDisplayDateTime(so.secretary.at), ...(so.secretary.signatureFileId ? { fileId: so.secretary.signatureFileId } : {}) } : {}) },
+          { label: 'President (sanctioned)', ...(so?.president ? { name: so.president.byName, at: formatDisplayDateTime(so.president.at), ...(so.president.signatureFileId ? { fileId: so.president.signatureFileId } : {}) } : {}) },
         ]}
       />
     </div>
@@ -544,13 +545,13 @@ export function FdFormPrintPage() {
               <li>Renewal in the name of either or survivor, or any one, has the same effect.</li>
             </ol>
             <p className="mt-2 text-body">I/We agree to abide by the rules relating to fixed deposits.</p>
-            <Signatures items={[{ label: 'Signature of depositor(s)', ...(dep.signature ? { name: d.member.name, at: formatDisplayDateTime(dep.signature.signedAt) } : {}) }, { label: 'Date' }]} />
+            <Signatures items={[{ label: 'Signature of depositor(s)', ...(dep.signature ? { name: d.member.name, at: formatDisplayDateTime(dep.signature.signedAt), ...(dep.signature.fileId ? { fileId: dep.signature.fileId } : {}) } : {}) }, { label: 'Date' }]} />
             <div className="mt-6 grid grid-cols-2 gap-6 border-t-2 border-dashed border-[#999] pt-4">
               <div>
                 <p className="text-label">FOR OFFICE USE</p>
                 <Line label="Account No." value={dep.status === 'ACTIVE' || dep.fdrNo ? dep.accountNo : ''} />
                 <Line label="F.D.R. No." value={dep.fdrNo} />
-                <Signatures items={[{ label: 'Secretary (accepted)', ...(dep.signOffs?.secretary ? { name: dep.signOffs.secretary.byName } : {}) }, { label: 'President (accepted)', ...(dep.signOffs?.president ? { name: dep.signOffs.president.byName } : {}) }]} />
+                <Signatures items={[{ label: 'Secretary (accepted)', ...(dep.signOffs?.secretary ? { name: dep.signOffs.secretary.byName, ...(dep.signOffs.secretary.signatureFileId ? { fileId: dep.signOffs.secretary.signatureFileId } : {}) } : {}) }, { label: 'President (accepted)', ...(dep.signOffs?.president ? { name: dep.signOffs.president.byName, ...(dep.signOffs.president.signatureFileId ? { fileId: dep.signOffs.president.signatureFileId } : {}) } : {}) }]} />
               </div>
               <div className="rounded border border-[#999] p-3">
                 <p className="text-label">CASH SLIP</p>
@@ -627,11 +628,11 @@ export function AgreementPrintPage() {
                 </>
               )}
             </p>
-            <Signatures items={[{ label: 'Signature of the member', name: m.name, ...(mandate ? { at: `Signed ${formatDisplayDate(mandate.signedOn)}` } : {}) }, { label: 'Witness' }]} />
+            <Signatures items={[{ label: 'Signature of the member', name: m.name, ...(mandate ? { at: `Signed ${formatDisplayDate(mandate.signedOn)}`, ...(mandate.signatureFileId ? { fileId: mandate.signatureFileId } : {}) } : {}) }, { label: 'Witness' }]} />
             {version === 'B' && (
               <div className="mt-8 rounded border border-[#999] px-4 py-3">
                 <p className="text-center text-card-title tracking-[0.3em]">AGREED</p>
-                <Signatures items={[{ label: `Asst. / Deputy Secretary to Govt., ${d.department?.name ?? ''}`, ...(mandate?.agreedByName ? { name: mandate.agreedByName, ...(mandate.agreedOn ? { at: formatDisplayDate(mandate.agreedOn) } : {}) } : {}) }, { label: mandate ? `Mandate ${mandate.status === 'AGREED' ? 'agreed' : mandate.status === 'PENDING_NEW_DDO' ? 'waiting for the new DDO' : 'superseded'}` : 'No mandate on file' }]} />
+                <Signatures items={[{ label: `Asst. / Deputy Secretary to Govt., ${d.department?.name ?? ''}`, ...(mandate?.agreedByName ? { name: mandate.agreedByName, ...(mandate.agreedOn ? { at: formatDisplayDate(mandate.agreedOn) } : {}), ...(mandate.agreedSignatureFileId ? { fileId: mandate.agreedSignatureFileId } : {}) } : {}) }, { label: mandate ? `Mandate ${mandate.status === 'AGREED' ? 'agreed' : mandate.status === 'PENDING_NEW_DDO' ? 'waiting for the new DDO' : 'superseded'}` : 'No mandate on file' }]} />
               </div>
             )}
             <p className="mt-6 text-[10px] text-[#777]">The printed paper form still names the legacy "Andhra Pradesh Secretariat Staff Co-operative Society Ltd."; this text is updated and needs legal review (Q-505).</p>

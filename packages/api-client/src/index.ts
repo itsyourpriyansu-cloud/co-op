@@ -76,6 +76,8 @@ import {
   type DemandSheetDetail,
   type MemberDues,
   type MemberNotices,
+  type MySignature,
+  type SignatureImage,
   type MyPayments,
   type NewReceiptInput,
   type PaymentReport,
@@ -265,6 +267,12 @@ export function createApiClient(options: ApiClientOptions) {
     },
     /** Topbar global search (M10). */
     search: (q: string) => request<SearchHit[]>('GET', `/search${toQuery({ q })}`),
+    /** F-01 (D-096): my signature (any signed-in user) and signatures on printed forms (staff). */
+    signatures: {
+      mine: () => request<MySignature | null>('GET', '/me/signature'),
+      upload: (pngBase64: string) => request<MySignature>('PUT', '/me/signature', { png: pngBase64 }),
+      image: (fileId: string) => request<SignatureImage>('GET', `/signatures/${fileId}`),
+    },
     /** ST-50 / ST-51 / ST-52 (M9). */
     reports: {
       catalogue: () => request<{ reports: ReportDef[]; options: ReportOptions }>('GET', '/reports'),
