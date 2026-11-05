@@ -113,6 +113,7 @@ export default function Profile() {
             <Card>
               <KeyValue label="Father's name" value={m.fatherName} />
               <KeyValue label="Date of birth" value={formatDisplayDate(m.dob)} />
+              <KeyValue label="Caste" value={m.caste ?? 'Not recorded'} />
               <KeyValue label="Mobile" value={m.mobileMasked} />
               <KeyValue label="Email" value={m.email ?? '—'} />
               <KeyValue label="Present address" value={address(m.presentAddress)} />

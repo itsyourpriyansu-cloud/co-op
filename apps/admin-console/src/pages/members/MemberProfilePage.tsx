@@ -85,6 +85,7 @@ function OverviewTab({ d }: { d: MemberDetail }) {
         <Field label="Father's name">{m.fatherName}</Field>
         <Field label="Date of birth">{`${formatDisplayDate(m.dob)} · ${d.ageYears} yrs`}</Field>
         <Field label="Gender">{m.gender === 'F' ? 'Female' : 'Male'}</Field>
+        <Field label="Caste">{m.caste ?? 'Not recorded'}</Field>
         <Field label="Mobile">
           <span className="tabular">{m.mobile}</span>
           {!d.can.seeFullMobile && <span className="ml-2 text-caption text-fg-tertiary">(masked for your role)</span>}

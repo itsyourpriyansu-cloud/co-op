@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   radioOn: { borderColor: color.brand.solid },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.brand.solid },
   yn: { gap: space[4], padding: space[8], borderRadius: radius.card, borderWidth: 1, borderColor: color.border.default, backgroundColor: color.bg.surface },
-  ynRow: { flexDirection: 'row', gap: space[4], marginTop: space[2] },
+  ynRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space[4], marginTop: space[2] },
   ynBtn: { flex: 1, height: touchTarget, borderRadius: radius.control, borderWidth: 1, borderColor: color.border.strong, alignItems: 'center', justifyContent: 'center' },
   ynOn: { borderColor: color.brand.solid, borderWidth: 2, backgroundColor: color.brand.subtle },
   cb: { flexDirection: 'row', gap: space[6], alignItems: 'flex-start', minHeight: touchTarget, paddingVertical: space[4] },

@@ -45,7 +45,7 @@ erDiagram
 | employeeId [P] | string | Needed for activation (Q-402) |
 | name, fatherName | string | [A] |
 | dob | date | [A] |
-| caste | enum/string | [A]. Restricted (Q-406). Category list UNKNOWN |
+| caste | string | [A] [S]. Required on new records, visible to all staff and the member (F-07, D-095). One of `settings.casteCategories` (Admin list, default OC, BC-A…BC-E, SC, ST) |
 | address | {line1, line2?, city, district, pincode} | [A] structure [P] |
 | mobile | string | [A] |
 | email?, gender?, photoUrl? | | [P] |

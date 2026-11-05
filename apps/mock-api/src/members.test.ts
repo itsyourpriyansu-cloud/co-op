@@ -26,7 +26,7 @@ const address = { line1: 'H.No 4-12, Lane 3', city: 'Hyderabad', district: 'Hyde
 const newMember: MemberInput = {
   name: 'Anil Varma',
   fatherName: 'Krishna Varma',
-  gender: 'M',
+  gender: 'M', caste: 'OC',
   dob: '1992-08-17',
   mobile: '9123456780',
   presentAddress: address,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { keepsAppAccess } from './members';
+import { keepsAppAccess, validateMemberInput } from './members';
+import { validateMembershipForm } from './membership';
 import { validateSocietySettings } from './settings';
 import { isWorkingDay, serviceTarget, workingHoursBetween } from './service-targets';
 
@@ -53,5 +54,21 @@ describe('ex-employees (F-12, D-093)', () => {
     expect(keepsAppAccess('RETIRED')).toBe(true);
     expect(keepsAppAccess('RESIGNED')).toBe(true);
     expect(keepsAppAccess('DECEASED')).toBe(false);
+  });
+});
+
+describe('caste (F-07, D-095)', () => {
+  const ctx = { today: '2026-10-24', minShares: 1, maxShares: 100, others: [], casteCategories: ['OC', 'SC'] };
+  it('is required on a member and must be a listed category', () => {
+    expect(validateMemberInput({ caste: '' }, ctx).caste).toBe('Required');
+    expect(validateMemberInput({ caste: 'XX' }, ctx).caste).toBe('Choose one of the listed categories');
+    expect(validateMemberInput({ caste: 'SC' }, ctx).caste).toBeUndefined();
+    expect(validateMemberInput({ caste: 'XX' }, { ...ctx, casteCategories: undefined }).caste).toBeUndefined();
+  });
+  it('is required on the membership form; the Admin list may not be empty', () => {
+    expect(validateMembershipForm({ personal: {} }, [])['personal.caste']).toBe('Required');
+    const base = { shareValue: 1, minShares: 1, maxShares: 2, retirementAge: 60, defaulterCycles: 1, rrfMonthly: 0, crdMonthly: 0, srdsMonthly: 0, insurance: { loaneeAmount: 0, nonLoaneeAmount: 0, collectionMonth: 4 }, savingsRatePercent: 0, fdMinAmount: 1, admissionFee: 0, maxGuaranteesPerSurety: 2, emiToNetSalaryMaxPercent: 50, financialYearStartMonth: 4 };
+    expect(validateSocietySettings({ ...base, casteCategories: [] }).casteCategories).toBeDefined();
+    expect(validateSocietySettings({ ...base, casteCategories: ['OC'] }).casteCategories).toBeUndefined();
   });
 });

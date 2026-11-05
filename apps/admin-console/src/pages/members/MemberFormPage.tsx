@@ -114,7 +114,7 @@ export function MemberFormPage() {
   const submit = () => {
     const input: MemberInput = { ...v, permanentAddress: sameAddress ? v.presentAddress : v.permanentAddress };
     // Client check first for instant feedback; the server repeats it (incl. duplicates).
-    const local = s ? validateMemberInput(input, { today: today || '2026-10-24', minShares: s.minShares, maxShares: s.maxShares, others: [] }) : {};
+    const local = s ? validateMemberInput(input, { today: today || '2026-10-24', minShares: s.minShares, maxShares: s.maxShares, others: [], casteCategories: s.casteCategories }) : {};
     setErrors(local);
     if (Object.keys(local).length) {
       addSnackbarV2({ header: 'Some details need attention', description: `${Object.keys(local).length} field(s) highlighted`, variant: SnackbarV2Variant.WARNING });
@@ -158,6 +158,14 @@ export function MemberFormPage() {
                 </div>
               </RadioGroup>
             </div>
+            <SingleSelectV2
+              label="Caste"
+              placeholder="Choose category"
+              items={[{ items: (settings.data?.settings.casteCategories ?? []).map((c) => ({ label: c, value: c })) }]}
+              selected={v.caste}
+              onSelect={(x) => set({ caste: x })}
+              {...(errors.caste ? { error: { show: true, message: errors.caste } } : {})}
+            />
             <TextField label="Mobile" name="mobile" value={v.mobile} onChange={(x) => set({ mobile: x.replace(/\D/g, '').slice(0, 10) })} errors={errors} hint="10 digits. The member signs in to the app with it." required />
             <TextField label="Email" name="email" value={v.email ?? ''} onChange={(x) => set({ email: x })} errors={errors} hint="Optional" />
             <DateInput label="Wedding anniversary" name="anniversaryDate" value={v.anniversaryDate ?? ''} onChange={(x) => set(x ? { anniversaryDate: x } : { anniversaryDate: undefined })} errors={errors} hint="Optional (greetings)" />

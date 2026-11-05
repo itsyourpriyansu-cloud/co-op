@@ -16,6 +16,7 @@ export function toMember(r: MemberRow): Member {
     name: r.name,
     fatherName: r.fatherName,
     gender: r.gender,
+    ...(r.caste ? { caste: r.caste } : {}),
     dob: r.dob,
     mobile: r.mobile,
     mobileMasked: maskMobile(r.mobile),
@@ -71,7 +72,7 @@ const toTransfer = (t: typeof memberTransfers.$inferSelect): TransferEvent => ({
 });
 
 /** Member values for an insert or update (mobileMasked is derived, never stored). */
-const toValues = ({ mobileMasked: _m, email, anniversaryDate, ...m }: Member) => ({ ...m, email: email ?? null, anniversaryDate: anniversaryDate ?? null });
+const toValues = ({ mobileMasked: _m, email, anniversaryDate, caste, ...m }: Member) => ({ ...m, caste: caste ?? null, email: email ?? null, anniversaryDate: anniversaryDate ?? null });
 
 export class MembersRepository {
   constructor(private readonly db: Database) {}

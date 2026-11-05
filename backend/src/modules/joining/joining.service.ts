@@ -110,6 +110,7 @@ export class JoiningService {
       minShares: settings.minShares,
       maxShares: settings.maxShares,
       requiredDocuments: REQUIRED_DOCUMENTS,
+      casteCategories: settings.casteCategories,
       agreements: AGREEMENTS,
     };
   }
@@ -386,6 +387,7 @@ export class JoiningService {
         name: a.name,
         fatherName: f.personal?.fatherName ?? '',
         gender: f.personal?.gender ?? 'M',
+        ...(f.personal?.caste ? { caste: f.personal.caste } : {}),
         dob,
         mobile,
         ...(f.personal?.email ? { email: f.personal.email } : {}),

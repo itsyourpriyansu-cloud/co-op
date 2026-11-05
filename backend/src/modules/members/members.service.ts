@@ -179,6 +179,7 @@ export class MembersService {
         name: valid.name.trim(),
         fatherName: valid.fatherName.trim(),
         gender: valid.gender,
+        caste: valid.caste,
         dob: valid.dob,
         mobile: valid.mobile,
         mobileMasked: maskMobile(valid.mobile),
@@ -230,6 +231,7 @@ export class MembersService {
       name: input.name.trim(),
       fatherName: input.fatherName.trim(),
       gender: input.gender,
+      caste: input.caste,
       dob: input.dob,
       mobile: input.mobile,
       mobileMasked: maskMobile(input.mobile),
@@ -534,7 +536,7 @@ export class MembersService {
 
   private async validate(input: Partial<MemberInput>, selfId?: string): Promise<MemberInput> {
     const [settings, others, today] = await Promise.all([this.app.masters.settings(), this.repo.others(selfId), businessToday(this.app)]);
-    const fieldErrors = validateMemberInput(input, { today, minShares: settings.minShares, maxShares: settings.maxShares, others, ...(selfId ? { selfId } : {}) });
+    const fieldErrors = validateMemberInput(input, { today, minShares: settings.minShares, maxShares: settings.maxShares, others, casteCategories: settings.casteCategories, ...(selfId ? { selfId } : {}) });
     if (input.departmentId && !(await this.app.departments.get(input.departmentId))) fieldErrors.departmentId = 'Unknown department';
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
     return input as MemberInput;

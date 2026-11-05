@@ -20,6 +20,8 @@ export const members = pgTable(
     name: text('name').notNull(),
     fatherName: text('father_name').notNull(),
     gender: text('gender').$type<Member['gender']>().notNull(),
+    /** F-07 (D-095); empty on records from before. */
+    caste: text('caste'),
     dob: day('dob').notNull(),
     mobile: text('mobile').notNull(),
     email: text('email'),

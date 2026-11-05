@@ -78,6 +78,8 @@ export const SETTINGS: SocietySettings = {
   financialYearStartMonth: 4,
   // Society: membership within 48 h, loans within 4–5 days (REQ-135, D-089).
   membershipTargetHours: 48,
+  // F-07 (D-095): Telangana's categories; the Admin edits the list.
+  casteCategories: ['OC', 'BC-A', 'BC-B', 'BC-C', 'BC-D', 'BC-E', 'SC', 'ST'],
   loanTargetDays: 5,
   // F-14: the Admin keeps the holiday list; a fixed national holiday for the demo (D-093).
   holidays: ['2026-10-02'],

@@ -11,7 +11,7 @@
 | | |
 |---|---|
 | **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | **P8a done** (D-089): notifications, messages, member questions, preferences and member home on the backend; WhatsApp / email / SMS simulated behind `backend/src/integrations`. P8b done (D-090): work queue, dashboards, search, service targets. P8c done (D-091): reports and the defaulter notice. P8 done. Society answers (D-093): step A done; next **B caste**, then C–F, then P9 (`docs/22`). Waiting on the society: F-06, F-09, F-10, F-13, F-14 |
+| **Next action** | **P8a done** (D-089): notifications, messages, member questions, preferences and member home on the backend; WhatsApp / email / SMS simulated behind `backend/src/integrations`. P8b done (D-090): work queue, dashboards, search, service targets. P8c done (D-091): reports and the defaulter notice. P8 done. Society answers (D-093): steps A, B done (D-094 caste); next **C signatures**, then D–F, then P9 (`docs/22`). Waiting on the society: F-06, F-09, F-10, F-13, F-14 |
 | **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
 | **Last updated** | 2026-11-05 |
 
@@ -110,3 +110,4 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-11-04 | **P8d built, P8 exit passed** (D-092): demo clock / reset / failure rate / scenarios / dataset / sample on the backend; department counts from PostgreSQL; full Playwright suite green on :4101 with the fallback off and no mock running. Bridge code removal left to P9 | P9 |
 | 2026-11-05 | **Society answers (D-093), step A built**: penal 2% / FD penalty 1% placeholders, no SMS (WhatsApp + email, migration 0020), messaging keys in `.env`, ex-employees keep read-only app use, service targets in working days (holiday list, loan clock from the last surety). Six form photos in `docs/paper-forms/` (F7–F10 mapped in docs/16). Tests: domain 153, backend 134, root 299 | B caste |
 | 2026-11-05 | **New app mark (D-094):** TG monogram (ligature) replaces the seal on the launcher / adaptive icon, splash (blue), member Welcome / Sign in / Home, console login, sidebar and favicons; the seal stays on prints. Masters in `assets/brand/`, `AppMark` in both apps. open-design installed at `C:Userspriyansu	oolsopen-design` (not in the repo) | P9 |
+| 2026-11-05 | **Step B built** (D-095): caste required on the application and member record, Admin category list, shown to staff and the member; migration 0021. Tests: domain 155, backend 134, root 299 | C signatures |

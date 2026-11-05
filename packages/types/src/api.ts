@@ -202,6 +202,8 @@ export interface JoiningReference {
   minShares: number;
   maxShares: number;
   requiredDocuments: Array<{ type: string; label: string; hint: string; required: boolean }>;
+  /** F-07 (D-095): the caste categories to choose from. */
+  casteCategories: string[];
   /** Plain-language summary + full text, versioned (D-031). */
   agreements: Array<{ key: 'byelaws' | 'noOtherSociety' | 'recoveryMandate'; title: string; summary: string[]; text: string; version: string }>;
 }
@@ -418,6 +420,7 @@ export interface MemberInput {
   name: string;
   fatherName: string;
   gender: 'F' | 'M';
+  caste: string;
   dob: ISODate;
   mobile: string;
   email?: string;

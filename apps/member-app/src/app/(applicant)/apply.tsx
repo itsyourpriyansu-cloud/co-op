@@ -169,7 +169,7 @@ export default function Apply() {
 }
 
 // ---- Step 1 · About you ----------------------------------------------------------------------
-function PersonalStep({ form, update, errors }: StepProps) {
+function PersonalStep({ form, update, errors, reference }: StepProps) {
   const p = form.personal ?? {};
   return (
     <View style={styles.fields}>
@@ -177,6 +177,7 @@ function PersonalStep({ form, update, errors }: StepProps) {
       <TextField label="Father's name" required value={p.fatherName ?? ''} onChangeText={(v) => update({ personal: { fatherName: v } })} autoCapitalize="words" error={errors['personal.fatherName']} />
       <DateField label="Date of birth" required value={p.dob} onChange={(iso) => update({ personal: { dob: iso } })} error={errors['personal.dob']} />
       <Segmented label="Gender" value={p.gender} options={[{ value: 'F', label: 'Female' }, { value: 'M', label: 'Male' }]} onChange={(v) => update({ personal: { gender: v } })} error={errors['personal.gender']} />
+      <Segmented label="Caste" value={p.caste} options={reference.casteCategories.map((c) => ({ value: c, label: c }))} onChange={(v) => update({ personal: { caste: v } })} error={errors['personal.caste']} />
       <TextField label="Mobile number" value={p.mobile ? `+91 ${p.mobile}` : ''} editable={false} hint="Verified with OTP" />
       <TextField label="Email (optional)" value={p.email ?? ''} onChangeText={(v) => update({ personal: { email: v } })} keyboardType="email-address" autoCapitalize="none" error={errors['personal.email']} />
     </View>

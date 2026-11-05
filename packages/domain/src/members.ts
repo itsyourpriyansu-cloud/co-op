@@ -48,6 +48,8 @@ export interface MemberValidationContext {
   others: Array<Pick<Member, 'id' | 'employeeId' | 'mobile' | 'name' | 'generalNo'>>;
   /** Set when editing, so the member does not clash with itself. */
   selfId?: string;
+  /** F-07 (D-095): when given, the caste must be one of these. */
+  casteCategories?: readonly string[];
 }
 
 /**
@@ -62,6 +64,8 @@ export function validateMemberInput(input: Partial<MemberInput>, ctx: MemberVali
   text('name', input.name);
   text('fatherName', input.fatherName);
   if (input.gender !== 'F' && input.gender !== 'M') e.gender = 'Required';
+  if (!input.caste?.trim()) e.caste = 'Required';
+  else if (ctx.casteCategories && !ctx.casteCategories.includes(input.caste)) e.caste = 'Choose one of the listed categories';
   if (!isIsoDate(input.dob)) e.dob = 'Enter a valid date';
   if (!MOBILE_PATTERN.test(input.mobile ?? '')) e.mobile = 'Enter a 10-digit mobile number starting with 6–9';
   if (input.email && !EMAIL_PATTERN.test(input.email)) e.email = 'Enter a valid email or leave it blank';

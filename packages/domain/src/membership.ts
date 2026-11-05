@@ -40,6 +40,7 @@ export function validateMembershipForm(form: MembershipForm | undefined, require
   req('personal.fatherName', f.personal?.fatherName);
   req('personal.dob', f.personal?.dob, 'Enter a valid date of birth');
   req('personal.gender', f.personal?.gender);
+  req('personal.caste', f.personal?.caste);
   if (f.personal?.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.personal.email)) e['personal.email'] = 'Enter a valid email or leave it blank';
   req('address.present.line1', f.address?.present?.line1);
   req('address.present.city', f.address?.present?.city);

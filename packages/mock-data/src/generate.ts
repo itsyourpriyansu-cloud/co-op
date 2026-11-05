@@ -46,6 +46,9 @@ import { departments } from './departments';
 import { PERSONA_MEMBERS, staffUsers } from './personas';
 import { createRng, type Rng } from './prng';
 
+/** F-07 (D-095): picked by number, not by the random generator, so the rest of the dataset is unchanged. */
+const DEMO_CASTES = ['OC', 'BC-A', 'BC-B', 'BC-C', 'BC-D', 'BC-E', 'SC', 'ST'] as const;
+
 export const SEED_TODAY: ISODate = '2026-10-24';
 export const CURRENT_CYCLE: Cycle = '2026-10';
 /** M9 seed (no RNG): members short in Jul, Aug and Sep 2026 → defaulters at the default 3 cycles. */
@@ -137,6 +140,7 @@ function makeMember(rng: Rng, generalNo: number, overrideIn?: Partial<Member> & 
     name,
     fatherName: `${rng.pick(FIRST_NAMES_M)} ${surname}`,
     gender,
+    caste: DEMO_CASTES[generalNo % DEMO_CASTES.length]!,
     dob,
     mobile,
     mobileMasked: `90XXXXXX${mobile.slice(-2)}`,
@@ -275,7 +279,7 @@ function enrichApplication(rng: Rng, app: MembershipApplication, existingMobile?
   const submittedAt = app.events[0]?.at ?? `${app.submittedOn ?? SEED_TODAY}T10:00:00+05:30`;
   const docAt = submittedAt;
   app.form = {
-    personal: { fullName: app.name, fatherName: `${rng.pick(FIRST_NAMES_M)} ${surname}`, dob, gender: female ? 'F' : 'M', mobile, ...(rng.chance(0.5) ? { email: `${first.toLowerCase()}.${app.id.slice(-3)}@example.org` } : {}) },
+    personal: { fullName: app.name, fatherName: `${rng.pick(FIRST_NAMES_M)} ${surname}`, dob, gender: female ? 'F' : 'M', caste: DEMO_CASTES[app.applicationNo.length % DEMO_CASTES.length]!, mobile, ...(rng.chance(0.5) ? { email: `${first.toLowerCase()}.${app.id.slice(-3)}@example.org` } : {}) },
     address: { present, sameAsPresent: rng.chance(0.75) },
     employment: { departmentId: app.departmentId, designation: app.designation, employeeId: `TS${pad(rng.int(10000, 99999), 5)}`, employmentType: 'REGULAR', regularAppointmentDate: app.regularAppointmentDate },
     shares: { sharesProposed: app.sharesProposed },
