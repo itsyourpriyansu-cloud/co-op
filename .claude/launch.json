@@ -1,0 +1,8 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "api", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "-w", "@tgs/mock-api"], "port": 4000 },
+    { "name": "console", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "-w", "@tgs/admin-console"], "port": 5180 },
+    { "name": "phone-web", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:web"], "port": 8090 }
+  ]
+}

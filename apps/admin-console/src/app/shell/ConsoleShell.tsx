@@ -5,7 +5,7 @@ import { SidebarV2, type DirectoryData } from '@juspay/blend-design-system';
 import { brand } from '@tgs/design-tokens';
 import { ROLE_LABELS } from '@tgs/types';
 import { NAV_GROUPS, navItemFor } from '@/config/navigation';
-import { Seal } from '@/components/Seal';
+import { AppMark } from '@/components/AppMark';
 import { useAuth } from '../auth';
 import { ConsoleTopbar } from './ConsoleTopbar';
 import { Initials } from '@/components/Initials';
@@ -50,7 +50,7 @@ export function ConsoleShell() {
 
   const brandBlock = (
     <div className="flex min-w-0 items-center gap-2.5">
-      <Seal size={36} />
+      <AppMark size={32} />
       <div className="min-w-0 leading-tight">
         <div className="truncate text-label text-fg">{brand.appName}</div>
         <div className="truncate text-caption text-fg-tertiary">Admin Console</div>

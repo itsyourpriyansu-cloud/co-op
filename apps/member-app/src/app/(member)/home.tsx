@@ -6,7 +6,7 @@ import { router, type Href } from 'expo-router';
 import { Bell, Calculator, ChevronRight, HandCoins, PiggyBank, ReceiptIndianRupee, type LucideIcon } from 'lucide-react-native';
 import { formatCycle, formatDisplayDate, formatINR } from '@tgs/domain';
 import type { MemberHome } from '@tgs/types';
-import { Logo } from '@/components/Logo';
+import { AppMark } from '@/components/AppMark';
 import { useAuth } from '@/lib/auth';
 import { useHome } from '@/lib/account';
 import { Alert, Card, Screen, Section, Skeleton, StatusTag, Tag, Text } from '@/ui';
@@ -23,7 +23,7 @@ export default function Home() {
   return (
     <Screen refreshing={q.isRefetching} onRefresh={() => void q.refetch()}>
       <View style={styles.greeting}>
-        <Logo size={44} />
+        <AppMark size={40} />
         <View style={{ flex: 1, gap: space[1] }}>
           <Text role="pageTitle">Hello, {firstName}</Text>
           <Text role="caption" tone="secondary">

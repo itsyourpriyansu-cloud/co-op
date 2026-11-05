@@ -1,9 +1,9 @@
-// MJ-01 Welcome: two clear paths (D-026). Long-press the logo for Demo settings (MA-05).
+// MJ-01 Welcome: two clear paths (D-026). Long-press the app mark for Demo settings (MA-05).
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { BadgeCheck, ChevronRight, FileSignature, ShieldCheck, Smartphone, UserPlus, UserRound } from 'lucide-react-native';
 import { brand } from '@tgs/design-tokens';
-import { Logo } from '@/components/Logo';
+import { AppMark } from '@/components/AppMark';
 import { Card, Screen, Text } from '@/ui';
 import { color, onBrandMuted, radius, space, onBrandTile } from '@/theme';
 
@@ -18,7 +18,7 @@ export default function Welcome() {
     <Screen>
       <View style={styles.hero}>
         <Pressable onLongPress={() => router.push('/demo-settings')} accessibilityHint="Long-press for demo settings" delayLongPress={600}>
-          <Logo size={120} />
+          <AppMark size={72} />
         </Pressable>
         <View style={{ gap: space[3] }}>
           <Text role="display" style={styles.center}>

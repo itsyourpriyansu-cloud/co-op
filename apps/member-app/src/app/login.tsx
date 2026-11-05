@@ -10,7 +10,7 @@ import { isApiError } from '@tgs/api-client';
 import type { OtpStarted, Persona } from '@tgs/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Logo } from '@/components/Logo';
+import { AppMark } from '@/components/AppMark';
 import { Alert, Button, Card, Header, Hero, OtpInput, Screen, Section, Skeleton, Text, TextField } from '@/ui';
 import { color, radius, space } from '@/theme';
 
@@ -123,7 +123,7 @@ export default function Login() {
 
   return (
     <Screen header={<Header onBack={() => router.back()} />}>
-      <Logo size={72} />
+      <AppMark size={56} />
       <Hero title="Sign in" subtitle="Use the mobile number registered with the society. We'll send you a one-time code." />
 
       <View style={{ gap: space[8] }}>

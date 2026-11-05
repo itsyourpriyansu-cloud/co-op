@@ -9,7 +9,7 @@ import { brand } from '@tgs/design-tokens';
 import { ROLE_LABELS, type Persona, type TotpSetup } from '@tgs/types';
 import { useAuth } from '@/app/auth';
 import { API_URL, api } from '@/lib/api';
-import { Seal } from '@/components/Seal';
+import { AppMark } from '@/components/AppMark';
 import { Initials } from '@/components/Initials';
 
 type Step =
@@ -120,7 +120,7 @@ export function LoginPage() {
       {/* Brand panel */}
       <aside className="hidden w-[44%] max-w-[560px] flex-col justify-between bg-inverse p-10 text-fg-inverse lg:flex">
         <div className="flex items-center gap-3">
-          <Seal size={56} />
+          <AppMark size={48} />
           <span className="text-card-title">{brand.appName}</span>
         </div>
         <div>
@@ -136,7 +136,7 @@ export function LoginPage() {
       {/* Sign-in panel */}
       <section className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-xl">
-          <Seal size={64} className="mb-4 lg:hidden" />
+          <AppMark size={56} className="mb-4 lg:hidden" />
 
           {step.kind === 'password' && (
             <>
