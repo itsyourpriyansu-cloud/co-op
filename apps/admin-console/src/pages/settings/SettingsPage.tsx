@@ -25,7 +25,7 @@ const SECTIONS: Array<{ id: string; label: string; screen: string; icon: LucideI
   { id: 'departments', label: 'Departments & DDOs', screen: 'ST-67', icon: Building2, hint: 'Who certifies and deducts' },
   { id: 'users', label: 'Users', screen: 'ST-61', icon: Users, hint: 'Staff logins and roles' },
   { id: 'permissions', label: 'Permissions', screen: 'ST-62', icon: ShieldCheck, hint: 'What each role can do' },
-  { id: 'templates', label: 'Notification templates', screen: 'ST-63', icon: MessageSquareText, hint: 'SMS, WhatsApp, email, app' },
+  { id: 'templates', label: 'Notification templates', screen: 'ST-63', icon: MessageSquareText, hint: 'WhatsApp, email, app' },
   { id: 'history', label: 'Change history', screen: 'ST-68', icon: History, hint: 'Who changed what' },
 ];
 

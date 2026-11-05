@@ -136,7 +136,7 @@ export function registerAccount(api: Api, store: Store, requireSession: Guard) {
     return c.json<Session>({ token, user });
   });
 
-  const prefsOf = (m: Member): MemberPreferences => db().preferences[m.id] ?? { channels: { SMS: true, WHATSAPP: false, EMAIL: Boolean(m.email) }, language: 'en', ...(m.email ? { email: m.email } : {}) };
+  const prefsOf = (m: Member): MemberPreferences => db().preferences[m.id] ?? { channels: { WHATSAPP: true, EMAIL: Boolean(m.email) }, language: 'en', ...(m.email ? { email: m.email } : {}) };
 
   // ---- MB-01 / MB-12 / MB-13 / MB-14 --------------------------------------------------------------
   api.get('/me/home', requireSession, (c) => c.json<MemberHome>(homeFor(db(), me(c.get('session')))));
@@ -145,7 +145,7 @@ export function registerAccount(api: Api, store: Store, requireSession: Guard) {
     const m = me(c.get('session'));
     const mine = db().notifications.filter((n) => n.recipientId === m.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     // Simulated delivery: every in-app message is also "sent" on the channels the member switched on (MB-14).
-    const on = (['SMS', 'WHATSAPP', 'EMAIL'] as const).filter((ch) => prefsOf(m).channels[ch]);
+    const on = (['WHATSAPP', 'EMAIL'] as const).filter((ch) => prefsOf(m).channels[ch]);
     return c.json<MyNotifications>({ items: mine.slice(0, 100).map((n) => ({ ...n, alsoSentVia: n.id.startsWith('ntf-msg-') ? ((n as { alsoSentVia?: typeof on }).alsoSentVia ?? []) : [...on] })), unread: mine.filter((n) => !n.read).length });
   });
   api.post('/me/notifications/read-all', requireSession, (c) => {

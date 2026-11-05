@@ -10,12 +10,12 @@ test.describe('FD premature withdrawal · backend', () => {
   });
   test.beforeEach(async ({ request }) => resetDemo(request));
 
-  test('Admin sets a 1-point rate cut, previews the settlement and withdraws an FD early', async ({ page, request }) => {
+  test('Admin sets a 2-point rate cut (default 1, D-093), previews the settlement and withdraws an FD early', async ({ page, request }) => {
     await consoleAs(page, request, 'stf-admin', '/settings/deposits');
     await expect(page.getByRole('heading', { name: 'Premature withdrawal' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'FD maturity' })).toBeVisible();
     const penalty = page.getByLabel('Penalty');
-    await penalty.fill('1');
+    await penalty.fill('2');
     await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByRole('button', { name: 'Save changes' })).toBeHidden();
 
@@ -26,7 +26,7 @@ test.describe('FD premature withdrawal · backend', () => {
     await page.getByRole('button', { name: 'Withdraw early' }).click();
     const d = page.getByRole('dialog');
     await expect(d.getByText('Principal (returned in full)')).toBeVisible();
-    await expect(d.getByText(/Penalty \(1 points, rate cut\)/)).toBeVisible();
+    await expect(d.getByText(/Penalty \(2 points, rate cut\)/)).toBeVisible();
     await expect(d.getByText('Paid to the member')).toBeVisible();
     await d.getByRole('button', { name: 'Withdraw early' }).click();
     await expect(d).toBeHidden();

@@ -33,21 +33,21 @@ describe('notifications (P8a)', () => {
 
   it('a template notification goes in the app and on each channel the member switched on', async () => {
     const before = (await call('GET', '/me/notifications', member)).json() as MyNotifications;
-    // Default channels: SMS on, WhatsApp off (MB-14). loan.sanctioned goes IN_APP, SMS, EMAIL.
+    // Default channels (F-09, D-093): WhatsApp on, email when on file (MB-14). loan.sanctioned goes IN_APP, WHATSAPP, EMAIL.
     const sent = await app.notifications.notify('mem-1103', 'loan.sanctioned', { amount: '₹1,00,000.00' });
-    expect(sent?.via.SMS).toBe('SIMULATED');
-    expect(sent?.via.WHATSAPP).toBeUndefined();
+    expect(sent?.via.WHATSAPP).toBe('SIMULATED');
     const after = (await call('GET', '/me/notifications', member)).json() as MyNotifications;
     expect(after.unread).toBe(before.unread + 1);
     expect(after.items[0]).toMatchObject({ id: sent!.id, read: false });
-    expect(after.items[0]!.alsoSentVia).toContain('SMS');
+    expect(after.items[0]!.alsoSentVia).toContain('WHATSAPP');
     const rows = await app.db.execute(sql`select channel, status, provider from deliveries where notification_id = ${sent!.id}`);
-    expect(rows.rows).toContainEqual({ channel: 'SMS', status: 'SIMULATED', provider: 'simulated' });
+    expect(rows.rows).toContainEqual({ channel: 'WHATSAPP', status: 'SIMULATED', provider: 'simulated' });
 
-    // Switch WhatsApp on: the next one goes there too.
-    const prefs = await call('PUT', '/me/preferences', member, { channels: { WHATSAPP: true } });
-    expect(prefs.json().channels).toMatchObject({ SMS: true, WHATSAPP: true });
-    expect((await app.notifications.notify('mem-1103', 'membership.active', {}))?.via).toMatchObject({ SMS: 'SIMULATED', WHATSAPP: 'SIMULATED' });
+    // Switch WhatsApp off: the next one stays in the app.
+    const prefs = await call('PUT', '/me/preferences', member, { channels: { WHATSAPP: false } });
+    expect(prefs.json().channels).toMatchObject({ WHATSAPP: false });
+    expect((await app.notifications.notify('mem-1103', 'membership.active', {}))?.via).toEqual({});
+    await call('PUT', '/me/preferences', member, { channels: { WHATSAPP: true } });
     expect(await app.notifications.notify('mem-1103', 'no.such.template', {})).toBeUndefined();
 
     await call('POST', `/me/notifications/${sent!.id}/read`, member);

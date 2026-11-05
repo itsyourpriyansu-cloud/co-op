@@ -146,7 +146,7 @@ describe('ST-03 notifications, composer and member questions', () => {
 
   it('preview → send a dues reminder to defaulters; every recipient gets it in the app', async () => {
     const acc = await login('stf-accountant');
-    const input = { channel: 'SMS', audience: { kind: 'DEFAULTERS' }, templateKey: 'dues.reminder', title: 'Dues reminder', body: 'Dear {name} (General No. {generalNo}), {overdue} is unpaid.' };
+    const input = { channel: 'WHATSAPP', audience: { kind: 'DEFAULTERS' }, templateKey: 'dues.reminder', title: 'Dues reminder', body: 'Dear {name} (General No. {generalNo}), {overdue} is unpaid.' };
     expect((await call('POST', '/messages/preview', input, await login('stf-secretary'))).status).toBe(403);
     expect((await call('POST', '/messages/preview', { ...input, body: 'short' }, acc)).body.fieldErrors?.body).toBeTruthy();
     const p = (await call<ComposePreview>('POST', '/messages/preview', input, acc)).body;

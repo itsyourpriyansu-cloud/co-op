@@ -1,5 +1,6 @@
 # 16 · Paper Forms → Digital Flows
 
+> Version 0.2 · 2026-11-05 · six more photos (D-093), stored in `docs/paper-forms/`; F7–F10 added.
 > Version 0.1 · 2026-10-24
 > Source: 7 photographs of the society's current paper forms, provided 2026-10-24. Tag **[PF]** = confirmed by a paper form.
 > Society letterhead [PF]: *The Telangana Secretariat Employees Cooperative Credit Society Limited · Regd. No. P-929 · 2nd Floor, West Ancillary Building, Dr. B.R Ambedkar Telangana Secretariat, Hyderabad-500004.*
@@ -173,6 +174,16 @@ Member authorises the current and future pay disbursing officers to recover, on 
 - Feeds a future "Retirement / death settlement" letter requesting recovery from gratuity (P2, Q-513).
 
 ---
+
+## F7–F10 · Forms received 2026-11-05 [PF] (D-093)
+Photos in `docs/paper-forms/`. `f3-salary-loan-application.jpg` and `f3-salary-loan-office-use.jpg` are F3 (front and back) and match the mapping above, including "Surety Recoveries" in the office-use panel. The rest are new and are built in step F:
+
+| Form | Paper | Digital plan |
+|---|---|---|
+| **F7** Loan disbursement receipt (`f7-loan-disbursement-receipt.jpg`) | "Received from the society the sum of Rs … being ordinary loan", borrower's signature; optional "Please pay the above amount to Sri …" with a second signature; Verified (Accountant / Manager); "PAID" (Cashier); received by: name & G.I. No., designation & dept | Borrower confirms receipt with OTP after disbursement; optional other payee recorded on the disbursement; printable twin with both signatures, Accountant's verification and Cashier's PAID stamp |
+| **F8** Ordinary / Education Loan Bond (`f8-ordinary-education-loan-bond.jpg`) | "On demand we jointly and severally promise to pay … with interest … at (…) per annum calculated at monthly rates"; G.I. No., L. No., Dept, Posted in Folio No., Vol. No.; borrower and surety signatures | The bond text is part of the borrower's and each surety's OTP signature; printable twin (folio / volume = the loan number) |
+| **F9** Salary Loan Bond (`f9-salary-loan-bond.jpg`) | "On demand I promise to pay …"; borrower only; with the receipt and the "pay to" authorisation of F7 | As F8 for the borrower alone, with F7's receipt |
+| **F10** Fixed Deposit Voucher (`f10-fixed-deposit-voucher.jpg`) | Vr. No., date, received Rs … (in words) towards interest on FDR / refund of FDR, member's signature, name, "passed for Rs …", Secretary, Treasurer | Voucher number and printable twin for every FD interest payout and refund; Treasurer = the Cashier (F-04) |
 
 ## Rules discovered from the forms (added to `09`)
 | ID | Rule | Source |

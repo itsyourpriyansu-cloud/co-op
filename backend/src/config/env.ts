@@ -47,6 +47,13 @@ const EnvSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
+  // ---- F-10 (D-093): outside messaging; only the simulated provider until the society names one ----
+  WHATSAPP_PROVIDER: z.enum(['simulated']).default('simulated'),
+  /** The society's WhatsApp Business number (F-10). */
+  WHATSAPP_FROM: z.string().trim().default(''),
+  EMAIL_PROVIDER: z.enum(['simulated']).default('simulated'),
+  /** The sender address for society email (F-10). */
+  EMAIL_FROM: z.string().trim().default(''),
   /** Password given to the seeded demo staff (dev/test only). */
   SEED_STAFF_PASSWORD: z.string().min(8).default('Society@2026'),
 });

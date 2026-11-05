@@ -33,7 +33,7 @@ export function validateFdSlabs(slabs: SocietySettings['fdSlabs']): Record<strin
 }
 
 /** ST-60 / ST-66: society-wide numbers. */
-export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 'minShares' | 'maxShares' | 'retirementAge' | 'defaulterCycles' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'insurance' | 'savingsRatePercent' | 'fdMinAmount' | 'admissionFee' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'financialYearStartMonth'> & Partial<Pick<SocietySettings, 'membershipTargetHours' | 'loanTargetDays' | 'demandSendByDays' | 'minTakeHomePay' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent'>>): Record<string, string> {
+export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 'minShares' | 'maxShares' | 'retirementAge' | 'defaulterCycles' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'insurance' | 'savingsRatePercent' | 'fdMinAmount' | 'admissionFee' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'financialYearStartMonth'> & Partial<Pick<SocietySettings, 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'demandSendByDays' | 'minTakeHomePay' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent'>>): Record<string, string> {
   const e: Record<string, string> = {};
   const money = (k: string, v: number, allowZero = true) => {
     if (!(Number.isInteger(v) && (allowZero ? v >= 0 : v > 0))) e[k] = allowZero ? 'Enter ₹0 or more.' : 'Enter more than ₹0.';
@@ -57,6 +57,7 @@ export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 
   if (!(s.emiToNetSalaryMaxPercent > 0 && s.emiToNetSalaryMaxPercent <= 100)) e.emiToNetSalaryMaxPercent = 'Use 1% to 100%.';
   // P8b (D-089, REQ-135): service targets; 0 switches a target off.
   if (s.membershipTargetHours !== undefined && !(Number.isInteger(s.membershipTargetHours) && s.membershipTargetHours >= 0 && s.membershipTargetHours <= 720)) e.membershipTargetHours = 'Use 0 to 720 hours.';
+  if (s.holidays !== undefined && !(Array.isArray(s.holidays) && s.holidays.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d))))) e.holidays = 'Use dates like 2026-10-02, one per line.';
   if (s.loanTargetDays !== undefined && !(Number.isInteger(s.loanTargetDays) && s.loanTargetDays >= 0 && s.loanTargetDays <= 90)) e.loanTargetDays = 'Use 0 to 90 days.';
   // P7b (D-088): send-by days and the minimum take-home pay (R1).
   if (s.demandSendByDays !== undefined && !(Number.isInteger(s.demandSendByDays) && s.demandSendByDays >= 0 && s.demandSendByDays <= 15)) e.demandSendByDays = 'Use 0 to 15 days.';

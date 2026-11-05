@@ -45,10 +45,10 @@ export const DESIGNATIONS = [
 
 /** Loan products. Values marked placeholder until the society confirms them (docs/13 §3, Q-311). */
 export const LOAN_PRODUCTS: LoanProduct[] = [
-  { code: 'ORDINARY', name: 'Ordinary Loan', ratePercent: 11, minAmount: R(10000), maxAmount: R(500000), maxInstalments: 100, maxConcurrent: 1, depositMarginPercent: 0, penalRatePercent: 0, suretiesRequired: 2, ddoCertificationRequired: true, shareDepositPercent: 10, topupAllowed: true, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true },
-  { code: 'EDUCATION', name: 'Education Loan', ratePercent: 9, minAmount: R(10000), maxAmount: R(300000), maxInstalments: 60, maxConcurrent: 1, depositMarginPercent: 0, penalRatePercent: 0, suretiesRequired: 2, ddoCertificationRequired: true, shareDepositPercent: 0, topupAllowed: false, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true },
-  { code: 'SALARY', name: 'Salary Loan', ratePercent: 12, minAmount: R(5000), maxAmount: R(100000), maxInstalments: 24, maxConcurrent: 1, depositMarginPercent: 0, penalRatePercent: 0, suretiesRequired: 0, ddoCertificationRequired: false, shareDepositPercent: 0, topupAllowed: false, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true },
-  { code: 'DEPOSIT', name: 'Loan against Deposit', ratePercent: 10, minAmount: R(10000), maxAmount: R(450000), maxInstalments: 36, maxConcurrent: 2, depositMarginPercent: 90, penalRatePercent: 0, suretiesRequired: 0, ddoCertificationRequired: false, shareDepositPercent: 0, topupAllowed: false, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true },
+  { code: 'ORDINARY', name: 'Ordinary Loan', ratePercent: 11, minAmount: R(10000), maxAmount: R(500000), maxInstalments: 100, maxConcurrent: 1, depositMarginPercent: 0, penalRatePercent: 2, suretiesRequired: 2, ddoCertificationRequired: true, shareDepositPercent: 10, topupAllowed: true, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true },
+  { code: 'EDUCATION', name: 'Education Loan', ratePercent: 9, minAmount: R(10000), maxAmount: R(300000), maxInstalments: 60, maxConcurrent: 1, depositMarginPercent: 0, penalRatePercent: 2, suretiesRequired: 2, ddoCertificationRequired: true, shareDepositPercent: 0, topupAllowed: false, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true },
+  { code: 'SALARY', name: 'Salary Loan', ratePercent: 12, minAmount: R(5000), maxAmount: R(100000), maxInstalments: 24, maxConcurrent: 1, depositMarginPercent: 0, penalRatePercent: 2, suretiesRequired: 0, ddoCertificationRequired: false, shareDepositPercent: 0, topupAllowed: false, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true },
+  { code: 'DEPOSIT', name: 'Loan against Deposit', ratePercent: 10, minAmount: R(10000), maxAmount: R(450000), maxInstalments: 36, maxConcurrent: 2, depositMarginPercent: 90, penalRatePercent: 2, suretiesRequired: 0, ddoCertificationRequired: false, shareDepositPercent: 0, topupAllowed: false, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true },
 ];
 
 export const SETTINGS: SocietySettings = {
@@ -79,6 +79,8 @@ export const SETTINGS: SocietySettings = {
   // Society: membership within 48 h, loans within 4–5 days (REQ-135, D-089).
   membershipTargetHours: 48,
   loanTargetDays: 5,
+  // F-14: the Admin keeps the holiday list; a fixed national holiday for the demo (D-093).
+  holidays: ['2026-10-02'],
   // Society: the sheet reaches DDOs 3–5 days before the 1st (D-088).
   demandSendByDays: 4,
   // R1 [P]: 0 until the society sets a minimum take-home pay (D-088).
@@ -87,9 +89,9 @@ export const SETTINGS: SocietySettings = {
   fdMaturityRunHour: 1,
   fdPrematureWithdrawalEnabled: true,
   fdPrematurePenaltyMethod: 'RATE_CUT',
-  // F-06: 0 until the society confirms the rate (D-086).
-  fdPrematurePenaltyPercent: 0,
-  placeholders: ['shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'demandSendByDays', 'minTakeHomePay', 'loanProducts'],
+  // F-06 placeholder (D-093): the Admin sets the real rate.
+  fdPrematurePenaltyPercent: 1,
+  placeholders: ['fdPrematurePenaltyPercent', 'holidays', 'shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'demandSendByDays', 'minTakeHomePay', 'loanProducts'],
 };
 
 export const LOAN_PURPOSES = {
@@ -101,27 +103,27 @@ export const LOAN_PURPOSES = {
 
 /** ST-63 notification templates. Sending is simulated: in-app always, other channels are logged. */
 export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
-  { key: 'membership.stage', event: 'Membership application moves to a new stage', title: 'Application update', body: 'Hello {name}, your membership application {applicationNo} is now at: {stage}.', channels: ['IN_APP', 'SMS'], audience: 'APPLICANT' },
-  { key: 'membership.active', event: 'Membership activated', title: 'Welcome to the society', body: 'Welcome {name}! Your General No. is {generalNo}.', channels: ['IN_APP', 'SMS', 'WHATSAPP'], audience: 'MEMBER' },
-  { key: 'profile.approved', event: 'Profile change approved', title: 'Profile updated', body: 'Your request to change {fields} has been approved.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
-  { key: 'profile.rejected', event: 'Profile change not approved', title: 'Profile change not approved', body: 'Your request to change {fields} was not approved: {reason}', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
+  { key: 'membership.stage', event: 'Membership application moves to a new stage', title: 'Application update', body: 'Hello {name}, your membership application {applicationNo} is now at: {stage}.', channels: ['IN_APP', 'WHATSAPP'], audience: 'APPLICANT' },
+  { key: 'membership.active', event: 'Membership activated', title: 'Welcome to the society', body: 'Welcome {name}! Your General No. is {generalNo}.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'profile.approved', event: 'Profile change approved', title: 'Profile updated', body: 'Your request to change {fields} has been approved.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'profile.rejected', event: 'Profile change not approved', title: 'Profile change not approved', body: 'Your request to change {fields} was not approved: {reason}', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'loan.submitted', event: 'Loan application submitted', title: 'Loan application received', body: 'We received your {product} application {applicationNo} for {amount}.', channels: ['IN_APP'], audience: 'MEMBER' },
-  { key: 'loan.surety', event: 'Member asked to be a surety', title: 'Surety request', body: '{borrower} asked you to be a surety for a {product} of {amount}. Open the app to respond.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
-  { key: 'loan.suretyDeclined', event: 'A surety declined', title: 'Choose another surety', body: '{surety} declined to be a surety for {applicationNo}: {reason}. Choose another member in the app.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
+  { key: 'loan.surety', event: 'Member asked to be a surety', title: 'Surety request', body: '{borrower} asked you to be a surety for a {product} of {amount}. Open the app to respond.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'loan.suretyDeclined', event: 'A surety declined', title: 'Choose another surety', body: '{surety} declined to be a surety for {applicationNo}: {reason}. Choose another member in the app.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'loan.suretiesSigned', event: 'All sureties signed', title: 'Sureties signed', body: 'All sureties signed {applicationNo}. The society office is reviewing it now.', channels: ['IN_APP'], audience: 'MEMBER' },
-  { key: 'loan.returned', event: 'Loan returned for correction', title: 'Action needed on your loan', body: 'Your loan {applicationNo} needs a correction: {reason}', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
-  { key: 'loan.sanctioned', event: 'Loan sanctioned', title: 'Loan sanctioned', body: 'Your {product} of {amount} is sanctioned. EMI {emi} from {firstCycle}.', channels: ['IN_APP', 'SMS', 'EMAIL'], audience: 'MEMBER' },
-  { key: 'loan.disbursed', event: 'Loan disbursed', title: 'Loan disbursed', body: '{netAmount} has been paid for loan {loanNo}.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
-  { key: 'loan.rejected', event: 'Loan rejected', title: 'Loan not approved', body: 'Your loan {applicationNo} was not approved: {reason}', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
-  { key: 'fd.rejected', event: 'Fixed deposit not accepted', title: 'Deposit not accepted', body: 'Your fixed deposit request {requestNo} was not accepted: {reason}. The money will be refunded.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
+  { key: 'loan.returned', event: 'Loan returned for correction', title: 'Action needed on your loan', body: 'Your loan {applicationNo} needs a correction: {reason}', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'loan.sanctioned', event: 'Loan sanctioned', title: 'Loan sanctioned', body: 'Your {product} of {amount} is sanctioned. EMI {emi} from {firstCycle}.', channels: ['IN_APP', 'WHATSAPP', 'EMAIL'], audience: 'MEMBER' },
+  { key: 'loan.disbursed', event: 'Loan disbursed', title: 'Loan disbursed', body: '{netAmount} has been paid for loan {loanNo}.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'loan.rejected', event: 'Loan rejected', title: 'Loan not approved', body: 'Your loan {applicationNo} was not approved: {reason}', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'fd.rejected', event: 'Fixed deposit not accepted', title: 'Deposit not accepted', body: 'Your fixed deposit request {requestNo} was not accepted: {reason}. The money will be refunded.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'fd.accepted', event: 'Fixed deposit accepted', title: 'Fixed deposit accepted', body: 'FD {fdrNo} for {amount} is active. Matures on {maturityDate}.', channels: ['IN_APP', 'EMAIL'], audience: 'MEMBER' },
-  { key: 'fd.maturing', event: 'Fixed deposit maturing in 30 days', title: 'FD maturing soon', body: 'FD {fdrNo} matures on {maturityDate}. Visit the office to renew or withdraw.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
+  { key: 'fd.maturing', event: 'Fixed deposit maturing in 30 days', title: 'FD maturing soon', body: 'FD {fdrNo} matures on {maturityDate}. Visit the office to renew or withdraw.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'recovery.posted', event: 'Monthly recovery posted', title: 'Deduction recovered', body: '{amount} was recovered from your {cycle} salary.', channels: ['IN_APP'], audience: 'MEMBER' },
-  { key: 'recovery.short', event: 'Short recovery', title: 'Short recovery', body: 'Only {recovered} of {demand} was recovered for {cycle}. See how it was applied.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
+  { key: 'recovery.short', event: 'Short recovery', title: 'Short recovery', body: 'Only {recovered} of {demand} was recovered for {cycle}. See how it was applied.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'payment.verified', event: 'Reported payment verified', title: 'Payment verified', body: 'Your payment of {amount} (ref {reference}) is verified. Receipt {receiptNo}.', channels: ['IN_APP'], audience: 'MEMBER' },
-  { key: 'payment.rejected', event: 'Reported payment rejected', title: 'Payment not verified', body: 'We could not verify your payment of {amount}: {reason}', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
-  { key: 'defaulter.notice', event: 'Defaulter notice (ST-52, Q-310 wording placeholder)', title: 'Overdue dues: {overdue}', body: 'Our records show that {overdue} due to the society from your salary deductions has not been recovered in full for {cycles} month(s), as detailed below. Please pay this amount at the society counter or by bank transfer within 15 days of this notice, and report the payment in the member app. If it is not paid, the society will recover it from your salary and, where applicable, from your sureties, as per the bye-laws and your agreement with the society.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
-  { key: 'defaulter.guarantorNotice', event: 'Notice to the sureties of a defaulter (P7b-3, Q-310)', title: 'Surety notice: {borrower}', body: '{borrower} (General No. {generalNo}), whose loan {loanNo} you stand surety for, has not repaid {overdue} for {cycles} month(s). Please ask them to clear it at the society counter. As a surety you may be asked to repay it as per the bye-laws and your agreement with the society.', channels: ['IN_APP', 'SMS'], audience: 'MEMBER' },
-  { key: 'dues.reminder', event: 'Dues reminder (composer)', title: 'Dues reminder', body: 'Dear {name} (General No. {generalNo}), {overdue} is unpaid on your society account. Please pay at the counter or by bank transfer and report it in the app.', channels: ['SMS', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'payment.rejected', event: 'Reported payment rejected', title: 'Payment not verified', body: 'We could not verify your payment of {amount}: {reason}', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'defaulter.notice', event: 'Defaulter notice (ST-52, Q-310 wording placeholder)', title: 'Overdue dues: {overdue}', body: 'Our records show that {overdue} due to the society from your salary deductions has not been recovered in full for {cycles} month(s), as detailed below. Please pay this amount at the society counter or by bank transfer within 15 days of this notice, and report the payment in the member app. If it is not paid, the society will recover it from your salary and, where applicable, from your sureties, as per the bye-laws and your agreement with the society.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'defaulter.guarantorNotice', event: 'Notice to the sureties of a defaulter (P7b-3, Q-310)', title: 'Surety notice: {borrower}', body: '{borrower} (General No. {generalNo}), whose loan {loanNo} you stand surety for, has not repaid {overdue} for {cycles} month(s). Please ask them to clear it at the society counter. As a surety you may be asked to repay it as per the bye-laws and your agreement with the society.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'dues.reminder', event: 'Dues reminder (composer)', title: 'Dues reminder', body: 'Dear {name} (General No. {generalNo}), {overdue} is unpaid on your society account. Please pay at the counter or by bank transfer and report it in the app.', channels: ['WHATSAPP'], audience: 'MEMBER' },
   { key: 'demand.sent', event: 'Demand sheet sent to the DDO', title: 'Demand sheet for {cycle}', body: 'The {cycle} demand for {department} ({members} members, {amount}) is ready to deduct.', channels: ['EMAIL'], audience: 'STAFF' },
 ];

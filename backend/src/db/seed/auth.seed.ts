@@ -1,4 +1,4 @@
-import { ROLE_PERMISSIONS } from '@tgs/domain';
+import { keepsAppAccess, ROLE_PERMISSIONS } from '@tgs/domain';
 import { demoDataset } from './dataset';
 import type { Role } from '@tgs/types';
 import { sql } from 'drizzle-orm';
@@ -67,7 +67,7 @@ const apps: Seeder = {
   run: async (tx) => {
     const data = demoDataset();
     const members = data.members
-      .filter((m) => m.status === 'ACTIVE')
+      .filter((m) => keepsAppAccess(m.status))
       .map((m) => ({
         id: m.id,
         kind: 'MEMBER' as const,

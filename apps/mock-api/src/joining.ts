@@ -65,7 +65,7 @@ export function registerJoining(api: Hono<Env>, store: Store, requireSession: Mi
       otps.delete(otpRef ?? '');
       return fail('VALIDATION_ERROR', 'This code has expired. Request a new one.', { fieldErrors: { otp: 'Expired' } });
     }
-    if (otp !== DEMO_OTP) fail('VALIDATION_ERROR', "That code doesn't match. Check the SMS and try again.", { fieldErrors: { otp: 'Incorrect code' } });
+    if (otp !== DEMO_OTP) fail('VALIDATION_ERROR', "That code doesn't match. Check WhatsApp and try again.", { fieldErrors: { otp: 'Incorrect code' } });
     otps.delete(otpRef ?? '');
     return pending;
   };

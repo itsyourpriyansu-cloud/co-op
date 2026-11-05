@@ -1,5 +1,6 @@
 # Open Questions
 
+> Version 0.5 · 2026-11-05 · F-01…F-14 answered (D-093)
 > Version 0.4 · 2026-10-29 · Society answers recorded (D-067, `docs/21-society-answers-impact.md`)
 > Asked in logical batches. **Batch 1 blocks the build.** Batches 2–4 block only the features listed in "Blocks". Until they are answered, the prototype uses the configurable placeholders in `09`/`13`.
 > Owner: **E** = Envizon (you) · **S** = Society (TGSECCSL) · **F** = Fusil Solutions
@@ -109,19 +110,19 @@ Details and context: `docs/21-society-answers-impact.md` §3–4.
 
 | ID | Question | Placeholder until answered | Owner | Status |
 |---|---|---|---|---|
-| F-01 | Without a signature, how does a surety agree? Is "I agree" in the app after login enough? | In-app "I agree" after login | S | Open |
-| F-02 | Is the share value still ₹100? | ₹100 | S | Open |
-| F-03 | 10% share deduction + insurance at disbursement: all loan types or Ordinary only? Only the difference if share deposit already exists? | Ordinary only, netted (BR-004 [A]); insurance not deducted at payout | S | **Partly answered by the agreement (§3.4, §3.5, p. 4):** 10% only under Ordinary Loan, netted against the existing share deposit (worked example ₹20,000 → ₹1,000). Salary, Education and Deposit loans: "as per society policies/rules", no 10% stated. Insurance (₹200 / ₹1,000) is "reflected in the demand sheet", not taken from the payout. **Still to ask the society:** (a) 10% on other loan types? (b) insurance cut from the payout as their answer says, or only through the demand sheet as the agreement says? |
-| F-04 | Separate Cashier, or does the Accountant take cash and pay out loans? | Keep the Cashier role; the Accountant may also act | S | Open |
-| F-05 | Monthly amounts and purpose of CRD, SRDS, RRF (conflict C-4 on "CRD") | ₹500 / ₹300 / ₹100 | S | Open |
-| F-06 | Penal interest rate on overdue dues; FD premature-withdrawal penalty % | 0% (setting) | S | Open. **[ASSUMPTION] D-088 (penal on dues):** simple interest per day on unpaid loan principal + interest only, rate per loan product, after the grace days, penal paid first, waivable by the Accountant with a reason; a backdated receipt settles penal to its date. Confirm the rate(s), grace days and whether waivers are allowed. **[ASSUMPTION] D-086:** the FD penalty comes only out of interest (principal always in full), default method = rate cut (interest at FD rate − penalty points), Admin may switch to "share of interest"; completed months count. Confirm the rate and the method |
-| F-07 | Caste visible to all staff only, or also members? (C-3) | All staff only | S | Open |
-| F-08 | Loan settlement on resignation or death | Not modelled | S | Open |
-| F-09 | Which events send WhatsApp / email? Templates and member defaults still include SMS (prototype: SMS on, WhatsApp off) although the society said no SMS (D-089): should SMS become WhatsApp everywhere? | ST-63 event list | S | Open |
-| F-10 | Society's WhatsApp Business number and sender email | Simulated | S | Open |
-| F-11 | Samples: registers/Excel, demand sheet, sanction letter, DDO statement, recovery agreement, back of F1 | Layouts from forms | S | Open |
-| F-12 | Do ex-employees (~1,200) keep accounts the system must hold? | Members with status RETIRED/LEFT | S | Open |
-| F-14 | Service targets (REQ-135): calendar or working days/hours, and does the clock pause while a loan waits on the member (sureties, corrections)? | Calendar time, never paused (D-090) | S | Open |
-| F-13 | Guarantor liability (Q-310 "the society starts charging the guarantor"): when does a surety start paying, how is the borrower's unpaid amount split between sureties (equally? in order?), from which cycle, and does the borrower's own share / FD go first? Also confirm the defaulter and surety notice wording | Notices only (D-088); no surety is charged | S | Open |
+| F-01 | Without a signature, how does a surety agree? Is "I agree" in the app after login enough? | In-app "I agree" after login | S | **Answered [S] D-093:** every user uploads a PNG signature; after OTP it appears on what they sign (step C) |
+| F-02 | Is the share value still ₹100? | ₹100 | S | **Answered [S] D-093:** Admin setting (₹100 placeholder) |
+| F-03 | 10% share deduction + insurance at disbursement: all loan types or Ordinary only? Only the difference if share deposit already exists? | Ordinary only, netted (BR-004 [A]); insurance not deducted at payout | S | **Answered [S] D-093:** Admin sets it per loan product (`shareDepositPercent`) |
+| F-04 | Separate Cashier, or does the Accountant take cash and pay out loans? | Keep the Cashier role; the Accountant may also act | S | **Answered [S] D-093:** Cashier pays out to the accounts, as in the prototype |
+| F-05 | Monthly amounts and purpose of CRD, SRDS, RRF (conflict C-4 on "CRD") | ₹500 / ₹300 / ₹100 | S | **Answered [S] D-093:** Admin settings (placeholders ₹500 / ₹300 / ₹100) |
+| F-06 | Penal interest rate on overdue dues; FD premature-withdrawal penalty % | 0% (setting) | S | **Answered [S] D-093:** Admin settings; placeholders penal 2% a year, FD penalty 1% |
+| F-07 | Caste visible to all staff only, or also members? (C-3) | All staff only | S | **Answered [S] D-093:** visible to all (staff and the member); field built in step B |
+| F-08 | Loan settlement on resignation or death | Not modelled | S | **Answered [S] D-093:** follow the forms (F5/F6: from gratuity); final settlement in step E |
+| F-09 | Which events send WhatsApp / email? Templates and member defaults still include SMS (prototype: SMS on, WhatsApp off) although the society said no SMS (D-089): should SMS become WhatsApp everywhere? | ST-63 event list | S | **Answered [S] D-093:** no SMS; WhatsApp for every member message, email also for letters |
+| F-10 | Society's WhatsApp Business number and sender email | Simulated | S | **Answered [S] D-093:** later; `.env` keys `WHATSAPP_*`, `EMAIL_*` (simulated) |
+| F-11 | Samples: registers/Excel, demand sheet, sanction letter, DDO statement, recovery agreement, back of F1 | Layouts from forms | S | **Partly answered [S] D-093:** six more form photos in `docs/paper-forms/`; registers / Excel for the import still needed (P9) |
+| F-12 | Do ex-employees (~1,200) keep accounts the system must hold? | Members with status RETIRED/LEFT | S | **Answered [S] D-093:** best practice: retired / resigned keep read-only app use and their records; the deceased lose the app |
+| F-14 | Service targets (REQ-135): calendar or working days/hours, and does the clock pause while a loan waits on the member (sureties, corrections)? | Calendar time, never paused (D-090) | S | **Answered [S] D-093:** working days only; a loan's clock starts after the sureties sign |
+| F-13 | Guarantor liability (Q-310 "the society starts charging the guarantor"): when does a surety start paying, how is the borrower's unpaid amount split between sureties (equally? in order?), from which cycle, and does the borrower's own share / FD go first? Also confirm the defaulter and surety notice wording | Notices only (D-088); no surety is charged | S | **Answered [S] D-093:** our design: Accountant recovers from the sureties in equal shares after N unpaid months (step D) |
 | C-1 | EMI flat (society) vs reducing balance (agreement): which one? | Both in the engine; product setting | S/E | **Resolved → D-071:** all methods built, society picks per product; default reducing balance |
 | C-2 | Membership: one signature (society) vs two (form F1) | Setting `membershipApprovals` | S/E | **Resolved → D-070:** two signatures (Secretary → President) as in the prototype; 1 is optional |

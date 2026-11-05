@@ -34,6 +34,9 @@ const isIsoDate = (v: string | undefined): v is string => {
   }
 };
 
+/** F-12 (D-093): retired and resigned members keep read-only use of the app; only the deceased lose it. */
+export const keepsAppAccess = (status: Member['status']): boolean => status !== 'DECEASED';
+
 export const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

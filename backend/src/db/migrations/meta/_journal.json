@@ -141,6 +141,13 @@
       "when": 1793773858570,
       "tag": "0019_p8b_service_targets",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793871161196,
+      "tag": "0020_society_answers_a",
+      "breakpoints": true
     }
   ]
 }

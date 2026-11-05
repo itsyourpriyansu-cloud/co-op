@@ -385,7 +385,7 @@ export interface MemberNotice {
   createdAt: ISODateTime;
   /** In-app now; WhatsApp and email come with P8. */
   /** P8a: in-app, then each channel of the template the member has switched on (MB-14). */
-  delivery: { inApp: 'PENDING' | 'SENT' | 'FAILED'; via?: Partial<Record<'SMS' | 'WHATSAPP' | 'EMAIL', DeliveryStatus>> };
+  delivery: { inApp: 'PENDING' | 'SENT' | 'FAILED'; via?: Partial<Record<'WHATSAPP' | 'EMAIL', DeliveryStatus>> };
 }
 
 /** P7b: where a deduction amount came from. */
@@ -577,7 +577,7 @@ export interface AppNotification {
   recipientId: string;
   title: string;
   body: string;
-  channel: 'IN_APP' | 'EMAIL' | 'WHATSAPP' | 'SMS';
+  channel: 'IN_APP' | 'EMAIL' | 'WHATSAPP';
   createdAt: ISODateTime;
   read: boolean;
   link?: string;
@@ -661,6 +661,8 @@ export interface SocietySettings {
   membershipTargetHours: number;
   /** P8b (D-089, REQ-135 [S]): a loan disbursed within this many days of application (society: 4–5). 0 = no target. */
   loanTargetDays: number;
+  /** F-14 (D-093): public holidays the office is closed (YYYY-MM-DD). Sundays and second Saturdays never count. */
+  holidays: ISODate[];
   /** P7b (D-088): the sheet must reach the DDO this many days before the 1st of the cycle (society: 3–5). */
   demandSendByDays: number;
   /** P7b (D-088, R1 [P]): a deduction may not leave the member less than this take-home pay. 0 until set. */
@@ -687,7 +689,7 @@ export interface SupportTicket {
   updatedAt?: ISODateTime;
 }
 
-export type NotificationChannel = 'IN_APP' | 'SMS' | 'EMAIL' | 'WHATSAPP';
+export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP';
 
 /** P8a: what a WhatsApp / email / SMS provider did with one message. SIMULATED until F-10 names a provider. */
 export type DeliveryStatus = 'SENT' | 'SIMULATED' | 'FAILED';

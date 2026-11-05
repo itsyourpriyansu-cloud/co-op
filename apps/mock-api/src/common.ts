@@ -40,7 +40,7 @@ export function audit(store: Store, user: SessionUser, entity: string, entityId:
 
 /**
  * Sends a templated notification (ST-63). In-app is stored for the recipient; other channels are
- * simulated (listed on the notification so the demo can show "sent by SMS / WhatsApp").
+ * simulated (listed on the notification so the demo can show "sent by WhatsApp / email").
  */
 export function notify(store: Store, recipientId: string, templateKey: string, vars: Record<string, string | number>, link?: string): AppNotification | undefined {
   const t = store.db.notificationTemplates.find((x) => x.key === templateKey);

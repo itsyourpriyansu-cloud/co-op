@@ -70,7 +70,7 @@ describe('deduction entry (P7b-1)', () => {
     // Next month's sheet shows it as previous outstanding (not added to the demand, R2).
     await call('POST', '/demand/generate', accountant, { cycle: '2026-11', departmentIds: ['dept-fin'] });
     const nov = await sheet('ds-2026-11-fin', accountant);
-    expect(nov.lines.find((l) => l.memberId === partial)?.previousOutstanding).toBe(dues.totalArrears);
+    expect(nov.lines.find((l) => l.memberId === partial)?.previousOutstanding).toBe(dues.totalArrears - (dues.totalPenal ?? 0));
     const tb = (await call('GET', '/ledger/trial-balance', accountant)).json();
     expect(tb.totalDebit).toBe(tb.totalCredit);
   });

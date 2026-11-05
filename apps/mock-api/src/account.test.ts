@@ -105,10 +105,10 @@ describe('MB-01 / MB-12 / MB-13 / MB-14', () => {
   it('preferences save, email needs an email on the profile', async () => {
     const t = (await signIn('1101')).body.token;
     const p = (await call<MemberPreferences>('GET', '/me/preferences', undefined, t)).body;
-    expect(p.channels.SMS).toBe(true);
-    const saved = await call<MemberPreferences>('PUT', '/me/preferences', { channels: { WHATSAPP: true } }, t);
-    expect(saved.body.channels).toMatchObject({ SMS: true, WHATSAPP: true });
-    expect((await call<MemberPreferences>('GET', '/me/preferences', undefined, t)).body.channels.WHATSAPP).toBe(true);
+    expect(p.channels.WHATSAPP).toBe(true);
+    const saved = await call<MemberPreferences>('PUT', '/me/preferences', { channels: { WHATSAPP: false } }, t);
+    expect(saved.body.channels).toMatchObject({ WHATSAPP: false });
+    expect((await call<MemberPreferences>('GET', '/me/preferences', undefined, t)).body.channels.WHATSAPP).toBe(false);
     delete lakshmi().email;
     expect((await call('PUT', '/me/preferences', { channels: { EMAIL: true } }, t)).body.fieldErrors?.EMAIL).toBeTruthy();
   });

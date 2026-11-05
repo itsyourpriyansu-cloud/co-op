@@ -19,7 +19,7 @@ import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-const CHANNEL: Record<MessageChannel, { label: string; icon: typeof Mail }> = { SMS: { label: 'SMS', icon: MessageSquareText }, WHATSAPP: { label: 'WhatsApp', icon: MessageCircle }, EMAIL: { label: 'Email', icon: Mail } };
+const CHANNEL: Record<MessageChannel, { label: string; icon: typeof Mail }> = { WHATSAPP: { label: 'WhatsApp', icon: MessageCircle }, EMAIL: { label: 'Email', icon: Mail } };
 const TICKET_TAG: Record<StaffTicketRow['status'], { text: string; color: TagV2Color }> = { OPEN: { text: 'Waiting for reply', color: TagV2Color.WARNING }, ANSWERED: { text: 'Answered', color: TagV2Color.PRIMARY }, CLOSED: { text: 'Closed', color: TagV2Color.NEUTRAL } };
 
 type Tab = 'mine' | 'questions' | 'sent';
@@ -237,7 +237,7 @@ function Composer({ open, onClose, onSent }: { open: boolean; onClose: () => voi
   const qc = useQueryClient();
   const templates = useQuery({ queryKey: ['notification-templates'], queryFn: api.settings.templates, enabled: open });
   const departments = useQuery({ queryKey: ['departments'], queryFn: api.settings.departments, enabled: open });
-  const [channel, setChannel] = useState<MessageChannel>('SMS');
+  const [channel, setChannel] = useState<MessageChannel>('WHATSAPP');
   const [kind, setKind] = useState<AudienceKind>('DEFAULTERS');
   const [member, setMember] = useState<MemberPick>();
   const [departmentId, setDepartmentId] = useState<string>();
@@ -347,12 +347,11 @@ function Composer({ open, onClose, onSent }: { open: boolean; onClose: () => voi
             }}
           />
         )}
-        {channel === 'EMAIL' || channel === 'WHATSAPP' ? <TextInputV2 label={channel === 'EMAIL' ? 'Subject' : 'Title'} value={title} onChange={(e) => (setTitle(e.target.value), reset())} error={errors.title ? { show: true, message: errors.title } : undefined} /> : null}
+        {<TextInputV2 label={channel === 'EMAIL' ? 'Subject' : 'Title'} value={title} onChange={(e) => (setTitle(e.target.value), reset())} error={errors.title ? { show: true, message: errors.title } : undefined} />}
         <div className="flex flex-col gap-1">
           <TextAreaV2 label="Message" placeholder="Write the message" value={body} onChange={(e) => (setBody(e.target.value), reset())} rows={5} error={errors.body ? { show: true, message: errors.body } : undefined} />
           <p className="text-caption text-fg-tertiary">
             Placeholders: {'{name} {generalNo} {department} {overdue} {cycle} {dor}'}
-            {channel === 'SMS' ? ` · ${body.length}/480 characters` : ''}
           </p>
         </div>
         {errors.form && <AlertV2 type={AlertV2Type.ERROR} subType={AlertV2SubType.SUBTLE} heading="Not sent" description={errors.form} />}
@@ -366,7 +365,7 @@ function Composer({ open, onClose, onSent }: { open: boolean; onClose: () => voi
                 <p className="text-caption text-fg-tertiary">
                   To {s.name} ({s.generalNo}) · {s.to}
                 </p>
-                {channel !== 'SMS' && <p className="text-label text-fg">{s.title}</p>}
+                <p className="text-label text-fg">{s.title}</p>
                 <p className="text-body text-fg">{s.body}</p>
               </div>
             ))}

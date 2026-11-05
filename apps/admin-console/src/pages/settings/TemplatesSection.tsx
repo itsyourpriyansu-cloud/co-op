@@ -1,4 +1,4 @@
-// ST-63 Notification templates & channels. Sending is simulated: in-app always, SMS / WhatsApp /
+// ST-63 Notification templates & channels. Sending is simulated: in-app always, WhatsApp /
 // email are shown as "sent via" on each notification.
 import { useState } from 'react';
 import { BellRing, Mail, MessageCircle, Pencil, Smartphone, type LucideIcon } from 'lucide-react';
@@ -13,7 +13,6 @@ import { useSettingsSave } from './shared';
 
 const CHANNELS: Array<{ id: NotificationChannel; label: string; icon: LucideIcon }> = [
   { id: 'IN_APP', label: 'App', icon: BellRing },
-  { id: 'SMS', label: 'SMS', icon: Smartphone },
   { id: 'WHATSAPP', label: 'WhatsApp', icon: MessageCircle },
   { id: 'EMAIL', label: 'Email', icon: Mail },
 ];

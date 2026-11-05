@@ -35,7 +35,8 @@ describe('penal interest (P7b-2)', () => {
   });
   afterAll(() => app.close());
 
-  it('is 0 until a penal rate is set (F-06)', async () => {
+  it('is 0 while the rate is 0 (F-06; the default is a 2% placeholder, D-093)', async () => {
+    await call('PUT', '/settings/loan-products/ORDINARY', admin, { penalRatePercent: 0 });
     const d = await dues();
     expect(d.totalPenal).toBe(0);
     expect(septDues(d).penal).toBe(0);

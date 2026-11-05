@@ -56,7 +56,7 @@ describe('P6b transitions and settings', () => {
 
   it('validates the FD maturity and withdrawal settings', () => {
     expect(validateSocietySettings(SETTINGS)).toEqual({});
-    expect(SETTINGS.fdPrematurePenaltyPercent).toBe(0);
+    expect(SETTINGS.fdPrematurePenaltyPercent).toBe(1); // F-06 placeholder (D-093)
     const bad = validateSocietySettings({ ...SETTINGS, fdMaturityRunHour: 24, fdPrematurePenaltyPercent: -1, fdPrematurePenaltyMethod: 'X' as never, fdMaturityJobEnabled: 'yes' as never, fdPrematureWithdrawalEnabled: 1 as never });
     expect(Object.keys(bad).sort()).toEqual(['fdMaturityJobEnabled', 'fdMaturityRunHour', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'fdPrematureWithdrawalEnabled']);
     expect(validateSocietySettings({ ...SETTINGS, fdPrematurePenaltyMethod: 'SHARE_OF_INTEREST', fdPrematurePenaltyPercent: 100 })).toEqual({});

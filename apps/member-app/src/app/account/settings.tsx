@@ -1,4 +1,4 @@
-// MB-14 Settings: where society messages reach you (SMS / WhatsApp / Email; in-app is always on),
+// MB-14 Settings: where society messages reach you (WhatsApp / Email; in-app is always on),
 // language (English; Telugu is Q-008), and account links. Saving is immediate per switch.
 import { useState } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
@@ -14,7 +14,6 @@ import { color, radius, space, touchTarget } from '@/theme';
 
 type Channel = keyof MemberPreferences['channels'];
 const CHANNELS: Array<{ key: Channel; icon: LucideIcon; label: string; detail: (p: MemberPreferences) => string }> = [
-  { key: 'SMS', icon: MessageSquareText, label: 'SMS', detail: () => 'To your registered mobile' },
   { key: 'WHATSAPP', icon: MessageCircle, label: 'WhatsApp', detail: () => 'To your registered mobile' },
   { key: 'EMAIL', icon: Mail, label: 'Email', detail: (p) => p.email ?? 'No email on your profile' },
 ];

@@ -62,7 +62,7 @@ export class NotificationsService {
     private readonly app: FastifyInstance,
     readonly repo: NotificationsRepository,
   ) {
-    this.senders = createSenders(app.log, app.env.NODE_ENV === 'production');
+    this.senders = createSenders(app.log, app.env);
   }
 
   // ---- sending ----
@@ -79,7 +79,7 @@ export class NotificationsService {
     const member = await this.app.members.byId(recipientId);
     if (member) {
       const on = (await this.preferencesOf(member)).channels;
-      n.via = await this.deliver(member, t.channels.filter((c): c is MessageChannel => c !== 'IN_APP' && on[c]), n.title, n.body, { notificationId: n.id });
+      n.via = await this.deliver(member, t.channels.filter((c): c is MessageChannel => (c === 'WHATSAPP' || c === 'EMAIL') && on[c]), n.title, n.body, { notificationId: n.id });
       if (Object.keys(n.via).length) await this.repo.setVia(n.id, n.via);
     }
     return { id: n.id, via: n.via };
@@ -165,10 +165,9 @@ export class NotificationsService {
 
   private async compose(input: ComposeInput): Promise<ComposePreview & { send: Member[] }> {
     const fieldErrors: Record<string, string> = {};
-    if (!['SMS', 'WHATSAPP', 'EMAIL'].includes(input?.channel)) fieldErrors.channel = 'Choose SMS, WhatsApp or Email';
+    if (!['WHATSAPP', 'EMAIL'].includes(input?.channel)) fieldErrors.channel = 'Choose WhatsApp or Email';
     if (input?.channel === 'EMAIL' && !input.title?.trim()) fieldErrors.title = 'Add a subject';
     if (!input?.body?.trim() || input.body.trim().length < 10) fieldErrors.body = 'Write the message (at least 10 characters)';
-    if (input?.channel === 'SMS' && input.body.length > 480) fieldErrors.body = 'SMS is limited to 480 characters (3 parts)';
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
     const { members, label } = await this.audience(input);
     const send = input.channel === 'EMAIL' ? members.filter((m) => m.email) : members;
@@ -249,7 +248,7 @@ export class NotificationsService {
   // ---- member app ----
 
   async preferencesOf(m: Member): Promise<MemberPreferences> {
-    return (await this.repo.preferences(m.id)) ?? { channels: { SMS: true, WHATSAPP: false, EMAIL: Boolean(m.email) }, language: 'en', ...(m.email ? { email: m.email } : {}) };
+    return (await this.repo.preferences(m.id)) ?? { channels: { WHATSAPP: true, EMAIL: Boolean(m.email) }, language: 'en', ...(m.email ? { email: m.email } : {}) };
   }
 
   async myNotifications(user: SessionUser): Promise<MyNotifications> {

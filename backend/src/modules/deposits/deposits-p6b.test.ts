@@ -31,7 +31,7 @@ describe('FD maturity and premature withdrawal (P6b)', () => {
 
   it('Admin configures the FD settings; others cannot; the values outlive a restart', async () => {
     const before = (await call('GET', '/settings', admin)).json().settings;
-    expect(before).toMatchObject({ fdMaturityJobEnabled: true, fdPrematureWithdrawalEnabled: true, fdPrematurePenaltyMethod: 'RATE_CUT', fdPrematurePenaltyPercent: 0 });
+    expect(before).toMatchObject({ fdMaturityJobEnabled: true, fdPrematureWithdrawalEnabled: true, fdPrematurePenaltyMethod: 'RATE_CUT', fdPrematurePenaltyPercent: 1 }); // F-06 placeholder (D-093)
     expect((await call('PUT', '/settings/values', accountant, { fdPrematurePenaltyPercent: 1 })).statusCode).toBe(403);
     expect((await settings({ fdPrematurePenaltyPercent: -2, fdMaturityRunHour: 30 })).json().fieldErrors).toMatchObject({ fdPrematurePenaltyPercent: expect.any(String), fdMaturityRunHour: expect.any(String) });
     const saved = (await settings({ fdMaturityRunHour: 2, fdPrematurePenaltyMethod: 'SHARE_OF_INTEREST', fdPrematurePenaltyPercent: 10 })).json().settings;
@@ -76,6 +76,7 @@ describe('FD maturity and premature withdrawal (P6b)', () => {
   });
 
   it('withdrawal at 0% pays the principal and all interest earned', async () => {
+    await settings({ fdPrematurePenaltyPercent: 0 });
     const fd = activeFds[1]!;
     const preview = (await call('GET', `/deposits/${fd.id}/withdrawal-preview`, admin)).json() as FdSettlement;
     expect(preview).toMatchObject({ principal: fd.principal, penaltyPercent: 0, penalty: 0, payable: fd.principal! + preview.interestEarned });

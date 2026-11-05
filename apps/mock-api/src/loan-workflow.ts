@@ -447,7 +447,7 @@ export function registerLoanWorkflow(api: Api, store: Store, requireSession: Gua
     const { otpRef = '', otp } = await c.req.json<{ otpRef?: string; otp?: string }>().catch(() => ({}) as { otpRef?: string; otp?: string });
     const pending = otps.get(otpRef);
     if (!pending || pending.memberId !== me || pending.loanId !== c.req.param('loanId') || Date.now() > pending.expiresAt) fail('VALIDATION_ERROR', 'This code has expired. Request a new one.', { fieldErrors: { otp: 'Expired' } });
-    if (otp !== DEMO_OTP) fail('VALIDATION_ERROR', "That code doesn't match. Check the SMS and try again.", { fieldErrors: { otp: 'Incorrect code' } });
+    if (otp !== DEMO_OTP) fail('VALIDATION_ERROR', "That code doesn't match. Check WhatsApp and try again.", { fieldErrors: { otp: 'Incorrect code' } });
     otps.delete(otpRef);
     const l = db().loans.find((x) => x.id === pending!.loanId)!;
     suretyRespond(store, l, me, true);

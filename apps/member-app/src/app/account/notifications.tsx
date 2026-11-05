@@ -9,7 +9,7 @@ import { accountKeys, appRouteFor, stamp, useNotifications } from '@/lib/account
 import { Alert, Button, Card, EmptyState, Header, Screen, Skeleton, Text } from '@/ui';
 import { color, radius, space } from '@/theme';
 
-const VIA: Record<string, string> = { SMS: 'SMS', WHATSAPP: 'WhatsApp', EMAIL: 'Email' };
+const VIA: Record<string, string> = { WHATSAPP: 'WhatsApp', EMAIL: 'Email' };
 
 export default function Notifications() {
   const qc = useQueryClient();

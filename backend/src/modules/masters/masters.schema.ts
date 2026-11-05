@@ -35,6 +35,7 @@ export const societySettingsSchema = z.object({
   demandSendByDays: z.number().int(),
   membershipTargetHours: z.number().int(),
   loanTargetDays: z.number().int(),
+  holidays: z.array(z.string()),
   minTakeHomePay: paise,
   placeholders: z.array(z.string()),
 });
@@ -96,7 +97,7 @@ export const templateSchema = z.object({
   event: z.string(),
   title: z.string(),
   body: z.string(),
-  channels: z.array(z.enum(['IN_APP', 'SMS', 'EMAIL', 'WHATSAPP'])),
+  channels: z.array(z.enum(['IN_APP', 'EMAIL', 'WHATSAPP'])),
   audience: z.enum(['MEMBER', 'APPLICANT', 'STAFF']),
 });
 export const templateInput = templateSchema.pick({ title: true, body: true, channels: true }).partial();

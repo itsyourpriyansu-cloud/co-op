@@ -51,7 +51,7 @@ describe('work queue, dashboards and search (P8b)', () => {
     const over = q.items.filter((i) => i.overTarget);
     expect(over.length).toBeGreaterThan(0);
     expect(over.every((i) => i.kind === 'loan' || i.kind === 'membership')).toBe(true);
-    expect(over.find((i) => i.kind === 'loan')?.targetLabel).toBe('1-day target');
+    expect(over.find((i) => i.kind === 'loan')?.targetLabel).toBe('1-working-day target');
     expect((await get<RoleDashboard>('/dashboard/role', accountant)).overTarget).toBe(over.length);
 
     await setTargets({ loanTargetDays: 0, membershipTargetHours: 0 });

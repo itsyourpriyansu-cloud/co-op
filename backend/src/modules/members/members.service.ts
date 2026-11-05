@@ -6,6 +6,7 @@ import {
   expectedRetirementDate,
   formatCycle,
   formatDisplayDate,
+  keepsAppAccess,
   maskMobile,
   PROFILE_FIELDS,
   REQUIRED_DOCUMENTS,
@@ -257,7 +258,7 @@ export class MembersService {
     await withTransaction(this.app.db, async (tx) => {
       await this.repo.update(tx, next);
       for (const e of events) await this.repo.addEvent(tx, e);
-      await this.app.appAccounts.upsertMember(tx, { id: next.id, generalNo: next.generalNo, employeeId: next.employeeId, name: next.name, mobile: next.mobile, active: next.status === 'ACTIVE' });
+      await this.app.appAccounts.upsertMember(tx, { id: next.id, generalNo: next.generalNo, employeeId: next.employeeId, name: next.name, mobile: next.mobile, active: keepsAppAccess(next.status) });
       if (changed.length) await this.app.audit.record(request, { action: 'update', entity: 'member', entityId: current.id, summary: `Edited ${next.name}: ${changed.join(', ')}`, before: current, after: next }, tx);
     });
     await this.syncToMock({ members: [next], serviceEvents: events });
@@ -342,7 +343,7 @@ export class MembersService {
     if (fields.some((f) => f.field.startsWith('payProfile.'))) m = { ...m, payProfile: { ...m.payProfile, certifiedAt: today } };
     await this.repo.update(tx, m);
     for (const e of events) await this.repo.addEvent(tx, e);
-    await this.app.appAccounts.upsertMember(tx, { id: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, mobile: m.mobile, active: m.status === 'ACTIVE' });
+    await this.app.appAccounts.upsertMember(tx, { id: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, mobile: m.mobile, active: keepsAppAccess(m.status) });
     return { members: [m], serviceEvents: events };
   }
 
@@ -437,7 +438,7 @@ export class MembersService {
     await withTransaction(this.app.db, async (tx) => {
       await this.repo.update(tx, next);
       await this.repo.addEvent(tx, event);
-      await this.app.appAccounts.upsertMember(tx, { id: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, mobile, active: m.status === 'ACTIVE' });
+      await this.app.appAccounts.upsertMember(tx, { id: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, mobile, active: keepsAppAccess(m.status) });
       await this.app.audit.record(request, { action: 'mobile', entity: 'member', entityId: m.id, summary: m.name + ' changed mobile (OTP verified)' }, tx);
     });
     await this.syncToMock({ members: [next], serviceEvents: [event] });

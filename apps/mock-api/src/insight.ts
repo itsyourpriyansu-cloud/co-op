@@ -208,10 +208,9 @@ const fill = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g
 
 function validateCompose(input: ComposeInput): void {
   const fieldErrors: Record<string, string> = {};
-  if (!['SMS', 'WHATSAPP', 'EMAIL'].includes(input.channel)) fieldErrors.channel = 'Choose SMS, WhatsApp or Email';
+  if (!['WHATSAPP', 'EMAIL'].includes(input.channel)) fieldErrors.channel = 'Choose WhatsApp or Email';
   if (input.channel === 'EMAIL' && !input.title?.trim()) fieldErrors.title = 'Add a subject';
   if (!input.body?.trim() || input.body.trim().length < 10) fieldErrors.body = 'Write the message (at least 10 characters)';
-  if (input.channel === 'SMS' && input.body.length > 480) fieldErrors.body = 'SMS is limited to 480 characters (3 parts)';
   if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
 }
 

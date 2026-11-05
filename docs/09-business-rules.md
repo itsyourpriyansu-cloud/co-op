@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.10 · 2026-11-05 · BR-037 working days, BR-012 placeholder rate (D-093).
 > Version 0.9 · 2026-11-04 · BR-037 service targets (D-090).
 > Version 0.8 · 2026-11-03 · BR-012 penal interest, BR-020 defaulter, BR-036 deduction entry (D-088).
 > Version 0.7 · 2026-11-02 · BR-035 FD maturity and premature withdrawal (D-086).
@@ -136,7 +137,8 @@ if remaining > 0 → excess handling (Q-309; placeholder: unallocated credit on 
 - Deposit/Share Capital loan and SRDS positions: UNKNOWN. Placeholder: Deposit loan after Ordinary. SRDS after CRD.
 - Unit test required: the A §3.6 order with a ₹ amount that stops mid-way through Interest.
 
-## BR-012 Penal charges [S] yes / rate [UNKNOWN] (D-088, F-06)
+## BR-012 Penal charges [S] yes / rate Admin-set (D-088, D-093, F-06)
+**D-093:** the society leaves the rate to the Admin; placeholder default 2% a year on every loan product, FD early-withdrawal penalty 1%.
 **Built (P7b-2):** simple interest per day on the unpaid loan instalment only (principal + interest; never RRF, CRD, SRDS, insurance, share capital), at the loan product's `penalRatePercent` (0 until F-06), from the cycle's last day + `penalGraceDays`, until paid. Worked out on read (no daily job), settled per demand line when paid or waived. A dues payment pays penal first (oldest first), then BR-011; collected penal → penal income 4200. The Accountant may waive with a reason (original, waived, who, when and why recorded). [ASSUMPTION] a backdated receipt settles penal to the receipt date.
 
 _Earlier text:_
@@ -252,5 +254,6 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand �
 
 ### BR-037 Service targets [S] (D-090, REQ-135, Q-514)
 - A membership should be decided within `membershipTargetHours` (society: 48 h) of being submitted; a loan within `loanTargetDays` (society: 4–5 days, default 5) of its application. 0 switches a target off.
-- Counted in calendar time [ASSUMPTION]; a date without a time counts from the start of that day in India.
+- **Working time only [S] (D-093, F-14):** Sundays, second Saturdays and the Admin's `holidays` list do not count; a date without a time counts from the start of that day in India.
+- **A loan's clock starts when its last surety signs [S]** (on submission when it needs no surety) and never pauses after that.
 - Work past its target is flagged on the Work Queue and counted on the role dashboard; nothing is blocked.

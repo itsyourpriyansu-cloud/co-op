@@ -5,7 +5,7 @@ import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, TextFiel
 import { api } from '@/lib/api';
 import { MONTH_ITEMS, isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays'>;
+type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays'>;
 const pick = (s: SocietySettings): Values => ({
   shareValue: s.shareValue,
   admissionFee: s.admissionFee,
@@ -17,6 +17,7 @@ const pick = (s: SocietySettings): Values => ({
   emiToNetSalaryMaxPercent: s.emiToNetSalaryMaxPercent,
   membershipTargetHours: s.membershipTargetHours,
   loanTargetDays: s.loanTargetDays,
+  holidays: s.holidays,
 });
 
 export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
@@ -61,9 +62,10 @@ export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
         <SingleSelectV2 label="Financial year starts in" placeholder="Month" items={[{ items: MONTH_ITEMS }]} selected={String(v.financialYearStartMonth)} onSelect={(m) => setV({ financialYearStartMonth: Number(m) })} disabled={ro} />
       </FormSection>
 
-      <FormSection title="Service targets" description="REQ-135: the society aims to decide a membership within 48 hours and a loan within 4–5 days. Work past the target is flagged on the Work Queue and dashboards. 0 = no target.">
-        <NumberField label="Membership" name="membershipTargetHours" value={v.membershipTargetHours} onChange={(membershipTargetHours) => setV({ membershipTargetHours })} errors={errors} unit="hours from submission" disabled={ro} />
-        <NumberField label="Loan" name="loanTargetDays" value={v.loanTargetDays} onChange={(loanTargetDays) => setV({ loanTargetDays })} errors={errors} unit="days from application" disabled={ro} />
+      <FormSection title="Service targets" description="REQ-135: the society aims to decide a membership within 48 hours and a loan within 4–5 days, counting working days only (F-14): Sundays, second Saturdays and the holidays below do not count. A loan's clock starts when its last surety signs. Work past the target is flagged on the Work Queue and dashboards. 0 = no target.">
+        <NumberField label="Membership" name="membershipTargetHours" value={v.membershipTargetHours} onChange={(membershipTargetHours) => setV({ membershipTargetHours })} errors={errors} unit="working hours from submission" disabled={ro} />
+        <NumberField label="Loan" name="loanTargetDays" value={v.loanTargetDays} onChange={(loanTargetDays) => setV({ loanTargetDays })} errors={errors} unit="working days from the last surety's signature" disabled={ro} />
+        <TextAreaV2 label="Holidays" placeholder="2026-10-02" value={v.holidays.join('\n')} onChange={(e) => setV({ holidays: e.target.value.split(/[\s,]+/).filter(Boolean) })} rows={4} disabled={ro} error={errors.holidays ? { show: true, message: errors.holidays } : undefined} />
       </FormSection>
 
       <FormSection title="Risk guards" description="Placeholders until the society confirms them (D-055)." tag={ph('maxGuaranteesPerSurety')}>

@@ -15,7 +15,7 @@ const SETTINGS_KEYS: Array<keyof SocietySettings> = [
   'shareValue', 'admissionFee', 'minShares', 'maxShares', 'retirementAge', 'financialYearStartMonth', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent',
   'insurance', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'defaulterCycles', 'fdSlabs', 'fdMinAmount', 'savingsRatePercent', 'crdRatePercent', 'srdsRatePercent', 'penalGraceDays',
   'fdMaturityJobEnabled', 'fdMaturityRunHour', 'fdPrematureWithdrawalEnabled', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent',
-  'demandSendByDays', 'minTakeHomePay', 'membershipTargetHours', 'loanTargetDays',
+  'demandSendByDays', 'minTakeHomePay', 'membershipTargetHours', 'loanTargetDays', 'holidays',
 ];
 
 const PRODUCT_FIELDS: Array<keyof LoanProduct> = [

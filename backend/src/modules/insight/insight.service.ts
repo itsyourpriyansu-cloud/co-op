@@ -102,7 +102,7 @@ export class InsightService {
       const primary = PRIMARY_LOAN_ACTION[l.status] && acts.includes(PRIMARY_LOAN_ACTION[l.status]!) ? PRIMARY_LOAN_ACTION[l.status]! : acts[0]!;
       const stage = l.status === 'SANCTION_PRESIDENT' ? 'SANCTION_SECRETARY' : l.status;
       const product = w.products.find((p) => p.code === l.product)?.name ?? l.product;
-      items.push({ kind: 'loan', id: l.id, ref: l.applicationNo, title: m.name, subtitle: `${product}${l.parentLoanId ? ' top-up' : ''} · ${l.sanctionedInstalments ?? l.appliedInstalments} months`, stage, stageLabel: STAGE_LABEL[stage] ?? stage, status: l.status, departmentName: dept(m.departmentId), amount: l.sanctionedAmount ?? l.appliedAmount, since, days: daysBetween(since, today), actionLabel: ACTION_TEXT[primary] ?? primary, link: `/loans/${l.id}`, ...this.target(w, 'loan', l.submittedAt ?? l.appliedOn) });
+      items.push({ kind: 'loan', id: l.id, ref: l.applicationNo, title: m.name, subtitle: `${product}${l.parentLoanId ? ' top-up' : ''} · ${l.sanctionedInstalments ?? l.appliedInstalments} months`, stage, stageLabel: STAGE_LABEL[stage] ?? stage, status: l.status, departmentName: dept(m.departmentId), amount: l.sanctionedAmount ?? l.appliedAmount, since, days: daysBetween(since, today), actionLabel: ACTION_TEXT[primary] ?? primary, link: `/loans/${l.id}`, ...this.target(w, 'loan', this.loanClockStart(l)) });
     }
     if (w.can('membership.view')) {
       for (const a of w.applications) {
@@ -151,6 +151,11 @@ export class InsightService {
       }
     }
     return items.sort((a, b) => b.days - a.days);
+  }
+
+  /** F-14 (D-093): a loan's clock starts when its last surety signs, or on submission when it needs none. */
+  private loanClockStart(l: Loan): string | undefined {
+    return l.events.find((e) => e.fromStatus === 'SURETY_PENDING' && e.toStatus === 'ACCOUNTANT_REVIEW')?.at ?? (l.status === 'SURETY_PENDING' ? undefined : (l.submittedAt ?? l.appliedOn));
   }
 
   private submittedAt(a: MembershipApplication): string | undefined {

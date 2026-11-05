@@ -1056,12 +1056,12 @@ export interface MemberHome {
 }
 
 export interface MyNotifications {
-  items: Array<AppNotification & { alsoSentVia?: Array<'SMS' | 'EMAIL' | 'WHATSAPP'> }>;
+  items: Array<AppNotification & { alsoSentVia?: Array<'EMAIL' | 'WHATSAPP'> }>;
   unread: number;
 }
 
 export interface MemberPreferences {
-  channels: { SMS: boolean; WHATSAPP: boolean; EMAIL: boolean };
+  channels: { WHATSAPP: boolean; EMAIL: boolean };
   /** English only for now; Telugu is Q-008. */
   language: 'en';
   email?: string;
@@ -1160,7 +1160,8 @@ export interface StaffNotifications {
   unread: number;
 }
 
-export type MessageChannel = 'SMS' | 'WHATSAPP' | 'EMAIL';
+/** F-09 (D-093): no SMS; WhatsApp to the mobile, email to the address on file. */
+export type MessageChannel = 'WHATSAPP' | 'EMAIL';
 export type MessageAudience = { kind: 'MEMBER'; memberId: string } | { kind: 'DEPARTMENT'; departmentId: string } | { kind: 'DEFAULTERS' } | { kind: 'RETIRING'; withinMonths: number };
 
 export interface ComposeInput {
