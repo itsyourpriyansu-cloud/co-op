@@ -74,7 +74,8 @@ export class LoanWorkflowService {
   async sanctionPreview(w: World, l: Loan, amount?: number, instalments?: number): Promise<SanctionPreview> {
     const m = await this.loans.member(l.memberId);
     const product = this.loans.productOf(w, l.product);
-    const [own, holdings] = await Promise.all([this.repo.forMember(m.id), this.loans.holdings(m.id)]);
+    const [own, holdings, dues] = await Promise.all([this.repo.forMember(m.id), this.loans.holdings(m.id), this.app.collections.duesOf([m.id])]);
+    const suretyRecoveries = (dues.get(m.id)?.suretyRecoveries ?? []).reduce((s, r) => s + r.due, 0);
     const amt = amount ?? l.sanctionedAmount ?? l.appliedAmount;
     const inst = instalments ?? l.sanctionedInstalments ?? l.appliedInstalments;
     const maxInstalments = checkTenureEligibility(calculateLeftoverService(m.dor, w.today).months, inst, product.maxInstalments).maxAllowed;
@@ -94,6 +95,7 @@ export class LoanWorkflowService {
         salary: salary.reduce((s, x) => s + x.outstandingPrincipal, 0),
         ...(ordinary[0]?.disbursedOn ? { ordinaryTakenOn: ordinary[0].disbursedOn } : {}),
         ...(salary[0]?.disbursedOn ? { salaryTakenOn: salary[0].disbursedOn } : {}),
+        ...(suretyRecoveries ? { suretyRecoveries } : {}),
       },
     });
     return { sheet, maxInstalments, fieldErrors: validateSanctionAdjustment(amt, inst, { amount: l.appliedAmount, instalments: l.appliedInstalments }, maxInstalments) };

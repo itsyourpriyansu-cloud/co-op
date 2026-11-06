@@ -247,7 +247,7 @@ export interface SanctionSheet {
   topup?: { loanId: string; loanNo: string; outstandingPrincipal: Paise; accruedInterest: Paise; settlement: Paise };
   netDisbursable: Paise;
   /** Office-use balances (F3 back): OL / SL outstanding and their dates. */
-  balances: { ordinary: Paise; salary: Paise; ordinaryTakenOn?: ISODate; salaryTakenOn?: ISODate };
+  balances: { ordinary: Paise; salary: Paise; ordinaryTakenOn?: ISODate; salaryTakenOn?: ISODate; /** F3 "Surety Recoveries": what the applicant owes as a surety (F-13, D-097). */ suretyRecoveries?: Paise };
 }
 
 /** F2 items 4–8 (Ordinary / Education) and F3 items 5–9 (Salary), docs/16. Money in paise. */
@@ -338,7 +338,8 @@ export interface FdHolder {
   phone: string;
 }
 
-export type DemandHead = 'RRF' | 'INSURANCE' | 'CRD' | 'SRDS' | 'SHARE_CAPITAL' | 'PENAL' | 'INTEREST' | 'PRINCIPAL';
+/** SURETY (D-097, F-13): a surety's share of another member's overdue loan; `loanId` is the borrower's loan. */
+export type DemandHead = 'RRF' | 'INSURANCE' | 'CRD' | 'SRDS' | 'SHARE_CAPITAL' | 'PENAL' | 'INTEREST' | 'PRINCIPAL' | 'SURETY';
 
 export interface DemandComponent {
   head: DemandHead;
@@ -439,7 +440,7 @@ export interface Receipt {
   cycle?: Cycle;
   allocations: Array<{ head: DemandHead; loanId?: string; amount: Paise; cycle?: Cycle }>;
   /** What a counter / bank receipt was for. Salary recoveries have none (they follow the demand). */
-  purpose?: 'FD' | 'DUES' | 'SHARE_CAPITAL';
+  purpose?: 'FD' | 'DUES' | 'SHARE_CAPITAL' | 'SURETY_RECOVERY';
   depositId?: string;
   reference?: string;
   /** M7: who took the money (cashier), from which sheet or member report. */
@@ -675,6 +676,8 @@ export interface SocietySettings {
   loanTargetDays: number;
   /** F-07 (D-095): caste categories the forms offer (Telangana list by default), edited by the Admin. */
   casteCategories: string[];
+  /** F-13 (D-097): a loan unpaid this many posted cycles in a row may be recovered from its sureties. */
+  suretyRecoveryAfterCycles: number;
   /** F-14 (D-093): public holidays the office is closed (YYYY-MM-DD). Sundays and second Saturdays never count. */
   holidays: ISODate[];
   /** P7b (D-088): the sheet must reach the DDO this many days before the 1st of the cycle (society: 3–5). */
@@ -728,4 +731,27 @@ export interface AuditEntry {
   entityId: string;
   action: string;
   summary: string;
+}
+
+/** F-13 (D-097): one surety's equal share of a borrower's overdue loan, collected at the counter or on their next demand. */
+export interface SuretyRecovery {
+  id: string;
+  loanId: string;
+  loanNo: string;
+  borrowerId: string;
+  borrowerName: string;
+  suretyId: string;
+  suretyName: string;
+  /** This surety's share of the overdue amount when it was raised. */
+  share: Paise;
+  paid: Paise;
+  status: 'OPEN' | 'CLOSED';
+  raisedOn: ISODateTime;
+  raisedByName: string;
+  /** Unpaid loan cycles in a row when it was raised. */
+  cycles: number;
+  /** The demand cycle it was put on (once, R2); unpaid after that it stays as the surety's dues. */
+  demandedCycle?: Cycle;
+  payments: Array<{ at: ISODateTime; amount: Paise; via: 'COUNTER' | 'SALARY'; receiptNo?: string; cycle?: Cycle }>;
+  closedReason?: 'PAID' | 'BORROWER_PAID';
 }

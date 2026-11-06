@@ -9,6 +9,8 @@ import {
   demandSendByDate,
   loanDefaulter,
   loanUnpaid,
+  splitEqually,
+  suretyRecoveryDue,
   nextDeductionEntryStatus,
   penalDue,
   type DeductionEntryAction,
@@ -47,6 +49,8 @@ import type {
   MemberDues,
   MemberNotice,
   MemberNotices,
+  SuretyRecovery,
+  SuretyRecoveryPanel,
   MyPayments,
   NewReceiptInput,
   PaymentReport,
@@ -71,7 +75,7 @@ import { withTransaction, type Tx } from '../../db/transaction';
 import { ACCOUNT, DEPOSIT_ACCOUNT, LOAN_ACCOUNT } from '../ledger/ledger.accounts';
 import type { CollectionsRepository, SheetHead } from './collections.repository';
 
-const HEAD_LABEL: Record<DemandHead, string> = { RRF: 'RRF', INSURANCE: 'Insurance', CRD: 'CRD', SRDS: 'SRDS', SHARE_CAPITAL: 'Share capital', PENAL: 'Penal interest', INTEREST: 'Interest', PRINCIPAL: 'Principal' };
+const HEAD_LABEL: Record<DemandHead, string> = { RRF: 'RRF', INSURANCE: 'Insurance', CRD: 'CRD', SRDS: 'SRDS', SHARE_CAPITAL: 'Share capital', PENAL: 'Penal interest', INTEREST: 'Interest', PRINCIPAL: 'Principal', SURETY: 'Surety recovery' };
 const PRODUCT_LABEL: Record<string, string> = { ORDINARY: 'Ordinary', EDUCATION: 'Education', SALARY: 'Salary', DEPOSIT: 'Deposit' };
 const PAY_TO = { accountName: 'TGSECCSL Dues Collection', accountNo: 'XXXXXXXX3307', ifsc: 'DEMO0000929', upi: 'tgseccsl.dues@demo', counter: 'Society cash counter, 2nd Floor, West Ancillary Building' };
 const ACTION_TEXT: Record<DemandSheetAction | DeductionEntryAction, string> = { certify: 'Certify', sendToDdo: 'Send to DDO', postRecovery: 'Enter recovery', saveEntry: 'Enter deductions', submitEntry: 'Submit deductions', rejectEntry: 'Review deductions' };
@@ -271,7 +275,8 @@ export class CollectionsService {
   // ---- ST-41 ----
   /** Lines for each department and a cycle (BR-009 / BR-010), from today's records. */
   private async buildLines(cycle: Cycle): Promise<Map<string, DemandLine[]>> {
-    const [members, transfers, dueRows, shares, crd, srds, settings] = await Promise.all([
+    const [recoveries, members, transfers, dueRows, shares, crd, srds, settings] = await Promise.all([
+      this.repo.openRecoveries(),
       this.app.members.all(),
       this.app.members.latestTransfers(),
       this.app.loans.repo.dueRows(cycle),
@@ -283,6 +288,12 @@ export class CollectionsService {
     const shareOf = new Map(shares.map((s) => [s.memberId, s]));
     const hasCrd = new Set(crd.filter((d) => d.status === 'ACTIVE').map((d) => d.memberId));
     const srdsOf = new Map(srds.filter((d) => d.status === 'ACTIVE').map((d) => [d.memberId, d]));
+    // F-13 (D-097): an open surety recovery goes on the surety's demand once; unpaid after that it stays as their dues.
+    const suretyRows = new Map<string, Array<{ loanId: string; amount: number }>>();
+    for (const r of recoveries.filter((x) => !x.demandedCycle || x.demandedCycle === cycle)) {
+      const amount = suretyRecoveryDue({ share: r.share, paid: r.paid, loanOverdue: await this.loanOverdue(r.borrowerId, r.loanId) });
+      if (amount > 0) suretyRows.set(r.suretyId, [...(suretyRows.get(r.suretyId) ?? []), { loanId: r.loanId, amount }]);
+    }
     const out = new Map<string, DemandLine[]>();
     for (const m of members) {
       if (m.status !== 'ACTIVE' || m.joinedSocietyOn > lastDayOf(cycle)) continue;
@@ -297,6 +308,7 @@ export class CollectionsService {
         srdsActive: Boolean(s && s.openedOn <= `${cycle}-01`),
         loanRows: dueRows.filter((r) => r.memberId === m.id).map((r) => ({ loanId: r.loanId, product: r.product, interest: r.interest, principal: r.principal })),
         ...(shareCapitalDue ? { shareCapitalDue } : {}),
+        ...(suretyRows.has(m.id) ? { suretyRows: suretyRows.get(m.id)! } : {}),
       });
       out.set(dept, [...(out.get(dept) ?? []), { memberId: m.id, components, totalDemand }]);
     }
@@ -342,6 +354,9 @@ export class CollectionsService {
     });
     await withTransaction(this.app.db, async (tx) => {
       for (const s of sheets) await this.repo.insertSheet(tx, s);
+      // F-13: mark the surety recoveries these sheets now carry.
+      const carried = new Set(sheets.flatMap((s) => s.lines.flatMap((l) => l.components.filter((c) => c.head === 'SURETY').map((c) => `${l.memberId}:${c.loanId}`))));
+      for (const r of await this.repo.openRecoveries(undefined, tx)) if (!r.demandedCycle && carried.has(`${r.suretyId}:${r.loanId}`)) await this.repo.saveRecovery(tx, { ...r, demandedCycle: cycle });
       await this.app.audit.record(request, { action: 'generate', entity: 'demandSheet', entityId: cycle, summary: `Generated ${formatCycle(cycle)} demand for ${targets.length} department${targets.length === 1 ? '' : 's'}` }, tx);
     });
     await this.sync({ demandSheets: sheets });
@@ -615,7 +630,7 @@ export class CollectionsService {
    * mark schedule rows, close repaid loans, credit CRD / SRDS and share capital. Returns the
    * receipt allocations and the ledger credit lines for them.
    */
-  private async applyAllocation(tx: Tx, memberId: string, cycle: Cycle, before: DemandComponent[], after: DemandComponent[], today: string, changed: Changed): Promise<{ allocations: Receipt['allocations']; lines: JournalLineInput[] }> {
+  private async applyAllocation(tx: Tx, memberId: string, cycle: Cycle, before: DemandComponent[], after: DemandComponent[], today: string, changed: Changed, via: 'SALARY' | 'COUNTER' = 'SALARY'): Promise<{ allocations: Receipt['allocations']; lines: JournalLineInput[] }> {
     const allocations: Receipt['allocations'] = [];
     const lines: JournalLineInput[] = [];
     const loanOf = async (id: string) => changed.loans.get(id) ?? (await this.app.loans.repo.lock(tx, id));
@@ -623,6 +638,10 @@ export class CollectionsService {
       const delta = c.allocated - (before[i]?.allocated ?? 0);
       if (delta <= 0) continue;
       allocations.push({ head: c.head, ...(c.loanId ? { loanId: c.loanId } : {}), amount: delta, cycle });
+      if (c.head === 'SURETY' && c.loanId) {
+        lines.push(...(await this.collectFromSurety(tx, memberId, c.loanId, delta, today, changed, { via, cycle })));
+        continue;
+      }
       const account = c.head === 'PRINCIPAL' ? LOAN_ACCOUNT[(c.loanProduct ?? 'ORDINARY') as keyof typeof LOAN_ACCOUNT] : HEAD_ACCOUNT[c.head];
       if (account) lines.push({ accountCode: account, debit: 0, credit: delta, ...(MEMBER_HEADS.has(c.head) ? { memberId, refType: c.head === 'PRINCIPAL' ? 'LOAN' : c.head === 'SHARE_CAPITAL' ? 'SHARE' : 'DEPOSIT', refId: c.loanId ?? memberId } : {}) });
       if (c.head === 'PRINCIPAL' && c.loanId) {
@@ -688,7 +707,8 @@ export class CollectionsService {
     }
     const shareCapitalDue = share ? Math.max(0, share.numberOfShares * settings.shareValue - share.shareCapital) : 0;
     const totalPenal = sum(arrears.map((a) => a.penal));
-    return { memberId, name: m.name, generalNo: m.generalNo, departmentName: this.deptName(v, m.departmentId), arrears, totalArrears: sum(arrears.map((a) => a.unpaid)) + totalPenal, totalPenal, shareCapitalDue };
+    const suretyRecoveries = await Promise.all((await this.repo.openRecoveries(memberId, tx)).map((r) => this.withDue(r, tx)));
+    return { memberId, name: m.name, generalNo: m.generalNo, departmentName: this.deptName(v, m.departmentId), arrears, totalArrears: sum(arrears.map((a) => a.unpaid)) + totalPenal, totalPenal, shareCapitalDue, ...(suretyRecoveries.length ? { suretyRecoveries } : {}) };
   }
 
   /**
@@ -827,7 +847,7 @@ export class CollectionsService {
           allocations.push({ head: 'PENAL', amount: cyc.penalPaid, cycle: sh.cycle });
           credit.push({ accountCode: HEAD_ACCOUNT.PENAL!, debit: 0, credit: cyc.penalPaid });
         }
-        const applied = await this.applyAllocation(tx, memberId, sh.cycle, before, line.components, v.today, changed);
+        const applied = await this.applyAllocation(tx, memberId, sh.cycle, before, line.components, v.today, changed, 'COUNTER');
         allocations.push(...applied.allocations);
         credit.push(...applied.lines);
         if (line.recovered !== undefined || line.components.some((c) => c.allocated > 0)) line.recovered = sum(line.components.map((c) => c.allocated));
@@ -844,6 +864,127 @@ export class CollectionsService {
     const m = v.members.get(memberId);
     await this.app.ledger.post({ entryDate: r.date, narration: `Receipt ${r.receiptNo} from ${m?.name ?? memberId} (${purpose === 'SHARE_CAPITAL' ? 'share capital' : 'dues'})`, source: 'RECEIPT', sourceRef: r.receiptNo, postedBy: { id: receipt.byId ?? 'system', name: receipt.byName ?? 'System' }, lines: [{ accountCode: debitAccount, debit: amount, credit: 0 }, ...credit] }, tx);
     return r;
+  }
+
+  // ---- F-13 surety recovery (D-097) ----
+
+  /** The borrower's unpaid instalments on one loan, across posted cycles. */
+  private async loanOverdue(borrowerId: string, loanId: string, tx?: Tx): Promise<number> {
+    const rows = await this.repo.linesOfMember(borrowerId, tx);
+    return sum(rows.filter((r) => r.sheet.status === 'RECOVERY_POSTED').map((r) => loanUnpaid(r.line.components, loanId)));
+  }
+
+  private async withDue(r: SuretyRecovery, tx?: Tx): Promise<SuretyRecovery & { due: number }> {
+    return { ...r, due: suretyRecoveryDue({ share: r.share, paid: r.paid, loanOverdue: await this.loanOverdue(r.borrowerId, r.loanId, tx) }) };
+  }
+
+  /** ST-22 loan page: may this loan be recovered from its sureties now, and what each would owe. */
+  async suretyRecoveryPanel(user: SessionUser, loanId: string, tx?: Tx): Promise<SuretyRecoveryPanel> {
+    await this.requireView(user);
+    const loan = (await this.app.loans.repo.find(loanId, tx)) ?? fail('NOT_FOUND', 'Loan not found.');
+    const [settings, rows, existing, canRaise, members] = await Promise.all([this.app.masters.settings(), this.repo.linesOfMember(loan.memberId, tx), this.repo.recoveriesOfLoan(loan.id, tx), this.app.permissions.has(user.role, 'collections.recoverFromSureties'), this.app.members.all()]);
+    const history = rows.filter((r) => r.sheet.status === 'RECOVERY_POSTED').map((r) => ({ cycle: r.sheet.cycle, loanUnpaid: loanUnpaid(r.line.components, loan.id) }));
+    const threshold = settings.suretyRecoveryAfterCycles;
+    const { isDefaulter, consecutiveCycles } = loanDefaulter(history, threshold);
+    const overdue = sum(history.map((h) => Math.max(0, h.loanUnpaid)));
+    const sureties = loan.sureties.filter((s) => s.status === 'ACCEPTED').map((s) => members.find((m) => m.id === s.memberId)).filter((m): m is Member => Boolean(m));
+    const split = splitEqually(overdue, sureties.length);
+    const open = existing.some((r) => r.status === 'OPEN');
+    const reason = !sureties.length ? 'This loan has no sureties.' : open ? 'Already being recovered from the sureties.' : !isDefaulter ? `Unpaid ${consecutiveCycles} month${consecutiveCycles === 1 ? '' : 's'} in a row; the sureties are asked after ${threshold}.` : overdue <= 0 ? 'Nothing is overdue.' : undefined;
+    return {
+      loanId: loan.id,
+      threshold,
+      consecutiveCycles,
+      overdue,
+      eligible: !reason,
+      ...(reason ? { reason } : {}),
+      canRaise,
+      shares: sureties.map((s, i) => ({ memberId: s.id, name: s.name, generalNo: s.generalNo, share: split[i]! })),
+      recoveries: await Promise.all(existing.map((r) => this.withDue(r, tx))),
+    };
+  }
+
+  /** F-13 (D-097): the Accountant asks every surety who signed for an equal share of what is overdue. */
+  async raiseSuretyRecovery(request: FastifyRequest, loanId: string): Promise<SuretyRecoveryPanel> {
+    const user = sessionOf(request);
+    await this.requireView(user);
+    if (!(await this.app.permissions.has(user.role, 'collections.recoverFromSureties'))) fail('FORBIDDEN', 'Only the Accountant recovers a loan from its sureties.');
+    const at = await businessNow(this.app);
+    const created: SuretyRecovery[] = [];
+    let overdue = 0;
+    let cycles = 0;
+    const loan = await withTransaction(this.app.db, async (tx) => {
+      const l = (await this.app.loans.repo.lock(tx, loanId)) ?? fail('NOT_FOUND', 'Loan not found.');
+      const panel = await this.suretyRecoveryPanel(user, l.id, tx);
+      if (!panel.eligible) fail('RULE_VIOLATION', panel.reason ?? 'Not possible now.', { ruleId: 'F-13' });
+      const borrower = (await this.app.members.byId(l.memberId))!;
+      overdue = panel.overdue;
+      cycles = panel.consecutiveCycles;
+      for (const s of panel.shares) {
+        const r: SuretyRecovery = { id: `sry-${randomUUID().slice(0, 8)}`, loanId: l.id, loanNo: l.loanNo ?? l.applicationNo, borrowerId: borrower.id, borrowerName: borrower.name, suretyId: s.memberId, suretyName: s.name, share: s.share, paid: 0, status: 'OPEN', raisedOn: at, raisedByName: user.name, cycles, payments: [] };
+        await this.repo.insertRecovery(tx, r);
+        created.push(r);
+      }
+      await this.app.audit.record(request, { action: 'suretyRecovery', entity: 'loan', entityId: l.id, summary: `${user.name} asked ${created.length} suret${created.length === 1 ? 'y' : 'ies'} to pay ${formatINR(overdue)} overdue on ${l.loanNo ?? l.applicationNo} (${cycles} months unpaid)`, after: created.map((r) => ({ suretyId: r.suretyId, share: r.share })) }, tx);
+      return { l, borrower };
+    });
+    for (const r of created) await notifyMember(this.app, r.suretyId, 'surety.recovery', { borrower: r.borrowerName, generalNo: loan.borrower.generalNo, loanNo: r.loanNo, cycles, share: formatINR(r.share) }, '/payments');
+    await notifyMember(this.app, loan.borrower.id, 'surety.recoveryBorrower', { loanNo: loan.l.loanNo ?? loan.l.applicationNo, cycles, overdue: formatINR(overdue) }, '/payments');
+    return this.suretyRecoveryPanel(user, loanId);
+  }
+
+  /**
+   * Money a surety paid for a loan: settles the borrower's unpaid interest then principal on that
+   * loan, oldest cycle first, and records the payment on the recovery. Anything beyond what the
+   * borrower still owes goes to unidentified receipts for the Accountant [ASSUMPTION, D-097].
+   */
+  private async collectFromSurety(tx: Tx, suretyId: string, loanId: string, amount: number, today: string, changed: Changed, how: { via: 'SALARY' | 'COUNTER'; cycle?: Cycle; receiptNo?: string }): Promise<JournalLineInput[]> {
+    const recovery = (await this.repo.openRecoveries(suretyId, tx)).find((r) => r.loanId === loanId);
+    const borrowerId = recovery?.borrowerId ?? (await this.app.loans.repo.find(loanId, tx))?.memberId;
+    const lines: JournalLineInput[] = [];
+    let remaining = amount;
+    for (const { sheet } of borrowerId ? (await this.repo.linesOfMember(borrowerId, tx)).filter((r) => r.sheet.status === 'RECOVERY_POSTED') : []) {
+      if (remaining <= 0) break;
+      const sh = (await this.repo.sheet(sheet.id, tx, true))!;
+      const line = sh.lines.find((l) => l.memberId === borrowerId)!;
+      const before = line.components.map((c) => ({ ...c }));
+      for (const head of ['INTEREST', 'PRINCIPAL'] as const)
+        for (const c of line.components.filter((x) => x.loanId === loanId && x.head === head)) {
+          const take = Math.min(c.amount - c.allocated, remaining);
+          c.allocated += take;
+          remaining -= take;
+        }
+      if (line.components.every((c, i) => c.allocated === before[i]!.allocated)) continue;
+      lines.push(...(await this.applyAllocation(tx, borrowerId!, sh.cycle, before, line.components, today, changed)).lines);
+      line.recovered = sum(line.components.map((c) => c.allocated));
+      await this.repo.saveLine(tx, sh.id, line);
+      sh.totalRecovered = sum(sh.lines.map((l) => l.recovered ?? 0));
+      const { lines: _l, ...head } = sh;
+      await this.repo.saveSheetHead(tx, head);
+    }
+    if (remaining > 0) lines.push({ accountCode: UNIDENTIFIED, debit: 0, credit: remaining });
+    if (recovery) {
+      const paid = recovery.paid + amount;
+      const overdueLeft = await this.loanOverdue(recovery.borrowerId, loanId, tx);
+      const closed = paid >= recovery.share ? 'PAID' : overdueLeft <= 0 ? 'BORROWER_PAID' : undefined;
+      await this.repo.saveRecovery(tx, { ...recovery, paid, payments: [...recovery.payments, { at: await businessNow(this.app), amount, via: how.via, ...(how.receiptNo ? { receiptNo: how.receiptNo } : {}), ...(how.cycle ? { cycle: how.cycle } : {}) }], ...(closed ? { status: 'CLOSED' as const, closedReason: closed } : {}) });
+    }
+    return lines;
+  }
+
+  /** A surety pays their share at the counter (receipt in their name, money to the borrower's loan). */
+  private async takeSuretyPayment(tx: Tx, suretyId: string, recoveryId: string, amount: number, debitAccount: string, receipt: Omit<Receipt, 'id' | 'receiptNo' | 'memberId' | 'amount' | 'allocations' | 'purpose'>, changed: Changed): Promise<Receipt> {
+    const r = await this.repo.lockRecovery(tx, recoveryId);
+    if (!r || r.suretyId !== suretyId || r.status !== 'OPEN') fail('VALIDATION_ERROR', 'Choose an open surety recovery of this member.', { fieldErrors: { recoveryId: 'Not an open recovery of this member' } });
+    const { due } = await this.withDue(r!, tx);
+    if (amount > due) fail('VALIDATION_ERROR', `At most ${formatINR(due)} is due on this recovery.`, { fieldErrors: { amount: `At most ${formatINR(due)}` } });
+    const seq = await this.repo.nextReceiptSeq(tx);
+    const receiptNo = `RCP-C-${String(seq).padStart(6, '0')}`;
+    const credit = await this.collectFromSurety(tx, suretyId, r!.loanId, amount, receipt.date, changed, { via: 'COUNTER', receiptNo });
+    const rec: Receipt = { id: `rcpt-c-${randomUUID().slice(0, 8)}`, receiptNo, memberId: suretyId, amount, allocations: [{ head: 'SURETY', loanId: r!.loanId, amount }], purpose: 'SURETY_RECOVERY', ...receipt };
+    await this.repo.insertReceipt(tx, rec);
+    await this.app.ledger.post({ entryDate: rec.date, narration: `Receipt ${receiptNo} from ${r!.suretyName} as surety for ${r!.borrowerName} (${r!.loanNo})`, source: 'RECEIPT', sourceRef: receiptNo, postedBy: { id: receipt.byId ?? 'system', name: receipt.byName ?? 'System' }, lines: [{ accountCode: debitAccount, debit: amount, credit: 0 }, ...credit] }, tx);
+    return rec;
   }
 
   async counterReceipt(request: FastifyRequest, input: Partial<NewReceiptInput>): Promise<ReceiptDetail> {
@@ -865,14 +1006,16 @@ export class CollectionsService {
       if (user.role !== 'ACCOUNTANT') fieldErrors.mode = 'Only the Accountant records adjustments';
       if ((input.remarks?.trim().length ?? 0) < 10) fieldErrors.remarks = 'Explain the adjustment (at least 10 characters)';
     } else fieldErrors.mode = 'Choose how it was paid';
-    if (input.purpose !== 'DUES' && input.purpose !== 'SHARE_CAPITAL') fieldErrors.purpose = 'Choose what it is for';
+    if (input.purpose !== 'DUES' && input.purpose !== 'SHARE_CAPITAL' && input.purpose !== 'SURETY_RECOVERY') fieldErrors.purpose = 'Choose what it is for';
+    if (input.purpose === 'SURETY_RECOVERY' && !input.recoveryId) fieldErrors.recoveryId = 'Choose which loan it is for';
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
     const at = await businessNow(this.app);
     const changed: Changed = { loans: new Map(), deposits: new Map(), shares: new Map() };
     const sheets: DemandSheet[] = [];
     const debit = input.mode === 'CASH' ? ACCOUNT.CASH : input.mode === 'ADJUSTMENT' ? UNIDENTIFIED : ACCOUNT.BANK;
     const r = await withTransaction(this.app.db, async (tx) => {
-      const receipt = await this.takePayment(tx, v, m!.id, input.purpose!, input.amount!, debit, {
+      const pay = input.purpose === 'SURETY_RECOVERY' ? (r: Omit<Receipt, 'id' | 'receiptNo' | 'memberId' | 'amount' | 'allocations' | 'purpose'>) => this.takeSuretyPayment(tx, m!.id, input.recoveryId!, input.amount!, debit, r, changed) : (r: Omit<Receipt, 'id' | 'receiptNo' | 'memberId' | 'amount' | 'allocations' | 'purpose'>) => this.takePayment(tx, v, m!.id, input.purpose as 'DUES' | 'SHARE_CAPITAL', input.amount!, debit, r, changed, sheets);
+      const receipt = await pay({
         date: input.date!,
         source: input.mode === 'CASH' ? 'CASH' : input.mode === 'ADJUSTMENT' ? 'ADJUSTMENT' : 'BANK_TRANSFER',
         ...(input.mode === 'CASH' ? { denominations: input.denominations! } : {}),
@@ -881,7 +1024,7 @@ export class CollectionsService {
         byName: user.name,
         byId: user.id,
         at,
-      }, changed, sheets);
+      });
       await this.app.audit.record(request, { action: 'create', entity: 'receipt', entityId: receipt.id, summary: `Receipt ${receipt.receiptNo} · ${m!.name} · ${formatINR(receipt.amount)}` }, tx);
       return receipt;
     });

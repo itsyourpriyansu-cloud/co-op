@@ -8,7 +8,7 @@ import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, useEdita
 import { api } from '@/lib/api';
 import { MONTH_ITEMS, isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'insurance' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'defaulterCycles' | 'penalGraceDays' | 'demandSendByDays' | 'minTakeHomePay'>;
+type Values = Pick<SocietySettings, 'insurance' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'defaulterCycles' | 'suretyRecoveryAfterCycles' | 'penalGraceDays' | 'demandSendByDays' | 'minTakeHomePay'>;
 
 const HEAD_LABEL: Record<DemandHead, string> = {
   RRF: 'RRF',
@@ -19,12 +19,13 @@ const HEAD_LABEL: Record<DemandHead, string> = {
   PENAL: 'Penal interest',
   INTEREST: 'Loan interest (Education → Salary → Ordinary → Deposit)',
   PRINCIPAL: 'Loan principal (same order)',
+  SURETY: "Surety recovery for another member's loan (last)",
 };
 
 export function InsuranceDemandSection({ bundle }: { bundle: SettingsBundle }) {
   const ro = !bundle.canEdit;
   const s = bundle.settings;
-  const form = useEditable<Values>({ insurance: s.insurance, rrfMonthly: s.rrfMonthly, crdMonthly: s.crdMonthly, srdsMonthly: s.srdsMonthly, defaulterCycles: s.defaulterCycles, penalGraceDays: s.penalGraceDays, demandSendByDays: s.demandSendByDays, minTakeHomePay: s.minTakeHomePay });
+  const form = useEditable<Values>({ insurance: s.insurance, rrfMonthly: s.rrfMonthly, crdMonthly: s.crdMonthly, srdsMonthly: s.srdsMonthly, defaulterCycles: s.defaulterCycles, suretyRecoveryAfterCycles: s.suretyRecoveryAfterCycles, penalGraceDays: s.penalGraceDays, demandSendByDays: s.demandSendByDays, minTakeHomePay: s.minTakeHomePay });
   const save = useSettingsSave(api.settings.updateValues, 'Demand rules saved');
   const v = form.draft!;
   const set = (patch: Partial<Values>) => form.setDraft({ ...v, ...patch });
@@ -48,6 +49,7 @@ export function InsuranceDemandSection({ bundle }: { bundle: SettingsBundle }) {
 
       <FormSection title="Defaulters" description="BR-020: a member becomes a defaulter after this many short cycles in a row." tag={ph('defaulterCycles')}>
         <NumberField label="Short cycles in a row" name="defaulterCycles" value={v.defaulterCycles} onChange={(defaulterCycles) => set({ defaulterCycles })} errors={errors} unit="cycles" disabled={ro} />
+        <NumberField label="Recover from sureties after" name="suretyRecoveryAfterCycles" value={v.suretyRecoveryAfterCycles} onChange={(suretyRecoveryAfterCycles) => set({ suretyRecoveryAfterCycles })} errors={errors} unit="unpaid months in a row" disabled={ro} hint="F-13: the sureties then pay equal shares" />
       </FormSection>
 
       <FormSection title="Sending and deductions" description="The sheet must reach the DDO this many days before the 1st (society: 3–5). A deduction may never leave the member less than the minimum take-home pay (R1)." tag={ph('demandSendByDays') ?? ph('minTakeHomePay')} columns={3}>

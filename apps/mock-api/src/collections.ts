@@ -59,6 +59,7 @@ const HEAD_LABEL: Record<DemandHead, string> = {
   PENAL: 'Penal interest',
   INTEREST: 'Interest',
   PRINCIPAL: 'Principal',
+  SURETY: 'Surety recovery',
 };
 const PRODUCT_LABEL: Record<string, string> = { ORDINARY: 'Ordinary', EDUCATION: 'Education', SALARY: 'Salary', DEPOSIT: 'Deposit' };
 const PAY_TO = { accountName: 'TGSECCSL Dues Collection', accountNo: 'XXXXXXXX3307', ifsc: 'DEMO0000929', upi: 'tgseccsl.dues@demo', counter: 'Society cash counter, 2nd Floor, West Ancillary Building' };
@@ -581,7 +582,8 @@ export function registerCollections(api: Api, store: Store, requireSession: Guar
     } else fieldErrors.mode = 'Choose how it was paid';
     if (input.purpose !== 'DUES' && input.purpose !== 'SHARE_CAPITAL') fieldErrors.purpose = 'Choose what it is for';
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
-    const r = takePayment(m!.id, input.purpose!, input.amount!, {
+    // The demo server has no surety recoveries (backend only, D-097); the check above rejects that purpose.
+    const r = takePayment(m!.id, input.purpose as 'DUES' | 'SHARE_CAPITAL', input.amount!, {
       date: input.date!,
       source: input.mode === 'CASH' ? 'CASH' : input.mode === 'ADJUSTMENT' ? 'ADJUSTMENT' : 'BANK_TRANSFER',
       ...(input.mode === 'CASH' ? { denominations: input.denominations! } : {}),

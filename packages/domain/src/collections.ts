@@ -17,6 +17,8 @@ export const HEAD_PRIORITY: Record<DemandHead, number> = {
   PENAL: 4,
   INTEREST: 5,
   PRINCIPAL: 6,
+  // F-13 (D-097): a surety's own dues come first; what they pay for someone else's loan comes last.
+  SURETY: 7,
 };
 
 export const LOAN_PRIORITY: Record<LoanProductCode, number> = { EDUCATION: 1, SALARY: 2, ORDINARY: 3, DEPOSIT: 4 };
@@ -193,4 +195,22 @@ export function loanDefaulter(history: Array<{ cycle: Cycle; loanUnpaid: Paise }
 /** Unpaid loan principal + interest on a line, optionally for one loan. */
 export function loanUnpaid(components: DemandComponent[], loanId?: string): Paise {
   return components.filter((c) => (c.head === 'PRINCIPAL' || c.head === 'INTEREST') && (!loanId || c.loanId === loanId)).reduce((s, c) => s + c.amount - c.allocated, 0);
+}
+
+// ---- F-13 surety recovery (D-097) ------------------------------------------------------------------
+
+/** Splits an amount into equal shares in paise; the first shares take the leftover paise. */
+export function splitEqually(amount: Paise, parts: number): Paise[] {
+  if (parts <= 0) return [];
+  const base = Math.floor(amount / parts);
+  return Array.from({ length: parts }, (_, i) => base + (i < amount - base * parts ? 1 : 0));
+}
+
+/**
+ * F-13 [P] (D-097): a loan may be recovered from its sureties once its instalments went unpaid in
+ * the latest `threshold` posted cycles in a row. A surety owes at most their share, and never more
+ * than the borrower still owes on that loan.
+ */
+export function suretyRecoveryDue(input: { share: Paise; paid: Paise; loanOverdue: Paise }): Paise {
+  return Math.max(0, Math.min(input.share - input.paid, input.loanOverdue));
 }

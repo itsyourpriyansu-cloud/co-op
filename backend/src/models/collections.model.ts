@@ -1,4 +1,4 @@
-import type { DemandComponent, DemandLine, DemandSheet, MemberNotice, DemandSheetStatus, PaymentReport, PaymentReportStatus, Receipt, ReceiptSource } from '@tgs/types';
+import type { DemandComponent, DemandLine, DemandSheet, MemberNotice, SuretyRecovery, DemandSheetStatus, PaymentReport, PaymentReportStatus, Receipt, ReceiptSource } from '@tgs/types';
 import { bigint, date, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { departments } from './masters.model';
 import { members } from './members.model';
@@ -111,4 +111,20 @@ export const memberNotices = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('member_notices_once_idx').on(t.kind, t.memberId, t.loanId, t.cycle), index('member_notices_member_idx').on(t.memberId)],
+);
+
+/** F-13 (D-097): a surety's share of a borrower's overdue loan; status and keys are columns, the rest is read and written whole. */
+export const suretyRecoveries = pgTable(
+  'surety_recoveries',
+  {
+    id: text('id').primaryKey(),
+    loanId: text('loan_id').notNull(),
+    suretyId: text('surety_id')
+      .notNull()
+      .references(() => members.id),
+    status: text('status').$type<SuretyRecovery['status']>().notNull(),
+    data: jsonb('data').$type<SuretyRecovery>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('surety_recoveries_loan_idx').on(t.loanId), index('surety_recoveries_surety_idx').on(t.suretyId, t.status)],
 );

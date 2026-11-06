@@ -46,6 +46,7 @@ export function NewReceiptPage() {
   const [member, setMember] = useState<MemberPick | null>(null);
   const dues = useQuery({ queryKey: ['dues', member?.id], queryFn: () => api.receipts.dues(member!.id), enabled: Boolean(member) });
   const [purpose, setPurpose] = useState<NewReceiptInput['purpose']>('DUES');
+  const [recoveryId, setRecoveryId] = useState<string>();
   const [mode, setMode] = useState<NewReceiptInput['mode']>('CASH');
   const [amount, setAmount] = useState<number>(Number.NaN);
   const [counts, setCounts] = useState<Counts>({});
@@ -56,7 +57,8 @@ export function NewReceiptPage() {
   const today = demo.data?.today ?? '';
   const [picked, setDate] = useState<string>();
   const date = picked ?? today;
-  const owed = dues.data ? (purpose === 'DUES' ? dues.data.totalArrears : dues.data.shareCapitalDue) : 0;
+  const recovery = dues.data?.suretyRecoveries?.find((r) => r.id === recoveryId);
+  const owed = dues.data ? (purpose === 'DUES' ? dues.data.totalArrears : purpose === 'SURETY_RECOVERY' ? (recovery?.due ?? 0) : dues.data.shareCapitalDue) : 0;
   const amt = Number.isFinite(amount) ? amount : owed;
 
   const preview = useMemo(() => {
@@ -80,7 +82,7 @@ export function NewReceiptPage() {
   });
 
   const save = useMutation({
-    mutationFn: () => api.receipts.create({ memberId: member!.id, purpose, mode, amount: amt, date, ...(mode === 'CASH' ? { denominations: counts } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(remarks.trim() ? { remarks: remarks.trim() } : {}) }),
+    mutationFn: () => api.receipts.create({ memberId: member!.id, purpose, ...(purpose === 'SURETY_RECOVERY' && recoveryId ? { recoveryId } : {}), mode, amount: amt, date, ...(mode === 'CASH' ? { denominations: counts } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(remarks.trim() ? { remarks: remarks.trim() } : {}) }),
     onSuccess: (r) => navigate(`/payments/${r.receipt.id}`),
   });
   const errors = fieldErrorsOf(save.error);
@@ -121,8 +123,17 @@ export function NewReceiptPage() {
                     options={[
                       { value: 'DUES', label: 'Dues', hint: dues.data.totalArrears ? `${formatINR(dues.data.totalArrears)} unpaid` : 'Nothing unpaid', disabled: !dues.data.totalArrears },
                       { value: 'SHARE_CAPITAL', label: 'Share capital', hint: dues.data.shareCapitalDue ? `${formatINR(dues.data.shareCapitalDue)} due` : 'Fully paid', disabled: !dues.data.shareCapitalDue },
+                      ...(dues.data.suretyRecoveries?.length ? [{ value: 'SURETY_RECOVERY' as const, label: 'As surety', hint: `${formatINR(dues.data.suretyRecoveries.reduce((s, r) => s + r.due, 0))} for other members' loans` }] : []),
                     ]}
                   />
+                  {purpose === 'SURETY_RECOVERY' && dues.data.suretyRecoveries && (
+                    <Chips
+                      value={recoveryId ?? ''}
+                      onChange={(id) => { setRecoveryId(id); setAmount(Number.NaN); }}
+                      options={dues.data.suretyRecoveries.map((r) => ({ value: r.id, label: `${r.borrowerName} · ${r.loanNo}`, hint: `${formatINR(r.due)} due`, disabled: r.due <= 0 }))}
+                    />
+                  )}
+                  {errors.recoveryId && <p className="text-caption text-danger-fg">{errors.recoveryId}</p>}
                   {errors.purpose && <p className="text-caption text-danger-fg">{errors.purpose}</p>}
                 </div>
                 <div className="flex flex-col gap-2">

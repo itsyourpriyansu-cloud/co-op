@@ -78,6 +78,7 @@ import {
   type MemberNotices,
   type MySignature,
   type SignatureImage,
+  type SuretyRecoveryPanel,
   type MyPayments,
   type NewReceiptInput,
   type PaymentReport,
@@ -361,6 +362,9 @@ export function createApiClient(options: ApiClientOptions) {
       searchMembers: (q: string) => request<MemberPick[]>('GET', `/members/search${toQuery({ q })}`),
       act: (id: string, action: string, input: LoanActionInput = {}) => request<LoanDetail>('POST', `/loans/${id}/actions/${action}`, input),
       demoAct: (id: string) => request<LoanDetail>('POST', `/loans/${id}/demo-act`),
+      /** F-13 (D-097): recover an overdue loan from its sureties. */
+      suretyRecovery: (id: string) => request<SuretyRecoveryPanel>('GET', `/loans/${id}/surety-recovery`),
+      raiseSuretyRecovery: (id: string) => request<SuretyRecoveryPanel>('POST', `/loans/${id}/surety-recovery`, {}),
       sanctionPreview: (id: string, amount?: number, instalments?: number) => request<SanctionPreview>('GET', `/loans/${id}/sanction-preview${toQuery({ amount, instalments })}`),
     },
     /** Staff: deposits (ST-30 … ST-33). */

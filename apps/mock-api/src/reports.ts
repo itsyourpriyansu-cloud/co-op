@@ -41,6 +41,7 @@ const HEADS: Array<{ head: DemandHead; label: string }> = [
   { head: 'PENAL', label: 'Penal' },
   { head: 'INTEREST', label: 'Interest' },
   { head: 'PRINCIPAL', label: 'Principal' },
+  { head: 'SURETY', label: 'Surety' },
 ];
 const HEAD_LABEL = Object.fromEntries(HEADS.map((h) => [h.head, h.label])) as Record<DemandHead, string>;
 

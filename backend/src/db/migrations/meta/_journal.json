@@ -169,6 +169,13 @@
       "when": 1793882096891,
       "tag": "0023_mandate_signatures",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793887100857,
+      "tag": "0024_surety_recoveries",
+      "breakpoints": true
     }
   ]
 }

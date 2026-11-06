@@ -475,6 +475,7 @@ function OfficeUse({ d, salary }: { d: LoanDetail; salary?: boolean }) {
           <Line label="SL balance" value={`${formatINR(sh.balances.salary)}${sh.balances.salaryTakenOn ? ` · taken ${formatDisplayDate(sh.balances.salaryTakenOn)}` : ''}`} />
           <Line label="Interest to date" value={sh.topup ? formatINR(sh.topup.accruedInterest) : 'Nil'} />
           <Line label="Total loans balance" value={formatINR(sh.balances.ordinary + sh.balances.salary)} />
+          <Line label="Surety recoveries" value={sh.balances.suretyRecoveries ? formatINR(sh.balances.suretyRecoveries) : 'Nil'} />
           <Line label="Sanctioned" value={`${formatINR(sh.amount)} · ${sh.instalments} months @ ${sh.ratePercent}%`} />
           <Line label="EMI / first due" value={`${formatINR(sh.emi)} from ${formatCycle(sh.firstDueCycle)}`} />
           {!salary && <Line label="Share deposit kept" value={formatINR(sh.shareDeduction)} />}

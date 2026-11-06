@@ -57,6 +57,7 @@ export type Permission =
   | 'collections.postRecovery'
   /** P7b-2 (D-088, R5): waive penal interest, with a reason. */
   | 'collections.waivePenal'
+  | 'collections.recoverFromSureties'
   | 'collections.view'
   | 'reports.view'
   /** Backend P3 (D-080): read the books (accounts, journals, statements, trial balance). */

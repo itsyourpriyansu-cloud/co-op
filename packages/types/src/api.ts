@@ -1,6 +1,6 @@
 // API envelope types shared by the mock API and both clients (docs/11-api-contracts.md).
 import type { Channel, Permission, Role } from './roles';
-import type { Address, AppNotification, AuditEntry, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, TransferEvent } from './entities';
+import type { Address, AppNotification, AuditEntry, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, SuretyRecovery, TransferEvent } from './entities';
 import type { DemandSheetStatus, DepositStatus, LoanStatus, MemberStatus, MembershipStatus, SuretyStatus } from './status';
 
 export const API_PREFIX = '/api/v1';
@@ -940,6 +940,8 @@ export interface MemberDues {
   totalPenal: Paise;
   /** New member who chose shares on the first demand and has not paid yet (D-029). */
   shareCapitalDue: Paise;
+  /** F-13 (D-097): open recoveries this member owes as surety for other members' loans; `due` is what may be paid now. */
+  suretyRecoveries?: Array<SuretyRecovery & { due: Paise }>;
 }
 
 export interface ReceiptRow {
@@ -986,7 +988,9 @@ export interface ReceiptDetail {
 
 export interface NewReceiptInput {
   memberId: string;
-  purpose: 'DUES' | 'SHARE_CAPITAL';
+  purpose: 'DUES' | 'SHARE_CAPITAL' | 'SURETY_RECOVERY';
+  /** With SURETY_RECOVERY: which recovery this payment is for (F-13). */
+  recoveryId?: string;
   mode: 'CASH' | 'BANK_TRANSFER' | 'ADJUSTMENT';
   amount: Paise;
   date: ISODate;
@@ -1242,4 +1246,18 @@ export interface MySignature {
 export interface SignatureImage {
   fileId: string;
   dataUrl: string;
+}
+
+/** F-13 (D-097): the loan page panel: can the loan be recovered from its sureties, and what each would owe. */
+export interface SuretyRecoveryPanel {
+  loanId: string;
+  threshold: number;
+  consecutiveCycles: number;
+  overdue: Paise;
+  eligible: boolean;
+  /** Why it cannot be raised now, when not eligible. */
+  reason?: string;
+  canRaise: boolean;
+  shares: Array<{ memberId: string; name: string; generalNo: string; share: Paise }>;
+  recoveries: Array<SuretyRecovery & { due: Paise }>;
 }

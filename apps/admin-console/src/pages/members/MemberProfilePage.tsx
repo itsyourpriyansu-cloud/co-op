@@ -488,6 +488,18 @@ export function MemberProfilePage() {
                         <Field label="Months unpaid">{String(dues.data.arrears.length)}</Field>
                       </dl>
                     )}
+                    {dues.data?.suretyRecoveries?.length ? (
+                      <div className="mt-4">
+                        <p className="mb-2 text-caption-strong text-fg-secondary">As surety (F-13)</p>
+                        <ul className="divide-y divide-line-subtle">
+                          {dues.data.suretyRecoveries.map((r) => (
+                            <li key={r.id} className="py-2 text-caption text-fg-secondary">
+                              <span className="text-label text-fg">{r.borrowerName} · {r.loanNo}</span> · share {formatINR(r.share)} · paid {formatINR(r.paid)} · {formatINR(r.due)} due
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                     {notices.data && (
                       <div className="mt-4">
                         <p className="mb-2 text-caption-strong text-fg-secondary">Notices</p>
