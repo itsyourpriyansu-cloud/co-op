@@ -419,7 +419,7 @@ export class LoansService {
     // Draft and submit in one transaction: a failed submit leaves nothing behind.
     const loan = await withTransaction(this.app.db, async (tx) => {
       const l = await this.newDraft(tx, w, m, input, 'COUNTER', user.name);
-      if (body.submit) await this.submitChecked(tx, w, l, { id: user.id, name: user.name, role: user.role });
+      if (body.submit) await this.submitChecked(tx, w, l, { id: user.id, name: user.name, role: user.role }, false);
       await this.app.audit.record(request, { action: body.submit ? 'submit' : 'draft', entity: 'loan', entityId: l.id, summary: `${body.submit ? 'Submitted' : 'Saved draft'} ${l.applicationNo} for ${m.name} (${formatINR(l.appliedAmount)})` }, tx);
       return l;
     });
@@ -491,7 +491,6 @@ export class LoansService {
     const w = await this.world();
     const m = await this.member(l.memberId);
     await this.checkSubmittable(w, l, m);
-    await this.app.signatures.require(m.id);
     return this.app.appAccounts.startCode(m.mobile, 'SIGN', l.id);
   }
 
@@ -500,13 +499,12 @@ export class LoansService {
     const mine = await this.myLoan(user, id);
     if (!editable(mine)) fail('INVALID_TRANSITION', 'Already submitted.');
     await this.app.appAccounts.verifyCode('SIGN', mine.id, body.otpRef ?? '', body.otp ?? '');
-    const fileId = await this.app.signatures.require(mine.memberId);
     const w = await this.world();
     const m = await this.member(mine.memberId);
     const loan = await withTransaction(this.app.db, async (tx) => {
       const l = (await this.repo.lock(tx, mine.id))!;
       if (!editable(l)) fail('INVALID_TRANSITION', 'Already submitted.');
-      await this.submitChecked(tx, w, l, { id: user.id, name: user.name, role: 'MEMBER' }, fileId);
+      await this.submitChecked(tx, w, l, { id: user.id, name: user.name, role: 'MEMBER' }, true);
       await this.app.audit.record(request, { action: 'submit', entity: 'loan', entityId: l.id, summary: `${user.name} applied for ${l.applicationNo} (${formatINR(l.appliedAmount)}) in the app` }, tx);
       return l;
     });
@@ -617,8 +615,7 @@ export class LoansService {
   }
 
   /** Full checks, then DRAFT → SURETY_PENDING / ACCOUNTANT_REVIEW (D-030). Mutates `l` and saves it in `tx`. */
-  /** `signatureFileId`: signed by the member with OTP (D-031, D-096); undefined for a paper form entered at the counter. */
-  private async submitChecked(tx: Tx, w: World, l: Loan, actor: { id: string; name: string; role: string }, signatureFileId?: string): Promise<void> {
+  private async submitChecked(tx: Tx, w: World, l: Loan, actor: { id: string; name: string; role: string }, signed: boolean): Promise<void> {
     const m = await this.member(l.memberId);
     const allSuretiesAccepted = await this.checkSubmittable(w, l, m);
     const resubmit = l.status === 'RETURNED';
@@ -630,7 +627,7 @@ export class LoansService {
     l.submittedAt = at;
     if (!resubmit) l.appliedOn = w.today;
     delete l.returnInfo;
-    if (signatureFileId) l.signature = { signedAt: at, textVersion: LOAN_TEXT_VERSION, fileId: signatureFileId };
+    if (signed) l.signature = { signedAt: at, textVersion: LOAN_TEXT_VERSION };
     await this.repo.save(tx, l);
   }
 

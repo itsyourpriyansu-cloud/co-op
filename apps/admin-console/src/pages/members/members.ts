@@ -10,8 +10,6 @@ export const EVENT_META: Record<ServiceEventType, { icon: LucideIcon; label: str
   RETIREMENT_DATE_CHANGED: { icon: CalendarClock, label: 'Retirement date changed' },
   PROFILE_UPDATED: { icon: PenLine, label: 'Profile updated' },
   RETIRED: { icon: LogOut, label: 'Retired' },
-  RESIGNED: { icon: LogOut, label: 'Resigned' },
-  DECEASED: { icon: LogOut, label: 'Deceased' },
 };
 
 export const MANDATE_LABEL: Record<RecoveryMandate['status'], string> = {
@@ -39,7 +37,6 @@ export function emptyMemberInput(): MemberInput {
     name: '',
     fatherName: '',
     gender: 'F',
-    caste: '',
     dob: '',
     mobile: '',
     email: '',
@@ -62,7 +59,6 @@ export function memberToInput(m: Member): MemberInput {
     name: m.name,
     fatherName: m.fatherName,
     gender: m.gender,
-    caste: m.caste ?? '',
     dob: m.dob,
     mobile: m.mobile,
     email: m.email ?? '',

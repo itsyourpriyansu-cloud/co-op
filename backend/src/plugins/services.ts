@@ -20,8 +20,6 @@ import { MembersService } from '../modules/members/members.service';
 import { ProfileChangesRepository } from '../modules/profile-changes/profile-changes.repository';
 import { ProfileChangesService } from '../modules/profile-changes/profile-changes.service';
 import { MastersService } from '../modules/masters/masters.service';
-import { SignaturesService } from '../modules/signatures/signatures.service';
-import { databaseFileStore } from '../integrations/file-store';
 import { NotificationsRepository } from '../modules/notifications/notifications.repository';
 import { NotificationsService } from '../modules/notifications/notifications.service';
 
@@ -44,8 +42,6 @@ declare module 'fastify' {
     profileChanges: ProfileChangesService;
     /** In-app notifications and WhatsApp / email / SMS delivery (P8a). */
     notifications: NotificationsService;
-    /** F-01 (D-096): signatures, encrypted in the file store. */
-    signatures: SignaturesService;
   }
 }
 
@@ -54,7 +50,6 @@ export const servicesPlugin = fp(
   async (app) => {
     app.decorate('masters', new MastersService(app, new MastersRepository(app.db)));
     app.decorate('notifications', new NotificationsService(app, new NotificationsRepository(app.db)));
-    app.decorate('signatures', new SignaturesService(app, databaseFileStore(app.db, app.env.DATA_ENCRYPTION_KEY)));
     app.decorate('ledger', new LedgerService(app, new LedgerRepository(app.db)));
     app.decorate('departments', new DepartmentsService(app, new DepartmentsRepository(app.db)));
     app.decorate('appAccounts', new AppAccountsService(app, new AuthRepository(app.db)));

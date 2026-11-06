@@ -98,7 +98,7 @@ export default function Payments() {
             <Alert
               type="warning"
               heading={`${formatINR(owed)} unpaid`}
-              description={`${d.dues.arrears.length ? `From ${d.dues.arrears.map((a) => formatCycle(a.cycle)).join(', ')} when your salary deduction came short. ` : ''}${d.dues.totalPenal ? `Includes ${formatINR(d.dues.totalPenal)} penal interest, which grows each day until paid. ` : ''}${d.dues.shareCapitalDue ? `Share capital ${formatINR(d.dues.shareCapitalDue)}. ` : ''}${d.dues.suretyRecoveries?.length ? `As a surety you are asked to pay ${d.dues.suretyRecoveries.map((r) => `${formatINR(r.due)} for ${r.borrowerName}'s loan ${r.loanNo}`).join(' and ')}; pay it at the counter or it comes off your next salary. ` : ''}Pay at the counter, or pay by bank / UPI and report it here.${pending ? ` ${pending} report${pending === 1 ? ' is' : 's are'} being verified.` : ''}`}
+              description={`${d.dues.arrears.length ? `From ${d.dues.arrears.map((a) => formatCycle(a.cycle)).join(', ')} when your salary deduction came short. ` : ''}${d.dues.totalPenal ? `Includes ${formatINR(d.dues.totalPenal)} penal interest, which grows each day until paid. ` : ''}${d.dues.shareCapitalDue ? `Share capital ${formatINR(d.dues.shareCapitalDue)}. ` : ''}Pay at the counter, or pay by bank / UPI and report it here.${pending ? ` ${pending} report${pending === 1 ? ' is' : 's are'} being verified.` : ''}`}
               action={{ text: 'Report a payment', onPress: () => router.push('/payment/report') }}
             />
           ) : (

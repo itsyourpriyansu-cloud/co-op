@@ -51,7 +51,7 @@ Sizes: S = under a day · M = 1–3 days of prototype work.
 |---|---|---|---|---|
 | C-1 | EMI = interest added to principal, divided equally (flat rate) | **Agreement [A]:** "Reducing Balance (Reducing Principal) method" (BR-006) | A flat rate charges interest on the full amount for the whole term. On ₹1,00,000 at 11% for 60 months: flat EMI ≈ ₹2,583 (total interest ₹55,000); reducing-balance EMI ≈ ₹2,174 (total ≈ ₹30,500). A large difference for members | **Resolved (D-071):** all methods built; the society picks per loan product. Default reducing balance until they choose |
 | C-2 | Membership approved by **either** Secretary or President | **Paper form F1 [PF]** has both signatures; D-027 | One signature means less control, but faster (48 h target) | **Resolved (D-070):** two signatures as in the prototype; setting allows 1 |
-| C-3 | Caste visible to "all people" | DPDP Act 2023 and the security model (docs/07 §7) | Caste is sensitive personal data | **Resolved → D-095:** visible to all staff and the member (F-07); never to other members |
+| C-3 | Caste visible to "all people" | DPDP Act 2023 and the security model (docs/07 §7) | Caste is sensitive personal data | Visible to all **staff** roles, not to other members. Confirm |
 | C-4 | CRD = "Co-operative Rural Bank" | The agreement lists CRD as a deposit/fund head collected monthly | A bank name does not fit a monthly deduction head | Record as given; ask once more with the monthly amounts (F-05) |
 
 ## 4. Follow-up questions for the society

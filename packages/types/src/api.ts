@@ -1,6 +1,6 @@
 // API envelope types shared by the mock API and both clients (docs/11-api-contracts.md).
 import type { Channel, Permission, Role } from './roles';
-import type { Address, AppNotification, AuditEntry, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, SuretyRecovery, TransferEvent, FinalSettlement, FinalSettlementStatement } from './entities';
+import type { Address, AppNotification, AuditEntry, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, TransferEvent } from './entities';
 import type { DemandSheetStatus, DepositStatus, LoanStatus, MemberStatus, MembershipStatus, SuretyStatus } from './status';
 
 export const API_PREFIX = '/api/v1';
@@ -202,8 +202,6 @@ export interface JoiningReference {
   minShares: number;
   maxShares: number;
   requiredDocuments: Array<{ type: string; label: string; hint: string; required: boolean }>;
-  /** F-07 (D-095): the caste categories to choose from. */
-  casteCategories: string[];
   /** Plain-language summary + full text, versioned (D-031). */
   agreements: Array<{ key: 'byelaws' | 'noOtherSociety' | 'recoveryMandate'; title: string; summary: string[]; text: string; version: string }>;
 }
@@ -420,7 +418,6 @@ export interface MemberInput {
   name: string;
   fatherName: string;
   gender: 'F' | 'M';
-  caste: string;
   dob: ISODate;
   mobile: string;
   email?: string;
@@ -940,8 +937,6 @@ export interface MemberDues {
   totalPenal: Paise;
   /** New member who chose shares on the first demand and has not paid yet (D-029). */
   shareCapitalDue: Paise;
-  /** F-13 (D-097): open recoveries this member owes as surety for other members' loans; `due` is what may be paid now. */
-  suretyRecoveries?: Array<SuretyRecovery & { due: Paise }>;
 }
 
 export interface ReceiptRow {
@@ -988,9 +983,7 @@ export interface ReceiptDetail {
 
 export interface NewReceiptInput {
   memberId: string;
-  purpose: 'DUES' | 'SHARE_CAPITAL' | 'SURETY_RECOVERY';
-  /** With SURETY_RECOVERY: which recovery this payment is for (F-13). */
-  recoveryId?: string;
+  purpose: 'DUES' | 'SHARE_CAPITAL';
   mode: 'CASH' | 'BANK_TRANSFER' | 'ADJUSTMENT';
   amount: Paise;
   date: ISODate;
@@ -1229,45 +1222,4 @@ export interface SearchHit {
   subtitle: string;
   status?: string;
   link: string;
-}
-
-/** F-01 (D-096): my signature on file. */
-export interface MySignature {
-  fileId: string;
-  uploadedAt: ISODateTime;
-  width: number;
-  height: number;
-  sha256: string;
-  /** The PNG as a data URL (only ever sent to its owner or to staff). */
-  dataUrl: string;
-}
-
-/** F-01 (D-096): a signature shown on a printed form. */
-export interface SignatureImage {
-  fileId: string;
-  dataUrl: string;
-}
-
-/** F-13 (D-097): the loan page panel: can the loan be recovered from its sureties, and what each would owe. */
-export interface SuretyRecoveryPanel {
-  loanId: string;
-  threshold: number;
-  consecutiveCycles: number;
-  overdue: Paise;
-  eligible: boolean;
-  /** Why it cannot be raised now, when not eligible. */
-  reason?: string;
-  canRaise: boolean;
-  shares: Array<{ memberId: string; name: string; generalNo: string; share: Paise }>;
-  recoveries: Array<SuretyRecovery & { due: Paise }>;
-}
-
-/** F-08 (D-098): the member's exit and final settlement page. */
-export interface SettlementView {
-  member: Pick<Member, 'id' | 'name' | 'generalNo' | 'designation' | 'status' | 'nominee' | 'presentAddress'> & { departmentName: string };
-  department: { name: string; ddoName: string; ddoDesignation: string } | null;
-  settlement: FinalSettlement | null;
-  statement: FinalSettlementStatement | null;
-  canExit: boolean;
-  canPost: boolean;
 }

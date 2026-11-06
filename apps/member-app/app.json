@@ -44,13 +44,6 @@
           "resizeMode": "contain",
           "backgroundColor": "#0561E2"
         }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "The app opens your photos so you can choose the image of your signature.",
-          "microphonePermission": false
-        }
       ]
     ],
     "experiments": {

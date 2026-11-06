@@ -278,7 +278,6 @@ function activate(db: Db, app: MembershipApplication) {
     name: app.name,
     fatherName: f.personal?.fatherName ?? '',
     gender: f.personal?.gender ?? 'M',
-    ...(f.personal?.caste ? { caste: f.personal.caste } : {}),
     dob,
     mobile,
     mobileMasked: `${mobile.slice(0, 2)}XXXXXX${mobile.slice(-2)}`,

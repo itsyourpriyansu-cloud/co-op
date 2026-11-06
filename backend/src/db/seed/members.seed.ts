@@ -11,7 +11,7 @@ const memberRecords: Seeder = {
   name: 'members',
   run: async (tx) => {
     const data = demoDataset();
-    const rows = data.members.map(({ mobileMasked: _masked, email, anniversaryDate, caste, ...m }) => ({ ...m, caste: caste ?? null, email: email ?? null, anniversaryDate: anniversaryDate ?? null }));
+    const rows = data.members.map(({ mobileMasked: _masked, email, anniversaryDate, ...m }) => ({ ...m, email: email ?? null, anniversaryDate: anniversaryDate ?? null }));
     for (let i = 0; i < rows.length; i += 200) await tx.insert(members).values(rows.slice(i, i + 200));
     const events = data.serviceEvents.map((e) => ({ ...e, effectiveCycle: e.effectiveCycle ?? null, byName: e.byName ?? null }));
     for (let i = 0; i < events.length; i += 500) await tx.insert(serviceEvents).values(events.slice(i, i + 500));

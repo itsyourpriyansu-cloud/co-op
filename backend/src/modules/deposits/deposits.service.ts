@@ -35,7 +35,6 @@ import {
   type Receipt,
   type Role,
   type SessionUser,
-  type StaffSignOff,
 } from '@tgs/types';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -373,7 +372,6 @@ export class DepositsService {
     const m = (await this.app.members.byId(this.memberIdOf(user))) ?? fail('NOT_FOUND', 'Member record not found.');
     const input = cleanRequest(body);
     await this.validate(input);
-    await this.app.signatures.require(m.id);
     return this.app.appAccounts.startCode(m.mobile, 'SIGN', `fd:${m.id}`, input);
   }
 
@@ -383,8 +381,7 @@ export class DepositsService {
     const { payload } = await this.app.appAccounts.verifyCode('SIGN', `fd:${m.id}`, body.otpRef ?? '', body.otp ?? '');
     const input = payload as FdRequestInput;
     await this.validate(input);
-    const fileId = await this.app.signatures.require(m.id);
-    const d = await this.newRequest(request, m, input, 'APP', { id: m.id, name: m.name, role: 'MEMBER' }, `${m.name} requested an FD of ${formatINR(input.principal)} in the app`, fileId);
+    const d = await this.newRequest(request, m, input, 'APP', { id: m.id, name: m.name, role: 'MEMBER' }, `${m.name} requested an FD of ${formatINR(input.principal)} in the app`);
     return this.detail(d, user);
   }
 
@@ -471,7 +468,7 @@ export class DepositsService {
   }
 
   // ---- writes ----
-  private async newRequest(request: FastifyRequest, m: Member, input: FdRequestInput, channel: 'APP' | 'COUNTER', actor: Actor, summary: string, signatureFileId?: string): Promise<DepositAccount> {
+  private async newRequest(request: FastifyRequest, m: Member, input: FdRequestInput, channel: 'APP' | 'COUNTER', actor: Actor, summary: string): Promise<DepositAccount> {
     const [at, today, settings] = await Promise.all([businessNow(this.app), businessToday(this.app), this.app.masters.settings()]);
     const holders = input.holding === 'JOINT' ? (input.holders ?? []).map((h) => ({ name: h.name.trim(), fatherOrHusbandName: h.fatherOrHusbandName.trim(), occupation: h.occupation.trim(), address: h.address.trim(), phone: h.phone })) : [];
     const d = await withTransaction(this.app.db, async (tx) => {
@@ -495,7 +492,7 @@ export class DepositsService {
         nominee: { name: input.nominee.name.trim(), relation: input.nominee.relation },
         channel,
         requestedAt: at,
-        ...(channel === 'APP' ? { signature: { signedAt: at, textVersion: FD_TEXT_VERSION, ...(signatureFileId ? { fileId: signatureFileId } : {}) } } : {}),
+        ...(channel === 'APP' ? { signature: { signedAt: at, textVersion: FD_TEXT_VERSION } } : {}),
         events: [{ at, actorId: actor.id, actorName: actor.name, actorRole: actor.role, action: 'request', toStatus: 'REQUESTED', ...(channel === 'COUNTER' ? { remarks: 'Opened at the counter from the signed form F4' } : {}) }],
       };
       await this.repo.insert(tx, created);
@@ -522,7 +519,7 @@ export class DepositsService {
       if (!next) return fail('INVALID_TRANSITION', `"${action}" is not possible at "${d.status}".`);
       const m = (await this.app.members.byId(d.memberId))!;
       const remarks = input.remarks?.trim();
-      const signOff: StaffSignOff = { byId: actor.id, byName: actor.name, role: actor.role, at, ...(remarks ? { remarks } : {}) };
+      const signOff = { byId: actor.id, byName: actor.name, role: actor.role, at, ...(remarks ? { remarks } : {}) };
       switch (action) {
         case 'recordPayment': {
           const p = input.payment;
@@ -547,10 +544,6 @@ export class DepositsService {
         }
         case 'accept':
           d.signOffs ??= {};
-          if (actor.role === (d.status === 'ACCEPTANCE_PRESIDENT' ? 'PRESIDENT' : 'SECRETARY')) {
-            const fileId = await this.app.signatures.signOff(actor.id, opts.demo);
-            if (fileId) signOff.signatureFileId = fileId;
-          }
           if (d.status === 'ACCEPTANCE_PRESIDENT') {
             if (d.signOffs.secretary?.byId === actor.id) fail('FORBIDDEN', 'The President cannot be the same person as the Secretary (SOD-1).');
             d.signOffs.president = signOff;

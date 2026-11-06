@@ -12,7 +12,6 @@ import { loanSeeders } from './loans.seed';
 import { depositSeeders } from './deposits.seed';
 import { collectionSeeders } from './collections.seed';
 import { notificationSeeders } from './notifications.seed';
-import { signatureSeeders } from './signatures.seed';
 
 /**
  * Seed runner (dev and test only). Each phase adds seeders that load its tables from the
@@ -22,8 +21,6 @@ import { signatureSeeders } from './signatures.seed';
  */
 export interface SeedContext {
   staffPassword: string;
-  /** Encrypts the demo signatures (DATA_ENCRYPTION_KEY, D-096). */
-  dataKey: string;
 }
 
 export interface Seeder {
@@ -32,7 +29,7 @@ export interface Seeder {
 }
 
 /** Registered per phase: P1 auth · P2 masters + departments · P3 ledger · P4 members · … */
-export const seeders: Seeder[] = [...authSeeders, ...masterSeeders, ...ledgerSeeders, ...memberSeeders, ...loanSeeders, ...depositSeeders, ...collectionSeeders, ...notificationSeeders, ...signatureSeeders];
+export const seeders: Seeder[] = [...authSeeders, ...masterSeeders, ...ledgerSeeders, ...memberSeeders, ...loanSeeders, ...depositSeeders, ...collectionSeeders, ...notificationSeeders];
 
 export async function runSeed(db: Database, ctx: SeedContext, list: Seeder[] = seeders): Promise<string[]> {
   return withTransaction(db, async (tx) => {
@@ -54,7 +51,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     process.exit(1);
   }
   const handle = createDb({ url: env.DATABASE_URL, ssl: env.DATABASE_SSL });
-  runSeed(handle.db, { staffPassword: env.SEED_STAFF_PASSWORD, dataKey: env.DATA_ENCRYPTION_KEY })
+  runSeed(handle.db, { staffPassword: env.SEED_STAFF_PASSWORD })
     .then((names) => console.log(`Seed done (${names.length ? names.join(', ') : 'no seeders yet'}).`))
     .catch((err) => {
       console.error(err);

@@ -1,4 +1,4 @@
-import type { Address, FinalSettlement, Member, MembershipApplication, MembershipStatus, MemberStatus, Nominee, PayProfile, ProfileChangeRequest, ProfileFieldChange, RecoveryMandate, ServiceEventType } from '@tgs/types';
+import type { Address, Member, MembershipApplication, MembershipStatus, MemberStatus, Nominee, PayProfile, ProfileChangeRequest, ProfileFieldChange, RecoveryMandate, ServiceEventType } from '@tgs/types';
 import { date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, boolean } from 'drizzle-orm/pg-core';
 import { departments } from './masters.model';
 
@@ -20,8 +20,6 @@ export const members = pgTable(
     name: text('name').notNull(),
     fatherName: text('father_name').notNull(),
     gender: text('gender').$type<Member['gender']>().notNull(),
-    /** F-07 (D-095); empty on records from before. */
-    caste: text('caste'),
     dob: day('dob').notNull(),
     mobile: text('mobile').notNull(),
     email: text('email'),
@@ -86,9 +84,6 @@ export const recoveryMandates = pgTable(
     signedOn: day('signed_on').notNull(),
     agreedOn: day('agreed_on'),
     agreedByName: text('agreed_by_name'),
-    /** F-01 (D-096): the member's and the DDO's signature images. */
-    signatureFileId: text('signature_file_id'),
-    agreedSignatureFileId: text('agreed_signature_file_id'),
   },
   (t) => [index('recovery_mandates_member_idx').on(t.memberId), index('recovery_mandates_department_idx').on(t.departmentId, t.status)],
 );
@@ -154,13 +149,3 @@ export const membershipApplications = pgTable(
   },
   (t) => [uniqueIndex('membership_applications_no_idx').on(t.applicationNo), uniqueIndex('membership_applications_applicant_idx').on(t.applicantId), index('membership_applications_status_idx').on(t.status)],
 );
-
-/** F-08 (D-098): a member's exit and final settlement (one per member); status is a column, the rest is read and written whole. */
-export const finalSettlements = pgTable('final_settlements', {
-  memberId: text('member_id')
-    .primaryKey()
-    .references(() => members.id),
-  status: text('status').$type<FinalSettlement['status']>().notNull(),
-  data: jsonb('data').$type<FinalSettlement>().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});

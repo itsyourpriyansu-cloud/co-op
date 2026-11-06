@@ -16,7 +16,6 @@ export function toMember(r: MemberRow): Member {
     name: r.name,
     fatherName: r.fatherName,
     gender: r.gender,
-    ...(r.caste ? { caste: r.caste } : {}),
     dob: r.dob,
     mobile: r.mobile,
     mobileMasked: maskMobile(r.mobile),
@@ -56,8 +55,6 @@ const toMandate = (m: typeof recoveryMandates.$inferSelect): RecoveryMandate => 
   signedOn: m.signedOn,
   ...(m.agreedOn ? { agreedOn: m.agreedOn } : {}),
   ...(m.agreedByName ? { agreedByName: m.agreedByName } : {}),
-  ...(m.signatureFileId ? { signatureFileId: m.signatureFileId } : {}),
-  ...(m.agreedSignatureFileId ? { agreedSignatureFileId: m.agreedSignatureFileId } : {}),
 });
 
 const toTransfer = (t: typeof memberTransfers.$inferSelect): TransferEvent => ({
@@ -74,7 +71,7 @@ const toTransfer = (t: typeof memberTransfers.$inferSelect): TransferEvent => ({
 });
 
 /** Member values for an insert or update (mobileMasked is derived, never stored). */
-const toValues = ({ mobileMasked: _m, email, anniversaryDate, caste, ...m }: Member) => ({ ...m, caste: caste ?? null, email: email ?? null, anniversaryDate: anniversaryDate ?? null });
+const toValues = ({ mobileMasked: _m, email, anniversaryDate, ...m }: Member) => ({ ...m, email: email ?? null, anniversaryDate: anniversaryDate ?? null });
 
 export class MembersRepository {
   constructor(private readonly db: Database) {}
@@ -151,15 +148,15 @@ export class MembersRepository {
   }
 
   async insertMandate(tx: Tx, m: RecoveryMandate): Promise<void> {
-    await tx.insert(recoveryMandates).values({ ...m, agreedOn: m.agreedOn ?? null, agreedByName: m.agreedByName ?? null, signatureFileId: m.signatureFileId ?? null, agreedSignatureFileId: m.agreedSignatureFileId ?? null });
+    await tx.insert(recoveryMandates).values({ ...m, agreedOn: m.agreedOn ?? null, agreedByName: m.agreedByName ?? null });
   }
 
   async supersedeMandates(tx: Tx, memberId: string): Promise<void> {
     await tx.update(recoveryMandates).set({ status: 'SUPERSEDED' }).where(and(eq(recoveryMandates.memberId, memberId), ne(recoveryMandates.status, 'SUPERSEDED')));
   }
 
-  async agreeMandate(tx: Tx, id: string, on: string, byName: string, signatureFileId?: string): Promise<void> {
-    await tx.update(recoveryMandates).set({ status: 'AGREED', agreedOn: on, agreedByName: byName, agreedSignatureFileId: signatureFileId ?? null }).where(eq(recoveryMandates.id, id));
+  async agreeMandate(tx: Tx, id: string, on: string, byName: string): Promise<void> {
+    await tx.update(recoveryMandates).set({ status: 'AGREED', agreedOn: on, agreedByName: byName }).where(eq(recoveryMandates.id, id));
   }
 
   // ---- transfers ----

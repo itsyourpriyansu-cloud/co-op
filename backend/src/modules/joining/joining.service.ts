@@ -110,7 +110,6 @@ export class JoiningService {
       minShares: settings.minShares,
       maxShares: settings.maxShares,
       requiredDocuments: REQUIRED_DOCUMENTS,
-      casteCategories: settings.casteCategories,
       agreements: AGREEMENTS,
     };
   }
@@ -181,7 +180,6 @@ export class JoiningService {
     const fieldErrors = validateMembershipForm(a.form, requiredDocs);
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Some details are missing.', { fieldErrors });
     const mobile = (await this.app.appAccounts.mobileOf(user.id)) ?? a.form?.personal?.mobile ?? fail('VALIDATION_ERROR', 'No mobile number to send the code to.');
-    await this.app.signatures.require(user.id);
     return this.app.appAccounts.startCode(mobile, 'SIGN', a.id);
   }
 
@@ -192,7 +190,6 @@ export class JoiningService {
     const mine = (await this.repo.byApplicant(user.id)) ?? fail('NOT_FOUND', 'No application found.');
     if (!editable(mine)) fail('INVALID_TRANSITION', 'Already submitted.');
     await this.app.appAccounts.verifyCode('SIGN', mine.id, body.otpRef ?? '', body.otp ?? '');
-    const fileId = await this.app.signatures.require(user.id);
     const [now, today] = [await businessNow(this.app), await businessToday(this.app)];
     const app = await withTransaction(this.app.db, async (tx) => {
       const a = (await this.repo.lock(tx, mine.id))!;
@@ -212,7 +209,7 @@ export class JoiningService {
         regularAppointmentDate: f.employment?.regularAppointmentDate ?? '',
         sharesProposed: f.shares?.sharesProposed ?? 0,
         submittedOn: a.submittedOn ?? today,
-        signature: { signedAt: now, textVersion: TEXT_VERSION, method: 'OTP', fileId },
+        signature: { signedAt: now, textVersion: TEXT_VERSION, method: 'OTP' },
       };
       await this.repo.save(tx, next);
       await this.app.audit.record(request, { action: resubmit ? 'resubmit' : 'submit', entity: 'membershipApplication', entityId: a.id, summary: `${next.name} ${resubmit ? 'resubmitted' : 'submitted'} membership application ${a.applicationNo}` }, tx);
@@ -335,21 +332,12 @@ export class JoiningService {
           out.intake = signOff;
           break;
         case 'certify':
-          // F-01 (D-096): a signature only from the officer whose line it is, never from a demo stand-in.
-          if (actor.role === 'DDO') {
-            const fileId = await this.app.signatures.signOff(actor.id, opts.demo);
-            if (fileId) signOff.signatureFileId = fileId;
-          }
           out.ddoCertification = { ...signOff, designation: dept?.ddoDesignation ?? 'DDO', departmentName: dept?.name ?? '', items: Object.fromEntries(F1_CERT_ITEMS.map((i) => [i, 'OK'])) as NonNullable<MembershipApplication['ddoCertification']>['items'], mandateAgreed: true };
           break;
         case 'forward':
           out.officeReview = signOff;
           break;
         case 'approve':
-          if (actor.role === (a.status === 'APPROVAL_SECRETARY' ? 'SECRETARY' : 'PRESIDENT')) {
-            const fileId = await this.app.signatures.signOff(actor.id, opts.demo);
-            if (fileId) signOff.signatureFileId = fileId;
-          }
           if (a.status === 'APPROVAL_SECRETARY') out.secretaryApproval = signOff;
           else {
             if (a.secretaryApproval?.byId === actor.id) fail('FORBIDDEN', 'The President cannot be the same person as the Secretary (SOD-1).');
@@ -398,7 +386,6 @@ export class JoiningService {
         name: a.name,
         fatherName: f.personal?.fatherName ?? '',
         gender: f.personal?.gender ?? 'M',
-        ...(f.personal?.caste ? { caste: f.personal.caste } : {}),
         dob,
         mobile,
         ...(f.personal?.email ? { email: f.personal.email } : {}),
@@ -418,11 +405,8 @@ export class JoiningService {
       },
       a.ddoCertification?.byName ?? 'DDO',
       actor.name,
-      { ...(a.signature?.fileId ? { member: a.signature.fileId } : {}), ...(a.ddoCertification?.signatureFileId ? { ddo: a.ddoCertification.signatureFileId } : {}) },
     );
     a.allottedGeneralNo = member.generalNo;
-    // F-01 (D-096): the applicant's signature becomes the member's.
-    await this.app.signatures.reassign(a.applicantId, member.id, tx);
     const receipt = a.shareReceipt!;
     const paidNow = receipt.mode !== 'FIRST_DEMAND';
     // Money received at the counter: Dr cash / bank, Cr the member's share capital. Paid by the

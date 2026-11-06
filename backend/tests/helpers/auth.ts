@@ -6,7 +6,7 @@ export const STAFF_PASSWORD = 'Society@2026';
 
 /** Reset the P1 tables to the demo state (idempotent seed). */
 export async function reseed(app: FastifyInstance): Promise<void> {
-  await runSeed(app.db, { staffPassword: STAFF_PASSWORD, dataKey: app.env.DATA_ENCRYPTION_KEY });
+  await runSeed(app.db, { staffPassword: STAFF_PASSWORD });
 }
 
 /** Demo one-click sign-in; works for every persona, including TOTP roles. */

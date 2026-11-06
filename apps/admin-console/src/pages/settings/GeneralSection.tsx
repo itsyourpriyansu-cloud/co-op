@@ -5,7 +5,7 @@ import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, TextFiel
 import { api } from '@/lib/api';
 import { MONTH_ITEMS, isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories'>;
+type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays'>;
 const pick = (s: SocietySettings): Values => ({
   shareValue: s.shareValue,
   admissionFee: s.admissionFee,
@@ -18,7 +18,6 @@ const pick = (s: SocietySettings): Values => ({
   membershipTargetHours: s.membershipTargetHours,
   loanTargetDays: s.loanTargetDays,
   holidays: s.holidays,
-  casteCategories: s.casteCategories,
 });
 
 export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
@@ -67,10 +66,6 @@ export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
         <NumberField label="Membership" name="membershipTargetHours" value={v.membershipTargetHours} onChange={(membershipTargetHours) => setV({ membershipTargetHours })} errors={errors} unit="working hours from submission" disabled={ro} />
         <NumberField label="Loan" name="loanTargetDays" value={v.loanTargetDays} onChange={(loanTargetDays) => setV({ loanTargetDays })} errors={errors} unit="working days from the last surety's signature" disabled={ro} />
         <TextAreaV2 label="Holidays" placeholder="2026-10-02" value={v.holidays.join('\n')} onChange={(e) => setV({ holidays: e.target.value.split(/[\s,]+/).filter(Boolean) })} rows={4} disabled={ro} error={errors.holidays ? { show: true, message: errors.holidays } : undefined} />
-      </FormSection>
-
-      <FormSection title="Caste categories" description="F-07: asked on every membership application and member record, shown to all staff and to the member. One category per line.">
-        <TextAreaV2 label="Categories" placeholder="OC" value={v.casteCategories.join('\n')} onChange={(e) => setV({ casteCategories: e.target.value.split('\n').map((c) => c.trim()).filter(Boolean) })} rows={5} disabled={ro} error={errors.casteCategories ? { show: true, message: errors.casteCategories } : undefined} />
       </FormSection>
 
       <FormSection title="Risk guards" description="Placeholders until the society confirms them (D-055)." tag={ph('maxGuaranteesPerSurety')}>

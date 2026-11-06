@@ -12,8 +12,6 @@ export interface DemandLineInput {
   loanRows: Array<{ loanId: string; product: LoanProductCode; interest: Paise; principal: Paise }>;
   /** New member who chose "shares on first demand" (D-029). */
   shareCapitalDue?: Paise;
-  /** F-13 (D-097): what this member owes as surety, per borrower's loan. */
-  suretyRows?: Array<{ loanId: string; amount: Paise }>;
 }
 
 /**
@@ -33,7 +31,6 @@ export function buildDemandComponents(input: DemandLineInput): { components: Dem
     components.push({ head: 'INTEREST', loanId: r.loanId, loanProduct: r.product, amount: r.interest, allocated: 0 });
     components.push({ head: 'PRINCIPAL', loanId: r.loanId, loanProduct: r.product, amount: r.principal, allocated: 0 });
   }
-  for (const r of input.suretyRows ?? []) if (r.amount > 0) components.push({ head: 'SURETY', loanId: r.loanId, amount: r.amount, allocated: 0 });
   return { components, totalDemand: components.reduce((sum, c) => sum + c.amount, 0) };
 }
 

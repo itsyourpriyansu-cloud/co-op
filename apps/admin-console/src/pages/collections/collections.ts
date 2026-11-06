@@ -18,7 +18,7 @@ export const HEAD_LABEL: Record<DemandHead, string> = Object.fromEntries(HEAD_CO
 
 export const SOURCE_LABEL: Record<Receipt['source'], string> = { SALARY_RECOVERY: 'Salary recovery', CASH: 'Cash', BANK_TRANSFER: 'Bank transfer', ADJUSTMENT: 'Adjustment' };
 
-export const PURPOSE_LABEL: Record<NonNullable<Receipt['purpose']>, string> = { DUES: 'Dues', SHARE_CAPITAL: 'Share capital', FD: 'Fixed deposit', SURETY_RECOVERY: 'As surety' };
+export const PURPOSE_LABEL: Record<NonNullable<Receipt['purpose']>, string> = { DUES: 'Dues', SHARE_CAPITAL: 'Share capital', FD: 'Fixed deposit' };
 
 export const REPORT_MODE_LABEL = { BANK_TRANSFER: 'Bank transfer', UPI: 'UPI', CHEQUE_DEPOSIT: 'Cheque deposit' } as const;
 

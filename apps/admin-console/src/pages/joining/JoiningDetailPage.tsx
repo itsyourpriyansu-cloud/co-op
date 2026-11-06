@@ -133,7 +133,6 @@ function ApplicationTab({ d }: { d: MembershipDetail }) {
           </Field>
           <Field label="Email">{f.personal?.email}</Field>
           <Field label="Gender">{f.personal?.gender === 'F' ? 'Female' : f.personal?.gender === 'M' ? 'Male' : ''}</Field>
-          <Field label="Caste">{f.personal?.caste ?? ''}</Field>
         </dl>
       </section>
     </div>

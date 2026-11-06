@@ -12,8 +12,6 @@ import { loansRoutes } from './loans/loans.routes';
 import { depositsRoutes } from './deposits/deposits.routes';
 import { collectionsRoutes } from './collections/collections.routes';
 import { profileChangesRoutes } from './profile-changes/profile-changes.routes';
-import { settlementsRoutes } from './settlements/settlements.routes';
-import { signaturesRoutes } from './signatures/signatures.routes';
 import { reportsRoutes } from './reports/reports.routes';
 import { insightRoutes } from './insight/insight.routes';
 import { notificationsRoutes } from './notifications/notifications.routes';
@@ -43,8 +41,6 @@ export async function registerModules(app: FastifyInstance): Promise<void> {
       await api.register(notificationsRoutes);
       await api.register(insightRoutes);
       await api.register(reportsRoutes);
-      await api.register(signaturesRoutes);
-      await api.register(settlementsRoutes);
       await api.register(demoRoutes);
     },
     { prefix: API_PREFIX },

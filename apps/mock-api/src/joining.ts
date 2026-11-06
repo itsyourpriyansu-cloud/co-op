@@ -98,7 +98,6 @@ export function registerJoining(api: Hono<Env>, store: Store, requireSession: Mi
       minShares: db.settings.minShares,
       maxShares: db.settings.maxShares,
       requiredDocuments: REQUIRED_DOCUMENTS,
-      casteCategories: db.settings.casteCategories,
       agreements: AGREEMENTS,
     });
   });

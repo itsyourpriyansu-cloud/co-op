@@ -1,6 +1,5 @@
 // Topbar content: global search (M10), demo controls, theme, notifications, account menu with persona switch.
-import { useState } from 'react';
-import { Bell, FlaskConical, LogOut, Moon, PenLine, RotateCcw, Sun, UserRoundCog, WifiOff } from 'lucide-react';
+import { Bell, FlaskConical, LogOut, Moon, RotateCcw, Sun, UserRoundCog, WifiOff } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import {
@@ -25,14 +24,12 @@ import { api } from '@/lib/api';
 import { useAuth } from '../auth';
 import { useThemeMode } from '../theme';
 import { GlobalSearch } from './GlobalSearch';
-import { MySignatureDrawer } from './MySignatureDrawer';
 import { Initials } from '@/components/Initials';
 
 const icon = (Icon: typeof Bell) => ({ slot: <Icon size={16} strokeWidth={1.75} aria-hidden /> });
 
 export function ConsoleTopbar() {
   const { session, logout, loginAsPersona } = useAuth();
-  const [signatureOpen, setSignatureOpen] = useState(false);
   const { mode, toggle } = useThemeMode();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -109,7 +106,6 @@ export function ConsoleTopbar() {
           )}
         </div>
 
-        {session && <MySignatureDrawer open={signatureOpen} onClose={() => setSignatureOpen(false)} />}
         {session && (
           <MenuV2
             trigger={
@@ -122,7 +118,6 @@ export function ConsoleTopbar() {
               {
                 label: `${session.user.name} · ${ROLE_LABELS[session.user.role]}`,
                 items: [
-                  { label: { text: 'My signature', leftSlot: <PenLine size={16} /> }, onClick: () => setSignatureOpen(true) },
                   {
                     label: { text: 'Switch demo persona', leftSlot: <UserRoundCog size={16} /> },
                     subMenu: (personas.data ?? []).map((p) => ({

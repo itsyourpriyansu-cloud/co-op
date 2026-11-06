@@ -1,6 +1,6 @@
 // P7b-1 (D-088) against the production backend: the DDO enters actual deductions online and submits;
 // the Accountant reviews and approves-and-posts. Skipped when E2E_API_URL points at the mock API.
-import { API_URL, apiCall, apiToken, consoleAs, expect, resetDemo, test } from './support';
+import { API_URL, consoleAs, expect, resetDemo, test } from './support';
 
 test.describe('DDO deduction entry · backend', () => {
   test.beforeAll(async ({ request }) => {
@@ -32,18 +32,5 @@ test.describe('DDO deduction entry · backend', () => {
     await page.goto('/members/1101');
     await expect(page.getByText('Outstanding & notices')).toBeVisible();
     await expect(page.getByText('Total outstanding')).toBeVisible();
-  });
-
-  test('F-13: an active loan with sureties shows the surety recovery panel', async ({ page, request }) => {
-    const { token } = await apiToken(request, 'stf-accountant', 'console');
-    const loans = await apiCall<{ items: Array<{ id: string; status: string }> }>(request, 'GET', '/loans?status=ACTIVE&pageSize=100', token);
-    for (const l of loans.items.filter((x) => x.status === 'ACTIVE')) {
-      const p = await apiCall<{ shares: unknown[] }>(request, 'GET', `/loans/${l.id}/surety-recovery`, token);
-      if (!p.shares.length) continue;
-      await consoleAs(page, request, 'stf-accountant', `/loans/${l.id}`);
-      await expect(page.getByText('Recover from sureties').first()).toBeVisible();
-      return;
-    }
-    throw new Error('no active loan with sureties in the demo data');
   });
 });

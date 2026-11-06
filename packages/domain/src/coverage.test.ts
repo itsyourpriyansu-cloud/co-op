@@ -105,7 +105,7 @@ describe('membership edges (BR-026, F1 validation)', () => {
   });
   it('complete form passes; bad email, PIN and missing probation months are caught', () => {
     const ok: MembershipForm = {
-      personal: { fullName: 'A B', fatherName: 'C B', dob: '1995-01-01', gender: 'F', caste: 'OC', email: 'a@b.org' },
+      personal: { fullName: 'A B', fatherName: 'C B', dob: '1995-01-01', gender: 'F', email: 'a@b.org' },
       address: { present: { line1: 'x', city: 'Hyd', pincode: '500001' }, sameAsPresent: true },
       employment: { departmentId: 'd', designation: 'JA', employmentType: 'REGULAR', regularAppointmentDate: '2020-01-01' },
       shares: { sharesProposed: 10 },

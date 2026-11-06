@@ -10,4 +10,3 @@ export * from './loans.model';
 export * from './deposits.model';
 export * from './collections.model';
 export * from './notifications.model';
-export * from './files.model';

@@ -88,7 +88,6 @@ test('Act 2 · joining the society (phone → console → phone)', async ({ page
   await phone.getByLabel("Father's name").fill('Ramesh S');
   await phone.getByLabel('Date of birth').fill('15/06/1994');
   await phone.getByRole('radio', { name: 'Female' }).or(phone.getByRole('button', { name: 'Female' })).first().click();
-  await phone.getByRole('radio', { name: 'BC-B' }).or(phone.getByRole('button', { name: 'BC-B' })).first().click(); // F-07 (D-094)
   await tap(phone, 'Save & continue');
   // Address.
   await phone.getByLabel('Present address: House no. and street').fill('H.No 2-41, Ameerpet');
