@@ -376,6 +376,7 @@ export function MemberProfilePage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {d.can.transfer && <ButtonV2 text="Transfer" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <ArrowRightLeft size={16} /> }} onClick={() => setTransfer(true)} />}
+                {(d.can.edit || m.status !== 'ACTIVE') && <ButtonV2 text={m.status === 'ACTIVE' ? 'Member leaves' : 'Final settlement'} buttonType={ButtonV2Type.SECONDARY} onClick={() => navigate(`/members/${m.id}/settlement`)} />}
                 {d.can.edit && <ButtonV2 text="Edit" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Pencil size={16} /> }} onClick={() => navigate(`/members/${m.id}/edit`)} />}
               </div>
             </header>

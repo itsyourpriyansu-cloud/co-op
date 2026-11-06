@@ -1,6 +1,6 @@
 // API envelope types shared by the mock API and both clients (docs/11-api-contracts.md).
 import type { Channel, Permission, Role } from './roles';
-import type { Address, AppNotification, AuditEntry, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, SuretyRecovery, TransferEvent } from './entities';
+import type { Address, AppNotification, AuditEntry, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, SuretyRecovery, TransferEvent, FinalSettlement, FinalSettlementStatement } from './entities';
 import type { DemandSheetStatus, DepositStatus, LoanStatus, MemberStatus, MembershipStatus, SuretyStatus } from './status';
 
 export const API_PREFIX = '/api/v1';
@@ -1260,4 +1260,14 @@ export interface SuretyRecoveryPanel {
   canRaise: boolean;
   shares: Array<{ memberId: string; name: string; generalNo: string; share: Paise }>;
   recoveries: Array<SuretyRecovery & { due: Paise }>;
+}
+
+/** F-08 (D-098): the member's exit and final settlement page. */
+export interface SettlementView {
+  member: Pick<Member, 'id' | 'name' | 'generalNo' | 'designation' | 'status' | 'nominee' | 'presentAddress'> & { departmentName: string };
+  department: { name: string; ddoName: string; ddoDesignation: string } | null;
+  settlement: FinalSettlement | null;
+  statement: FinalSettlementStatement | null;
+  canExit: boolean;
+  canPost: boolean;
 }

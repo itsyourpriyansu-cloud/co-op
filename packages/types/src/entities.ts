@@ -614,7 +614,7 @@ export interface TransferEvent {
   recordedByName?: string;
 }
 
-export type ServiceEventType = 'JOINED' | 'TRANSFERRED' | 'DESIGNATION_CHANGED' | 'RETIREMENT_DATE_CHANGED' | 'PROFILE_UPDATED' | 'RETIRED';
+export type ServiceEventType = 'JOINED' | 'TRANSFERRED' | 'DESIGNATION_CHANGED' | 'RETIREMENT_DATE_CHANGED' | 'PROFILE_UPDATED' | 'RETIRED' | 'RESIGNED' | 'DECEASED';
 
 /** Service history timeline on ST-12 / MB-02 (docs/08). */
 export interface ServiceEvent {
@@ -754,4 +754,49 @@ export interface SuretyRecovery {
   demandedCycle?: Cycle;
   payments: Array<{ at: ISODateTime; amount: Paise; via: 'COUNTER' | 'SALARY'; receiptNo?: string; cycle?: Cycle }>;
   closedReason?: 'PAID' | 'BORROWER_PAID';
+}
+
+/** F-08 (D-098): one line of a final settlement. */
+export interface SettlementLine {
+  key: string;
+  label: string;
+  amount: Paise;
+  loanId?: string;
+  product?: LoanProductCode;
+  part?: 'PRINCIPAL' | 'INTEREST';
+  head?: string;
+  recoveryId?: string;
+  fdId?: string;
+  principal?: Paise;
+  interest?: Paise;
+}
+
+/** F-08 (D-098): what a leaving member owes against what the society holds for them. `net` > 0 is paid out; < 0 is recovered from the gratuity. */
+export interface FinalSettlementStatement {
+  exitDate: ISODate;
+  owes: SettlementLine[];
+  holds: SettlementLine[];
+  totalOwed: Paise;
+  totalHeld: Paise;
+  net: Paise;
+}
+
+/** F-08 (D-098): a member's exit and its settlement. Opened when the member is marked as left; POSTED once the money has moved. */
+export interface FinalSettlement {
+  memberId: string;
+  exit: { status: 'RETIRED' | 'RESIGNED' | 'DECEASED'; date: ISODate; remarks?: string; byName: string; at: ISODateTime };
+  status: 'OPEN' | 'POSTED';
+  posted?: {
+    statement: FinalSettlementStatement;
+    offset: boolean;
+    payTo: 'MEMBER' | 'NOMINEE';
+    payeeName: string;
+    /** Received from the pay office (gratuity) and paid to the member / nominee. */
+    received: Paise;
+    paid: Paise;
+    reference: string;
+    byName: string;
+    at: ISODateTime;
+    journalNo?: string;
+  };
 }

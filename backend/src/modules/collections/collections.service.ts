@@ -938,7 +938,7 @@ export class CollectionsService {
    * loan, oldest cycle first, and records the payment on the recovery. Anything beyond what the
    * borrower still owes goes to unidentified receipts for the Accountant [ASSUMPTION, D-097].
    */
-  private async collectFromSurety(tx: Tx, suretyId: string, loanId: string, amount: number, today: string, changed: Changed, how: { via: 'SALARY' | 'COUNTER'; cycle?: Cycle; receiptNo?: string }): Promise<JournalLineInput[]> {
+  async collectFromSurety(tx: Tx, suretyId: string, loanId: string, amount: number, today: string, changed: Changed, how: { via: 'SALARY' | 'COUNTER'; cycle?: Cycle; receiptNo?: string }): Promise<JournalLineInput[]> {
     const recovery = (await this.repo.openRecoveries(suretyId, tx)).find((r) => r.loanId === loanId);
     const borrowerId = recovery?.borrowerId ?? (await this.app.loans.repo.find(loanId, tx))?.memberId;
     const lines: JournalLineInput[] = [];

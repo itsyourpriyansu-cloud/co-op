@@ -10,6 +10,8 @@ export const EVENT_META: Record<ServiceEventType, { icon: LucideIcon; label: str
   RETIREMENT_DATE_CHANGED: { icon: CalendarClock, label: 'Retirement date changed' },
   PROFILE_UPDATED: { icon: PenLine, label: 'Profile updated' },
   RETIRED: { icon: LogOut, label: 'Retired' },
+  RESIGNED: { icon: LogOut, label: 'Resigned' },
+  DECEASED: { icon: LogOut, label: 'Deceased' },
 };
 
 export const MANDATE_LABEL: Record<RecoveryMandate['status'], string> = {

@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.12 · 2026-11-06 · BR-039 final settlement (D-098).
 > Version 0.11 · 2026-11-05 · BR-038 surety recovery (D-097).
 > Version 0.10 · 2026-11-05 · BR-037 working days, BR-012 placeholder rate (D-093).
 > Version 0.9 · 2026-11-04 · BR-037 service targets (D-090).
@@ -263,3 +264,8 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand �
 - After a loan's instalments go unpaid in the latest `suretyRecoveryAfterCycles` posted cycles in a row (placeholder 3), the Accountant may ask every surety who signed for an **equal share** of what is overdue.
 - A surety pays at the counter or on their next demand (once; unpaid after that it stays as their dues). Their own dues are paid first; this head comes last.
 - Every payment settles the borrower's unpaid interest then principal on that loan, oldest cycle first. A surety owes at most their share and never more than the borrower still owes; when the borrower pays up, the recovery closes.
+
+### BR-039 Final settlement on retirement, resignation or death [PF] F5 / F6 / [P] (D-098, F-08)
+- Owed: each loan's outstanding principal plus interest from the last paid instalment to the leaving date, penal, other unpaid demand items, surety dues. Held: share capital, share deposit, CRD / SRDS, FDs (early-withdrawal value before maturity).
+- Net owed is recovered from the gratuity through the pay office (F5 / F6); net held is paid to the member, or to the nominee after a death.
+- Posted once the money has moved, offset (net) or in full; one balanced ledger entry; loans, deposits and shares close.

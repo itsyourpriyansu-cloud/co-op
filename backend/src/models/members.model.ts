@@ -1,4 +1,4 @@
-import type { Address, Member, MembershipApplication, MembershipStatus, MemberStatus, Nominee, PayProfile, ProfileChangeRequest, ProfileFieldChange, RecoveryMandate, ServiceEventType } from '@tgs/types';
+import type { Address, FinalSettlement, Member, MembershipApplication, MembershipStatus, MemberStatus, Nominee, PayProfile, ProfileChangeRequest, ProfileFieldChange, RecoveryMandate, ServiceEventType } from '@tgs/types';
 import { date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, boolean } from 'drizzle-orm/pg-core';
 import { departments } from './masters.model';
 
@@ -154,3 +154,13 @@ export const membershipApplications = pgTable(
   },
   (t) => [uniqueIndex('membership_applications_no_idx').on(t.applicationNo), uniqueIndex('membership_applications_applicant_idx').on(t.applicantId), index('membership_applications_status_idx').on(t.status)],
 );
+
+/** F-08 (D-098): a member's exit and final settlement (one per member); status is a column, the rest is read and written whole. */
+export const finalSettlements = pgTable('final_settlements', {
+  memberId: text('member_id')
+    .primaryKey()
+    .references(() => members.id),
+  status: text('status').$type<FinalSettlement['status']>().notNull(),
+  data: jsonb('data').$type<FinalSettlement>().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

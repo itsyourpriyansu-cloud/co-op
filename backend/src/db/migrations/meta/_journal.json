@@ -176,6 +176,13 @@
       "when": 1793887100857,
       "tag": "0024_surety_recoveries",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793947278948,
+      "tag": "0025_final_settlements",
+      "breakpoints": true
     }
   ]
 }

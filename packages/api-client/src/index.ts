@@ -79,6 +79,7 @@ import {
   type MySignature,
   type SignatureImage,
   type SuretyRecoveryPanel,
+  type SettlementView,
   type MyPayments,
   type NewReceiptInput,
   type PaymentReport,
@@ -344,6 +345,10 @@ export function createApiClient(options: ApiClientOptions) {
       update: (id: string, input: MemberInput) => request<MemberDetail>('PUT', `/members/${id}`, input),
       transfer: (id: string, input: TransferInput) => request<MemberDetail>('POST', `/members/${id}/transfers`, input),
       agreeMandate: (id: string) => request<MemberDetail>('POST', `/members/${id}/mandate/agree`),
+      /** F-08 (D-098): a member leaves and is settled. */
+      settlement: (memberId: string) => request<SettlementView>('GET', `/members/${memberId}/settlement`),
+      exit: (memberId: string, body: { status: 'RETIRED' | 'RESIGNED' | 'DECEASED'; date: string; remarks?: string }) => request<SettlementView>('POST', `/members/${memberId}/exit`, body),
+      postSettlement: (memberId: string, body: { offset: boolean; payTo?: 'MEMBER' | 'NOMINEE'; received: number; reference: string }) => request<SettlementView>('POST', `/members/${memberId}/settlement/post`, body),
     },
     /** Staff: profile change requests (ST-18). */
     changeRequests: {
