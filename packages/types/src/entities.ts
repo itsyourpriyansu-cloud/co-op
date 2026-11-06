@@ -221,7 +221,9 @@ export interface Loan {
   /** Last return to the member (RETURNED) or rejection. */
   returnInfo?: { byName: string; role: string; at: ISODateTime; reason: string };
   rejection?: StaffSignOff;
-  disbursement?: { mode: 'NEFT' | 'CHEQUE' | 'TRANSFER'; reference: string; date: ISODate; amount: Paise; byName: string; at: ISODateTime };
+  disbursement?: { mode: 'NEFT' | 'CHEQUE' | 'TRANSFER'; reference: string; date: ISODate; amount: Paise; byName: string; at: ISODateTime; /** F7 (D-099): paid to someone else on the borrower's authorisation. */ payee?: string; /** F7 "PAID": the Cashier's signature. */ signatureFileId?: string };
+  /** F7 (D-099): the borrower confirmed in the app, with an OTP, that the money was received. */
+  receiptAck?: { at: ISODateTime; textVersion: string; fileId?: string };
 }
 
 export interface LoanSignOffs {
@@ -321,6 +323,8 @@ export interface DepositAccount {
   rejection?: StaffSignOff;
   cancelledReason?: string;
   closedOn?: ISODate;
+  /** F10 (D-099): a voucher for every payment out of the FD (maturity, early withdrawal, refund). Treasurer = the Cashier (F-04). */
+  vouchers?: Array<{ no: string; kind: 'MATURITY' | 'PREMATURE' | 'REFUND'; amount: Paise; interest: Paise; date: ISODate; paidByName: string; signatureFileId?: string }>;
   /** P6b: interest booked as payable when the maturity job matured it (paid out at payout). */
   maturityInterestAccrued?: Paise;
   /** P6b: a premature withdrawal, with the method and rate used at the time. */

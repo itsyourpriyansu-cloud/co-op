@@ -29,6 +29,7 @@ import { MembersPage } from '@/pages/members/MembersPage';
 import { ModulePage } from '@/pages/ModulePage';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
 import { AgreementPrintPage, DefaulterNoticePrintPage, FdFormPrintPage, LoanFormPrintPage, MembershipFormPrintPage } from '@/pages/reports/PrintForms';
+import { FdVoucherPrintPage, LoanBondPrintPage } from '@/pages/reports/BondPrints';
 import { ReportsPage } from '@/pages/reports/ReportsPage';
 import { ReportViewerPage } from '@/pages/reports/ReportViewerPage';
 import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
@@ -111,6 +112,8 @@ export const router = createBrowserRouter([
           ['reports/print/loan-form', <LoanFormPrintPage />, 'loans.view'],
           ['reports/print/fd-form', <FdFormPrintPage />, 'deposits.view'],
           ['reports/print/agreement', <AgreementPrintPage />, 'members.view'],
+          ['reports/print/loan-bond', <LoanBondPrintPage />, 'loans.view'],
+          ['reports/print/fd-voucher', <FdVoucherPrintPage />, 'deposits.view'],
           ['reports/:id', <ReportViewerPage />, 'reports.view'],
           // ST-03 (M9)
           ['notifications', <NotificationsPage />, 'dashboard.view'],

@@ -444,6 +444,9 @@ export function createApiClient(options: ApiClientOptions) {
       requestSign: (id: string) => request<OtpChallenge>('POST', `/me/loans/${id}/sign/request`),
       submit: (id: string, otpRef: string, otp: string) => request<LoanDetail>('POST', `/me/loans/${id}/submit`, { otpRef, otp }),
       withdraw: (id: string, reason?: string) => request<LoanDetail>('POST', `/me/loans/${id}/withdraw`, { reason }),
+      /** F7 (D-099): confirm with a code that the loan money was received. */
+      requestReceipt: (id: string) => request<OtpChallenge>('POST', `/me/loans/${id}/receipt/request`, {}),
+      confirmReceipt: (id: string, otpRef: string, otp: string) => request<LoanDetail>('POST', `/me/loans/${id}/receipt`, { otpRef, otp }),
       replaceSurety: (id: string, oldId: string, newId: string) => request<LoanDetail>('POST', `/me/loans/${id}/sureties/replace`, { oldId, newId }),
     },
     /** Member: own profile (MB-02, MB-19). */

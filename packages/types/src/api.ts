@@ -657,7 +657,7 @@ export interface LoanActionInput {
   amount?: Paise;
   instalments?: number;
   /** ST-28 disbursement. */
-  disbursement?: { mode: 'NEFT' | 'CHEQUE' | 'TRANSFER'; reference: string; date: ISODate };
+  disbursement?: { mode: 'NEFT' | 'CHEQUE' | 'TRANSFER'; reference: string; date: ISODate; /** F7 (D-099): pay someone else, on the borrower's authorisation. */ payee?: string };
 }
 
 export interface SanctionPreview {

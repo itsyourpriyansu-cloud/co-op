@@ -9,7 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { formatCycle, formatDisplayDate, formatINR } from '@tgs/domain';
 import { api } from '@/lib/api';
 import { loanKeys, useMemberSearch, useMyLoan } from '@/lib/loans';
-import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, Skeleton, StageTracker, StatusTag, Text, TextField } from '@/ui';
+import { Alert, Button, Card, Divider, Header, KeyValue, OtpInput, Screen, Section, Skeleton, StageTracker, StatusTag, Text, TextField } from '@/ui';
 import { color, radius, space } from '@/theme';
 
 export default function LoanDetails() {
@@ -23,6 +23,8 @@ export default function LoanDetails() {
   const search = useMemberSearch(q);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const [actionError, setActionError] = useState<string>();
+  const [receipt, setReceipt] = useState<{ otpRef: string; demoOtp?: string } | null>(null);
+  const [receiptOtp, setReceiptOtp] = useState('');
   const d = loan.data;
   const l = d?.loan;
 
@@ -105,6 +107,27 @@ export default function LoanDetails() {
               <StageTracker stages={d.stages.map((s) => ({ key: s.key, title: s.title, status: s.status, ...(s.date ? { date: formatDisplayDate(s.date) } : {}), ...(s.by ? { description: s.by } : {}) }))} />
             </Card>
           </Section>
+
+          {l.disbursement && !l.receiptAck ? (
+            <Section title="Confirm you received the money">
+              <Card>
+                <Text role="body">
+                  {formatINR(l.disbursement.amount)} was paid on {formatDisplayDate(l.disbursement.date)}{l.disbursement.payee ? ` to ${l.disbursement.payee}, as you authorised` : ''}. Confirm you received it; this signs the loan receipt (form F7) with your signature on file.
+                </Text>
+                {receipt ? (
+                  <>
+                    {receipt.demoOtp ? <Text role="caption" tone="secondary">Demo code: {receipt.demoOtp}</Text> : null}
+                    <OtpInput value={receiptOtp} onChange={setReceiptOtp} />
+                    <Button text="Confirm & sign" fullWidth disabled={receiptOtp.length !== 6} onPress={() => void run(async () => { await api.myLoans.confirmReceipt(l.id, receipt.otpRef, receiptOtp); setReceipt(null); })} />
+                  </>
+                ) : (
+                  <Button text="I received it · sign with OTP" leftSlot={PenLine} fullWidth onPress={() => void run(async () => setReceipt(await api.myLoans.requestReceipt(l.id)))} />
+                )}
+              </Card>
+            </Section>
+          ) : l.receiptAck ? (
+            <Alert type="success" heading="Receipt confirmed" description={`You confirmed receiving the money on ${formatDisplayDate(l.receiptAck.at.slice(0, 10))}.`} />
+          ) : null}
 
           <Section title="Amounts">
             <Card>

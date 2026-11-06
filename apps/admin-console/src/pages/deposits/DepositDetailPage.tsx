@@ -233,6 +233,7 @@ export function DepositDetailPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {dep.fdrNo && <ButtonV2 text="FDR" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => navigate(`/deposits/${dep.id}/fdr`)} />}
+                {dep.vouchers?.map((v) => <ButtonV2 key={v.no} text={`Voucher ${v.no}`} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => navigate(`/reports/print/fd-voucher?deposit=${dep.id}&vr=${v.no}`)} />)}
                 {secondary.map((a) => (
                   <ButtonV2 key={a} text={ACTION_LABEL[a] ?? a} buttonType={ButtonV2Type.SECONDARY} onClick={() => setDrawer(a)} />
                 ))}

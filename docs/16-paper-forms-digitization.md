@@ -1,5 +1,6 @@
 # 16 · Paper Forms → Digital Flows
 
+> Version 0.3 · 2026-11-06 · F7–F10 built (D-099).
 > Version 0.2 · 2026-11-05 · six more photos (D-093), stored in `docs/paper-forms/`; F7–F10 added.
 > Version 0.1 · 2026-10-24
 > Source: 7 photographs of the society's current paper forms, provided 2026-10-24. Tag **[PF]** = confirmed by a paper form.
@@ -176,7 +177,7 @@ Member authorises the current and future pay disbursing officers to recover, on 
 ---
 
 ## F7–F10 · Forms received 2026-11-05 [PF] (D-093)
-Photos in `docs/paper-forms/`. `f3-salary-loan-application.jpg` and `f3-salary-loan-office-use.jpg` are F3 (front and back) and match the mapping above, including "Surety Recoveries" in the office-use panel. The rest are new and are built in step F:
+Photos in `docs/paper-forms/`. `f3-salary-loan-application.jpg` and `f3-salary-loan-office-use.jpg` are F3 (front and back) and match the mapping above, including "Surety Recoveries" in the office-use panel. The rest are new; **built in step F (D-099)**:
 
 | Form | Paper | Digital plan |
 |---|---|---|

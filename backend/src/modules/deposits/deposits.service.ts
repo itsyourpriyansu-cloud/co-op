@@ -507,6 +507,13 @@ export class DepositsService {
   }
 
   /** One transition with its side effects (ST-33, D-027), in one transaction. `demo` acts as the stage owner. */
+  /** F10 (D-099): a numbered voucher for money paid out of an FD, with the paying Cashier's (Treasurer's) signature. */
+  private async voucher(tx: Tx, d: DepositAccount, kind: 'MATURITY' | 'PREMATURE' | 'REFUND', amount: number, interest: number, date: string, actor: Actor, demo?: boolean): Promise<void> {
+    const no = `VR-${date.slice(0, 4)}-${String(await this.repo.nextNumber(tx, 'VR')).padStart(5, '0')}`;
+    const signatureFileId = actor.role === 'CASHIER' ? await this.app.signatures.signOff(actor.id, demo) : undefined;
+    d.vouchers = [...(d.vouchers ?? []), { no, kind, amount, interest, date, paidByName: actor.name, ...(signatureFileId ? { signatureFileId } : {}) }];
+  }
+
   private async apply(request: FastifyRequest, id: string, action: DepositAction, actor: Actor, input: DepositActionInput, opts: { demo?: boolean } = {}): Promise<DepositAccount> {
     const [at, today] = await Promise.all([businessNow(this.app), businessToday(this.app)]);
     let note: [string, string, Record<string, string>, string] | undefined;
@@ -569,6 +576,7 @@ export class DepositsService {
           break;
         case 'refund': {
           const amount = d.payment?.amount ?? d.principal ?? 0;
+          await this.voucher(tx, d, 'REFUND', amount, 0, today, actor, opts.demo);
           await this.post(tx, `FD request ${d.accountNo} refunded to ${m.name} after rejection`, 'FD_REFUND', d.accountNo, today, actor, [
             { accountCode: DEPOSIT_ACCOUNT.FD, debit: amount, credit: 0, memberId: m.id, refType: 'DEPOSIT', refId: d.id },
             { accountCode: d.payment?.mode === 'CASH' ? ACCOUNT.CASH : ACCOUNT.BANK, debit: 0, credit: amount },
@@ -591,6 +599,7 @@ export class DepositsService {
           if (accrued > 0) lines.push({ accountCode: FD_INTEREST_PAYABLE, debit: accrued, credit: 0, memberId: m.id, refType: 'DEPOSIT', refId: d.id });
           if (value - principal - accrued > 0) lines.push({ accountCode: FD_INTEREST_EXPENSE, debit: value - principal - accrued, credit: 0 });
           lines.push({ accountCode: ACCOUNT.BANK, debit: 0, credit: value });
+          await this.voucher(tx, d, 'MATURITY', value, value - principal, today, actor, opts.demo);
           await this.post(tx, `FD ${d.fdrNo ?? d.accountNo} paid out to ${m.name} on maturity`, 'FD_PAYOUT', d.fdrNo ?? d.accountNo, today, actor, lines);
           d.closedOn = today;
           d.balance = 0;
@@ -603,6 +612,7 @@ export class DepositsService {
           if (s.interestPayable + s.penalty > 0) lines.push({ accountCode: FD_INTEREST_EXPENSE, debit: s.interestPayable + s.penalty, credit: 0 });
           if (s.penalty > 0) lines.push({ accountCode: FD_PENALTY_INCOME, debit: 0, credit: s.penalty });
           lines.push({ accountCode: ACCOUNT.BANK, debit: 0, credit: s.payable });
+          await this.voucher(tx, d, 'PREMATURE', s.payable, s.interestPayable, today, actor, opts.demo);
           await this.post(tx, `FD ${d.fdrNo ?? d.accountNo} withdrawn early by ${m.name} after ${s.monthsHeld} months${s.penalty ? ` (penalty ${formatINR(s.penalty)})` : ''}`, 'FD_PREMATURE', d.fdrNo ?? d.accountNo, today, actor, lines);
           d.prematureWithdrawal = { ...s, date: today, byName: actor.name, at };
           d.closedOn = today;

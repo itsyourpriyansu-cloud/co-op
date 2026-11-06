@@ -53,8 +53,12 @@ export class DepositsRepository {
   }
 
   /** Next REQ-0001 request number, or FD-00001 account number, under a table lock. */
-  async nextNumber(tx: Tx, prefix: 'REQ' | 'FD'): Promise<number> {
+  async nextNumber(tx: Tx, prefix: 'REQ' | 'FD' | 'VR'): Promise<number> {
     await tx.execute(sql`lock table ${deposits} in share row exclusive mode`);
+    if (prefix === 'VR') {
+      const [row] = await tx.select({ n: sql<number>`coalesce(sum(jsonb_array_length(coalesce(${deposits.data}->'vouchers', '[]'::jsonb))), 0)::int` }).from(deposits);
+      return (row?.n ?? 0) + 1;
+    }
     if (prefix === 'REQ') {
       const [row] = await tx.select({ n: sql<number>`count(*)::int` }).from(deposits).where(like(deposits.accountNo, 'REQ-%'));
       return (row?.n ?? 0) + 1;

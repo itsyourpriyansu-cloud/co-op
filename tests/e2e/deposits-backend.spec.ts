@@ -32,5 +32,17 @@ test.describe('FD premature withdrawal · backend', () => {
     await expect(d).toBeHidden();
     await expect(page.getByText(/Withdrawn early on/)).toBeVisible();
     await expect(page.getByText('Premature withdrawal:', { exact: false })).toBeVisible();
+    // F10 (D-099): the payout has a numbered voucher.
+    await page.getByRole('button', { name: /^Voucher VR-/ }).click();
+    await expect(page.getByRole('heading', { name: 'FIXED DEPOSIT VOUCHER' })).toBeVisible();
+  });
+
+  test('F7 / F8: a sanctioned loan prints its bond and receipt', async ({ page, request }) => {
+    const { token } = await apiToken(request, 'stf-accountant', 'console');
+    const loans = await apiCall<{ items: Array<{ id: string; status: string }> }>(request, 'GET', '/loans?pageSize=100', token);
+    const loan = loans.items.find((l) => l.status === 'SANCTIONED' || l.status === 'ACTIVE')!;
+    await consoleAs(page, request, 'stf-accountant', '/reports/print/loan-bond?loan=' + loan.id);
+    await expect(page.getByRole('heading', { name: /LOAN BOND/ })).toBeVisible();
+    await expect(page.getByText(/Received from the T.G. Secretariat/)).toBeVisible();
   });
 });

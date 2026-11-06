@@ -307,6 +307,7 @@ export function LoanDetailPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {l.status !== 'DRAFT' && l.product !== 'DEPOSIT' && <ButtonV2 text="Print form" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => navigate(`/reports/print/loan-form?loan=${l.id}`)} />}
+                {l.sanctionLetterNo && <ButtonV2 text="Bond & receipt" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => navigate(`/reports/print/loan-bond?loan=${l.id}`)} />}
                 {l.sanctionLetterNo && <ButtonV2 text="Sanction letter" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => navigate(`/loans/${l.id}/letter`)} />}
                 {d.actions.filter((a) => SECONDARY.has(a)).map((a) => (
                   <ButtonV2 key={a} text={ACTION_LABEL[a] ?? a} buttonType={ButtonV2Type.SECONDARY} onClick={() => setDrawer(a)} />

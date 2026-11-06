@@ -116,6 +116,7 @@ export function LoanActionDrawer({ detail, action, onClose, today }: { detail: L
   const [instalments, setInstalments] = useState(0);
   const [mode, setMode] = useState<'NEFT' | 'CHEQUE' | 'TRANSFER'>('NEFT');
   const [reference, setReference] = useState('');
+  const [payee, setPayee] = useState('');
   const [date, setDate] = useState('');
 
   useEffect(() => {
@@ -169,7 +170,7 @@ export function LoanActionDrawer({ detail, action, onClose, today }: { detail: L
       case 'sendForSanction':
         return { ...base, amount, instalments };
       case 'disburse':
-        return { ...base, disbursement: { mode, reference: reference.trim(), date } };
+        return { ...base, disbursement: { mode, reference: reference.trim(), date, ...(payee.trim() ? { payee: payee.trim() } : {}) } };
       default:
         return base;
     }
@@ -300,6 +301,7 @@ export function LoanActionDrawer({ detail, action, onClose, today }: { detail: L
               ))}
             </div>
             <TextField label={mode === 'CHEQUE' ? 'Cheque number' : 'UTR / reference'} name="reference" value={reference} onChange={setReference} errors={fe} />
+            <TextField label="Paid to (only if not the borrower)" name="payee" value={payee} onChange={setPayee} errors={fe} hint="F7: the borrower authorises payment to this person" />
             <TextInputV2 label="Payment date" type="date" value={date} onChange={(e) => setDate(e.target.value)} error={fe.date ? { show: true, message: fe.date } : undefined} />
             <p className="text-body text-fg">
               Pay <Money value={l.netDisbursable ?? detail.preview.netDisbursable} className="text-label" /> to {detail.member.name}

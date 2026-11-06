@@ -1,6 +1,6 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { requireAuth } from '../../common/guards';
+import { requireAuth, sessionOf } from '../../common/guards';
 import { LoansController } from './loans.controller';
 
 const passthrough = (name: string) => z.any().describe(`${name} (packages/types)`);
@@ -47,6 +47,8 @@ export const loansRoutes: FastifyPluginAsyncZod = async (app) => {
   app.put('/me/loans/:id', { ...pre, schema: { tags: mb, summary: 'Save my draft (or a returned application)', security, params: idParams, body: loanInput, response: ok('LoanDetail') } }, c.updateMine as never);
   app.delete('/me/loans/:id', { ...pre, schema: { tags: mb, summary: 'Discard my draft', security, params: idParams, response: ok('{ ok }') } }, c.discardMine);
   app.post('/me/loans/:id/sign/request', { ...pre, schema: { tags: mb, summary: 'Send the signing code once the application passes every check (D-031)', security, params: idParams, response: ok('OtpChallenge') } }, c.requestSign);
+  app.post('/me/loans/:id/receipt/request', { ...pre, schema: { tags: mb, summary: 'F7: send the code to confirm the money was received', security, params: idParams, body: z.object({}).nullish(), response: { 200: passthrough('OtpChallenge') } } }, (r) => app.loans.requestReceiptSign(sessionOf(r), r.params.id));
+  app.post('/me/loans/:id/receipt', { ...pre, schema: { tags: mb, summary: 'F7: confirm with the code that the money was received', security, params: idParams, body: z.object({ otpRef: z.string().optional(), otp: z.string().optional() }).nullish(), response: { 200: passthrough('LoanDetail') } } }, (r) => app.loans.confirmReceipt(r, r.params.id, r.body ?? {}));
   app.post('/me/loans/:id/submit', { ...pre, schema: { tags: mb, summary: 'Sign with the code and submit', security, params: idParams, body: otpBody, response: ok('LoanDetail') } }, c.submitMine);
   app.post('/me/loans/:id/sureties/replace', { ...pre, schema: { tags: mb, summary: 'Replace a surety who declined', security, params: idParams, body: z.object({ oldId: z.string().optional(), newId: z.string().optional() }), response: ok('LoanDetail') } }, c.replaceSurety);
   app.post('/me/loans/:id/withdraw', { ...pre, schema: { tags: mb, summary: 'Withdraw my application', security, params: idParams, body: reasonBody.nullish(), response: ok('LoanDetail') } }, c.withdraw as never);

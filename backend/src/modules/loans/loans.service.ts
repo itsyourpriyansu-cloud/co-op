@@ -50,11 +50,13 @@ import { notifyMember } from '../../common/utils/notify';
 import { withTransaction, type Tx } from '../../db/transaction';
 import type { LoanLite, LoansRepository } from './loans.repository';
 
-export const LOAN_TEXT_VERSION = 'F2+F3-2026.1';
+export const LOAN_TEXT_VERSION = 'F2+F3+F8+F9-2026.2';
+/** F7 (D-099): what the borrower confirms after the money is paid. */
+export const RECEIPT_TEXT_VERSION = 'F7-2026.1';
 /** Plain-language versions of form F2 clause 12 and the F3 declaration (docs/16). */
 const DECLARATION = {
-  f2: 'I and my sureties authorise the Drawing & Disbursing Officer, and any future pay officer, to recover the instalments of this loan from our salaries as demanded by the society. If I am transferred, the new pay officer recovers as per the society’s demand. If I go on deputation, my sureties will tell the society my address.',
-  f3: 'I authorise the pay disbursing officer to recover this salary loan from my salary.',
+  f2: 'I and my sureties authorise the Drawing & Disbursing Officer, and any future pay officer, to recover the instalments of this loan from our salaries as demanded by the society. If I am transferred, the new pay officer recovers as per the society’s demand. If I go on deputation, my sureties will tell the society my address. Loan bond (F8): on demand, my sureties and I jointly and severally promise to pay the society, or its order, the amount of this loan with interest at the loan\'s yearly rate, calculated at monthly rests, from the date of payment until it is repaid in full.',
+  f3: 'I authorise the pay disbursing officer to recover this salary loan from my salary. Salary loan bond (F9): on demand, I promise to pay the society, or its order, the amount of this loan with interest at the loan\'s yearly rate, calculated at monthly rests, from the date of payment until it is repaid in full.',
   version: LOAN_TEXT_VERSION,
 };
 
@@ -493,6 +495,33 @@ export class LoansService {
     await this.checkSubmittable(w, l, m);
     await this.app.signatures.require(m.id);
     return this.app.appAccounts.startCode(m.mobile, 'SIGN', l.id);
+  }
+
+  // ---- F7 (D-099): the borrower confirms the money was received ----
+  async requestReceiptSign(user: SessionUser, id: string): Promise<OtpChallenge> {
+    const l = await this.myLoan(user, id);
+    if (!l.disbursement) fail('INVALID_TRANSITION', 'The loan has not been paid out yet.');
+    if (l.receiptAck) fail('INVALID_TRANSITION', 'Already confirmed.');
+    const m = await this.member(l.memberId);
+    await this.app.signatures.require(m.id);
+    return this.app.appAccounts.startCode(m.mobile, 'SIGN', `${l.id}:receipt`);
+  }
+
+  async confirmReceipt(request: FastifyRequest, id: string, body: { otpRef?: string; otp?: string }): Promise<LoanDetail> {
+    const user = sessionOf(request);
+    const mine = await this.myLoan(user, id);
+    await this.app.appAccounts.verifyCode('SIGN', `${mine.id}:receipt`, body.otpRef ?? '', body.otp ?? '');
+    const fileId = await this.app.signatures.require(mine.memberId);
+    const at = await businessNow(this.app);
+    const loan = await withTransaction(this.app.db, async (tx) => {
+      const l = (await this.repo.lock(tx, mine.id))!;
+      if (!l.disbursement || l.receiptAck) fail('INVALID_TRANSITION', 'Nothing to confirm.');
+      l.receiptAck = { at, textVersion: RECEIPT_TEXT_VERSION, fileId };
+      await this.repo.save(tx, l);
+      await this.app.audit.record(request, { action: 'receiptAck', entity: 'loan', entityId: l.id, summary: `${user.name} confirmed receiving ${formatINR(l.disbursement.amount)} for ${l.loanNo ?? l.applicationNo}` }, tx);
+      return l;
+    });
+    return this.detail(await this.world(), loan, user);
   }
 
   async submitMine(request: FastifyRequest, id: string, body: { otpRef?: string; otp?: string }): Promise<LoanDetail> {

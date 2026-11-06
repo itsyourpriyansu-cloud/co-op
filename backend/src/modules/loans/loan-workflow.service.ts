@@ -28,7 +28,7 @@ import { ACCOUNT, LOAN_ACCOUNT } from '../ledger/ledger.accounts';
 import { inputOf, type LoansService, type World } from './loans.service';
 
 const SURETY_DECLARATION =
-  'I agree to stand surety for this loan. If the borrower does not repay, I authorise the Drawing & Disbursing Officer, and any future pay officer, to recover the dues from my salary as demanded by the society (form F2, item 12).';
+  'I agree to stand surety for this loan. If the borrower does not repay, I authorise the Drawing & Disbursing Officer, and any future pay officer, to recover the dues from my salary as demanded by the society (form F2, item 12). Loan bond (F8): on demand, I join the borrower in jointly and severally promising to pay the society, or its order, the amount of this loan with interest at its yearly rate, calculated at monthly rests, until it is repaid in full.';
 const INTEREST_INCOME = '4100';
 
 interface Actor {
@@ -265,7 +265,8 @@ export class LoanWorkflowService {
           l.schedule = generateSchedule(amount, l.ratePercent, instalments, product.emiMethod, firstDue);
           l.emi = l.schedule[0]?.emi ?? l.emi;
           l.outstandingPrincipal = amount;
-          l.disbursement = { mode: d!.mode, reference: d!.reference.trim(), date: d!.date, amount: l.netDisbursable ?? amount, byName: actor.name, at };
+          const cashierSignature = actor.role === 'CASHIER' ? await this.app.signatures.signOff(actor.id, opts.demo) : undefined;
+          l.disbursement = { mode: d!.mode, reference: d!.reference.trim(), date: d!.date, amount: l.netDisbursable ?? amount, byName: actor.name, at, ...(d!.payee?.trim() ? { payee: d!.payee.trim() } : {}), ...(cashierSignature ? { signatureFileId: cashierSignature } : {}) };
           // BR-004: the share deposit deduction is credited to the member's share deposit.
           if (l.shareDepositDeduction) shareDeposit = await this.app.collections.creditShareDeposit(tx, m.id, l.shareDepositDeduction);
           // J-07: a top-up closes the loan it settles.
