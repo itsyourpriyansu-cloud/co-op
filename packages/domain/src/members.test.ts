@@ -16,7 +16,7 @@ const address = { line1: 'H.No 1-2, Street', city: 'Hyderabad', district: 'Hyder
 const input: MemberInput = {
   name: 'Test Member',
   fatherName: 'Father Name',
-  gender: 'F',
+  gender: 'F', caste: 'OC',
   dob: '1990-05-14',
   mobile: '9876543210',
   presentAddress: address,

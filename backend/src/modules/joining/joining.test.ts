@@ -96,6 +96,11 @@ describe('joining (P4c)', () => {
     const member = (await call('GET', `/members/${generalNo}`, accountant)).json();
     expect(member.member).toMatchObject({ name: 'Divya S', employeeId: 'TSDIVYA1', departmentId: ravi.departmentId, status: 'ACTIVE' });
     expect(member.mandate).toMatchObject({ status: 'AGREED' });
+    // F-01 (D-096): the applicant's and the officers' signatures are on the record, and the mandate carries the member's and the DDO's.
+    expect(a.signature?.fileId).toBeTruthy();
+    expect([a.ddoCertification?.signatureFileId, a.secretaryApproval?.signatureFileId, a.presidentApproval?.signatureFileId].every(Boolean)).toBe(true);
+    expect(member.mandate).toMatchObject({ signatureFileId: a.signature!.fileId, agreedSignatureFileId: a.ddoCertification!.signatureFileId });
+    expect((await call('GET', '/me/signature', divya)).json()).toBeNull(); // moved to the member record with admission
     expect(member.serviceEvents.some((e: { type: string }) => e.type === 'JOINED')).toBe(true);
 
     // The receipt is in the books: bank debited, the member's share capital credited.

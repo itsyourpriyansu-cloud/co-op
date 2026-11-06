@@ -78,6 +78,10 @@ export const SETTINGS: SocietySettings = {
   financialYearStartMonth: 4,
   // Society: membership within 48 h, loans within 4–5 days (REQ-135, D-089).
   membershipTargetHours: 48,
+  // F-13 [P] (D-097): sureties are asked to pay after three unpaid months in a row; the Admin sets it.
+  suretyRecoveryAfterCycles: 3,
+  // F-07 (D-095): Telangana's categories; the Admin edits the list.
+  casteCategories: ['OC', 'BC-A', 'BC-B', 'BC-C', 'BC-D', 'BC-E', 'SC', 'ST'],
   loanTargetDays: 5,
   // F-14: the Admin keeps the holiday list; a fixed national holiday for the demo (D-093).
   holidays: ['2026-10-02'],
@@ -124,6 +128,8 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
   { key: 'payment.rejected', event: 'Reported payment rejected', title: 'Payment not verified', body: 'We could not verify your payment of {amount}: {reason}', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'defaulter.notice', event: 'Defaulter notice (ST-52, Q-310 wording placeholder)', title: 'Overdue dues: {overdue}', body: 'Our records show that {overdue} due to the society from your salary deductions has not been recovered in full for {cycles} month(s), as detailed below. Please pay this amount at the society counter or by bank transfer within 15 days of this notice, and report the payment in the member app. If it is not paid, the society will recover it from your salary and, where applicable, from your sureties, as per the bye-laws and your agreement with the society.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'defaulter.guarantorNotice', event: 'Notice to the sureties of a defaulter (P7b-3, Q-310)', title: 'Surety notice: {borrower}', body: '{borrower} (General No. {generalNo}), whose loan {loanNo} you stand surety for, has not repaid {overdue} for {cycles} month(s). Please ask them to clear it at the society counter. As a surety you may be asked to repay it as per the bye-laws and your agreement with the society.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'surety.recovery', event: 'A surety is asked to pay for an overdue loan (F-13)', title: 'Surety recovery: {borrower}', body: '{borrower} (General No. {generalNo}) has not paid loan {loanNo} for {cycles} months. As a surety you are asked to pay your share of {share}. Pay at the counter, or it will be on your next salary demand.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'surety.recoveryBorrower', event: 'Borrower told the sureties are asked to pay (F-13)', title: 'Your sureties are asked to pay', body: 'Loan {loanNo} has been unpaid for {cycles} months, so the society has asked your sureties to pay {overdue}. Pay at the counter to stop this.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'dues.reminder', event: 'Dues reminder (composer)', title: 'Dues reminder', body: 'Dear {name} (General No. {generalNo}), {overdue} is unpaid on your society account. Please pay at the counter or by bank transfer and report it in the app.', channels: ['WHATSAPP'], audience: 'MEMBER' },
   { key: 'demand.sent', event: 'Demand sheet sent to the DDO', title: 'Demand sheet for {cycle}', body: 'The {cycle} demand for {department} ({members} members, {amount}) is ready to deduct.', channels: ['EMAIL'], audience: 'STAFF' },
 ];

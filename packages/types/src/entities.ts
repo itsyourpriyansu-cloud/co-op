@@ -82,6 +82,8 @@ export interface Member {
   name: string;
   fatherName: string;
   gender: 'F' | 'M';
+  /** F-07 [S] (D-095): required on new records, visible to all staff and the member; records from before may lack it. */
+  caste?: string;
   dob: ISODate;
   mobile: string;
   mobileMasked: string;
@@ -163,6 +165,8 @@ export interface LoanSurety {
   retiresDuringLoan: boolean;
   respondedAt?: ISODateTime;
   declineReason?: string;
+  /** F-01 (D-096): the surety's signature image when they signed. */
+  signatureFileId?: string;
 }
 
 export interface WorkflowEvent {
@@ -207,7 +211,7 @@ export interface Loan {
   channel?: 'APP' | 'COUNTER';
   createdByName?: string;
   submittedAt?: ISODateTime;
-  signature?: { signedAt: ISODateTime; textVersion: string };
+  signature?: { signedAt: ISODateTime; textVersion: string; fileId?: string };
   /** M5 workflow records (ST-24 … ST-28), each with name and time. */
   signOffs?: LoanSignOffs;
   /** ST-26 assessment = "For Office Use" (F2/F3 back side). */
@@ -243,7 +247,7 @@ export interface SanctionSheet {
   topup?: { loanId: string; loanNo: string; outstandingPrincipal: Paise; accruedInterest: Paise; settlement: Paise };
   netDisbursable: Paise;
   /** Office-use balances (F3 back): OL / SL outstanding and their dates. */
-  balances: { ordinary: Paise; salary: Paise; ordinaryTakenOn?: ISODate; salaryTakenOn?: ISODate };
+  balances: { ordinary: Paise; salary: Paise; ordinaryTakenOn?: ISODate; salaryTakenOn?: ISODate; /** F3 "Surety Recoveries": what the applicant owes as a surety (F-13, D-097). */ suretyRecoveries?: Paise };
 }
 
 /** F2 items 4–8 (Ordinary / Education) and F3 items 5–9 (Salary), docs/16. Money in paise. */
@@ -309,7 +313,7 @@ export interface DepositAccount {
   /** Where the request came from: the member in the app (MB-15) or the office counter (ST-31). */
   channel?: 'APP' | 'COUNTER';
   requestedAt?: ISODateTime;
-  signature?: { signedAt: ISODateTime; textVersion: string };
+  signature?: { signedAt: ISODateTime; textVersion: string; fileId?: string };
   /** ST-33 step 1: the cashier's receipt (cash with denominations, BR-029, or transfer). */
   payment?: { mode: 'CASH' | 'TRANSFER' | 'CHEQUE'; amount: Paise; date: ISODate; denominations?: Partial<Record<500 | 200 | 100 | 50 | 20 | 10, number>>; reference?: string; receiptNo: string; byName: string; at: ISODateTime };
   /** ST-33 steps 2–3 (D-027). */
@@ -334,7 +338,8 @@ export interface FdHolder {
   phone: string;
 }
 
-export type DemandHead = 'RRF' | 'INSURANCE' | 'CRD' | 'SRDS' | 'SHARE_CAPITAL' | 'PENAL' | 'INTEREST' | 'PRINCIPAL';
+/** SURETY (D-097, F-13): a surety's share of another member's overdue loan; `loanId` is the borrower's loan. */
+export type DemandHead = 'RRF' | 'INSURANCE' | 'CRD' | 'SRDS' | 'SHARE_CAPITAL' | 'PENAL' | 'INTEREST' | 'PRINCIPAL' | 'SURETY';
 
 export interface DemandComponent {
   head: DemandHead;
@@ -435,7 +440,7 @@ export interface Receipt {
   cycle?: Cycle;
   allocations: Array<{ head: DemandHead; loanId?: string; amount: Paise; cycle?: Cycle }>;
   /** What a counter / bank receipt was for. Salary recoveries have none (they follow the demand). */
-  purpose?: 'FD' | 'DUES' | 'SHARE_CAPITAL';
+  purpose?: 'FD' | 'DUES' | 'SHARE_CAPITAL' | 'SURETY_RECOVERY';
   depositId?: string;
   reference?: string;
   /** M7: who took the money (cashier), from which sheet or member report. */
@@ -451,7 +456,7 @@ export type MembershipDocumentType = 'PHOTO' | 'ID_PROOF' | 'APPOINTMENT_ORDER' 
 
 /** The digital Membership form F1 (docs/16 §F1). Every section is optional while it is a draft. */
 export interface MembershipForm {
-  personal?: { fullName?: string; fatherName?: string; dob?: ISODate; gender?: 'F' | 'M'; mobile?: string; email?: string };
+  personal?: { fullName?: string; fatherName?: string; dob?: ISODate; gender?: 'F' | 'M'; caste?: string; mobile?: string; email?: string };
   address?: { present?: Partial<Address>; permanent?: Partial<Address>; sameAsPresent?: boolean };
   employment?: {
     departmentId?: string;
@@ -472,6 +477,8 @@ export interface SignatureRecord {
   signedAt: ISODateTime;
   textVersion: string;
   method: 'OTP';
+  /** F-01 (D-096): the signature image on file when it was signed. */
+  fileId?: string;
 }
 
 /** F1 items 1–7 that the DDO certifies (docs/16 §F1 "Certified that items 1 to 7 are correct"). */
@@ -485,6 +492,8 @@ export interface StaffSignOff {
   role: string;
   at: ISODateTime;
   remarks?: string;
+  /** F-01 (D-096): the signer's signature image (sanction, DDO certificate). */
+  signatureFileId?: string;
 }
 
 export interface MembershipApplication {
@@ -605,7 +614,7 @@ export interface TransferEvent {
   recordedByName?: string;
 }
 
-export type ServiceEventType = 'JOINED' | 'TRANSFERRED' | 'DESIGNATION_CHANGED' | 'RETIREMENT_DATE_CHANGED' | 'PROFILE_UPDATED' | 'RETIRED';
+export type ServiceEventType = 'JOINED' | 'TRANSFERRED' | 'DESIGNATION_CHANGED' | 'RETIREMENT_DATE_CHANGED' | 'PROFILE_UPDATED' | 'RETIRED' | 'RESIGNED' | 'DECEASED';
 
 /** Service history timeline on ST-12 / MB-02 (docs/08). */
 export interface ServiceEvent {
@@ -627,6 +636,10 @@ export interface RecoveryMandate {
   signedOn: ISODate;
   agreedOn?: ISODate;
   agreedByName?: string;
+  /** F-01 (D-096): the member's signature (signed with the joining application). */
+  signatureFileId?: string;
+  /** F-01 (D-096): the DDO's signature on "AGREED". */
+  agreedSignatureFileId?: string;
 }
 
 /** Society settings seed (docs/13 §3). `placeholders` lists values awaiting the society (docs/09). */
@@ -661,6 +674,10 @@ export interface SocietySettings {
   membershipTargetHours: number;
   /** P8b (D-089, REQ-135 [S]): a loan disbursed within this many days of application (society: 4–5). 0 = no target. */
   loanTargetDays: number;
+  /** F-07 (D-095): caste categories the forms offer (Telangana list by default), edited by the Admin. */
+  casteCategories: string[];
+  /** F-13 (D-097): a loan unpaid this many posted cycles in a row may be recovered from its sureties. */
+  suretyRecoveryAfterCycles: number;
   /** F-14 (D-093): public holidays the office is closed (YYYY-MM-DD). Sundays and second Saturdays never count. */
   holidays: ISODate[];
   /** P7b (D-088): the sheet must reach the DDO this many days before the 1st of the cycle (society: 3–5). */
@@ -714,4 +731,72 @@ export interface AuditEntry {
   entityId: string;
   action: string;
   summary: string;
+}
+
+/** F-13 (D-097): one surety's equal share of a borrower's overdue loan, collected at the counter or on their next demand. */
+export interface SuretyRecovery {
+  id: string;
+  loanId: string;
+  loanNo: string;
+  borrowerId: string;
+  borrowerName: string;
+  suretyId: string;
+  suretyName: string;
+  /** This surety's share of the overdue amount when it was raised. */
+  share: Paise;
+  paid: Paise;
+  status: 'OPEN' | 'CLOSED';
+  raisedOn: ISODateTime;
+  raisedByName: string;
+  /** Unpaid loan cycles in a row when it was raised. */
+  cycles: number;
+  /** The demand cycle it was put on (once, R2); unpaid after that it stays as the surety's dues. */
+  demandedCycle?: Cycle;
+  payments: Array<{ at: ISODateTime; amount: Paise; via: 'COUNTER' | 'SALARY'; receiptNo?: string; cycle?: Cycle }>;
+  closedReason?: 'PAID' | 'BORROWER_PAID';
+}
+
+/** F-08 (D-098): one line of a final settlement. */
+export interface SettlementLine {
+  key: string;
+  label: string;
+  amount: Paise;
+  loanId?: string;
+  product?: LoanProductCode;
+  part?: 'PRINCIPAL' | 'INTEREST';
+  head?: string;
+  recoveryId?: string;
+  fdId?: string;
+  principal?: Paise;
+  interest?: Paise;
+}
+
+/** F-08 (D-098): what a leaving member owes against what the society holds for them. `net` > 0 is paid out; < 0 is recovered from the gratuity. */
+export interface FinalSettlementStatement {
+  exitDate: ISODate;
+  owes: SettlementLine[];
+  holds: SettlementLine[];
+  totalOwed: Paise;
+  totalHeld: Paise;
+  net: Paise;
+}
+
+/** F-08 (D-098): a member's exit and its settlement. Opened when the member is marked as left; POSTED once the money has moved. */
+export interface FinalSettlement {
+  memberId: string;
+  exit: { status: 'RETIRED' | 'RESIGNED' | 'DECEASED'; date: ISODate; remarks?: string; byName: string; at: ISODateTime };
+  status: 'OPEN' | 'POSTED';
+  posted?: {
+    statement: FinalSettlementStatement;
+    offset: boolean;
+    payTo: 'MEMBER' | 'NOMINEE';
+    payeeName: string;
+    /** Received from the pay office (gratuity) and paid to the member / nominee. */
+    received: Paise;
+    paid: Paise;
+    reference: string;
+    byName: string;
+    at: ISODateTime;
+    journalNo?: string;
+  };
 }

@@ -179,6 +179,7 @@ export class MembersService {
         name: valid.name.trim(),
         fatherName: valid.fatherName.trim(),
         gender: valid.gender,
+        caste: valid.caste,
         dob: valid.dob,
         mobile: valid.mobile,
         mobileMasked: maskMobile(valid.mobile),
@@ -230,6 +231,7 @@ export class MembersService {
       name: input.name.trim(),
       fatherName: input.fatherName.trim(),
       gender: input.gender,
+      caste: input.caste,
       dob: input.dob,
       mobile: input.mobile,
       mobileMasked: maskMobile(input.mobile),
@@ -287,7 +289,8 @@ export class MembersService {
     const transfer: TransferEvent = { id: `trf-${randomUUID().slice(0, 8)}`, memberId: m.id, fromDepartmentId: m.departmentId, toDepartmentId: to!.id, effectiveCycle, effectiveDate: input.effectiveDate!, orderRef: input.orderRef?.trim() || '—', ...(input.remarks?.trim() ? { remarks: input.remarks.trim() } : {}), recordedAt: new Date().toISOString(), recordedByName: user.name };
     const next: Member = { ...m, departmentId: to!.id };
     // The salary-recovery mandate must be agreed again by the new DDO (BR-028).
-    const mandate: RecoveryMandate = { id: `mdt-${m.generalNo}-${randomUUID().slice(0, 6)}`, memberId: m.id, departmentId: to!.id, status: 'PENDING_NEW_DDO', signedOn: today };
+    const previous = await this.repo.currentMandate(m.id);
+    const mandate: RecoveryMandate = { id: `mdt-${m.generalNo}-${randomUUID().slice(0, 6)}`, memberId: m.id, departmentId: to!.id, status: 'PENDING_NEW_DDO', signedOn: today, ...(previous?.signatureFileId ? { signatureFileId: previous.signatureFileId } : {}) };
     const event: ServiceEvent = { id: `sev-${randomUUID().slice(0, 8)}`, memberId: m.id, type: 'TRANSFERRED', date: today, effectiveCycle, summary: `Transferred from ${fromName} to ${to!.name}${input.orderRef?.trim() ? ` (order ${input.orderRef.trim()})` : ''}. On the ${to!.name} demand sheet from ${formatCycle(effectiveCycle)}`, byName: user.name };
     const superseded = await this.repo.currentMandate(m.id);
     await withTransaction(this.app.db, async (tx) => {
@@ -310,12 +313,16 @@ export class MembersService {
     if (!mandate || mandate.status !== 'PENDING_NEW_DDO') fail('INVALID_TRANSITION', 'Nothing to agree: the mandate is not waiting for a DDO.');
     const [login, dept] = await Promise.all([this.app.departments.ddoLogin(mandate!.departmentId), this.app.departments.get(mandate!.departmentId)]);
     let byName: string;
-    if (user.role === 'DDO' && user.departmentId === mandate!.departmentId) byName = user.name;
+    let signatureFileId: string | undefined;
+    if (user.role === 'DDO' && user.departmentId === mandate!.departmentId) {
+      byName = user.name;
+      signatureFileId = await this.app.signatures.require(user.id, 'staff');
+    }
     else if (!login && user.role !== 'DDO' && (await this.app.permissions.has(user.role, 'demo.control'))) byName = dept?.ddoName ?? 'DDO';
     else return fail('FORBIDDEN', `Waiting for ${dept?.ddoName ?? 'the DDO'} (DDO, ${dept?.name ?? ''}) to agree.`);
     const today = await businessToday(this.app);
     await withTransaction(this.app.db, async (tx) => {
-      await this.repo.agreeMandate(tx, mandate!.id, today, byName);
+      await this.repo.agreeMandate(tx, mandate!.id, today, byName, signatureFileId);
       await this.app.audit.record(request, { action: 'agree', entity: 'mandate', entityId: mandate!.id, summary: `${byName} agreed the salary recovery mandate for ${m.name}` }, tx);
     });
     await this.syncToMock({ mandates: [{ ...mandate!, status: 'AGREED', agreedOn: today, agreedByName: byName }] });
@@ -357,12 +364,12 @@ export class MembersService {
    * Inside the joining transaction: allot the next General No., write the member, the mandate the
    * DDO agreed when certifying, the JOINED event, and turn the applicant's sign-in into theirs (D-026).
    */
-  async admit(tx: Tx, draft: Omit<Member, 'id' | 'generalNo' | 'mobileMasked'>, mandateAgreedBy: string, byName: string): Promise<{ member: Member; mandate: RecoveryMandate; event: ServiceEvent }> {
+  async admit(tx: Tx, draft: Omit<Member, 'id' | 'generalNo' | 'mobileMasked'>, mandateAgreedBy: string, byName: string, signatures: { member?: string; ddo?: string } = {}): Promise<{ member: Member; mandate: RecoveryMandate; event: ServiceEvent }> {
     const generalNo = await this.repo.nextGeneralNo(tx);
     const member: Member = { ...draft, id: `mem-${generalNo}`, generalNo, mobileMasked: maskMobile(draft.mobile) };
     const dept = await this.app.departments.get(member.departmentId);
     const today = member.joinedSocietyOn;
-    const mandate: RecoveryMandate = { id: `mdt-${generalNo}-1`, memberId: member.id, departmentId: member.departmentId, status: 'AGREED', signedOn: today, agreedOn: today, agreedByName: mandateAgreedBy };
+    const mandate: RecoveryMandate = { id: `mdt-${generalNo}-1`, memberId: member.id, departmentId: member.departmentId, status: 'AGREED', signedOn: today, agreedOn: today, agreedByName: mandateAgreedBy, ...(signatures.member ? { signatureFileId: signatures.member } : {}), ...(signatures.ddo ? { agreedSignatureFileId: signatures.ddo } : {}) };
     const event: ServiceEvent = { id: `sev-${randomUUID().slice(0, 8)}`, memberId: member.id, type: 'JOINED', date: today, summary: `Joined the society (General No. ${generalNo}) from ${dept?.name ?? ''} as ${member.designation}`, byName };
     await this.repo.insert(tx, member);
     await this.repo.insertMandate(tx, mandate);
@@ -534,7 +541,7 @@ export class MembersService {
 
   private async validate(input: Partial<MemberInput>, selfId?: string): Promise<MemberInput> {
     const [settings, others, today] = await Promise.all([this.app.masters.settings(), this.repo.others(selfId), businessToday(this.app)]);
-    const fieldErrors = validateMemberInput(input, { today, minShares: settings.minShares, maxShares: settings.maxShares, others, ...(selfId ? { selfId } : {}) });
+    const fieldErrors = validateMemberInput(input, { today, minShares: settings.minShares, maxShares: settings.maxShares, others, casteCategories: settings.casteCategories, ...(selfId ? { selfId } : {}) });
     if (input.departmentId && !(await this.app.departments.get(input.departmentId))) fieldErrors.departmentId = 'Unknown department';
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
     return input as MemberInput;

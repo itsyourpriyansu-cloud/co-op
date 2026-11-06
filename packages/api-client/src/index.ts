@@ -76,6 +76,10 @@ import {
   type DemandSheetDetail,
   type MemberDues,
   type MemberNotices,
+  type MySignature,
+  type SignatureImage,
+  type SuretyRecoveryPanel,
+  type SettlementView,
   type MyPayments,
   type NewReceiptInput,
   type PaymentReport,
@@ -265,6 +269,12 @@ export function createApiClient(options: ApiClientOptions) {
     },
     /** Topbar global search (M10). */
     search: (q: string) => request<SearchHit[]>('GET', `/search${toQuery({ q })}`),
+    /** F-01 (D-096): my signature (any signed-in user) and signatures on printed forms (staff). */
+    signatures: {
+      mine: () => request<MySignature | null>('GET', '/me/signature'),
+      upload: (pngBase64: string) => request<MySignature>('PUT', '/me/signature', { png: pngBase64 }),
+      image: (fileId: string) => request<SignatureImage>('GET', `/signatures/${fileId}`),
+    },
     /** ST-50 / ST-51 / ST-52 (M9). */
     reports: {
       catalogue: () => request<{ reports: ReportDef[]; options: ReportOptions }>('GET', '/reports'),
@@ -335,6 +345,10 @@ export function createApiClient(options: ApiClientOptions) {
       update: (id: string, input: MemberInput) => request<MemberDetail>('PUT', `/members/${id}`, input),
       transfer: (id: string, input: TransferInput) => request<MemberDetail>('POST', `/members/${id}/transfers`, input),
       agreeMandate: (id: string) => request<MemberDetail>('POST', `/members/${id}/mandate/agree`),
+      /** F-08 (D-098): a member leaves and is settled. */
+      settlement: (memberId: string) => request<SettlementView>('GET', `/members/${memberId}/settlement`),
+      exit: (memberId: string, body: { status: 'RETIRED' | 'RESIGNED' | 'DECEASED'; date: string; remarks?: string }) => request<SettlementView>('POST', `/members/${memberId}/exit`, body),
+      postSettlement: (memberId: string, body: { offset: boolean; payTo?: 'MEMBER' | 'NOMINEE'; received: number; reference: string }) => request<SettlementView>('POST', `/members/${memberId}/settlement/post`, body),
     },
     /** Staff: profile change requests (ST-18). */
     changeRequests: {
@@ -353,6 +367,9 @@ export function createApiClient(options: ApiClientOptions) {
       searchMembers: (q: string) => request<MemberPick[]>('GET', `/members/search${toQuery({ q })}`),
       act: (id: string, action: string, input: LoanActionInput = {}) => request<LoanDetail>('POST', `/loans/${id}/actions/${action}`, input),
       demoAct: (id: string) => request<LoanDetail>('POST', `/loans/${id}/demo-act`),
+      /** F-13 (D-097): recover an overdue loan from its sureties. */
+      suretyRecovery: (id: string) => request<SuretyRecoveryPanel>('GET', `/loans/${id}/surety-recovery`),
+      raiseSuretyRecovery: (id: string) => request<SuretyRecoveryPanel>('POST', `/loans/${id}/surety-recovery`, {}),
       sanctionPreview: (id: string, amount?: number, instalments?: number) => request<SanctionPreview>('GET', `/loans/${id}/sanction-preview${toQuery({ amount, instalments })}`),
     },
     /** Staff: deposits (ST-30 … ST-33). */

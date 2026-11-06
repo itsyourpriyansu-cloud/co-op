@@ -45,7 +45,7 @@ erDiagram
 | employeeId [P] | string | Needed for activation (Q-402) |
 | name, fatherName | string | [A] |
 | dob | date | [A] |
-| caste | enum/string | [A]. Restricted (Q-406). Category list UNKNOWN |
+| caste | string | [A] [S]. Required on new records, visible to all staff and the member (F-07, D-095). One of `settings.casteCategories` (Admin list, default OC, BC-A…BC-E, SC, ST) |
 | address | {line1, line2?, city, district, pincode} | [A] structure [P] |
 | mobile | string | [A] |
 | email?, gender?, photoUrl? | | [P] |
@@ -211,3 +211,6 @@ Caste categories (Q-406) · Nominee relations · Document types (Q-403) · Disbu
 - `RecoveryMandate {id, memberId, departmentId, status: AGREED|PENDING_NEW_DDO|SUPERSEDED, signedOn, agreedOn?, agreedByName?}`: one current (non-superseded) mandate per member.
 - `ProfileChangeRequest {id, memberId, fields[{field, oldValue, newValue}], reason, documentName?, route: OFFICE|DDO_THEN_OFFICE, status, createdAt, ddoCertified?, decidedByName?, decidedAt?, remarks?}`. `ProfileField` = name, fatherName, dob, designation, doj, dor, nominee.name, nominee.relation, payProfile.scaleOfPay, payProfile.grossSalary.
 - `TransferEvent` gained `id, effectiveDate?, remarks?, recordedAt?, recordedByName?`. Seed version 7.
+
+### Stored files (D-096)
+`files`: id, owner id (member, applicant or staff), purpose (`SIGNATURE`), mime, size, width, height, SHA-256 of the plain file, and the file itself encrypted with AES-256-GCM (`sealed`: IV · tag · ciphertext). Rows are never changed; the latest per owner is the current signature. Signed records hold the file id: `MembershipApplication.signature.fileId`, `Loan.signature.fileId`, `LoanSurety.signatureFileId`, `DepositAccount.signature.fileId`, `StaffSignOff.signatureFileId` (loan, membership and FD sign-offs), `RecoveryMandate.signatureFileId` (member) and `agreedSignatureFileId` (DDO).

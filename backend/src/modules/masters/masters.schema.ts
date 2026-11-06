@@ -36,6 +36,8 @@ export const societySettingsSchema = z.object({
   membershipTargetHours: z.number().int(),
   loanTargetDays: z.number().int(),
   holidays: z.array(z.string()),
+  casteCategories: z.array(z.string()),
+  suretyRecoveryAfterCycles: z.number().int(),
   minTakeHomePay: paise,
   placeholders: z.array(z.string()),
 });

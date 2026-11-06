@@ -30,7 +30,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   // R2 keeps the member master and decides profile change requests (docs/03, D-057).
   // P3 (D-080) [P]: the Accountant keeps the books; signers and the Cashier read them, the Super Admin only reads.
-  ACCOUNTANT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'collections.enterDeduction', 'collections.postRecovery', 'collections.waivePenal', 'reports.view', 'ledger.view', 'ledger.post', 'messages.send', 'support.reply', 'members.edit', 'members.decideChanges', 'loans.create', 'deposits.open'],
+  ACCOUNTANT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'collections.enterDeduction', 'collections.postRecovery', 'collections.waivePenal', 'collections.recoverFromSureties', 'reports.view', 'ledger.view', 'ledger.post', 'messages.send', 'support.reply', 'members.edit', 'members.decideChanges', 'loans.create', 'deposits.open'],
   SECRETARY: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view'],
   PRESIDENT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view'],
   CASHIER: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view', 'deposits.open'],
@@ -61,6 +61,7 @@ export const PERMISSION_LABELS: Array<{ key: Permission; label: string; group: s
   { key: 'collections.enterDeduction', label: 'Enter actual deductions on demand sheets', group: 'Money' },
   { key: 'collections.postRecovery', label: 'Approve and post recoveries', group: 'Money' },
   { key: 'collections.waivePenal', label: 'Waive penal interest (with a reason)', group: 'Money' },
+  { key: 'collections.recoverFromSureties', label: 'Recover an overdue loan from its sureties', group: 'Money' },
   { key: 'reports.view', label: 'Reports', group: 'Insight' },
   { key: 'ledger.view', label: 'Books of account (read)', group: 'Money' },
   { key: 'ledger.post', label: 'Manual journals and reversals', group: 'Money' },

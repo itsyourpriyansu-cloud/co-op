@@ -24,6 +24,7 @@ import { LoansPage } from '@/pages/loans/LoansPage';
 import { ChangeRequestsPage } from '@/pages/members/ChangeRequestsPage';
 import { MemberFormPage } from '@/pages/members/MemberFormPage';
 import { MemberProfilePage } from '@/pages/members/MemberProfilePage';
+import { SettlementPage } from '@/pages/members/SettlementPage';
 import { MembersPage } from '@/pages/members/MembersPage';
 import { ModulePage } from '@/pages/ModulePage';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
@@ -82,6 +83,7 @@ export const router = createBrowserRouter([
           ['members/new', <MemberFormPage />, 'members.edit'],
           ['members/:id', <MemberProfilePage />, 'members.view'],
           ['members/:id/edit', <MemberFormPage />, 'members.edit'],
+          ['members/:id/settlement', <SettlementPage />, 'members.view'],
           // ST-20, ST-21, ST-23 (M4 Loans core)
           ['loans', <LoansPage />, 'loans.view'],
           ['loans/new', <LoanFormPage />, 'loans.create'],

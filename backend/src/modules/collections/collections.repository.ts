@@ -1,8 +1,8 @@
-import type { DemandLine, DemandSheet, MemberNotice, PaymentReport, PaymentReportStatus, Receipt, ShareAccount } from '@tgs/types';
+import type { DemandLine, DemandSheet, MemberNotice, PaymentReport, SuretyRecovery, PaymentReportStatus, Receipt, ShareAccount } from '@tgs/types';
 import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
 import type { Tx } from '../../db/transaction';
-import { demandLines, demandSheets, memberNotices, members, paymentReports, receipts, shareAccounts } from '../../models';
+import { demandLines, demandSheets, memberNotices, members, paymentReports, receipts, shareAccounts, suretyRecoveries } from '../../models';
 
 type SheetRow = typeof demandSheets.$inferSelect;
 type LineRow = typeof demandLines.$inferSelect;
@@ -235,5 +235,27 @@ export class CollectionsRepository {
 
   async saveNotice(n: MemberNotice): Promise<void> {
     await this.db.update(memberNotices).set({ data: n }).where(eq(memberNotices.id, n.id));
+  }
+
+  // ---- F-13 surety recoveries (D-097) ----
+  async insertRecovery(tx: Tx, r: SuretyRecovery): Promise<void> {
+    await tx.insert(suretyRecoveries).values({ id: r.id, loanId: r.loanId, suretyId: r.suretyId, status: r.status, data: r });
+  }
+
+  async saveRecovery(tx: Tx, r: SuretyRecovery): Promise<void> {
+    await tx.update(suretyRecoveries).set({ status: r.status, data: r }).where(eq(suretyRecoveries.id, r.id));
+  }
+
+  async lockRecovery(tx: Tx, id: string): Promise<SuretyRecovery | undefined> {
+    return (await tx.select({ data: suretyRecoveries.data }).from(suretyRecoveries).where(eq(suretyRecoveries.id, id)).for('update'))[0]?.data;
+  }
+
+  async recoveriesOfLoan(loanId: string, tx?: Tx): Promise<SuretyRecovery[]> {
+    return (await (tx ?? this.db).select({ data: suretyRecoveries.data }).from(suretyRecoveries).where(eq(suretyRecoveries.loanId, loanId)).orderBy(asc(suretyRecoveries.createdAt))).map((r) => r.data);
+  }
+
+  /** Open recoveries, of one surety or of everyone. */
+  async openRecoveries(suretyId?: string, tx?: Tx): Promise<SuretyRecovery[]> {
+    return (await (tx ?? this.db).select({ data: suretyRecoveries.data }).from(suretyRecoveries).where(and(eq(suretyRecoveries.status, 'OPEN'), suretyId ? eq(suretyRecoveries.suretyId, suretyId) : undefined)).orderBy(asc(suretyRecoveries.createdAt))).map((r) => r.data);
   }
 }

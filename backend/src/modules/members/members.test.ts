@@ -20,7 +20,7 @@ describe('members (P4a)', () => {
   const newMember = (over: Partial<MemberInput> = {}): MemberInput => ({
     name: 'Test Member',
     fatherName: lakshmi.fatherName,
-    gender: 'F',
+    gender: 'F', caste: 'OC',
     dob: lakshmi.dob,
     mobile: '9123499901',
     presentAddress: lakshmi.presentAddress,

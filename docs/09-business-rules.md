@@ -1,5 +1,7 @@
 # 09 · Business Rules
 
+> Version 0.12 · 2026-11-06 · BR-039 final settlement (D-098).
+> Version 0.11 · 2026-11-05 · BR-038 surety recovery (D-097).
 > Version 0.10 · 2026-11-05 · BR-037 working days, BR-012 placeholder rate (D-093).
 > Version 0.9 · 2026-11-04 · BR-037 service targets (D-090).
 > Version 0.8 · 2026-11-03 · BR-012 penal interest, BR-020 defaulter, BR-036 deduction entry (D-088).
@@ -257,3 +259,13 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand �
 - **Working time only [S] (D-093, F-14):** Sundays, second Saturdays and the Admin's `holidays` list do not count; a date without a time counts from the start of that day in India.
 - **A loan's clock starts when its last surety signs [S]** (on submission when it needs no surety) and never pauses after that.
 - Work past its target is flagged on the Work Queue and counted on the role dashboard; nothing is blocked.
+
+### BR-038 Recovery from sureties [S] answer / [P] design (D-097, F-13)
+- After a loan's instalments go unpaid in the latest `suretyRecoveryAfterCycles` posted cycles in a row (placeholder 3), the Accountant may ask every surety who signed for an **equal share** of what is overdue.
+- A surety pays at the counter or on their next demand (once; unpaid after that it stays as their dues). Their own dues are paid first; this head comes last.
+- Every payment settles the borrower's unpaid interest then principal on that loan, oldest cycle first. A surety owes at most their share and never more than the borrower still owes; when the borrower pays up, the recovery closes.
+
+### BR-039 Final settlement on retirement, resignation or death [PF] F5 / F6 / [P] (D-098, F-08)
+- Owed: each loan's outstanding principal plus interest from the last paid instalment to the leaving date, penal, other unpaid demand items, surety dues. Held: share capital, share deposit, CRD / SRDS, FDs (early-withdrawal value before maturity).
+- Net owed is recovered from the gratuity through the pay office (F5 / F6); net held is paid to the member, or to the nominee after a death.
+- Posted once the money has moved, offset (net) or in full; one balanced ledger entry; loans, deposits and shares close.

@@ -38,7 +38,7 @@ describe('app wiring (P0)', () => {
   });
 
   it('records the seed in system_info', async () => {
-    const names = await runSeed(app.db, { staffPassword: 'unused-here' }, [{ name: 'probe', run: async () => {} }]);
+    const names = await runSeed(app.db, { staffPassword: 'unused-here', dataKey: 'unused-here' }, [{ name: 'probe', run: async () => {} }]);
     expect(names).toEqual(['probe']);
   });
 });

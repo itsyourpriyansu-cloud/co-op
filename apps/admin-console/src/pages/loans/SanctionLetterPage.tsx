@@ -8,6 +8,7 @@ import { amountInWords, formatCycle, formatDisplayDate, formatDisplayDateTime, f
 import { Seal } from '@/components/Seal';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
+import { SignatureMark } from '@/components/SignatureMark';
 
 export function SanctionLetterPage() {
   const { id = '' } = useParams();
@@ -98,6 +99,7 @@ export function SanctionLetterPage() {
                 { label: 'President', s: l.signOffs?.president },
               ].map((x) => (
                 <div key={x.label}>
+                  {x.s?.signatureFileId && <SignatureMark fileId={x.s.signatureFileId} name={x.s.byName} className="h-12" />}
                   <p className="font-semibold">{x.s?.byName}</p>
                   <p>{x.label}</p>
                   <p className="text-caption">Signed digitally · {x.s ? formatDisplayDateTime(x.s.at) : ''}</p>
