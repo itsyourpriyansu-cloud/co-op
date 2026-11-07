@@ -151,7 +151,6 @@ export class JoiningService {
       await this.repo.insert(tx, created);
       return created;
     });
-    await this.sync(app);
     return { ...result, application: app };
   }
 
@@ -171,7 +170,6 @@ export class JoiningService {
       await this.repo.save(tx, next);
       return next;
     });
-    await this.sync(app);
     return app;
   }
 
@@ -218,7 +216,6 @@ export class JoiningService {
       await this.app.audit.record(request, { action: resubmit ? 'resubmit' : 'submit', entity: 'membershipApplication', entityId: a.id, summary: `${next.name} ${resubmit ? 'resubmitted' : 'submitted'} membership application ${a.applicationNo}` }, tx);
       return next;
     });
-    await this.sync(app);
     return app;
   }
 
@@ -380,7 +377,6 @@ export class JoiningService {
       await this.app.audit.record(request, { action: `membership.${action}`, entity: 'membershipApplication', entityId: a.id, summary: `${actor.name} (${ROLE_LABELS[actor.role]}${opts.demo ? ', demo control' : ''}): ${action} on ${a.applicationNo}${admitted ? `, admitted as General No. ${admitted.member.generalNo}` : ''}` }, tx);
       return out;
     });
-    await this.app.members.sync({ ...(admitted?.records ?? {}), membershipApplications: [saved] });
     return saved;
   }
 
@@ -540,8 +536,4 @@ export class JoiningService {
     if (!(await this.app.permissions.has(user.role, 'membership.view'))) fail('FORBIDDEN', 'You do not have access to membership applications.');
   }
 
-  /** TODO(P9): the mock's dashboards and search still read applications; keep them in step. */
-  private async sync(a: MembershipApplication): Promise<void> {
-    await this.app.members.sync({ membershipApplications: [a] });
-  }
 }

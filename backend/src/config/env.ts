@@ -22,12 +22,13 @@ const EnvSchema = z.object({
         .map((o) => o.trim())
         .filter((o) => o && o !== '*'),
     ),
-  MOCK_FALLBACK_URL: z
-    .string()
-    .trim()
-    .default('')
-    .transform((v) => v || undefined)
-    .pipe(z.url().optional()),
+  /** P9 (D-100): trust X-Forwarded-For only behind a known proxy (Azure App Service); otherwise a client could fake its IP past the rate limits. */
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  /** P9 (D-100): requests per minute per IP on every route (0 = off). Sign-in has its own stricter limit. Production default 600. */
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(0).optional(),
 
   // ---- P1 auth (docs/22 §5.1) ----
   /** Signs access tokens. Required (32+ characters) in production; a fixed dev value otherwise. */
@@ -77,14 +78,15 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   if (production && (!raw.JWT_SECRET || !raw.DATA_ENCRYPTION_KEY)) {
     throw new Error('Invalid backend configuration: JWT_SECRET and DATA_ENCRYPTION_KEY are required in production.');
   }
+  // P9 (D-100): in production only the apps' own origins may call the API.
+  if (production && !raw.CORS_ORIGIN.length) throw new Error('Invalid backend configuration: CORS_ORIGIN is required in production (the console and app origins).');
   const env: Env = {
     ...raw,
     JWT_SECRET: raw.JWT_SECRET ?? DEV_JWT_SECRET,
     DATA_ENCRYPTION_KEY: raw.DATA_ENCRYPTION_KEY ?? DEV_ENCRYPTION_KEY,
   };
-  // The strangler fallback and demo sign-in must never run in production (docs/22 §4, §5.1).
+  // Demo sign-in must never run in production (docs/22 §5.1).
   if (production) {
-    env.MOCK_FALLBACK_URL = undefined;
     env.DEMO_MODE = false;
   }
   return env;

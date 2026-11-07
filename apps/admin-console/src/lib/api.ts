@@ -1,7 +1,7 @@
 import { createApiClient } from '@tgs/api-client';
 import { clearSession, getToken, loadSession, saveSession } from './session';
 
-export const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+export const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:4100';
 
 export const api = createApiClient({
   baseUrl: API_URL,

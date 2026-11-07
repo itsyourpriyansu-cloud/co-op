@@ -291,10 +291,7 @@ export class LoanWorkflowService {
       await this.app.audit.record(request, { action: `loan.${action}`, entity: 'loan', entityId: l.id, summary: `${actor.name}: ${action} on ${l.loanNo ?? l.applicationNo} (${m.name})${opts.demo ? ' [demo]' : ''}` }, tx);
       return l;
     });
-    await this.loans.sync([saved, ...changed]);
-    if (certified) await this.app.members.sync({ members: [certified] });
     if (pledgeRelease) await this.loans.pledge(pledgeRelease, null);
-    if (shareDeposit) await this.app.members.sync({ shareAccounts: [shareDeposit] });
     for (const [to, key, vars, link] of notes) await notifyMember(this.app, to, key, vars, link);
     return saved;
   }
@@ -371,7 +368,6 @@ export class LoanWorkflowService {
       else if (next === 'ACCOUNTANT_REVIEW') note = [l.memberId, 'loan.suretiesSigned', { applicationNo: l.applicationNo }, `/loan/${l.id}`];
       return l;
     });
-    await this.loans.sync([saved]);
     if (note) await notifyMember(this.app, ...note);
     return saved;
   }
@@ -440,7 +436,6 @@ export class LoanWorkflowService {
       await this.app.audit.record(request, { action: 'replaceSurety', entity: 'loan', entityId: l.id, summary: `${user.name} replaced surety ${oldName} with ${newcomer.name} on ${l.applicationNo}` }, tx);
       return l;
     });
-    await this.loans.sync([saved]);
     await notifyMember(this.app, newcomer!.id, 'loan.surety', { borrower: user.name, product: this.loans.productOf(w, saved.product).name, amount: formatINR(saved.appliedAmount) }, '/surety');
     return this.loans.detail(w, saved, user);
   }
@@ -461,7 +456,6 @@ export class LoanWorkflowService {
       await this.app.audit.record(request, { action: 'withdraw', entity: 'loan', entityId: l.id, summary: `${user.name} withdrew ${l.applicationNo}` }, tx);
       return l;
     });
-    await this.loans.sync([saved]);
     if (saved.pledgedDepositId) await this.loans.pledge(saved.pledgedDepositId, null);
     return this.loans.detail(w, saved, user);
   }

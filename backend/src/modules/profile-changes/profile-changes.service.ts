@@ -68,7 +68,6 @@ export class ProfileChangesService {
       await this.app.audit.record(request, { action: approve ? 'certify' : 'reject', entity: 'profileChange', entityId: r.id, summary: `${byName} ${approve ? 'certified' : 'did not certify'} ${member.name}'s ${fieldLabels(r)}` }, tx);
       return next;
     });
-    await this.sync([saved]);
     if (!approve) await this.notify(member.id, 'profile.rejected', { fields: fieldLabels(saved), reason: body.remarks!.trim() });
     return this.toRow(user, saved, member);
   }
@@ -91,7 +90,6 @@ export class ProfileChangesService {
       await this.app.audit.record(request, { action: body.approve ? 'approve' : 'reject', entity: 'profileChange', entityId: r.id, summary: `${body.approve ? 'Approved' : 'Rejected'} change of ${fieldLabels(r)} for General No. ${m?.generalNo ?? ''}` }, tx);
       return next;
     });
-    await this.app.members.sync({ ...records, profileChangeRequests: [saved] });
     await this.notify(saved.memberId, body.approve ? 'profile.approved' : 'profile.rejected', { fields: fieldLabels(saved), reason: body.remarks?.trim() ?? '' });
     return this.toRow(user, saved, (await this.app.members.byId(saved.memberId))!);
   }
@@ -124,7 +122,6 @@ export class ProfileChangesService {
       await this.repo.insert(tx, r);
       await this.app.audit.record(request, { action: 'request', entity: 'profileChange', entityId: r.id, summary: `${m.name} asked to change ${fieldLabels(r)}` }, tx);
     });
-    await this.sync([r]);
     return r;
   }
 
@@ -170,10 +167,6 @@ export class ProfileChangesService {
   private async requireStaffView(user: SessionUser): Promise<void> {
     const staff = user.role !== 'MEMBER' && user.role !== 'APPLICANT';
     if (!staff || !(await this.app.permissions.has(user.role, 'members.view'))) fail('FORBIDDEN', 'You do not have access to members.');
-  }
-
-  private async sync(requests: ProfileChangeRequest[]): Promise<void> {
-    await this.app.members.sync({ profileChangeRequests: requests });
   }
 
   private async notify(recipientId: string, templateKey: string, vars: Record<string, string>): Promise<void> {

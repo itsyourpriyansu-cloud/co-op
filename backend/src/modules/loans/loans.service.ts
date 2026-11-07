@@ -455,7 +455,6 @@ export class LoansService {
     const m = await this.member(this.memberIdOf(user));
     const w = await this.world();
     const loan = await withTransaction(this.app.db, (tx) => this.newDraft(tx, w, m, cleanInput(body), 'APP', m.name));
-    await this.sync([loan]);
     return this.detail(w, loan, user);
   }
 
@@ -471,7 +470,6 @@ export class LoansService {
       await this.repo.save(tx, next);
       return next;
     });
-    await this.sync([loan]);
     return this.detail(w, loan, user);
   }
 
@@ -482,7 +480,6 @@ export class LoansService {
       if (l.status !== 'DRAFT') fail('INVALID_TRANSITION', 'Only drafts can be discarded. Withdraw a submitted application instead.');
       await this.repo.remove(tx, l.id);
     });
-    await this.app.members.sync({ deleteLoans: [mine.id] });
     return { ok: true };
   }
 
@@ -665,7 +662,6 @@ export class LoansService {
 
   /** After commit: reserve the FD, tell the sureties and the member, keep the mock in step. */
   private async afterSubmit(w: World, l: Loan, m: Member, submitted: boolean): Promise<void> {
-    await this.sync([l]);
     if (!submitted) return;
     // Reserve the FD so it cannot be pledged twice (released if the loan is rejected or withdrawn).
     if (l.pledgedDepositId) await this.pledge(l.pledgedDepositId, l.id);
@@ -679,8 +675,4 @@ export class LoansService {
     await this.app.deposits.pledge(depositId, loanId);
   }
 
-  /** TODO(P7): the mock's work queue, dashboards, demand and collections read loans; keep them in step. */
-  async sync(changed: Loan[]): Promise<void> {
-    await this.app.members.sync({ loans: changed });
-  }
 }

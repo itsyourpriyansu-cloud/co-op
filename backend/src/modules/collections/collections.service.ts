@@ -359,7 +359,6 @@ export class CollectionsService {
       for (const r of await this.repo.openRecoveries(undefined, tx)) if (!r.demandedCycle && carried.has(`${r.suretyId}:${r.loanId}`)) await this.repo.saveRecovery(tx, { ...r, demandedCycle: cycle });
       await this.app.audit.record(request, { action: 'generate', entity: 'demandSheet', entityId: cycle, summary: `Generated ${formatCycle(cycle)} demand for ${targets.length} department${targets.length === 1 ? '' : 's'}` }, tx);
     });
-    await this.sync({ demandSheets: sheets });
     return { generated: sheets.map((s) => s.id) };
   }
 
@@ -458,7 +457,6 @@ export class CollectionsService {
       await this.app.audit.record(request, { action, entity: 'demandSheet', entityId: sh.id, summary: `${user.name} ${what} · ${dept?.name ?? ''} ${formatCycle(sh.cycle)}`, ...(changes.length ? { before: Object.fromEntries(changes.map((c) => [c.memberId, c.before ?? null])), after: Object.fromEntries(changes.map((c) => [c.memberId, c.after])) } : {}) }, tx);
       return sh;
     });
-    await this.sync({ demandSheets: [saved] });
     return this.detail(await this.view(), saved, user);
   }
 
@@ -556,7 +554,6 @@ export class CollectionsService {
       await this.app.audit.record(request, { action, entity: 'demandSheet', entityId: sh.id, summary: `${ACTION_TEXT[action]} · ${dept?.name ?? ''} ${formatCycle(sh.cycle)}${opts.demo ? ' (demo, as Accountant)' : ''}` }, tx);
       return sh;
     });
-    await this.syncChanged(changed, { demandSheets: [saved], receipts: newReceipts });
     for (const n of notes) await notifyMember(this.app, ...n);
     await this.deliverNotices(request, notices);
     return saved;
@@ -1028,7 +1025,6 @@ export class CollectionsService {
       await this.app.audit.record(request, { action: 'create', entity: 'receipt', entityId: receipt.id, summary: `Receipt ${receipt.receiptNo} · ${m!.name} · ${formatINR(receipt.amount)}` }, tx);
       return receipt;
     });
-    await this.syncChanged(changed, { demandSheets: sheets, receipts: [r] });
     return this.receiptDetail(await this.view(), r);
   }
 
@@ -1076,7 +1072,6 @@ export class CollectionsService {
       await this.app.audit.record(request, { action: 'verify', entity: 'paymentReport', entityId: rep.id, summary: `Verified ${formatINR(rep.amount)} (${rep.reference}) → ${receipt.receiptNo}` }, tx);
       return { receipt, rep };
     });
-    await this.syncChanged(changed, { demandSheets: sheets, receipts: [receipt], paymentReports: [rep] });
     await notifyMember(this.app, rep.memberId, 'payment.verified', { amount: formatINR(rep.amount), reference: rep.reference, receiptNo: receipt.receiptNo }, '/payments');
     return this.receiptDetail(await this.view(), receipt);
   }
@@ -1092,7 +1087,6 @@ export class CollectionsService {
       await this.app.audit.record(request, { action: 'reject', entity: 'paymentReport', entityId: r.id, summary: `Rejected ${formatINR(r.amount)} (${r.reference})` }, tx);
       return r;
     });
-    await this.sync({ paymentReports: [rep] });
     await notifyMember(this.app, rep.memberId, 'payment.rejected', { amount: formatINR(rep.amount), reason: reason.trim() }, '/payments');
     return this.reportRow(await this.view(), rep);
   }
@@ -1148,17 +1142,7 @@ export class CollectionsService {
       await this.repo.saveReport(tx, rep, true);
       await this.app.audit.record(request, { action: 'report', entity: 'paymentReport', entityId: rep.id, summary: `${user.name} reported ${formatINR(rep.amount)} (${ref})` }, tx);
     });
-    await this.sync({ paymentReports: [rep] });
     return rep;
   }
 
-  // ---- dev bridge ----
-  /** TODO(P8): the mock's work queue, dashboards and reports read these; keep them in step. */
-  private async sync(records: Record<string, unknown[]>): Promise<void> {
-    await this.app.members.sync(records);
-  }
-
-  private async syncChanged(changed: Changed, extra: Record<string, unknown[]>): Promise<void> {
-    await this.sync({ ...extra, loans: [...changed.loans.values()], deposits: [...changed.deposits.values()], shareAccounts: [...changed.shares.values()] });
-  }
 }

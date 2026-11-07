@@ -212,7 +212,6 @@ export class MembersService {
     // TODO(P5): share accounts move with loans; until then the mock keeps them.
     const share: ShareAccount = { memberId: created.member.id, numberOfShares: created.member.numberOfShares, shareCapital: created.member.numberOfShares * settings.shareValue, shareDepositBalance: 0 };
     await withTransaction(this.app.db, (tx) => this.app.collections.saveShare(tx, share));
-    await this.syncToMock({ members: [created.member], mandates: [created.mandate], serviceEvents: [created.event], shareAccounts: [share] });
     return this.toDetail(user, created.member);
   }
 
@@ -263,7 +262,6 @@ export class MembersService {
       await this.app.appAccounts.upsertMember(tx, { id: next.id, generalNo: next.generalNo, employeeId: next.employeeId, name: next.name, mobile: next.mobile, active: keepsAppAccess(next.status) });
       if (changed.length) await this.app.audit.record(request, { action: 'update', entity: 'member', entityId: current.id, summary: `Edited ${next.name}: ${changed.join(', ')}`, before: current, after: next }, tx);
     });
-    await this.syncToMock({ members: [next], serviceEvents: events });
     return this.toDetail(user, next);
   }
 
@@ -301,7 +299,6 @@ export class MembersService {
       await this.repo.addEvent(tx, event);
       await this.app.audit.record(request, { action: 'transfer', entity: 'member', entityId: m.id, summary: `${m.name}: ${fromName} → ${to!.name} from ${formatCycle(effectiveCycle)}`, after: transfer }, tx);
     });
-    await this.syncToMock({ members: [next], transfers: [transfer], mandates: [...(superseded ? [{ ...superseded, status: 'SUPERSEDED' as const }] : []), mandate], serviceEvents: [event] });
     return this.toDetail(user, next);
   }
 
@@ -325,7 +322,6 @@ export class MembersService {
       await this.repo.agreeMandate(tx, mandate!.id, today, byName, signatureFileId);
       await this.app.audit.record(request, { action: 'agree', entity: 'mandate', entityId: mandate!.id, summary: `${byName} agreed the salary recovery mandate for ${m.name}` }, tx);
     });
-    await this.syncToMock({ mandates: [{ ...mandate!, status: 'AGREED', agreedOn: today, agreedByName: byName }] });
     return this.toDetail(user, m);
   }
 
@@ -378,11 +374,6 @@ export class MembersService {
     return { member, mandate, event };
   }
 
-  /** Record sync for callers that changed members inside their own transaction. */
-  async sync(records: Record<string, unknown[]>): Promise<void> {
-    await this.syncToMock(records);
-  }
-
   /** MB-02 My profile. */
   async myProfile(user: SessionUser): Promise<MyProfile> {
     const m = await this.mine(user);
@@ -431,7 +422,6 @@ export class MembersService {
         await this.repo.addEvent(tx, event);
         await this.app.audit.record(request, { action: 'contact', entity: 'member', entityId: m.id, summary: m.name + ' updated ' + parts.join(', ') }, tx);
       });
-      await this.syncToMock({ members: [next], serviceEvents: [event] });
     }
     return this.myProfile(user);
   }
@@ -448,7 +438,6 @@ export class MembersService {
       await this.app.appAccounts.upsertMember(tx, { id: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, mobile, active: keepsAppAccess(m.status) });
       await this.app.audit.record(request, { action: 'mobile', entity: 'member', entityId: m.id, summary: m.name + ' changed mobile (OTP verified)' }, tx);
     });
-    await this.syncToMock({ members: [next], serviceEvents: [event] });
     return this.myProfile(user);
   }
 
@@ -605,8 +594,4 @@ export class MembersService {
     return { today, currentCycle, rows, pendingChangeRequests: [] };
   }
 
-  /** Record sync (dev, docs/22 §5.4): the mock's loans, deposits and demand read these. */
-  private async syncToMock(records: Record<string, unknown[]>): Promise<void> {
-    await this.app.mockBridge?.sync(records).catch((err) => this.app.log.warn({ err }, 'mock sync failed'));
-  }
 }

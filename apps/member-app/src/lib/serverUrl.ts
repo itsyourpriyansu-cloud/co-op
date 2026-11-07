@@ -5,7 +5,7 @@ import * as storage from './storage';
 
 const KEY = 'tgs.serverUrl';
 export const DEFAULT_SERVER_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'web' ? 'http://localhost:4000' : 'http://10.0.2.2:4000');
+  process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'web' ? 'http://localhost:4100' : 'http://10.0.2.2:4100');
 
 let current = DEFAULT_SERVER_URL;
 

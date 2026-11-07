@@ -9,7 +9,6 @@ import { authPlugin } from './plugins/auth';
 import { dbPlugin } from './plugins/db';
 import { demoFailuresPlugin } from './plugins/demo-failures';
 import { errorHandlerPlugin } from './plugins/error-handler';
-import { mockBridgePlugin, mockFallbackPlugin } from './plugins/mock-fallback';
 import { securityPlugin } from './plugins/security';
 import { jobsPlugin } from './plugins/jobs';
 import { servicesPlugin } from './plugins/services';
@@ -33,7 +32,7 @@ export async function buildApp({ env, dbHandle, logger = true }: BuildAppOptions
       : false,
     genReqId: () => crypto.randomUUID(),
     requestIdHeader: 'x-request-id',
-    trustProxy: true,
+    trustProxy: env.TRUST_PROXY,
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
@@ -44,13 +43,13 @@ export async function buildApp({ env, dbHandle, logger = true }: BuildAppOptions
   await app.register(securityPlugin, { corsOrigins: env.CORS_ORIGIN });
   await app.register(dbPlugin, { handle: dbHandle ?? createDb({ url: env.DATABASE_URL, ssl: env.DATABASE_SSL }) });
   await app.register(authPlugin, { env });
-  // Off by default; sign-in routes opt in with `config.rateLimit` (docs/22 §5.1).
-  // Not registered under NODE_ENV=test, where one IP signs in hundreds of times.
-  if (env.NODE_ENV !== 'test') await app.register(rateLimit, { global: false });
+  // Sign-in routes have their own stricter `config.rateLimit` (docs/22 §5.1); P9 (D-100) adds a per-IP
+  // ceiling on every route, on by default in production. Not under NODE_ENV=test (one IP, many calls).
+  const perMinute = env.RATE_LIMIT_PER_MINUTE ?? (env.NODE_ENV === 'production' ? 600 : 0);
+  if (env.NODE_ENV !== 'test') await app.register(rateLimit, perMinute ? { global: true, max: perMinute, timeWindow: '1 minute' } : { global: false });
   await app.register(servicesPlugin);
-  await app.register(swaggerPlugin);
-  // Dev only: the bridge and its mirror hook must exist before the module routes (docs/22 §4).
-  if (env.MOCK_FALLBACK_URL) await app.register(mockBridgePlugin, { upstream: env.MOCK_FALLBACK_URL });
+  // P9 (D-100): the API explorer is for development; production does not serve it.
+  if (env.NODE_ENV !== 'production') await app.register(swaggerPlugin);
   // Demo "simulate network errors" must sit before every route it can fail (docs/20).
   if (env.DEMO_MODE) await app.register(demoFailuresPlugin);
 
@@ -58,7 +57,6 @@ export async function buildApp({ env, dbHandle, logger = true }: BuildAppOptions
   // Daily jobs; tests run them on demand instead.
   if (env.NODE_ENV !== 'test') await app.register(jobsPlugin);
 
-  if (env.MOCK_FALLBACK_URL) await app.register(mockFallbackPlugin);
 
   return app;
 }

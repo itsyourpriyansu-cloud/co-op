@@ -1,5 +1,6 @@
 # 22 · Production backend plan
 
+> Version 0.24 · 2026-11-06 · v0.24: P9 built (D-100): fallback removed, apps default to the backend, hardening, backups + restore drill, Dockerfile, member register import, performance check.
 > Version 0.23 · 2026-11-05 · v0.23: society answers (D-093): steps A–F before P9; A built.
 > Version 0.22 · 2026-11-04 · v0.22: P8d built, P8 complete: demo controls on the backend, exit test passed with the fallback off (D-092).
 > Version 0.21 · 2026-11-04 · v0.21: P8c built (reports, defaulter notice, D-091).
@@ -198,7 +199,7 @@ Each phase ends with its exit test passing. Never start the next phase before th
 | **P7 Collections** ✅ built 2026-11-03 (P7a D-087, P7b D-088; guarantor recovery waits for F-13) | Demand sheets per department, send-by date, **DDO enters actual deduction**, allocation (BR-011), dues (not carried forward), counter receipts, member payment reports (QR, no screenshot), daily penal job, defaulter after 1 month, guarantor notices | Demand screens, DDO console, MB-10/18 | Month-end journey e2e passes; reports match ledger totals |
 | **P8 Notifications, dashboards, reports** ✅ built 2026-11-04 (P8a D-089, P8b D-090, P8c D-091, P8d D-092) | Work queue + dashboards (48 h / 4–5 day alerts), in-app notifications, WhatsApp/email/push providers (simulated + real adapters), support tickets, 8 reports, CSV/Excel, PDFs | Every remaining screen | Full Playwright suite (188 tests) green against :4100 with fallback **switched off** |
 | **Society answers A–F** (D-093) — A ✅ 2026-11-05: settings, WhatsApp instead of SMS, ex-employees, working days · B ✅ caste (D-095) · C ✅ signatures, encrypted in PostgreSQL behind `integrations/file-store` (D-096) · D ✅ surety recovery (D-097) · E ✅ final settlement (D-098) · F ✅ bonds, receipt, FD voucher (D-099) | | | |
-| **P9 Hardening & go-live prep** | Remove fallback, security review (rate limits, headers, OWASP checks), backups, Dockerfile, data import tool for the society's registers (F-11), performance check, Azure deployment (Bicep) when asked | Apps default to the backend | e2e green; restore drill; import of a sample register succeeds |
+| **P9 Hardening & go-live prep** ✅ built 2026-11-06 (D-100; Azure / Bicep waits until asked, loan and deposit registers wait for F-11 samples) | Remove fallback, security review (rate limits, headers, OWASP checks), backups, Dockerfile, data import tool for the society's registers (F-11), performance check, Azure deployment (Bicep) when asked | Apps default to the backend | e2e green; restore drill; import of a sample register succeeds |
 
 ### 5.1 P1 design: auth, users, permissions, audit
 

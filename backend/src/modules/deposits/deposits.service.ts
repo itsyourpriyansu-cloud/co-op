@@ -151,7 +151,6 @@ export class DepositsService {
       await this.repo.save(tx, d);
       return d;
     });
-    if (saved) await this.sync([saved]);
   }
 
   // ---- read models ----
@@ -456,7 +455,6 @@ export class DepositsService {
       if (saved) changed.push(saved);
     }
     await this.app.db.insert(systemInfo).values({ key: LAST_RUN_KEY, value: { date: today } }).onConflictDoUpdate({ target: systemInfo.key, set: { value: { date: today }, updatedAt: new Date() } });
-    await this.sync(changed);
     return { matured: changed.length, date: today };
   }
 
@@ -502,7 +500,6 @@ export class DepositsService {
       await this.app.audit.record(request, { action: 'request', entity: 'deposit', entityId: created.id, summary }, tx);
       return created;
     });
-    await this.sync([d]);
     return d;
   }
 
@@ -626,8 +623,6 @@ export class DepositsService {
       await this.app.audit.record(request, { action: `deposit.${action}`, entity: 'deposit', entityId: d.id, summary: `${actor.name}: ${action} on ${d.fdrNo ?? d.accountNo} (${m.name})${opts.demo ? ' [demo]' : ''}` }, tx);
       return d;
     });
-    await this.sync([saved]);
-    if (receipts.length) await this.app.members.sync({ receipts });
     if (note) await notifyMember(this.app, ...note);
     return saved;
   }
@@ -637,8 +632,4 @@ export class DepositsService {
     return String(e.entryNo);
   }
 
-  /** TODO(P7): the mock's work queue, dashboards, home and collections read deposits; keep them in step. */
-  async sync(changed: DepositAccount[]): Promise<void> {
-    await this.app.members.sync({ deposits: changed });
-  }
 }

@@ -4,7 +4,7 @@ import { test as base, expect, type APIRequestContext, type Browser, type Browse
 
 export const CONSOLE_URL = process.env.E2E_CONSOLE_URL ?? 'http://localhost:5180';
 export const PHONE_URL = process.env.E2E_PHONE_URL ?? 'http://localhost:8090';
-export const API_URL = process.env.E2E_API_URL ?? 'http://localhost:4000';
+export const API_URL = process.env.E2E_API_URL ?? 'http://localhost:4100';
 export const API = `${API_URL}/api/v1`;
 export const OTP = '123456';
 

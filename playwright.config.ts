@@ -4,13 +4,15 @@
 //   npm run e2e:phone      phone project only
 //   npx playwright show-report
 // URLs come from env so the same suite can point at a hosted demo later (D-054):
-//   E2E_CONSOLE_URL (default http://localhost:5180) · E2E_PHONE_URL (8090) · E2E_API_URL (4000)
+//   E2E_CONSOLE_URL (default http://localhost:5180) · E2E_PHONE_URL (8090) · E2E_API_URL (4100, the backend;
+//   http://localhost:4000 runs the same suite against the mock API demo). P9 (D-100): the backend is the default.
 import { defineConfig, devices } from '@playwright/test';
 
 const CONSOLE_URL = process.env.E2E_CONSOLE_URL ?? 'http://localhost:5180';
 const PHONE_URL = process.env.E2E_PHONE_URL ?? 'http://localhost:8090';
-const API_URL = process.env.E2E_API_URL ?? 'http://localhost:4000';
+const API_URL = process.env.E2E_API_URL ?? 'http://localhost:4100';
 const port = (url: string) => new URL(url).port;
+const MOCK = port(API_URL) === '4000';
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -41,7 +43,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'npm run start -w @tgs/mock-api',
+      // The backend needs PostgreSQL migrated and seeded, with DEMO_MODE on (backend/README.md).
+      command: MOCK ? 'npm run start -w @tgs/mock-api' : 'npm run start -w @tgs/backend',
       url: `${API_URL}/health`,
       env: { PORT: port(API_URL), MOCK_PERSIST: '0' },
       reuseExistingServer: true,
@@ -50,12 +53,14 @@ export default defineConfig({
     {
       command: `npm run dev -w @tgs/admin-console -- --port ${port(CONSOLE_URL)} --strictPort --open false`,
       url: CONSOLE_URL,
+      env: { VITE_API_URL: API_URL },
       reuseExistingServer: true,
       timeout: 120_000,
     },
     {
       command: `npx expo start --web --port ${port(PHONE_URL)}`,
       cwd: 'apps/member-app',
+      env: { EXPO_PUBLIC_API_URL: API_URL },
       url: PHONE_URL,
       reuseExistingServer: true,
       timeout: 180_000,

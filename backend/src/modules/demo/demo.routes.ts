@@ -39,9 +39,6 @@ export const demoRoutes: FastifyPluginAsyncZod = async (app) => {
     app.permissions.reload();
     app.demoFailure.rate = 0;
     await setClock(app, null);
-    // Dev only, until the fallback goes (P9): the mock starts over too.
-    app.mockBridge?.clear();
-    await app.mockBridge?.send(undefined, 'POST', '/api/v1/__demo/reset').catch((err) => app.log.warn({ err }, 'mock reset failed'));
     await app.audit.record(request, { action: 'demo.reset', entity: 'system', summary: 'Demo data reset', actor: { id: 'demo', name: 'Demo reset' } });
     return demoState(app);
   });

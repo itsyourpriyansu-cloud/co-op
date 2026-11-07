@@ -9,6 +9,9 @@ coverage/
 # Non-secret mode file: console pointed at the backend (docs/22 §4)
 !apps/admin-console/.env.backend
 
+# database dumps (P9, D-100): never committed
+backend/backups/
+
 # mock API runtime snapshot
 apps/mock-api/.data/
 

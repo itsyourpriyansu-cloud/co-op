@@ -8,7 +8,6 @@ try {
   await app.listen({ port: env.PORT, host: env.HOST });
   // Plain ASCII: legacy Windows consoles garble typographic characters.
   console.log(`\n  TGSECCSL backend  |  http://localhost:${env.PORT}  |  API docs http://localhost:${env.PORT}/docs`);
-  console.log(`  Mock fallback: ${env.MOCK_FALLBACK_URL ?? 'off'}\n`);
 } catch (err) {
   app.log.error(err);
   process.exit(1);

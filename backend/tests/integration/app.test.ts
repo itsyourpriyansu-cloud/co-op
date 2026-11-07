@@ -76,45 +76,15 @@ describe('error envelope (docs/11 §1)', () => {
   });
 });
 
-describe('mock fallback (docs/22 §4)', () => {
-  let upstream: FastifyInstance;
-  let app: FastifyInstance;
-  beforeAll(async () => {
-    upstream = Fastify();
-    upstream.setValidatorCompiler(validatorCompiler);
-    upstream.setSerializerCompiler(serializerCompiler);
-    upstream.get('/api/v1/not-built-yet', async (_req, reply) =>
-      reply.header('access-control-allow-origin', '*').send({ items: [], from: 'mock' }),
-    );
-    upstream.get('/health', async () => ({ service: 'tgseccsl-mock-api' }));
-    await upstream.listen({ port: 0, host: '127.0.0.1' });
-    const { port } = upstream.server.address() as { port: number };
-    app = await buildTestApp({ MOCK_FALLBACK_URL: `http://127.0.0.1:${port}` });
-  });
-  afterAll(async () => {
-    await app.close();
-    await upstream.close();
-  });
-
-  it('forwards routes the backend does not have yet', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/v1/not-built-yet', headers: { origin: 'http://localhost:5180' } });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ items: [], from: 'mock' });
-    expect(res.headers['x-served-by']).toBe('mock-fallback');
-    // Only this server's CORS header, never a duplicate from the mock.
-    expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5180');
-  });
-
-  it('keeps routes the backend owns', async () => {
-    const res = await app.inject({ method: 'GET', url: '/health' });
-    expect(res.json().service).toBe('tgseccsl-backend');
-  });
-
-  it('is never enabled in production, and neither is demo sign-in', () => {
-    const secrets = { JWT_SECRET: 'x'.repeat(40), DATA_ENCRYPTION_KEY: 'y'.repeat(40) };
-    const env = loadEnv({ ...process.env, ...secrets, NODE_ENV: 'production', MOCK_FALLBACK_URL: 'http://localhost:4000', DEMO_MODE: 'true' });
-    expect(env.MOCK_FALLBACK_URL).toBeUndefined();
+describe('production safety', () => {
+  it('never runs demo sign-in in production', () => {
+    const secrets = { JWT_SECRET: 'x'.repeat(40), DATA_ENCRYPTION_KEY: 'y'.repeat(40), CORS_ORIGIN: 'https://console.example.org' };
+    const env = loadEnv({ ...process.env, ...secrets, NODE_ENV: 'production', DEMO_MODE: 'true' });
     expect(env.DEMO_MODE).toBe(false);
+  });
+
+  it('refuses to start in production without the allowed origins (P9, D-100)', () => {
+    expect(() => loadEnv({ ...process.env, NODE_ENV: 'production', JWT_SECRET: 'x'.repeat(40), DATA_ENCRYPTION_KEY: 'y'.repeat(40), CORS_ORIGIN: '' })).toThrow(/CORS_ORIGIN is required/);
   });
 
   it('refuses to start in production without real secrets', () => {
