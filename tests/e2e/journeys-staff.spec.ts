@@ -86,7 +86,7 @@ test.describe('staff journeys', () => {
       const server = await apiCall<{ items: unknown[] }>(request, 'GET', '/work-queue', token);
       await staffAs(page, request, persona, '/staff/home');
       await phoneSettled(page);
-      if (server.items.length) await expect(page.getByText(`${server.items.length} waiting on you`), persona).toBeVisible();
+      if (server.items.length) await expect(persona === 'stf-admin' ? page.getByText(`${server.items.length} waiting on you`) : page.getByRole('button', { name: new RegExp(`^${server.items.length}\\s*waiting on you`) }), persona).toBeVisible();
       else await expect(page.getByText(/waiting on you/), persona).toHaveCount(0);
     }
     await staffAs(page, request, 'stf-accountant', '/staff/queue');
@@ -323,7 +323,7 @@ test.describe('staff journeys', () => {
       const server = await apiCall<{ rowCount: number }>(request, 'GET', `/reports/${def.id}`, token);
       await staffAs(page, request, 'stf-accountant', `/staff/report/${def.id}`);
       await phoneSettled(page);
-      await expect(page.getByText(new RegExp(`^${server.rowCount.toLocaleString('en-IN')} rows? ·`)).first(), def.id).toBeVisible();
+      await expect(page.getByText(new RegExp(`\\b${server.rowCount.toLocaleString('en-IN')} rows? ·`)).first(), def.id).toBeVisible();
     }
     await staffAs(page, request, 'stf-accountant', '/staff/reports');
     await phoneSettled(page);

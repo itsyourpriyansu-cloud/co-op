@@ -15,7 +15,7 @@ export default function VerifyPayment() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ['payment-reports'], queryFn: () => api.receipts.reports() });
   return (
-    <Loaded q={q} what="this payment">
+    <Loaded page q={q} what="this payment">
       {(rows) => {
         const r = rows.find((x) => x.id === id);
         return r ? (
@@ -97,7 +97,7 @@ function Verify({ r }: { r: PaymentReportRow }) {
         {r.screenshotName ? <KeyValue label="Screenshot" value={r.screenshotName} /> : null}
       </Card>
       {dues.data ? (
-        <Section title="Applied to (BR-011, oldest month first)">
+        <Section title="Applied to, oldest month first">
           <Card>
             {share ? (
               <Text role="body">

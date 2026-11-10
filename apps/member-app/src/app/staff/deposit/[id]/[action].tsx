@@ -15,7 +15,7 @@ export default function DepositAction() {
   const { id, action } = useLocalSearchParams<{ id: string; action: string }>();
   const q = useQuery({ queryKey: ['deposit', id], queryFn: () => api.deposits.get(id) });
   return (
-    <Loaded q={q} what="this deposit">
+    <Loaded page q={q} what="this deposit">
       {(d) => <Decision d={d} action={action} />}
     </Loaded>
   );
@@ -96,7 +96,7 @@ function Decision({ d, action }: { d: DepositDetail; action: string }) {
 
       {action === 'accept' ? (
         <Card>
-          <KeyValue label="Payment" value={dep.payment ? `${dep.payment.mode.toLowerCase()} · ${dep.payment.receiptNo}` : '—'} />
+          <KeyValue label="Payment" value={dep.payment ? `${dep.payment.mode === 'CASH' ? 'Cash' : dep.payment.mode === 'TRANSFER' ? 'Bank transfer' : 'Cheque'} · ${dep.payment.receiptNo}` : '—'} />
           <KeyValue label="Received on" value={dep.payment ? formatDisplayDate(dep.payment.date) : '—'} />
           <KeyValue label="Matures" value={d.maturity ? formatDisplayDate(d.maturity.date) : '—'} />
           <KeyValue label="Maturity value" value={d.maturity ? formatINR(d.maturity.value) : '—'} />

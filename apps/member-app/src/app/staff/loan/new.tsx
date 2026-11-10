@@ -125,7 +125,7 @@ export default function NewLoan() {
             />
           ))}
           {c.topupCandidates.some((t) => t.product === product) ? (
-            <Section title="New loan or top-up?" description="A top-up settles the running loan with interest to date (BR-007) and pays the balance after the share deposit (BR-004).">
+            <Section title="New loan or top-up?" description="A top-up settles the running loan with interest to date and pays the balance after the share deposit.">
               <View style={{ gap: space[4] }}>
                 {[{ id: '', label: 'New loan' }, ...c.topupCandidates.filter((t) => t.product === product).map((t) => ({ id: t.id, label: `Top-up of ${t.loanNo} (${formatINR(t.outstanding)} outstanding)` }))].map((o) => (
                   <ChoiceCard key={o.id || 'new'} title={o.label} selected={topupOf === o.id} onPress={() => setTopupOf(o.id)} />
@@ -140,10 +140,10 @@ export default function NewLoan() {
         product === 'SALARY' ? (
           <View style={{ gap: space[8] }}>
             <Text role="body" tone="secondary">
-              Net substantive pay = substantive pay − compulsory deductions − Ordinary-loan dues (BR-023).
+              Net substantive pay = substantive pay − compulsory deductions − Ordinary-loan dues.
             </Text>
             <MoneyField label="5 · Substantive pay" value={form.salary?.substantivePay ?? 0} onChange={(v) => setSalary({ substantivePay: v })} error={fe['form.salary.substantivePay'] ?? fe['salary.substantivePay']} />
-            <MoneyField label="9 · Net pay earned to date" value={form.salary?.netPayEarnedToDate ?? 0} onChange={(v) => setSalary({ netPayEarnedToDate: v })} error={fe['form.salary.netPayEarnedToDate'] ?? fe['salary.netPayEarnedToDate']} hint="The loan cannot exceed this (D-058)" />
+            <MoneyField label="9 · Net pay earned to date" value={form.salary?.netPayEarnedToDate ?? 0} onChange={(v) => setSalary({ netPayEarnedToDate: v })} error={fe['form.salary.netPayEarnedToDate'] ?? fe['salary.netPayEarnedToDate']} hint="The loan cannot exceed this" />
             <Section title="6 · Compulsory deductions">
               <View style={{ gap: space[4] }}>
                 {ded.map((d, i) => (
@@ -181,7 +181,7 @@ export default function NewLoan() {
       {name === 'Loan' && c ? (
         <View style={{ gap: space[8] }}>
           <MoneyField label="7a · Amount required" required value={amount} onChange={setAmount} error={fe.amount} hint={amount > 0 ? amountInWords(amount) : prod ? `Up to ${formatINR(prod.maxAmount)}` : undefined} />
-          <TextField label="11 · Monthly instalments" required keyboardType="number-pad" suffix={<Text role="caption" tone="tertiary">months</Text>} value={Number.isFinite(instalments) ? String(instalments) : ''} onChangeText={(t) => setInstalments(t === '' ? Number.NaN : Number(t.replace(/\D/g, '')))} error={fe.instalments} hint={res ? `At most ${res.preview.maxInstalments} for this member (BR-002 / BR-022)` : undefined} />
+          <TextField label="11 · Monthly instalments" required keyboardType="number-pad" suffix={<Text role="caption" tone="tertiary">months</Text>} value={Number.isFinite(instalments) ? String(instalments) : ''} onChangeText={(t) => setInstalments(t === '' ? Number.NaN : Number(t.replace(/\D/g, '')))} error={fe.instalments} hint={res ? `At most ${res.preview.maxInstalments} for this member` : undefined} />
           <TextField label="7b · Purpose" required value={purpose} onChangeText={setPurpose} placeholder="e.g. House repair" error={fe.purpose} />
           {product === 'EDUCATION' ? (
             <>

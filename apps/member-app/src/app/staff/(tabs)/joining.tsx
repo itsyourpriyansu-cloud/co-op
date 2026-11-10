@@ -5,10 +5,10 @@ import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { UserPlus } from 'lucide-react-native';
 import type { MembershipRow } from '@tgs/types';
-import { Loaded, RecordCard, Stack2, StatTile, TileGrid } from '@/components/staff';
+import { FilterBar, Loaded, RecordCard, Stack2, StatTile, TileGrid } from '@/components/staff';
 import { api } from '@/lib/api';
 import { FLAG_LABEL, STAGES } from '@/lib/staffJoining';
-import { Checkbox, EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
+import { EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
 import { space } from '@/theme';
 
 function waiting(r: MembershipRow) {
@@ -44,10 +44,11 @@ export default function Joining() {
         <StatTile label="With applicants" value={String(data?.counts.INFO_REQUESTED ?? 0)} />
         <StatTile label="New members" value={String(data?.counts.ACTIVE ?? 0)} />
       </TileGrid>
-      <TextField label="Search" value={q} onChangeText={setQ} placeholder="Name or application no." autoCorrect={false} />
-      <SelectField label="Show" value={stage} options={[{ value: 'ALL', label: 'All stages' }, ...STAGES.map((s) => ({ value: s.status, label: `${s.title} (${count(s.status)})` })), { value: 'DECIDED', label: 'Decided' }]} onChange={setStage} />
-      {!data?.scope.departmentId ? <SelectField label="Department" searchable value={dept} options={[{ value: '', label: 'All departments' }, ...departments.map(([value, label]) => ({ value, label }))]} onChange={setDept} /> : null}
-      <Checkbox checked={mine} onChange={setMine} label="Waiting on me" />
+      <FilterBar search={<TextField compact label="Search" value={q} onChangeText={setQ} placeholder="Name or application no." autoCorrect={false} />}>
+        <SelectField compact label="Show" value={stage} options={[{ value: 'ALL', label: 'All stages' }, ...STAGES.map((s) => ({ value: s.status, label: `${s.title} (${count(s.status)})` })), { value: 'DECIDED', label: 'Decided' }]} onChange={setStage} />
+        {!data?.scope.departmentId ? <SelectField compact label="Department" searchable value={dept} options={[{ value: '', label: 'All departments' }, ...departments.map(([value, label]) => ({ value, label }))]} onChange={setDept} /> : null}
+        <SelectField compact label="Waiting on" value={mine ? 'me' : ''} options={[{ value: '', label: 'Waiting on anyone' }, { value: 'me', label: 'Waiting on me' }]} onChange={(v) => setMine(v === 'me')} />
+      </FilterBar>
       <Loaded q={list} what="applications">
         {(d) =>
           !d.rows.length ? (

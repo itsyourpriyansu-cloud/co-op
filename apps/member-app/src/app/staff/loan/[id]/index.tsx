@@ -15,7 +15,7 @@ export default function LoanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ['loan', id], queryFn: () => api.loans.get(id), refetchInterval: 20_000 });
   return (
-    <Loaded q={q} what="this loan">
+    <Loaded page q={q} what="this loan">
       {(d) => <Body d={d} refetching={q.isRefetching} refetch={() => void q.refetch()} />}
     </Loaded>
   );
@@ -30,7 +30,7 @@ function SuretyRecovery({ loanId }: { loanId: string }) {
     if (await ask('Recover from sureties', `Ask ${p.shares.length} suret${p.shares.length === 1 ? 'y' : 'ies'} to pay ${formatINR(p.overdue)} between them? They and the borrower are told on WhatsApp and in the app.`, 'Yes, ask the sureties')) await a.run(() => api.loans.raiseSuretyRecovery(loanId));
   };
   return (
-    <Section title="Recover from sureties" description={`After ${p.threshold} unpaid month${p.threshold === 1 ? '' : 's'} in a row the sureties pay equal shares (F-13)`}>
+    <Section title="Recover from sureties" description={`After ${p.threshold} unpaid month${p.threshold === 1 ? '' : 's'} in a row the sureties pay equal shares`}>
       <Card>
         {p.recoveries.length ? (
           <View style={{ gap: space[4] }}>
@@ -125,7 +125,10 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
       <Section title="Next step">
         <Card>
           {d.actions.length ? (
-            <Tag text="Your turn" color="primary" />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[3] }}>
+              <Tag text="Your turn" color="primary" />
+              <Text role="label">{primary.map((a) => ACTION_LABEL[a] ?? a).join(' or ')}</Text>
+            </View>
           ) : d.waitingOn ? (
             <View style={{ gap: space[1] }}>
               <Text role="label">Waiting on {d.waitingOn}</Text>

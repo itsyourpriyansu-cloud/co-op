@@ -16,7 +16,7 @@ export default function ChangeRequest() {
   const list = useQuery({ queryKey: ['change-requests'], queryFn: api.changeRequests.list });
   const [row, setRow] = useState<ChangeRequestRow>();
   return (
-    <Loaded q={list} what="this request">
+    <Loaded page q={list} what="this request">
       {(d) => {
         const r = row ?? d.rows.find((x) => x.id === id);
         return r ? (

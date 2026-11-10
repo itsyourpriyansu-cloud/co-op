@@ -48,7 +48,8 @@ export { expect };
 // ---- demo API --------------------------------------------------------------------------------
 
 export async function resetDemo(request: APIRequestContext) {
-  const r = await request.post(`${API}/__demo/reset`);
+  // A full reseed: about 6 s idle, slower under load. Giving up early makes the next reset collide with this one.
+  const r = await request.post(`${API}/__demo/reset`, { timeout: 90_000 });
   expect(r.ok()).toBeTruthy();
   await setFailureRate(request, 0);
 }

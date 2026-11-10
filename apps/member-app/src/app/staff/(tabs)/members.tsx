@@ -6,10 +6,10 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { FileClock, UserPlus, Users } from 'lucide-react-native';
 import { formatDisplayDate, formatDuration, formatINR } from '@tgs/domain';
 import type { MemberListParams, MemberRow, MemberStatus } from '@tgs/types';
-import { Expand, Loaded, RecordCard, Row, ShareCsvButton, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
+import { FilterBar, Loaded, RecordCard, Row, ShareCsvButton, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { retiringLabel } from '@/lib/staffMembers';
-import { Button, Card, Checkbox, EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
+import { Button, Card, EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
 import { space } from '@/theme';
 
 const STATUS = [
@@ -63,7 +63,7 @@ export default function Members() {
         <View style={{ flex: 1, gap: space[1] }}>
           <Text role="pageTitle">Members</Text>
           <Text role="caption" tone="secondary">
-            {first ? `${first.total.toLocaleString('en-IN')} found${first.scope.departmentName ? ` · ${first.scope.departmentName} only` : ''}` : 'The member master'}
+            {first ? `${first.total.toLocaleString('en-IN')} found${first.scope.departmentName ? ` · ${first.scope.departmentName} only` : ''} · amounts are loans outstanding` : 'The member master'}
           </Text>
         </View>
         {first?.canCreate ? <Button text="New" size="sm" leftSlot={UserPlus} onPress={() => router.push('/staff/member/new')} /> : null}
@@ -79,15 +79,14 @@ export default function Members() {
         <Row icon={FileClock} label="Change requests" hint="Profile changes from the app" right={first?.counts.changeRequests ? <Tag text={String(first.counts.changeRequests)} color="warning" size="xs" /> : undefined} onPress={() => router.push('/staff/change-requests')} />
       </Card>
 
-      <TextField label="Search" value={text} onChangeText={setText} placeholder="Name, General No. or Employee ID" autoCorrect={false} />
-      <SelectField label="Status" value={status} options={STATUS} onChange={(v) => setStatus(v as MemberStatus | 'ALL')} />
-      <Expand title="More filters">
-        {!first?.scope.departmentId ? <SelectField label="Department" searchable value={dept} options={[{ value: '', label: 'All departments' }, ...(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))]} onChange={setDept} /> : null}
-        <SelectField label="Retirement" value={retiring} options={RETIRING} onChange={setRetiring} />
-        <Checkbox checked={loanOnly} onChange={setLoanOnly} label="Has an active loan" />
-        <Checkbox checked={mandateOnly} onChange={setMandateOnly} label="Mandate pending" />
-        {filtersOn ? <Button text="Clear filters" subType="inline" onPress={clear} /> : null}
-      </Expand>
+      <FilterBar search={<TextField compact label="Search" value={text} onChangeText={setText} placeholder="Name, General No. or Employee ID" autoCorrect={false} />}>
+        <SelectField compact label="Status" value={status} options={STATUS} onChange={(v) => setStatus(v as MemberStatus | 'ALL')} />
+        {!first?.scope.departmentId ? <SelectField compact label="Department" searchable value={dept} options={[{ value: '', label: 'All departments' }, ...(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))]} onChange={setDept} /> : null}
+        <SelectField compact label="Retirement" value={retiring} options={RETIRING} onChange={setRetiring} />
+        <SelectField compact label="Loan" value={loanOnly ? 'yes' : ''} options={[{ value: '', label: 'Any loan' }, { value: 'yes', label: 'Has an active loan' }]} onChange={(v) => setLoanOnly(v === 'yes')} />
+        <SelectField compact label="Mandate" value={mandateOnly ? 'yes' : ''} options={[{ value: '', label: 'Any mandate' }, { value: 'yes', label: 'Mandate pending' }]} onChange={(v) => setMandateOnly(v === 'yes')} />
+      </FilterBar>
+      {filtersOn ? <Button text="Clear filters" subType="inline" onPress={clear} /> : null}
 
       <Loaded q={list} what="members">
         {(d) =>
@@ -100,7 +99,7 @@ export default function Members() {
               {items.map((r) => {
                 const soon = retiringLabel(r.leftoverMonths, r.status);
                 return (
-                  <RecordCard key={r.id} title={r.name} subtitle={`No. ${r.generalNo} · ${r.employeeId}`} amount={r.activeLoans ? formatINR(r.outstanding) : 'Non-loanee'} tag={<StatusTag entity="member" status={r.status} audience="staff" size="xs" />} caption={`${r.departmentName} · ${r.designation}`} onPress={() => router.push(`/staff/member/${r.id}`)}>
+                  <RecordCard key={r.id} title={r.name} subtitle={`No. ${r.generalNo} · ${r.employeeId}`} {...(r.activeLoans ? { amount: formatINR(r.outstanding) } : {})} tag={<StatusTag entity="member" status={r.status} audience="staff" size="xs" />} caption={`${r.departmentName} · ${r.designation}`} onPress={() => router.push(`/staff/member/${r.id}`)}>
                     {soon || r.mandateStatus === 'PENDING_NEW_DDO' || r.pendingChanges > 0 ? (
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[3] }}>
                         {soon ? <Tag text={soon} color="warning" size="xs" /> : null}
@@ -111,7 +110,7 @@ export default function Members() {
                   </RecordCard>
                 );
               })}
-              {list.hasNextPage ? <Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /> : null}
+              {list.hasNextPage ? <View style={{ padding: space[6] }}><Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
               <ShareCsvButton title="Members" rows={() => csvRows(params)} />
             </Stack2>
           )

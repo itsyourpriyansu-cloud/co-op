@@ -24,7 +24,7 @@ export default function ChangeRequests() {
   return (
     <Screen header={<Header title="Change requests" onBack={() => router.back()} />} refreshing={list.isRefetching} onRefresh={() => void list.refetch()}>
       <Filter value={show} options={[{ value: 'mine', label: `On me ${data?.counts.waitingOnMe ?? 0}` }, { value: 'pending', label: `Pending ${data?.counts.pending ?? 0}` }, { value: 'decided', label: 'Decided' }]} onChange={setShow} />
-      <TextField label="Search" value={q} onChangeText={setQ} placeholder="Member or General No." autoCorrect={false} />
+      <TextField compact label="Search" value={q} onChangeText={setQ} placeholder="Member or General No." autoCorrect={false} />
       <Loaded q={list} what="change requests">
         {(d) =>
           !d.rows.length ? (

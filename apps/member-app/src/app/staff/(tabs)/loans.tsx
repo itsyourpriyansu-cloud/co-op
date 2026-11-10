@@ -6,7 +6,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { HandCoins, Plus } from 'lucide-react-native';
 import { formatCycle, formatINR } from '@tgs/domain';
 import type { LoanListParams, LoanProductCode, LoanStatusGroup } from '@tgs/types';
-import { Loaded, RecordCard, Stack2, useDebounced } from '@/components/staff';
+import { FilterBar, Loaded, RecordCard, Stack2, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { GROUP_ITEMS, PRODUCT_TABS } from '@/lib/staffLoans';
 import { Button, EmptyState, Screen, SelectField, StatusTag, Text, TextField } from '@/ui';
@@ -42,10 +42,11 @@ export default function Loans() {
         </View>
         {first?.canCreate ? <Button text="New" size="sm" leftSlot={Plus} onPress={() => router.push('/staff/loan/new')} /> : null}
       </View>
-      <TextField label="Search" value={text} onChangeText={setText} placeholder="Member, General No. or loan no." autoCorrect={false} />
-      <SelectField label="Loan type" value={product} options={PRODUCT_TABS.map((t) => ({ value: t.value, label: `${t.label} (${first?.counts.byProduct[t.value] ?? 0})` }))} onChange={(v) => setProduct(v as typeof product)} />
-      <SelectField label="Status" value={group} options={GROUP_ITEMS.map((g) => ({ value: g.value, label: `${g.label}${g.value && first ? ` (${first.counts.byGroup[g.value] ?? 0})` : ''}` }))} onChange={(v) => setGroup(v as typeof group)} />
-      {!first?.scope.departmentId ? <SelectField label="Department" searchable value={dept} options={[{ value: '', label: 'All departments' }, ...(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))]} onChange={setDept} /> : null}
+      <FilterBar search={<TextField compact label="Search" value={text} onChangeText={setText} placeholder="Member, General No. or loan no." autoCorrect={false} />}>
+        <SelectField compact label="Loan type" value={product} options={PRODUCT_TABS.map((t) => ({ value: t.value, label: t.value === 'ALL' ? 'All loan types' : t.label }))} onChange={(v) => setProduct(v as typeof product)} />
+        <SelectField compact label="Status" value={group} options={GROUP_ITEMS.map((g) => ({ value: g.value, label: `${g.label}${g.value && first ? ` (${first.counts.byGroup[g.value] ?? 0})` : ''}` }))} onChange={(v) => setGroup(v as typeof group)} />
+        {!first?.scope.departmentId ? <SelectField compact label="Department" searchable value={dept} options={[{ value: '', label: 'All departments' }, ...(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))]} onChange={setDept} /> : null}
+      </FilterBar>
       <Loaded q={list} what="loans">
         {(d) =>
           !d.pages[0]?.counts.byProduct.ALL ? (
@@ -57,7 +58,7 @@ export default function Loans() {
               {items.map((r) => (
                 <RecordCard key={r.id} title={r.memberName} subtitle={`No. ${r.generalNo} · ${r.loanNo ?? r.applicationNo}`} amount={formatINR(r.sanctionedAmount ?? r.appliedAmount)} tag={<StatusTag entity="loan" status={r.status} audience="staff" size="xs" />} onPress={() => router.push(`/staff/loan/${r.id}`)} caption={[`${r.productName}${r.isTopup ? ' · top-up' : ''}`, `${r.instalments} mths${r.emi ? ` · EMI ${formatINR(r.emi)}` : ''}`, r.group === 'ACTIVE' ? `outstanding ${formatINR(r.outstanding)}${r.nextDue ? `, next ${formatCycle(r.nextDue.cycle)}` : ''}` : r.group === 'IN_PROCESS' ? r.waitingOn : undefined].filter(Boolean).join(' · ')} />
               ))}
-              {list.hasNextPage ? <Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /> : null}
+              {list.hasNextPage ? <View style={{ padding: space[6] }}><Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
             </Stack2>
           )
         }

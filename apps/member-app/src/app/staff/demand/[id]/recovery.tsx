@@ -6,17 +6,17 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { allocateRecovery, formatCycle, formatINR } from '@tgs/domain';
 import type { DemandSheetDetail } from '@tgs/types';
-import { ActionAlert, ask, Loaded, useAction } from '@/components/staff';
+import { ActionAlert, ask, Loaded, useAction, FilterBar } from '@/components/staff';
 import { api } from '@/lib/api';
 import { ENTRY_LABEL, LINE_FILTERS } from '@/lib/staffCollections';
-import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, SelectField, Text, TextField, WizardProgress } from '@/ui';
+import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, SelectField, Text, TextField } from '@/ui';
 import { space } from '@/theme';
 
 export default function Recovery() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ['demand-sheet', id], queryFn: () => api.demand.sheet(id) });
   return (
-    <Loaded q={q} what="this sheet">
+    <Loaded page q={q} what="this sheet">
       {(d) => <Entry d={d} />}
     </Loaded>
   );
@@ -115,12 +115,16 @@ function Entry({ d }: { d: DemandSheetDetail }) {
       {entry ? <Alert type={entry.status === 'REJECTED' ? 'warning' : 'primary'} heading={`Deductions ${ENTRY_LABEL[entry.status]}${entry.source === 'PHYSICAL_SHEET' ? ' (paper sheet)' : ' (entered online by the DDO)'}`} description={entry.status === 'REJECTED' ? `${entry.rejection?.byName}: ${entry.rejection?.remarks ?? ''}` : entry.submitted ? `Submitted by ${entry.submitted.byName}.` : entry.savedBy ? `Last saved by ${entry.savedBy.byName}.` : ''} /> : null}
       {!editable ? <Alert type="warning" heading="Nothing to enter now" description={d.sheet.status === 'RECOVERY_POSTED' ? 'Recovery is already posted.' : d.sheet.status !== 'SENT_TO_DDO' ? 'The Accountant certifies and sends the sheet to the DDO first.' : 'The deductions are with the Accountant for review.'} /> : null}
 
-      <SelectField label="Show" value={filter} options={LINE_FILTERS} onChange={(v) => (setFilter(v), setIndex(0))} />
-      {visible.length ? <SelectField label="Member" searchable value={sel?.memberId ?? ''} options={visible.map((r) => ({ value: r.memberId, label: r.name, hint: `No. ${r.generalNo} · ${formatINR(r.amount)}` }))} onChange={(v) => setIndex(visible.findIndex((r) => r.memberId === v))} /> : null}
+      <FilterBar>
+        <SelectField compact label="Show" value={filter} options={LINE_FILTERS} onChange={(v) => (setFilter(v), setIndex(0))} />
+        {visible.length ? <SelectField compact label="Member" searchable value={sel?.memberId ?? ''} options={visible.map((r) => ({ value: r.memberId, label: r.name, hint: `No. ${r.generalNo} · ${formatINR(r.amount)}` }))} onChange={(v) => setIndex(visible.findIndex((r) => r.memberId === v))} /> : null}
+      </FilterBar>
 
       {sel ? (
         <>
-          <WizardProgress step={at + 1} total={visible.length} title={sel.name} />
+          <Text role="captionStrong" tone="secondary">
+            {sel.name} · {at + 1} of {visible.length}
+          </Text>
           <Card>
             <Text role="caption" tone="tertiary">
               No. {sel.generalNo}
@@ -135,14 +139,14 @@ function Entry({ d }: { d: DemandSheetDetail }) {
             <KeyValue label="Earlier dues" value={sel.previousOutstanding ? formatINR(sel.previousOutstanding) : '—'} />
             <KeyValue label="Salary available" value={sel.availableSalary !== undefined ? formatINR(sel.availableSalary) : 'Pay not certified'} />
             {sel.salaryLeft !== undefined ? <KeyValue label="Salary left" value={formatINR(Math.max(0, sel.salaryLeft))} /> : null}
-            <KeyValue label="Unpaid" value={sel.unpaid ? formatINR(sel.unpaid) : 'In full'} />
+            <KeyValue label="Unpaid" value={sel.unpaid ? formatINR(sel.unpaid) : 'None'} />
           </Card>
           <TextField key={sel.memberId} label="Deducted" prefix="₹" keyboardType="decimal-pad" editable={editable} accessibilityLabel={`Deducted from ${sel.name}`} value={entered[sel.memberId] ?? ''} onChangeText={(t) => setEntered((s) => ({ ...s, [sel.memberId]: t.replace(/[^0-9.]/g, '') }))} error={err} />
           <View style={{ flexDirection: 'row', gap: space[4] }}>
             <Button text="Previous" buttonType="secondary" style={{ flex: 1 }} disabled={at === 0} onPress={() => setIndex(at - 1)} />
             <Button text="Next member" buttonType="secondary" style={{ flex: 1 }} disabled={at >= visible.length - 1} onPress={() => setIndex(at + 1)} />
           </View>
-          <Section title={`How ${formatINR(Math.min(sel.amount, sel.totalDemand))} is applied (BR-011)`}>
+          <Section title={`How ${formatINR(Math.min(sel.amount, sel.totalDemand))} is applied`}>
             <Card>
               {(preview?.components ?? []).map((c, i) => {
                 const comp = sel.components[i]!;

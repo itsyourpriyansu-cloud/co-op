@@ -16,7 +16,7 @@ export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ['member', id], queryFn: () => api.members.get(id) });
   return (
-    <Loaded q={q} what="this member">
+    <Loaded page q={q} what="this member">
       {(d) => <Body d={d} refetching={q.isRefetching} refetch={() => void q.refetch()} />}
     </Loaded>
   );

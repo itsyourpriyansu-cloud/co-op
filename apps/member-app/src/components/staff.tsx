@@ -1,6 +1,6 @@
 // Small helpers shared by the staff screens (docs/23 §4). Everything visual comes from the existing kit.
-import { useEffect, useState, type ReactNode } from 'react';
-import { Alert as RNAlert, Linking, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
+import { Children, useEffect, useState, type ReactNode } from 'react';
+import { Alert as RNAlert, Linking, Platform, Pressable, Share, StyleSheet, View, ScrollView } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { ChevronDown, ChevronRight, CircleCheck, CircleX, Printer, Share2, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,7 +10,7 @@ import type { MemberPick, Permission, Role, StaffTicketRow } from '@tgs/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { getServerUrl } from '@/lib/serverUrl';
-import { Alert, Button, Card, Segmented, SelectField, Skeleton, Text, TextField, type TagColor, Tag } from '@/ui';
+import { Alert, Button, Card, Header, Screen, Segmented, SelectField, Skeleton, Text, TextField, type TagColor, Tag } from '@/ui';
 import { color, radius, space, touchTarget } from '@/theme';
 
 export const MUST_CHANGE_KEY = 'tgs.staff.mustChange';
@@ -108,66 +108,97 @@ export function ActionAlert({ action, heading = "That didn't work", check }: { a
 // ---- Screen parts --------------------------------------------------------------------------
 
 /** Loading, error and no-access states for a query. Children get the data. */
-export function Loaded<T>({ q, what, height = 110, count = 3, children }: { q: { isLoading: boolean; isError: boolean; data: T | undefined; error: unknown; refetch: () => unknown }; what: string; height?: number; count?: number; children: (data: T) => ReactNode }) {
+export function Loaded<T>({ q, what, height = 110, count = 3, page, children }: { q: { isLoading: boolean; isError: boolean; data: T | undefined; error: unknown; refetch: () => unknown }; what: string; height?: number; count?: number; page?: boolean; children: (data: T) => ReactNode }) {
+  // A record's own page has no Screen until its data is in: give these states the frame and a way back.
+  const frame = (state: ReactNode) => (page ? <Screen header={<Header title="" onBack={() => (router.canGoBack() ? router.back() : router.replace('/staff/home'))} />}>{state}</Screen> : state);
   if (q.isLoading)
-    return (
+    return frame(
       <View style={{ gap: space[6] }}>
         {Array.from({ length: count }, (_, i) => (
           <Skeleton key={i} height={height} radius={radius.card} />
         ))}
-      </View>
+      </View>,
     );
   if (q.isError || q.data === undefined) {
-    if (isApiError(q.error) && q.error.status === 403) return <Alert type="warning" heading="You don't have access to this" description="Ask the Super Admin if you need it." />;
-    if (isApiError(q.error) && q.error.status === 404) return <Alert type="neutral" heading="Not found" description="The record may have been removed." />;
-    return <Alert type="error" heading={`Couldn't load ${what}`} description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />;
+    if (isApiError(q.error) && q.error.status === 403) return frame(<Alert type="warning" heading="You don't have access to this" description="Ask the Super Admin if you need it." />);
+    if (isApiError(q.error) && q.error.status === 404) return frame(<Alert type="neutral" heading="Not found" description="The record may have been removed." />);
+    return frame(<Alert type="error" heading={`Couldn't load ${what}`} description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />);
   }
   return <>{children(q.data)}</>;
 }
 
 /** Up to four values fit a Segmented; more go in a picker (docs/23 §4.2). */
-export function Filter<T extends string>({ label = 'Show', value, options, onChange }: { label?: string; value: T; options: Array<{ value: T; label: string }>; onChange: (v: T) => void }) {
+export function Filter<T extends string>({ label = 'Show', value, options, onChange, compact }: { label?: string; value: T; options: Array<{ value: T; label: string }>; onChange: (v: T) => void; compact?: boolean }) {
   if (options.length <= 4) return <Segmented label={label} value={value} options={options} onChange={onChange} />;
-  return <SelectField label={label} value={value} options={options} onChange={(v) => onChange(v as T)} />;
+  const select = <SelectField compact={!!compact} label={label} value={value} options={options} onChange={(v) => onChange(v as T)} />;
+  return compact ? <FilterBar>{select}</FilterBar> : select;
 }
 
-/** A table row as a card: who first, the amount, its status, what it waits on. */
-export function RecordCard({ title, subtitle, amount, tag, caption, onPress, children }: { title: string; subtitle?: string; amount?: string; tag?: ReactNode; caption?: string; onPress?: () => void; children?: ReactNode }) {
+/** Server text can carry the project's rule and question numbers. They mean nothing to staff. */
+export const plain = (text: string) => text.replace(/\s*\((?=[^)]*\b(?:BR|D|Q|F|REQ)-\d)[^)]*\)/g, '');
+
+/** Search, then filters side by side and scrolling sideways, so a list's records stay near the top of the phone. */
+export function FilterBar({ search, children }: { search?: ReactNode; children?: ReactNode }) {
   return (
-    <Card {...(onPress ? { onPress } : {})}>
-      <View style={{ gap: space[4] }}>
-        <View style={styles.row}>
-          <View style={{ flex: 1, gap: space[1] }}>
-            <Text role="cardTitle">{title}</Text>
-            {subtitle ? (
-              <Text role="caption" tone="tertiary">
-                {subtitle}
-              </Text>
-            ) : null}
-          </View>
-          {onPress ? <ChevronRight size={20} color={color.text.tertiary} /> : null}
-        </View>
-        {amount || tag ? (
-          <View style={styles.row}>
-            <Text role="amount" style={{ flex: 1 }}>
-              {amount ?? ''}
-            </Text>
-            {tag}
-          </View>
-        ) : null}
-        {caption ? (
-          <Text role="caption" tone="secondary">
-            {caption}
-          </Text>
-        ) : null}
-        {children}
-      </View>
-    </Card>
+    <View style={{ gap: space[2] }}>
+      {search}
+      {children ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ marginHorizontal: -space[8] }} contentContainerStyle={{ gap: space[3], paddingHorizontal: space[8], paddingVertical: space[1] }}>
+          {children}
+        </ScrollView>
+      ) : null}
+    </View>
   );
 }
 
+/** One line of the register: who on the left, the figure and its status on the right, what it waits on below. */
+export function RecordCard({ title, subtitle, amount, tag, caption, onPress, children }: { title: string; subtitle?: string; amount?: string; tag?: ReactNode; caption?: string; onPress?: () => void; children?: ReactNode }) {
+  const body = (
+    <>
+      <View style={styles.recordHead}>
+        <View style={{ flex: 1, gap: space[1] }}>
+          <Text role="cardTitle">{title}</Text>
+          {subtitle ? (
+            <Text role="caption" tone="tertiary">
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        {amount || tag ? (
+          <View style={styles.recordFigure}>
+            {amount ? <Text role="amount">{amount}</Text> : null}
+            {tag}
+          </View>
+        ) : null}
+      </View>
+      {caption ? (
+        <Text role="caption" tone="secondary">
+          {caption}
+        </Text>
+      ) : null}
+      {children}
+    </>
+  );
+  return onPress ? (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.record, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
+      {body}
+    </Pressable>
+  ) : (
+    <View style={styles.record}>{body}</View>
+  );
+}
+
+/** The register: one surface with ruled lines between its records. */
 export function Stack2({ children }: { children: ReactNode }) {
-  return <View style={{ gap: space[6] }}>{children}</View>;
+  return (
+    <Card padded={false} style={{ overflow: 'hidden' }}>
+      {Children.toArray(children).map((child, i) => (
+        <View key={i} style={i > 0 ? styles.divider : undefined}>
+          {child}
+        </View>
+      ))}
+    </Card>
+  );
 }
 
 /** Menu row, as on the member More screen. */
@@ -199,7 +230,7 @@ export function StatTile({ label, value, sub, tone, onPress }: { label: string; 
       <Text role="caption" tone="secondary" numberOfLines={2}>
         {label}
       </Text>
-      <Text role="sectionTitle" style={{ color: fg }}>
+      <Text role="sectionTitle" style={{ color: fg, fontVariant: ['tabular-nums'] }}>
         {value}
       </Text>
       {sub ? (
@@ -219,7 +250,15 @@ export function StatTile({ label, value, sub, tone, onPress }: { label: string; 
 }
 
 export function TileGrid({ children }: { children: ReactNode }) {
-  return <View style={styles.grid}>{children}</View>;
+  return (
+    <Card padded={false} style={styles.grid}>
+      {Children.toArray(children).map((tile, i) => (
+        <View key={i} style={[styles.cell, i % 2 === 1 && styles.ruleLeft, i > 1 && styles.divider]}>
+          {tile}
+        </View>
+      ))}
+    </Card>
+  );
 }
 
 /** A plain horizontal meter (rate 0 to 1). */
@@ -260,10 +299,10 @@ export function ShareCsvButton({ title, rows }: { title: string; rows: () => Arr
 }
 
 /** A section of a long record that opens in place. Stands in for the console's detail tabs. */
-export function Expand({ title, badge, initiallyOpen, children }: { title: string; badge?: ReactNode; initiallyOpen?: boolean; children: ReactNode }) {
+export function Expand({ title, badge, initiallyOpen, flush, children }: { title: string; badge?: ReactNode; initiallyOpen?: boolean; flush?: boolean; children: ReactNode }) {
   const [open, setOpen] = useState(!!initiallyOpen);
-  return (
-    <Card padded={false}>
+  const body = (
+    <>
       <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded: open }} onPress={() => setOpen((o) => !o)} style={styles.menu}>
         <Text role="cardTitle" style={{ flex: 1 }}>
           {title}
@@ -272,8 +311,9 @@ export function Expand({ title, badge, initiallyOpen, children }: { title: strin
         {open ? <ChevronDown size={20} color={color.text.tertiary} /> : <ChevronRight size={20} color={color.text.tertiary} />}
       </Pressable>
       {open ? <View style={styles.expandBody}>{children}</View> : null}
-    </Card>
+    </>
   );
+  return flush ? <View>{body}</View> : <Card padded={false}>{body}</Card>;
 }
 
 /** Every rule outcome, explained (the console's RuleCheckList). */
@@ -287,10 +327,7 @@ export function RuleChecks({ checks }: { checks: Array<{ ruleId: string; pass: b
           <View key={`${c.ruleId}-${i}`} style={{ flexDirection: 'row', gap: space[3] }}>
             <Icon size={18} color={tint} />
             <Text role="body" style={{ flex: 1 }}>
-              {c.message}{' '}
-              <Text role="caption" tone="tertiary">
-                ({c.ruleId})
-              </Text>
+              {c.message}
             </Text>
           </View>
         );
@@ -356,13 +393,16 @@ export function CashStatus({ amount, counts }: { amount: number; counts: Counts 
 /** BR-029: notes × count, the total must equal the amount. */
 export function DenominationCounter({ amount, counts, onChange }: { amount: number; counts: Counts; onChange: (c: Counts) => void }) {
   return (
-    <View style={{ gap: space[4] }}>
+    <View style={{ gap: space[3] }}>
       {DENOMINATIONS.map((d) => (
         <View key={d} style={styles.row}>
+          <Text role="label" style={{ width: 64 }}>
+            ₹{d} ×
+          </Text>
           <View style={{ flex: 1 }}>
-            <TextField label={`₹${d} notes`} keyboardType="number-pad" accessibilityLabel={`Number of ₹${d} notes`} value={counts[d] ? String(counts[d]) : ''} onChangeText={(t) => onChange({ ...counts, [d]: Math.floor(Number(t.replace(/\D/g, '')) || 0) })} />
+            <TextField compact label={`Number of ₹${d} notes`} keyboardType="number-pad" value={counts[d] ? String(counts[d]) : ''} onChangeText={(t) => onChange({ ...counts, [d]: Math.floor(Number(t.replace(/\D/g, '')) || 0) })} />
           </View>
-          <Text role="body" tone="secondary" style={{ flex: 1, textAlign: 'right' }}>
+          <Text role="body" tone="secondary" style={{ minWidth: 96, textAlign: 'right', fontVariant: ['tabular-nums'] }}>
             {formatINR(d * 100 * (counts[d] ?? 0))}
           </Text>
         </View>
@@ -457,8 +497,13 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   menu: { flexDirection: 'row', alignItems: 'center', gap: space[6], minHeight: touchTarget + 8, paddingHorizontal: space[8] },
   divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[4] },
-  tile: { flexGrow: 1, flexBasis: '45%', gap: space[1], padding: space[6], borderRadius: radius.card, borderWidth: 1, borderColor: color.border.default, backgroundColor: color.bg.surface },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', overflow: 'hidden' },
+  cell: { flexGrow: 1, flexBasis: '50%' },
+  ruleLeft: { borderLeftWidth: 1, borderLeftColor: color.border.subtle },
+  tile: { flex: 1, gap: space[1], padding: space[6] },
+  record: { gap: space[3], padding: space[8] },
+  recordHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space[4] },
+  recordFigure: { alignItems: 'flex-end', gap: space[2], maxWidth: '50%' },
   expandBody: { paddingHorizontal: space[8], paddingBottom: space[8], gap: space[4] },
   track: { height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: color.bg.surfaceSunken },
 });

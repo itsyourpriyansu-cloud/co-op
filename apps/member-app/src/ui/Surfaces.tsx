@@ -72,10 +72,10 @@ export function Section({ title, description, right, children }: { title?: strin
 export function KeyValue({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
   return (
     <View style={styles.kv}>
-      <Text role="caption" tone="tertiary" style={{ flex: 1 }}>
+      <Text role="caption" tone="tertiary" style={{ flexShrink: 1 }}>
         {label}
       </Text>
-      <Text role={emphasis ? 'amount' : 'bodyStrong'} style={{ flex: 1.4, textAlign: 'right' }}>
+      <Text role={emphasis ? 'amount' : 'bodyStrong'} style={{ flexShrink: 1, maxWidth: '64%', textAlign: 'right' }}>
         {value}
       </Text>
     </View>
@@ -87,12 +87,12 @@ export function Divider() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: color.bg.surface, borderRadius: radius.card, borderWidth: 1, borderColor: color.border.default, ...elevation.raised },
+  card: { backgroundColor: color.bg.surface, borderRadius: radius.card, borderWidth: 1, borderColor: color.border.default },
   padded: { padding: space[8] },
   selected: { borderColor: color.brand.solid, backgroundColor: color.brand.subtle },
   pressed: { backgroundColor: color.bg.surfaceSubtle },
   alert: { flexDirection: 'row', gap: space[6], padding: space[8], borderRadius: radius.card, borderWidth: 1 },
   sectionHead: { flexDirection: 'row', alignItems: 'flex-end', gap: space[6] },
-  kv: { flexDirection: 'row', alignItems: 'flex-start', gap: space[8], paddingVertical: space[4] },
+  kv: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space[8], paddingVertical: space[4] },
   divider: { height: 1, backgroundColor: color.border.subtle },
 });

@@ -32,7 +32,7 @@ export default function ReceiptScreen() {
                 <KeyValue label="Received from" value={d.member.name} />
                 <KeyValue label="General No." value={d.member.generalNo} />
                 <KeyValue label="Office" value={`${d.member.designation}, ${d.member.departmentName}`} />
-                <KeyValue label="By" value={`${SOURCE_LABEL[r.source]}${r.reference ? ` · ${r.reference}` : ''}`} />
+                <KeyValue label="Mode" value={`${SOURCE_LABEL[r.source]}${r.reference ? ` · ${r.reference}` : ''}`} />
                 {r.purpose ? <KeyValue label="Towards" value={PURPOSE_LABEL[r.purpose]} /> : d.sheet ? <KeyValue label="Against" value={`${formatCycle(d.sheet.cycle)} demand of ${d.sheet.departmentName}`} /> : null}
                 <KeyValue label="Recorded by" value={`${r.byName ?? 'Salary recovery (DDO)'}${r.at ? ` · ${formatDisplayDateTime(r.at)}` : ''}`} />
               </Card>

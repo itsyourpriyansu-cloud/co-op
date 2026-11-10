@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { FileSpreadsheet, Plus } from 'lucide-react-native';
 import { formatCycle, formatDisplayDate, formatINR, formatINRCompact } from '@tgs/domain';
-import { Loaded, RecordCard, Stack2, StatTile, TileGrid } from '@/components/staff';
+import { FilterBar, Loaded, RecordCard, Stack2, StatTile, TileGrid } from '@/components/staff';
 import { api } from '@/lib/api';
 import { ENTRY_LABEL, SHEET_FILTERS } from '@/lib/staffCollections';
 import { Button, EmptyState, Screen, SelectField, StatusTag, Tag, Text } from '@/ui';
@@ -31,8 +31,10 @@ export default function Demand() {
         </View>
         {d?.canGenerate && d.totals.notGenerated > 0 ? <Button text="Generate" size="sm" leftSlot={Plus} onPress={() => router.push(`/staff/demand/generate?cycle=${d.cycle}`)} /> : null}
       </View>
-      <SelectField label="Month" value={d?.cycle ?? ''} options={(d?.cycles ?? []).map((c) => ({ value: c, label: `${formatCycle(c)}${c === d?.currentCycle ? ' (current)' : ''}` }))} onChange={setPicked} />
-      <SelectField label="Show" value={filter} options={SHEET_FILTERS.map(({ label, value }) => ({ label, value }))} onChange={setFilter} />
+      <FilterBar>
+        <SelectField compact label="Month" value={d?.cycle ?? ''} options={(d?.cycles ?? []).map((c) => ({ value: c, label: `${formatCycle(c)}${c === d?.currentCycle ? ' (current)' : ''}` }))} onChange={setPicked} />
+        <SelectField compact label="Show" value={filter} options={SHEET_FILTERS.map(({ label, value }) => ({ label, value }))} onChange={setFilter} />
+      </FilterBar>
       <Loaded q={q} what="demand sheets">
         {(o) => {
           const rows = o.rows.filter(SHEET_FILTERS.find((f) => f.value === filter)!.match);

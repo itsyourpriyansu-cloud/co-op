@@ -4,7 +4,7 @@ import { router, type Href } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Lock, ScrollText } from 'lucide-react-native';
 import type { ReportDef } from '@tgs/types';
-import { consoleUrl, Loaded, Row } from '@/components/staff';
+import { consoleUrl, Loaded, Row, plain } from '@/components/staff';
 import { api } from '@/lib/api';
 import { Card, Screen, Section, Tag, Text } from '@/ui';
 import { color, space } from '@/theme';
@@ -45,15 +45,15 @@ export default function Reports() {
                   <Card padded={false}>
                     {items.map((r, i) =>
                       r.available ? (
-                        <Row key={r.id} label={r.title} hint={r.description} divider={i > 0} onPress={() => open(r)} />
+                        <Row key={r.id} label={r.title} hint={plain(r.description)} divider={i > 0} onPress={() => open(r)} />
                       ) : (
-                        <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[6] }} accessible accessibilityLabel={`${r.title}, not available yet`}>
+                        <View key={r.id} style={[{ flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[8], paddingVertical: space[6] }, i > 0 && { borderTopWidth: 1, borderTopColor: color.border.subtle }]} accessible accessibilityLabel={`${r.title}, not available yet`}>
                           <View style={{ flex: 1, gap: space[1] }}>
                             <Text role="body" tone="tertiary">
                               {r.title}
                             </Text>
                             <Text role="caption" tone="tertiary">
-                              {r.note ?? r.description}
+                              Not available yet
                             </Text>
                           </View>
                           <Lock size={16} color={color.text.tertiary} />

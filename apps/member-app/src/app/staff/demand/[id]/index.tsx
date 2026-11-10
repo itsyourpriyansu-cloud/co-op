@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { DemandSheetDetail } from '@tgs/types';
-import { Expand, Loaded, PrintButton, ShareCsvButton } from '@/components/staff';
+import { Expand, Loaded, plain, PrintButton, ShareCsvButton, Stack2 } from '@/components/staff';
 import { api } from '@/lib/api';
 import { ENTRY_LABEL, HEAD_COLUMNS } from '@/lib/staffCollections';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Text, TextField } from '@/ui';
@@ -21,7 +21,7 @@ export default function DemandSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ['demand-sheet', id], queryFn: () => api.demand.sheet(id) });
   return (
-    <Loaded q={q} what="this sheet">
+    <Loaded page q={q} what="this sheet">
       {(d) => <Body d={d} refetching={q.isRefetching} refetch={() => void q.refetch()} />}
     </Loaded>
   );
@@ -70,7 +70,7 @@ function Body({ d, refetching, refetch }: { d: DemandSheetDetail; refetching: bo
       </View>
 
       <Card>
-        <StageTracker stages={d.stages.map((s, i) => ({ key: `${i}`, title: s.title, ...(s.by ? { description: s.by, ...(s.date ? { date: s.date } : {}) } : {}), status: s.status === 'done' ? 'done' : s.status === 'current' ? 'current' : 'todo' }))} />
+        <StageTracker stages={d.stages.map((s, i) => ({ key: `${i}`, title: plain(s.title), ...(s.by ? { description: s.by, ...(s.date ? { date: formatDisplayDate(s.date.slice(0, 10)) } : {}) } : {}), status: s.status === 'done' ? 'done' : s.status === 'current' ? 'current' : 'todo' }))} />
       </Card>
 
       {sh.status === 'SENT_TO_DDO' ? <Alert type={sh.entry?.status === 'REJECTED' ? 'warning' : 'primary'} heading={sh.entry ? `Deductions ${ENTRY_LABEL[sh.entry.status]}${sh.entry.source === 'PHYSICAL_SHEET' ? ' (paper sheet)' : ' (entered online by the DDO)'}` : 'With the DDO for deduction'} description={sh.entry?.status === 'REJECTED' ? `${sh.entry.rejection?.byName}: ${sh.entry.rejection?.remarks ?? ''}` : "The DDO enters what was actually deducted (or sends a paper sheet the Accountant enters). The Accountant checks and posts. Short amounts become the member's dues."} /> : null}
@@ -101,10 +101,11 @@ function Body({ d, refetching, refetch }: { d: DemandSheetDetail; refetching: bo
       ) : null}
 
       <Section title="Members">
-        <TextField label="Search" value={q} onChangeText={setQ} placeholder="Name or General No." autoCorrect={false} />
-        <View style={{ gap: space[3] }}>
+        <TextField compact label="Search" value={q} onChangeText={setQ} placeholder="Name or General No." autoCorrect={false} />
+        <Stack2>
           {lines.map((l) => (
             <Expand
+              flush
               key={l.memberId}
               title={`${l.name} · No. ${l.generalNo}`}
               badge={
@@ -122,7 +123,7 @@ function Body({ d, refetching, refetch }: { d: DemandSheetDetail; refetching: bo
               ))}
             </Expand>
           ))}
-        </View>
+        </Stack2>
       </Section>
 
       <View style={{ gap: space[3] }}>
