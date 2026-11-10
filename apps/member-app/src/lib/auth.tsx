@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Me, Session } from '@tgs/types';
+import type { Channel, Me, Session } from '@tgs/types';
 import { api } from './api';
 import { loadServerUrl } from './serverUrl';
 import { clearSession, getCachedSession, loadSession, onUnauthenticated, saveSession } from './session';
@@ -18,7 +18,8 @@ interface AuthContextValue {
   ready: boolean;
   session: Session | null;
   me: Me | undefined;
-  loginAsPersona: (personaId: string) => Promise<Session>;
+  meLoading: boolean;
+  loginAsPersona: (personaId: string, channel?: Channel) => Promise<Session>;
   /** MA-01 / MJ-02: finish a mobile sign-in or sign-up with the one-time code (D-067). */
   verifyOtp: (otpRef: string, otp: string, name?: string) => Promise<Session>;
   /** Use a session obtained elsewhere (e.g. applicant sign-up OTP, MJ-02). */
@@ -59,8 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     enabled: ready && !!session,
   });
 
-  const loginAsPersona = useCallback(async (personaId: string) => {
-    const next = await api.auth.loginAsPersona(personaId, 'app');
+  const loginAsPersona = useCallback(async (personaId: string, channel: Channel = 'app') => {
+    const next = await api.auth.loginAsPersona(personaId, channel);
     await saveSession(next);
     setSession(next);
     return next;
@@ -104,8 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ ready, session, me: meQuery.data, loginAsPersona, verifyOtp, adoptSession, syncSession, logout }),
-    [ready, session, meQuery.data, loginAsPersona, verifyOtp, adoptSession, syncSession, logout],
+    () => ({ ready, session, me: meQuery.data, meLoading: meQuery.isLoading, loginAsPersona, verifyOtp, adoptSession, syncSession, logout }),
+    [ready, session, meQuery.data, meQuery.isLoading, loginAsPersona, verifyOtp, adoptSession, syncSession, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

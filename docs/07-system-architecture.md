@@ -1,5 +1,7 @@
 # 07 · System Architecture
 
+> Version 0.4 · 2026-11-10 · Staff screens are built inside the existing mobile app, see `docs/23` (D-101, D-106, D-108). This file describes the prototype.
+> Version 0.3 · 2026-11-10 · Staff screens are planned inside the existing mobile app, see `docs/23` (D-101, D-106). This file describes the prototype.
 > Phase 3 · Version 0.2 · 2026-10-24
 > Accepted: D-008 (staff web stack), D-019/D-020 (separate Expo member app), D-021 (shared mock API), D-022 (Android APK). Proposed: D-024 (monorepo layout), D-025 (libraries).
 > Scope: **two frontends + a mock API server**. The production backend is described only as a hand-off boundary. Its behaviour is NOT invented here (Q-005).

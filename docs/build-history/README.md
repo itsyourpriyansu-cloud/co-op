@@ -20,6 +20,7 @@ Every entry has the same sections: **Built** (screens by ID) · **Key files** ·
 | 11 | [M10 Polish: a11y, states, search, demo script](10-polish.md) | Done (demo scope) | 2026-10-25 |
 | 12 | [Demo-ready: clock, e2e suite, screen sizes, prod mode, docs](11-demo-ready.md) | Done | 2026-10-25 |
 | 13 | [App mark: TG monogram, icon, splash, entry screens](12-app-mark.md) | Done | 2026-11-05 |
+| 14 | [Staff mobile UI: plan](13-staff-app-plan.md) | Planned | 2026-11-10 |
 
 ## How to resume
 1. `npm install` (once) → `npm run demo` (mock API :4000 + console :5180; `npm run demo:prod` for the built console) → `npm run dev:web` for the phone preview on :8090 (or `npm run dev:app` for Expo Go). Port 5173 belongs to the user's other project: never use or kill it.

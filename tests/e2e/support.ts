@@ -99,6 +99,15 @@ export async function phoneSettled(page: Page) {
   await page.waitForTimeout(300);
 }
 
+/** Staff screens in the same app (D-106): a console role's session under the app's storage key. */
+export async function staffAs(page: Page, request: APIRequestContext, personaId: string, path = '/staff/home') {
+  const session = await apiToken(request, personaId, 'console');
+  await page.goto(`${PHONE_URL}/welcome`);
+  await page.evaluate((s) => localStorage.setItem('tgs.app.session', JSON.stringify(s)), session);
+  await page.goto(`${PHONE_URL}${path}`);
+  return session;
+}
+
 export async function phoneSignOut(page: Page) {
   await page.evaluate(() => localStorage.removeItem('tgs.app.session'));
 }
