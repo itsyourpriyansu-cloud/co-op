@@ -118,7 +118,7 @@ export function SelectField({ label, required, hint, error, value, options, onCh
   return (
     <FieldFrame label={label} required={required} hint={hint} error={error}>
       <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${selected?.label ?? placeholder}`} onPress={() => setOpen(true)} style={[styles.box, !!error && styles.errored]}>
-        <Text role="body" tone={selected ? 'primary' : 'disabled'} style={{ flex: 1 }} numberOfLines={1}>
+        <Text role="body" tone={selected ? 'primary' : 'tertiary'} style={{ flex: 1 }} numberOfLines={1}>
           {selected?.label ?? placeholder}
         </Text>
         <ChevronDown size={20} color={color.text.tertiary} />

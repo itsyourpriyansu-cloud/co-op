@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { BadgeCheck, ChevronRight, FileSignature, ShieldCheck, Smartphone, UserPlus, UserRound } from 'lucide-react-native';
 import { brand } from '@tgs/design-tokens';
 import { AppMark } from '@/components/AppMark';
-import { Card, Screen, Text } from '@/ui';
+import { Button, Card, Screen, Text } from '@/ui';
 import { color, onBrandMuted, radius, space, onBrandTile } from '@/theme';
 
 const HOW = [
@@ -64,6 +64,8 @@ export default function Welcome() {
           ))}
         </View>
       </Card>
+
+      <Button text="Society staff? Sign in" subType="inline" style={{ alignSelf: 'center' }} onPress={() => router.push('/staff-login')} />
 
       <View style={styles.trust}>
         <ShieldCheck size={16} color={color.text.tertiary} />

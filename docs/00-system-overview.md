@@ -1,5 +1,7 @@
 # 00 · System Overview: The Clean Structure
 
+> Version 0.5 · 2026-11-10 · Staff screens in the mobile app built, real-phone check open (D-101, D-106, D-108, docs/23).
+> Version 0.4 · 2026-11-10 · Staff screens in the mobile app planned (D-101, D-106, docs/23).
 > Version 0.3 · 2026-10-24 · Read this before anything else in `docs/`.
 
 ## 1. Two apps, one backend, with no overlap
@@ -27,7 +29,7 @@
 
 **Hard boundaries (D-033):**
 - Members and applicants use **only the app**. There is no member website.
-- Staff (including DDO, Secretary and President) use **only the Admin Console** on desktop. There are no staff features in the app.
+- Staff (including DDO, Secretary and President) use the **Admin Console** on desktop. **Staff screens with the same functions are also inside the mobile app**, in their own area that members never see (D-101, D-106, `docs/23`).
 - Neither app holds business rules. The API decides and the apps display. (The apps may preview calculations, but the API's answer wins.)
 
 ## 2. Who does what (paper → digital)

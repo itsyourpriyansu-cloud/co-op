@@ -10,10 +10,10 @@
 
 | | |
 |---|---|
-| **Current step** | C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
-| **Next action** | **P8a done** (D-089): notifications, messages, member questions, preferences and member home on the backend; WhatsApp / email / SMS simulated behind `backend/src/integrations`. P8b done (D-090): work queue, dashboards, search, service targets. P8c done (D-091): reports and the defaulter notice. P8 done. Society answers (D-093): steps A, B done (D-094 caste); C done (D-096 signatures); D done (D-097 surety recovery); E done (D-098 final settlement); F done (D-099 bonds, receipt, voucher); society answers A–F complete. **P9 done** (D-100): fallback removed, apps default to the backend, hardening, backups + restore drill, Dockerfile, member register import, performance check. Next: Azure deployment when asked; loan / deposit register import once the society sends samples. Waiting on the society: F-06, F-09, F-10, F-13, F-14 |
-| **Blockers** | None. Demo-only scope, localhost now, Azure later, no APK until asked (D-054) |
-| **Last updated** | 2026-11-06 |
+| **Current step** | E. **Staff mobile UI: planned (D-101, D-106), S0 not started.** `docs/23-staff-app-and-go-live.md` is the tracker. Branch `v2`; the user commits by hand. Earlier: C. **M0–M10 done + demo-ready.** Both apps, all MVP screens, reports and printables, and a Playwright suite that plays every journey, the cross-app hand-offs, accessibility, error states, screen sizes and the whole `DEMO-SCRIPT.md` (docs/build-history/11-demo-ready.md) |
+| **Next action** | **Build S1–S9 against the backend, tested on Expo web (D-107).** The owner does the real-phone check last (S10). Earlier: **P8a done** (D-089): notifications, messages, member questions, preferences and member home on the backend; WhatsApp / email / SMS simulated behind `backend/src/integrations`. P8b done (D-090): work queue, dashboards, search, service targets. P8c done (D-091): reports and the defaulter notice. P8 done. Society answers (D-093): steps A, B done (D-094 caste); C done (D-096 signatures); D done (D-097 surety recovery); E done (D-098 final settlement); F done (D-099 bonds, receipt, voucher); society answers A–F complete. **P9 done** (D-100): fallback removed, apps default to the backend, hardening, backups + restore drill, Dockerfile, member register import, performance check. Next: Azure deployment when asked; loan / deposit register import once the society sends samples. Waiting on the society: F-06, F-09, F-10, F-13, F-14 |
+| **Blockers** | S0 needs an Android phone and an iPhone with Expo Go. Later, outside this work: **member sign-in on production needs F-10 (WhatsApp provider)** |
+| **Last updated** | 2026-11-10 |
 
 ---
 
@@ -54,6 +54,23 @@ Each milestone ends with its exit test passing. Tick the box only then.
 - [ ] Client demo run (script in `DEMO-SCRIPT.md`; rehearsed automatically by `npm run e2e:demo`)
 - [ ] Placeholder values replaced by the society's answers. All questions closed or parked
 - [ ] Hand-over notes for the production backend team
+
+---
+
+## E. Staff mobile UI (task lists in `docs/23` §6)
+Tick a phase only when its exit test has passed.
+
+- [ ] S0 Build baseline
+- [ ] S1 Staff shell and sign-in
+- [ ] S2 Work
+- [ ] S3 Joining and members
+- [ ] S4 Loans
+- [ ] S5 Deposits
+- [ ] S6 Collections
+- [ ] S7 Reports and prints
+- [ ] S8 Settings
+- [ ] S9 Parity and polish
+- [ ] S10 Real-phone check (the owner, last)
 
 ---
 
@@ -116,3 +133,5 @@ Each milestone ends with its exit test passing. Tick the box only then.
 | 2026-11-06 | **Step E built** (D-098): "Member leaves" (retired / resigned / deceased), live final settlement statement (loans + interest to date, penal, dues, surety dues vs shares, share deposit, CRD / SRDS, FDs), gratuity letter to the pay office, nominee after a death, posting in one balanced journal entry that closes loans, deposits and shares; migration 0025. Tests: domain +3, backend 145, root 307 | F bonds / receipt / voucher |
 | 2026-11-06 | **Step F built** (D-099): bond wording in the borrower and surety OTP signatures, disbursement payee + Cashier PAID signature + borrower OTP receipt confirmation, FD voucher numbers with the Cashier as Treasurer; printable bond & receipt and FD voucher. Society answers A–F complete. Tests: backend 148, root 307 | P9 |
 | 2026-11-06 | **P9 built** (D-100): mock bridge and fallback deleted, console / app / e2e default to :4100 (mock only for `npm run demo`), TRUST_PROXY, global rate limit, CORS required in production, no /docs in production, npm audit clean, `db:backup` + `db:restore-drill` (passed on tgseccsl_dev), Dockerfile (not built: Docker Desktop off), `db:import-register` with template + sample, performance check. Tests: backend 143, root 307 | Azure when asked |
+| 2026-11-10 | **Staff mobile UI planned** (D-101, then scope reset D-106): `docs/23` with the folder structure, Member App screen recipes, desktop-to-phone rules, parity matrix, phases S0–S9, Android and iOS checks. React Native only, on `v2`, nothing committed. Documents only, no code changed | S0 |
+| 2026-11-10 | **S0 started:** `ios.bundleIdentifier` added; `node_modules` reinstalled from the lockfile (it was older than the lockfile); app typecheck clean after regenerating Expo's typed routes; iOS and Android bundles build (5.5 MB each). expo-doctor: 10 packages a patch behind SDK 58, left as they are. Device walk not done: `backend/.env` is absent and needs the owner's database password | S0 device walk |

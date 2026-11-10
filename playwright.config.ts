@@ -37,7 +37,7 @@ export default defineConfig({
     },
     {
       name: 'phone',
-      testMatch: /(journeys-phone|a11y-phone|states-phone)\.spec\.ts$/,
+      testMatch: /(journeys-phone|a11y-phone|states-phone|journeys-staff|a11y-staff|states-staff)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'], baseURL: PHONE_URL, viewport: { width: 412, height: 915 }, isMobile: false, hasTouch: true },
     },
   ],

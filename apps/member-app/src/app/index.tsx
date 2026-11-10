@@ -1,9 +1,10 @@
 import { ActivityIndicator, View } from 'react-native';
 import { Redirect } from 'expo-router';
+import { channelForRole } from '@tgs/types';
 import { useAuth } from '@/lib/auth';
 import { color } from '@/theme';
 
-/** Entry gate: applicants → their tracker (it routes to eligibility/form as needed); members → home. */
+/** Entry gate: applicants → their tracker (it routes to eligibility/form as needed); members → home; staff → their area. */
 export default function Index() {
   const { ready, session } = useAuth();
   if (!ready) {
@@ -14,5 +15,6 @@ export default function Index() {
     );
   }
   if (!session) return <Redirect href="/welcome" />;
+  if (channelForRole(session.user.role) === 'console') return <Redirect href="/staff/home" />;
   return <Redirect href={session.user.role === 'APPLICANT' ? '/tracker' : '/home'} />;
 }

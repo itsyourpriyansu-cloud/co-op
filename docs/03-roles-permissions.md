@@ -1,7 +1,9 @@
 # 03 · Roles & Permissions
 
 > Version 0.4 · 2026-10-25 · Roles from the flow diagrams [F] and the paper forms [PF]. Action-level permissions are **[P]** (D-016, D-037).
-> Platform rule (D-033): R1–R5 use the **Admin Console** (desktop web) only. R6–R7 use the **Member App** (Android) only.
+> Version 0.6 · 2026-11-10 · Staff screens built (D-108).
+> Version 0.5 · 2026-11-10 · Platform rule widened (D-101).
+> Platform rule (D-033, D-101): R1–R5 use the **Admin Console** (desktop web) or the **staff screens in the mobile app** (Android and iOS, docs/23, D-106), with the same permissions. R6–R7 use the **Member App** only and never see staff screens.
 
 ## 1. Roles
 

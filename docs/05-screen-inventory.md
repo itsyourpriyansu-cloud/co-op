@@ -1,5 +1,7 @@
 # 05 · Screen Inventory: How Many Things We Build
 
+> Version 0.7 · 2026-11-10 · Staff screens built (D-108), §3b
+> Version 0.6 · 2026-11-10 · Staff App planned (D-101), §3b
 > Version 0.5 · 2026-10-29 · MA-02, MA-03, MB-17 retired (D-078): Member App 26, total 64
 > Version 0.4 · 2026-10-24 · Accepted MVP (D-036), incl. the membership join flow (D-026) and paper-form digitisation (doc 16)
 > Complexity: **S** simple · **M** standard · **L** complex. Columns: **Lean** = loan-lifecycle demo · **MVP** = accepted · **Full** = everything
@@ -154,6 +156,10 @@ Three deliverables: **Admin Console** (desktop web, React + Vite), **Member App*
 | ~~MB-17~~ | ~~Change password~~ retired: no member password (D-078) | SM | — | | |
 
 **Member App MVP = 26 screens** after D-078 (was 6 + 4 + 19 = 29: MA-02, MA-03, MB-17 retired).
+
+## 3b. Staff screens in the mobile app (Android and iOS, built, real-phone check open, D-101, D-106, D-108)
+
+Each console screen in §2 gets a phone twin with the same ID plus `m` (ST-23 → ST-23m), except the Design System page and the demo controls. The screen-by-screen list and its progress are the parity matrix in `docs/23-staff-app-and-go-live.md` §5. None are built yet, so the MVP count above is unchanged.
 
 ## 4. Traceability: sources → screens
 

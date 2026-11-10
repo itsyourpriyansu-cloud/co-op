@@ -34,7 +34,7 @@ Today all of this runs on **paper forms** carried from desk to desk. We're turni
 | 💵 **Cashier** | Takes cash, counts notes, gives out loan money | Admin Console |
 | 🛠️ **Super Admin** | Sets the rules (interest rates, limits) and manages users | Admin Console |
 
-**Golden rule:** members only use the **phone app**, and staff only use the **computer console**. Nobody uses both with the same login.
+**Golden rule:** members only use the **phone app**. Staff use the **computer console**, or the **staff screens inside the same phone app**, which members never see (signed in with the staff password and authenticator code). Nobody uses both sides with the same login.
 
 **How people sign in (real backend, P1):** members type the **mobile number** registered with the society and get a **one-time code** (no password to forget). Staff type a **user ID and password**; the Super Admin, Secretary and President also type a 6-digit code from an **authenticator app** on their phone, because they sign approvals.
 
