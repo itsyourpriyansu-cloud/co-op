@@ -13,7 +13,7 @@ export default function SheetAction() {
   const { id, action } = useLocalSearchParams<{ id: string; action: 'certify' | 'sendToDdo' }>();
   const q = useQuery({ queryKey: ['demand-sheet', id], queryFn: () => api.demand.sheet(id) });
   return (
-    <Loaded q={q} what="this sheet">
+    <Loaded page q={q} what="this sheet">
       {(d) => <Decide d={d} action={action} />}
     </Loaded>
   );
@@ -41,7 +41,7 @@ function Decide({ d, action }: { d: DemandSheetDetail; action: 'certify' | 'send
   return (
     <Screen header={<Header title={title} onBack={() => router.back()} />} footer={<Button text={certify ? 'Certify correct' : 'Send'} size="lg" fullWidth loading={a.busy} disabled={a.busy || a.unconfirmed} onPress={submit} />}>
       <Text role="body" tone="secondary">
-        {certify ? 'BR-030: you confirm the demand is correct. Your name and the time are stamped on the sheet.' : `To ${d.department?.ddoName}, ${d.department?.ddoDesignation}, ${d.department?.name}. The DDO deducts these amounts from the salaries.`}
+        {certify ? 'You confirm the demand is correct. Your name and the time are stamped on the sheet.' : `To ${d.department?.ddoName}, ${d.department?.ddoDesignation}, ${d.department?.name}. The DDO deducts these amounts from the salaries.`}
       </Text>
       <Card>
         <KeyValue label="Members" value={String(d.lines.length)} />

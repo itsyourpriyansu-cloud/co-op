@@ -20,7 +20,7 @@ export default function Transfer() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ['member', id], queryFn: () => api.members.get(id) });
   return (
-    <Loaded q={q} what="this member">
+    <Loaded page q={q} what="this member">
       {(d) => <Form d={d} />}
     </Loaded>
   );

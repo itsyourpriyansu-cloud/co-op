@@ -8,7 +8,7 @@ import { FileSearch, UserRound } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { MemberPick, ReportCell, ReportColumn, ReportFilterKey, ReportResult } from '@tgs/types';
-import { Expand, MemberPicker, PrintButton, ShareCsvButton, staffHref } from '@/components/staff';
+import { Expand, MemberPicker, PrintButton, ShareCsvButton, staffHref, FilterBar, RecordCard, Stack2, plain } from '@/components/staff';
 import { api } from '@/lib/api';
 import { Alert, Button, Card, DateField, EmptyState, Header, KeyValue, Screen, Section, SelectField, Skeleton, Text } from '@/ui';
 import { space } from '@/theme';
@@ -39,21 +39,26 @@ function csvRows(res: ReportResult) {
 function Rows({ r, rows }: { r: ReportResult; rows: ReportResult['groups'][number]['rows'] }) {
   const [shown, setShown] = useState(30);
   const [first, ...rest] = r.columns;
+  const nameCol = rest.find((c) => c.key === 'name');
   return (
     <View style={{ gap: space[4] }}>
-      {rows.slice(0, shown).map((row, i) => {
-        const link = r.links?.[String(row[first!.key] ?? '')];
-        return (
-          <Card key={i} {...(link ? { onPress: () => router.push(staffHref(link)) } : {})}>
-            <Text role="label" tone={link ? 'link' : 'primary'}>
-              {show(first!, row[first!.key] ?? null)}
-            </Text>
-            {rest.map((c) => (
-              <KeyValue key={c.key} label={c.label} value={show(c, row[c.key] ?? null)} />
-            ))}
-          </Card>
-        );
-      })}
+      <Stack2>
+        {rows.slice(0, shown).map((row, i) => {
+          const key = show(first!, row[first!.key] ?? null);
+          const link = r.links?.[String(row[first!.key] ?? '')];
+          return (
+            <RecordCard key={i} title={nameCol ? show(nameCol, row[nameCol.key] ?? null) : key} {...(nameCol ? { subtitle: `${first!.label} ${key}` } : {})} {...(link ? { onPress: () => router.push(staffHref(link)) } : {})}>
+              <View>
+                {rest
+                  .filter((c) => c !== nameCol && !['—', '–'].includes(show(c, row[c.key] ?? null)))
+                  .map((c) => (
+                    <KeyValue key={c.key} label={c.label} value={show(c, row[c.key] ?? null)} />
+                  ))}
+              </View>
+            </RecordCard>
+          );
+        })}
+      </Stack2>
       {rows.length > shown ? <Button text={`Show more (${rows.length - shown} left)`} buttonType="secondary" fullWidth onPress={() => setShown((s) => s + 50)} /> : null}
     </View>
   );
@@ -82,14 +87,14 @@ function Result({ r }: { r: ReportResult }) {
         r.groups.map((g, i) => (
           <Expand key={g.label} title={`${g.label} · ${g.rows.length} row${g.rows.length === 1 ? '' : 's'}`} initiallyOpen={i === 0}>
             {totalled.length ? (
-              <Card>
+              <View>
                 <Text role="overline" tone="tertiary">
                   Subtotal
                 </Text>
                 {totalled.map((c) => (
                   <KeyValue key={c.key} label={c.label} value={show(c, g.subtotal[c.key] ?? 0)} />
                 ))}
-              </Card>
+              </View>
             ) : null}
             <Rows r={r} rows={g.rows} />
           </Expand>
@@ -130,20 +135,26 @@ export default function ReportViewer() {
     <Screen header={<Header title={def?.title ?? 'Report'} onBack={() => router.back()} />}>
       {def?.description ? (
         <Text role="body" tone="secondary">
-          {def.description}
+          {plain(def.description)}
         </Text>
       ) : null}
       {def && opts ? (
-        <View style={{ gap: space[6] }}>
+        <View style={{ gap: space[4] }}>
           {has('memberId') ? <MemberPicker value={member} onPick={(m) => (setMember(m), set('memberId', m?.id))} /> : null}
-          {has('cycle') ? <SelectField label="Month" placeholder="Latest posted" value={filters.cycle ?? r?.filters.cycle ?? ''} options={opts.cycles.map((c) => ({ value: c, label: formatCycle(c) }))} onChange={(v) => set('cycle', v)} /> : null}
-          {has('departmentId') ? <SelectField label="Department" searchable value={filters.departmentId ?? ''} options={[{ value: '', label: 'All departments' }, ...opts.departments.map((d) => ({ value: d.id, label: d.name }))]} onChange={(v) => set('departmentId', v || undefined)} /> : null}
-          {has('product') ? <SelectField label="Loan type" value={filters.product ?? ''} options={[{ value: '', label: 'All loan types' }, ...opts.products.map((p) => ({ value: p.code, label: p.name }))]} onChange={(v) => set('product', v || undefined)} /> : null}
-          {has('minCycles') ? <SelectField label="Short in a row" value={filters.minCycles ?? String(opts.defaulterCycles)} options={['1', '2', '3', '4', '6'].map((n) => ({ value: n, label: `${n}+ cycle${n === '1' ? '' : 's'}${Number(n) === opts.defaulterCycles ? ' (setting)' : ''}` }))} onChange={(v) => set('minCycles', v)} /> : null}
-          {has('withinMonths') ? <SelectField label="Retiring within" value={filters.withinMonths ?? '12'} options={['3', '6', '12', '24', '36'].map((n) => ({ value: n, label: `${n} months` }))} onChange={(v) => set('withinMonths', v)} /> : null}
+          {(['cycle', 'departmentId', 'product', 'minCycles', 'withinMonths'] as const).some(has) ? (
+            <FilterBar>
+              {has('cycle') ? <SelectField compact label="Month" placeholder="Latest posted" value={filters.cycle ?? r?.filters.cycle ?? ''} options={opts.cycles.map((c) => ({ value: c, label: formatCycle(c) }))} onChange={(v) => set('cycle', v)} /> : null}
+          {has('departmentId') ? <SelectField compact label="Department" searchable value={filters.departmentId ?? ''} options={[{ value: '', label: 'All departments' }, ...opts.departments.map((d) => ({ value: d.id, label: d.name }))]} onChange={(v) => set('departmentId', v || undefined)} /> : null}
+          {has('product') ? <SelectField compact label="Loan type" value={filters.product ?? ''} options={[{ value: '', label: 'All loan types' }, ...opts.products.map((p) => ({ value: p.code, label: p.name }))]} onChange={(v) => set('product', v || undefined)} /> : null}
+          {has('minCycles') ? <SelectField compact label="Short in a row" value={filters.minCycles ?? String(opts.defaulterCycles)} options={['1', '2', '3', '4', '6'].map((n) => ({ value: n, label: `${n}+ cycle${n === '1' ? '' : 's'}${Number(n) === opts.defaulterCycles ? ' (setting)' : ''}` }))} onChange={(v) => set('minCycles', v)} /> : null}
+          {has('withinMonths') ? <SelectField compact label="Retiring within" value={filters.withinMonths ?? '12'} options={['3', '6', '12', '24', '36'].map((n) => ({ value: n, label: `${n} months` }))} onChange={(v) => set('withinMonths', v)} /> : null}
+            </FilterBar>
+          ) : null}
           {/* Remounts once when the server's default arrives; DateField keeps its own text after that. */}
-          {has('from') ? <DateField key={`from-${filters.from ? 'set' : (r?.filters.from ?? '')}`} label="From" value={filters.from ?? r?.filters.from} onChange={(d) => d && set('from', d)} /> : null}
-          {has('to') ? <DateField key={`to-${filters.to ? 'set' : (r?.filters.to ?? '')}`} label="To" value={filters.to ?? r?.filters.to} onChange={(d) => d && set('to', d)} error={errorMsg?.includes('start') ? errorMsg : undefined} /> : null}
+          <View style={{ flexDirection: 'row', gap: space[4] }}>
+          {has('from') ? <View style={{ flex: 1 }}><DateField key={`from-${filters.from ? 'set' : (r?.filters.from ?? '')}`} label="From" value={filters.from ?? r?.filters.from} onChange={(d) => d && set('from', d)} /></View> : null}
+          {has('to') ? <View style={{ flex: 1 }}><DateField key={`to-${filters.to ? 'set' : (r?.filters.to ?? '')}`} label="To" value={filters.to ?? r?.filters.to} onChange={(d) => d && set('to', d)} error={errorMsg?.includes('start') ? errorMsg : undefined} /></View> : null}
+          </View>
           {Object.keys(filters).length ? <Button text="Clear filters" subType="inline" style={{ alignSelf: 'flex-start' }} onPress={clear} /> : null}
         </View>
       ) : null}

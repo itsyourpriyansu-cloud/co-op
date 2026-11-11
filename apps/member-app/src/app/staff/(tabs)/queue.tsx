@@ -33,7 +33,7 @@ export default function Queue() {
           {data ? `${data.items.length} waiting, oldest first${data.scope.departmentName ? ` · ${data.scope.departmentName} only` : ''}` : 'Waiting for your review, certificate, signature or payout'}
         </Text>
       </View>
-      {data && data.tabs.length > 0 ? <Filter value={tab} options={[{ value: 'ALL', label: `All ${data.items.length}` }, ...data.tabs.map((t) => ({ value: t.key, label: `${t.label} ${t.count}` }))]} onChange={setTab} /> : null}
+      {data && data.tabs.length > 0 ? <Filter compact value={tab} options={[{ value: 'ALL', label: `All ${data.items.length}` }, ...data.tabs.map((t) => ({ value: t.key, label: `${t.label} ${t.count}` }))]} onChange={setTab} /> : null}
       <Loaded q={q} what="your queue">
         {(d) => {
           const rows = d.items.filter((i) => tab === 'ALL' || i.stage === tab);
@@ -41,13 +41,13 @@ export default function Queue() {
             <Stack2>
               {rows.map((i) => (
                 <RecordCard key={`${i.kind}-${i.id}`} title={i.title} subtitle={`${i.ref} · ${i.subtitle}`} {...(i.amount ? { amount: formatINR(i.amount) } : {})} tag={stageTag(i)} onPress={() => router.push(staffHref(i.link))}>
+                  <Text role="caption" tone="tertiary">
+                    {i.departmentName && !i.title.startsWith(i.departmentName) ? `${i.departmentName} · ` : ''}since {formatDisplayDate(i.since)}
+                  </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[3] }}>
                     <WaitTag days={i.days} />
                     {i.overTarget ? <Tag text={`Over the ${i.targetLabel ?? 'target'}`} color="error" size="xs" /> : null}
-                    <Text role="caption" tone="tertiary" style={{ flex: 1 }}>
-                      {i.departmentName ? `${i.departmentName} · ` : ''}since {formatDisplayDate(i.since)}
-                    </Text>
-                    <Text role="captionStrong" tone="link">
+                    <Text role="captionStrong" tone="link" style={{ marginLeft: 'auto' }}>
                       {i.actionLabel}
                     </Text>
                   </View>

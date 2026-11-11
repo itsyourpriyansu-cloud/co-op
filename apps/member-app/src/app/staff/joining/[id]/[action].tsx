@@ -26,7 +26,7 @@ export default function ApplicationAction() {
   const { id, action } = useLocalSearchParams<{ id: string; action: MembershipAction }>();
   const q = useQuery({ queryKey: ['membership-application', id], queryFn: () => api.applications.get(id) });
   return (
-    <Loaded q={q} what="this application">
+    <Loaded page q={q} what="this application">
       {(d) => <Decision d={d} action={action} />}
     </Loaded>
   );

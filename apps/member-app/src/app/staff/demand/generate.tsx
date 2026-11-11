@@ -4,10 +4,10 @@ import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { formatCycle, formatINR } from '@tgs/domain';
-import { ActionAlert, ask, Loaded, useAction } from '@/components/staff';
+import { ActionAlert, ask, Loaded, useAction, RecordCard, Stack2 } from '@/components/staff';
 import { api } from '@/lib/api';
 import { HEAD_COLUMNS } from '@/lib/staffCollections';
-import { Alert, Button, Card, Checkbox, Header, KeyValue, Screen, Segmented, Text } from '@/ui';
+import { Alert, Button, Checkbox, Header, KeyValue, Screen, Segmented, Text } from '@/ui';
 import { space } from '@/theme';
 
 export default function GenerateDemand() {
@@ -51,38 +51,35 @@ export default function GenerateDemand() {
         : {})}
     >
       <Text role="body" tone="secondary">
-        Builds each member's deduction from today's records: RRF, insurance, CRD, SRDS, first-demand shares and every running loan's instalment (BR-009).
+        Builds each member's deduction from today's records: RRF, insurance, CRD, SRDS, first-demand shares and every running loan's instalment.
       </Text>
       {options.length > 1 ? <Segmented label="Month" value={cycle} options={options.map((c) => ({ value: c, label: formatCycle(c) }))} onChange={setCycle} /> : null}
       <Loaded q={preview} what="the preview">
         {(p) => (
           <>
-            {p.insuranceMonth ? <Alert type="primary" heading="Insurance month" description="This cycle collects the yearly insurance contribution (BR-008)." /> : null}
+            {p.insuranceMonth ? <Alert type="primary" heading="Insurance month" description="This cycle collects the yearly insurance contribution." /> : null}
             {!open.length ? <Alert type="success" heading={`Every department is generated for ${formatCycle(cycle)}`} description="Open a sheet from the list to certify or post it." /> : null}
-            <View style={{ gap: space[4] }}>
-              {p.rows.map((r) => (
-                <Card key={r.departmentId}>
-                  <View style={{ gap: space[3] }}>
-                    {r.alreadyGenerated ? (
-                      <Text role="label" tone="tertiary">
-                        {r.departmentName} · already generated
-                      </Text>
-                    ) : (
-                      <Checkbox checked={selected.includes(r.departmentId)} onChange={(v) => setSelected((s) => (v ? [...s, r.departmentId] : s.filter((x) => x !== r.departmentId)))} label={r.departmentName} description={`${r.members} members`} />
-                    )}
+            {/* What will be generated first; the ones already done follow as single lines. */}
+            <Stack2>
+              {[...p.rows].sort((x, y) => Number(x.alreadyGenerated) - Number(y.alreadyGenerated)).map((r) =>
+                r.alreadyGenerated ? (
+                  <RecordCard key={r.departmentId} title={r.departmentName} subtitle={r.warnings.join(' ') || 'Already generated'} amount={formatINR(r.total)} />
+                ) : (
+                  <View key={r.departmentId} style={{ gap: space[3], padding: space[8] }}>
+                    <Checkbox checked={selected.includes(r.departmentId)} onChange={(v) => setSelected((s) => (v ? [...s, r.departmentId] : s.filter((x) => x !== r.departmentId)))} label={r.departmentName} description={`${r.members} members`} />
                     {r.warnings.map((w) => (
-                      <Text key={w} role="caption" tone={r.alreadyGenerated ? 'tertiary' : 'warning'}>
+                      <Text key={w} role="caption" tone="warning">
                         {w}
                       </Text>
                     ))}
-                    {HEAD_COLUMNS.filter((h) => (r.heads[h.head] ?? 0) > 0).map((h) => (
-                      <KeyValue key={h.head} label={h.label} value={formatINR(r.heads[h.head]!)} />
-                    ))}
+                    <Text role="caption" tone="secondary">
+                      {HEAD_COLUMNS.filter((h) => (r.heads[h.head] ?? 0) > 0).map((h) => `${h.label} ${formatINR(r.heads[h.head]!)}`).join(' · ')}
+                    </Text>
                     <KeyValue label="Total" value={formatINR(r.total)} emphasis />
                   </View>
-                </Card>
-              ))}
-            </View>
+                ),
+              )}
+            </Stack2>
           </>
         )}
       </Loaded>

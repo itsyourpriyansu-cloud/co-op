@@ -18,7 +18,7 @@ export default function Search() {
   const q = useQuery({ queryKey: ['global-search', dq], queryFn: () => api.search(dq), enabled: dq.length >= 2 });
   return (
     <Screen header={<Header title="Search" onBack={() => router.back()} />}>
-      <TextField label="Search" value={text} onChangeText={setText} placeholder="Members, loans, FDs, receipts" autoFocus autoCorrect={false} />
+      <TextField compact label="Search" value={text} onChangeText={setText} placeholder="Members, loans, FDs, receipts" autoFocus autoCorrect={false} />
       {dq.length < 2 ? (
         <Text role="caption" tone="tertiary">
           Type at least two letters of a name, General No., Employee ID, loan or FDR number.

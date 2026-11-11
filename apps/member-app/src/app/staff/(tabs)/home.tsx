@@ -11,19 +11,11 @@ import { Loaded, Meter, StatTile, staffHref, TileGrid, WaitTag } from '@/compone
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Button, Card, EmptyState, Screen, Section, StatusTag, Tag, Text } from '@/ui';
-import { color, space } from '@/theme';
+import { color, onBrandMuted, radius, space } from '@/theme';
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 const hour = new Date().getHours();
 const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-const SUBTITLE: Record<RoleDashboard['variant'], string> = {
-  ADMIN: '',
-  ACCOUNTANT: 'Your queue, this month’s demand sheets and the latest applications.',
-  SIGNER: 'Everything waiting for your signature, oldest first.',
-  CASHIER: 'Payouts to make, counter receipts and member-reported payments.',
-  DDO: 'Your department only: validations, members and this month’s deduction.',
-};
-
 function ListRow({ title, subtitle, right, tag, onPress, divider }: { title: string; subtitle: string; right?: React.ReactNode; tag?: React.ReactNode; onPress?: () => void; divider?: boolean }) {
   return (
     <Pressable accessibilityRole="button" disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.listRow, divider && styles.divider, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
@@ -199,15 +191,33 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
   const DEMAND_LABEL: Record<DemandSheetStatus | 'NOT_GENERATED', string> = { NOT_GENERATED: 'Not generated', GENERATED: 'Generated', CERTIFIED: 'Certified', SENT_TO_DDO: 'Sent to DDO', RECOVERY_POSTED: 'Posted' };
   return (
     <>
+      {total > 0 ? (
+        <Pressable accessibilityRole="button" onPress={() => router.push('/staff/queue')} style={({ pressed }) => [styles.hero, pressed && { opacity: 0.92 }]}>
+          <View style={{ flex: 1, gap: space[1] }}>
+            <Text role="pageTitle" tone="onBrand" style={styles.heroFigure}>
+              {total}
+            </Text>
+            <Text role="label" tone="onBrand">
+              waiting on you
+            </Text>
+            <Text role="caption" style={{ color: onBrandMuted }}>
+              {d.oldest[0] ? `Oldest ${d.oldest[0].days} day${d.oldest[0].days === 1 ? '' : 's'}` : ''}
+              {d.overTarget ? ` · ${d.overTarget} over the service target` : ''}
+            </Text>
+          </View>
+          <ChevronRight size={24} color={onBrandMuted} />
+        </Pressable>
+      ) : null}
+
       <TileGrid>
-        {d.tiles.map((t) => (
+        {d.tiles.filter((t, i) => !(i === 0 && t.value === total)).map((t) => (
           <StatTile key={t.key} label={t.label} value={tileValue(t)} {...(t.sub ? { sub: t.sub } : {})} {...(t.tone ? { tone: t.tone } : {})} {...(t.link ? { onPress: () => router.push(staffHref(t.link!)) } : {})} />
         ))}
       </TileGrid>
 
       <Section
         title={d.variant === 'SIGNER' ? 'Awaiting your signature' : d.variant === 'CASHIER' ? 'Waiting on you' : d.variant === 'DDO' ? 'Pending validations' : 'Your queue'}
-        description={total ? `${total} item${total === 1 ? '' : 's'} · oldest first${d.overTarget ? ` · ${d.overTarget} over the service target` : ''}` : 'Nothing waiting'}
+        description={total ? 'Oldest first' : 'Nothing waiting'}
         right={<Button text="Open queue" subType="inline" onPress={() => router.push('/staff/queue')} />}
       >
         {d.oldest.length === 0 ? (
@@ -219,7 +229,7 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
                 key={`${i.kind}-${i.id}`}
                 divider={n > 0}
                 title={`${i.title} · ${i.stageLabel}`}
-                subtitle={`${i.ref} · ${i.subtitle}${i.departmentName ? ` · ${i.departmentName}` : ''}`}
+                subtitle={`${i.ref} · ${i.subtitle}${i.departmentName && !i.title.startsWith(i.departmentName) ? ` · ${i.departmentName}` : ''}`}
                 onPress={() => router.push(staffHref(i.link))}
                 right={
                   <>
@@ -322,10 +332,10 @@ export default function StaffHome() {
         <AppMark size={40} />
         <View style={{ flex: 1, gap: space[1] }}>
           <Text role="pageTitle">
-            {greeting}, {session.user.name.split(' ')[0]}
+            {session.user.name.split(' ')[0]}
           </Text>
           <Text role="caption" tone="secondary">
-            {ROLE_LABELS[session.user.role]}
+            {greeting} · {ROLE_LABELS[session.user.role]}
             {session.user.departmentId ? ' · your department only' : ''}
           </Text>
         </View>
@@ -347,13 +357,8 @@ export default function StaffHome() {
         <View style={{ gap: space[2] }}>
           <Text role="caption" tone="tertiary">
             Data as of {formatDisplayDate(s.asOf)} · cycle {formatCycle(s.currentCycle)}
-            {waiting > 0 ? ` · ${waiting} waiting on you` : ''}
+            {waiting > 0 && role.data?.variant === 'ADMIN' ? ` · ${waiting} waiting on you` : ''}
           </Text>
-          {role.data && role.data.variant !== 'ADMIN' ? (
-            <Text role="body" tone="secondary">
-              {SUBTITLE[role.data.variant]}
-            </Text>
-          ) : null}
         </View>
       ) : null}
       <Loaded q={role} what="your dashboard" height={140}>
@@ -373,6 +378,8 @@ export default function StaffHome() {
 
 const styles = StyleSheet.create({
   greeting: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  hero: { flexDirection: 'row', alignItems: 'center', gap: space[4], padding: space[8], borderRadius: radius.card, backgroundColor: color.brand.solid },
+  heroFigure: { fontSize: 44, lineHeight: 50, fontVariant: ['tabular-nums'] },
   bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.default },
   badge: { position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: color.status.danger.solid, alignItems: 'center', justifyContent: 'center' },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[4] },

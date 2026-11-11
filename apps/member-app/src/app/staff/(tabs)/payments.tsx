@@ -6,10 +6,10 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Banknote, Inbox, Plus } from 'lucide-react-native';
 import { formatCycle, formatDisplayDate, formatINR, formatINRCompact } from '@tgs/domain';
 import type { ReceiptTab } from '@tgs/types';
-import { Loaded, RecordCard, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
+import { FilterBar, Loaded, RecordCard, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { PURPOSE_LABEL, REPORT_MODE_LABEL, SOURCE_LABEL } from '@/lib/staffCollections';
-import { Button, EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
+import { Button, EmptyState, Screen, SelectField, StatusTag, Text, TextField } from '@/ui';
 import { space } from '@/theme';
 
 export default function Payments() {
@@ -54,7 +54,9 @@ export default function Payments() {
         <StatTile label="This month" value={formatINRCompact(first?.totals.thisMonth ?? 0)} sub="All receipts" />
         <StatTile label="Reported by members" value={String(reportedOpen)} tone={reportedOpen ? 'warning' : 'neutral'} sub="Waiting to verify" onPress={() => setTab('REPORTED')} />
       </TileGrid>
-      <SelectField label="Show" value={tab} options={[{ value: 'ALL', label: `All receipts${count(counts?.ALL)}` }, { value: 'SALARY_RECOVERY', label: `Salary recovery${count(counts?.SALARY_RECOVERY)}` }, { value: 'COUNTER', label: `Counter & bank${count(counts?.COUNTER)}` }, { value: 'REPORTED', label: `Reported by members${count(reportedOpen)}` }]} onChange={(v) => setTab(v as ReceiptTab)} />
+      <FilterBar search={tab === 'REPORTED' ? undefined : <TextField compact label="Search" value={text} onChangeText={setText} placeholder="Receipt no., member, General No. or reference" autoCorrect={false} />}>
+        <SelectField compact label="Show" value={tab} options={[{ value: 'ALL', label: `All receipts${count(counts?.ALL)}` }, { value: 'SALARY_RECOVERY', label: `Salary recovery${count(counts?.SALARY_RECOVERY)}` }, { value: 'COUNTER', label: `Counter & bank${count(counts?.COUNTER)}` }, { value: 'REPORTED', label: `Reported by members${count(reportedOpen)}` }]} onChange={(v) => setTab(v as ReceiptTab)} />
+      </FilterBar>
 
       {tab === 'REPORTED' ? (
         <Loaded q={reports} what="reported payments">
@@ -77,25 +79,20 @@ export default function Payments() {
           }
         </Loaded>
       ) : (
-        <>
-          <TextField label="Search" value={text} onChangeText={setText} placeholder="Receipt no., member, General No. or reference" autoCorrect={false} />
-          <Loaded q={list} what="receipts">
+        <Loaded q={list} what="receipts">
             {() =>
               !items.length ? (
                 <EmptyState icon={Banknote} title={dq ? 'No receipts match' : 'No receipts yet'} {...(dq ? { action: { text: 'Clear search', onPress: () => setText('') } } : {})} />
               ) : (
                 <Stack2>
                   {items.map((r) => (
-                    <RecordCard key={r.id} title={r.memberName} subtitle={`${r.receiptNo} · ${formatDisplayDate(r.date)}`} amount={formatINR(r.amount)} onPress={() => router.push(`/staff/payment/${r.id}`)} caption={`No. ${r.generalNo} · ${SOURCE_LABEL[r.source]}${r.purpose ? ` · ${PURPOSE_LABEL[r.purpose]}` : r.cycle ? ` · ${formatCycle(r.cycle)}` : ''} · ${r.byName ?? 'Salary recovery'}`}>
-                      {r.heads.length ? <Tag text={`${r.heads.length} head${r.heads.length === 1 ? '' : 's'}`} color="neutral" size="xs" /> : null}
-                    </RecordCard>
+                    <RecordCard key={r.id} title={r.memberName} subtitle={`${r.receiptNo} · ${formatDisplayDate(r.date)}`} amount={formatINR(r.amount)} onPress={() => router.push(`/staff/payment/${r.id}`)} caption={`No. ${r.generalNo} · ${SOURCE_LABEL[r.source]}${r.purpose ? ` · ${PURPOSE_LABEL[r.purpose]}` : r.cycle ? ` · ${formatCycle(r.cycle)}` : ''} · ${r.byName ?? 'Salary recovery'}`} />
                   ))}
-                  {list.hasNextPage ? <Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /> : null}
+                  {list.hasNextPage ? <View style={{ padding: space[6] }}><Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
                 </Stack2>
               )
             }
-          </Loaded>
-        </>
+        </Loaded>
       )}
     </Screen>
   );

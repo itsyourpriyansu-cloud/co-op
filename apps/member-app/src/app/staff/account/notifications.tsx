@@ -50,7 +50,7 @@ function Mine() {
                 <Pressable key={n.id} accessibilityRole="button" onPress={() => void open(n.id, n.read, n.link)} style={({ pressed }) => [styles.note, i > 0 && styles.divider, !n.read && { backgroundColor: color.brand.subtle }, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
                   <Bell size={18} color={n.read ? color.text.tertiary : color.brand.solid} />
                   <View style={{ flex: 1, gap: space[1] }}>
-                    <Text role={n.read ? 'body' : 'label'}>{n.title}</Text>
+                    <Text role="label" tone={n.read ? 'secondary' : 'primary'}>{n.title}</Text>
                     <Text role="caption" tone="secondary">
                       {n.body}
                     </Text>

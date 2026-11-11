@@ -1,7 +1,7 @@
 // Form fields (native mirrors of Blend TextInputV2 / SingleSelectV2): label above, hint below,
 // error replaces hint, 48 dp targets, required marker (docs/12 §5, docs/18 §7).
 import { useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, TextInput, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
+import { FlatList, Modal, Platform, Pressable, StyleSheet, TextInput, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
 import { Check, ChevronDown, Search, X } from 'lucide-react-native';
 import { parseISODate, toISODate } from '@tgs/domain';
 import { color, radius, space, textStyle, touchTarget } from '@/theme';
@@ -12,16 +12,20 @@ interface FieldFrameProps {
   required?: boolean;
   hint?: string;
   error?: string;
+  /** No label above: the placeholder or the chosen value says what it is. Screen readers still get the label. */
+  compact?: boolean | undefined;
   children: ReactNode;
 }
 
-function FieldFrame({ label, required, hint, error, children }: FieldFrameProps) {
+function FieldFrame({ label, required, hint, error, compact, children }: FieldFrameProps) {
   return (
     <View style={{ gap: space[3] }}>
-      <Text role="label">
-        {label}
-        {required ? <Text role="label" tone="danger"> *</Text> : null}
-      </Text>
+      {compact ? null : (
+        <Text role="label">
+          {label}
+          {required ? <Text role="label" tone="danger"> *</Text> : null}
+        </Text>
+      )}
       {children}
       {error ? (
         <Text role="caption" tone="danger" accessibilityLiveRegion="polite">
@@ -45,12 +49,13 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   prefix?: string;
   /** Trailing control inside the box (e.g. Show / Hide on a password). */
   suffix?: ReactNode;
+  compact?: boolean;
 }
 
-export function TextField({ label, required, hint, error, prefix, suffix, editable = true, onFocus, onBlur, ...input }: TextFieldProps) {
+export function TextField({ label, required, hint, error, prefix, suffix, compact, editable = true, onFocus, onBlur, ...input }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
   return (
-    <FieldFrame label={label} required={required} hint={hint} error={error}>
+    <FieldFrame label={label} required={required} hint={hint} error={error} compact={compact}>
       <View style={[styles.box, focused && styles.focused, !!error && styles.errored, !editable && styles.readonly]}>
         {prefix ? (
           <Text role="body" tone="tertiary">
@@ -100,7 +105,7 @@ export function DateField({ label, required, hint, error, value, onChange }: { l
       onChange(undefined);
     }
   };
-  return <TextField label={label} required={required} hint={hint ?? 'DD/MM/YYYY'} error={localError ?? error} value={text} onChangeText={onText} keyboardType="number-pad" placeholder="DD/MM/YYYY" maxLength={10} />;
+  return <TextField label={label} required={required} {...(hint ? { hint } : {})} error={localError ?? error} value={text} onChangeText={onText} keyboardType="number-pad" placeholder="DD/MM/YYYY" maxLength={10} />;
 }
 
 export interface SelectOption {
@@ -110,18 +115,18 @@ export interface SelectOption {
 }
 
 /** Bottom-sheet picker with optional search (long lists: departments, designations). */
-export function SelectField({ label, required, hint, error, value, options, onChange, placeholder = 'Select', searchable }: { label: string; required?: boolean; hint?: string; error?: string; value?: string; options: SelectOption[]; onChange: (v: string) => void; placeholder?: string; searchable?: boolean }) {
+export function SelectField({ label, required, hint, error, value, options, onChange, placeholder = 'Select', searchable, compact }: { label: string; required?: boolean; hint?: string; error?: string; value?: string; options: SelectOption[]; onChange: (v: string) => void; placeholder?: string; searchable?: boolean; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const selected = options.find((o) => o.value === value);
   const filtered = useMemo(() => (q ? options.filter((o) => o.label.toLowerCase().includes(q.toLowerCase())) : options), [q, options]);
   return (
-    <FieldFrame label={label} required={required} hint={hint} error={error}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${selected?.label ?? placeholder}`} onPress={() => setOpen(true)} style={[styles.box, !!error && styles.errored]}>
-        <Text role="body" tone={selected ? 'primary' : 'tertiary'} style={{ flex: 1 }} numberOfLines={1}>
+    <FieldFrame label={label} required={required} hint={hint} error={error} compact={compact}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${selected?.label ?? placeholder}`} onPress={() => setOpen(true)} style={compact ? styles.chip : [styles.box, !!error && styles.errored]}>
+        <Text role={compact ? 'captionStrong' : 'body'} tone={selected ? 'primary' : 'tertiary'} numberOfLines={1} {...(compact ? {} : { style: { flex: 1 } })}>
           {selected?.label ?? placeholder}
         </Text>
-        <ChevronDown size={20} color={color.text.tertiary} />
+        <ChevronDown size={compact ? 16 : 20} color={color.text.tertiary} />
       </Pressable>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel="Close" />
@@ -222,8 +227,10 @@ const styles = StyleSheet.create({
     backgroundColor: color.bg.surface,
   },
   // The box draws the focus ring, so the browser's own outline is switched off (web preview).
-  input: { flex: 1, paddingVertical: space[5], outlineWidth: 0 },
+  // The box already shows focus; the browser would draw a second ring inside it.
+  input: { flex: 1, minWidth: 0, paddingVertical: space[5], outlineWidth: 0,...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : {}) },
   focused: { borderColor: color.border.focus, borderWidth: 2 },
+  chip: { height: 40, flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[5], borderRadius: 20, borderWidth: 1, borderColor: color.border.strong, backgroundColor: color.bg.surface },
   errored: { borderColor: color.status.danger.solid },
   readonly: { backgroundColor: color.bg.surfaceMuted },
   backdrop: { flex: 1, backgroundColor: color.bg.overlay },

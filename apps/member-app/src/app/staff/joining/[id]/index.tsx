@@ -35,7 +35,7 @@ export default function ApplicationDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ['membership-application', id], queryFn: () => api.applications.get(id), refetchInterval: 20_000 });
   return (
-    <Loaded q={q} what="this application">
+    <Loaded page q={q} what="this application">
       {(d) => <Body d={d} refetching={q.isRefetching} refetch={() => void q.refetch()} />}
     </Loaded>
   );

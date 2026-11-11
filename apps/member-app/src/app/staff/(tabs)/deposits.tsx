@@ -6,7 +6,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { Landmark, Plus } from 'lucide-react-native';
 import { formatDisplayDate, formatINR, formatINRCompact } from '@tgs/domain';
 import type { DepositListParams, DepositTab } from '@tgs/types';
-import { Loaded, RecordCard, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
+import { FilterBar, Loaded, RecordCard, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { MATURING, TABS } from '@/lib/staffDeposits';
 import { Button, EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
@@ -47,9 +47,10 @@ export default function Deposits() {
         <StatTile label="CRD + SRDS" value={t ? formatINRCompact(t.crd + t.srds) : '—'} sub="From monthly salary recovery" />
         <StatTile label="Savings" value={t ? formatINRCompact(t.savings) : '—'} sub={`${first?.counts.SAVINGS ?? 0} accounts`} />
       </TileGrid>
-      <SelectField label="Show" value={tab} options={TABS.map((x) => ({ value: x.value, label: `${x.label} (${first?.counts[x.value] ?? 0})` }))} onChange={(v) => setTab(v as DepositTab)} />
-      <TextField label="Search" value={text} onChangeText={setText} placeholder="Member, General No., account or FDR no." autoCorrect={false} />
-      {tab === 'FD' ? <SelectField label="Maturity" value={maturing} options={MATURING} onChange={setMaturing} /> : null}
+      <FilterBar search={<TextField compact label="Search" value={text} onChangeText={setText} placeholder="Member, General No., account or FDR no." autoCorrect={false} />}>
+        <SelectField compact label="Show" value={tab} options={TABS.map((x) => ({ value: x.value, label: `${x.label} (${first?.counts[x.value] ?? 0})` }))} onChange={(v) => setTab(v as DepositTab)} />
+        {tab === 'FD' ? <SelectField compact label="Maturity" value={maturing} options={MATURING} onChange={setMaturing} /> : null}
+      </FilterBar>
       <Loaded q={list} what="deposits">
         {(d) =>
           !d.pages[0]?.counts[tab] ? (
@@ -63,7 +64,7 @@ export default function Deposits() {
                   {r.pledged ? <Tag text="Pledged" color="purple" size="xs" /> : null}
                 </RecordCard>
               ))}
-              {list.hasNextPage ? <Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /> : null}
+              {list.hasNextPage ? <View style={{ padding: space[6] }}><Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
             </Stack2>
           )
         }

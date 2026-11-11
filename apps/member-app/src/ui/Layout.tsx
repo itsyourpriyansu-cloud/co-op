@@ -15,6 +15,8 @@ export function Screen({ children, footer, header, scroll = true, background = c
       contentContainerStyle={[styles.content, contentStyle]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      // Web keyboard users can then scroll a long list that has nothing else to focus (axe).
+      {...(Platform.OS === 'web' ? { tabIndex: 0 as const } : {})}
       refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={color.brand.solid} colors={[color.brand.solid]} /> : undefined}
     >
       {children}

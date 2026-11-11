@@ -7,7 +7,7 @@ import { Check, Lock, Minus, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import { calculateEmi, calculateFdMaturity, formatDisplayDateTime, formatINR, HEAD_PRIORITY, toPaise } from '@tgs/domain';
 import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type DemandHead, type Department, type LoanProduct, type NotificationTemplate, type SettingsBundle, type SocietyProfile, type SocietySettings, type StaffUser } from '@tgs/types';
-import { ActionAlert, ask, Loaded, MoneyField, RecordCard, useAction } from '@/components/staff';
+import { ActionAlert, ask, Loaded, MoneyField, RecordCard, Stack2, useAction, plain } from '@/components/staff';
 import { api } from '@/lib/api';
 import { AUDIENCE, CHANNELS, ENTITY, fill, isPlaceholder, MONTHS, RECOVERY_LABEL, ROLE_HINT, SECTIONS, vars } from '@/lib/staffSettings';
 import { Alert, Button, Card, Checkbox, EmptyState, Header, KeyValue, Screen, Section, Segmented, SelectField, Tag, Text, TextField } from '@/ui';
@@ -162,31 +162,31 @@ function General({ b, title }: { b: SettingsBundle; title: string }) {
       }}
     >
       <Block title="Society" description="Printed on every receipt, letter and form (letterhead).">
-        <TextField label="Registered name" value={s.name} onChangeText={(name) => setS({ name })} error={e.name} editable={!ro} />
+        <TextField label="Registered name" value={s.name} onChangeText={(name) => setS({ name })} multiline numberOfLines={2} error={e.name} editable={!ro} />
         <TextField label="Short name" value={s.shortName} onChangeText={(shortName) => setS({ shortName })} error={e.shortName} editable={!ro} />
         <TextField label="Registration No." value={s.registrationNo} onChangeText={(registrationNo) => setS({ registrationNo })} error={e.registrationNo} editable={!ro} />
-        <TextField label="Address" value={s.address} onChangeText={(address) => setS({ address })} multiline numberOfLines={2} error={e.address} editable={!ro} />
+        <TextField label="Address" value={s.address} onChangeText={(address) => setS({ address })} multiline numberOfLines={4} error={e.address} editable={!ro} />
       </Block>
-      <Block title="Shares on joining" description="BR-032. Applies to new members from the next application." tag={ph('shareValue') || ph('minShares')}>
+      <Block title="Shares on joining" description="Applies to new members from the next application." tag={ph('shareValue') || ph('minShares')}>
         <MoneyField label="Value of one share" value={v.shareValue} onChange={(shareValue) => setV({ shareValue })} error={e.shareValue} disabled={ro} />
         <MoneyField label="Admission fee" value={v.admissionFee} onChange={(admissionFee) => setV({ admissionFee })} error={e.admissionFee} disabled={ro} hint="₹0 = no fee" />
         <Num label="Minimum shares" value={v.minShares} onChange={(minShares) => setV({ minShares })} error={e.minShares} unit="shares" disabled={ro} />
         <Num label="Maximum shares" value={v.maxShares} onChange={(maxShares) => setV({ maxShares })} error={e.maxShares} unit="shares" disabled={ro} />
       </Block>
       <Block title="Service and year" tag={ph('retirementAge')}>
-        <Num label="Retirement age" value={v.retirementAge} onChange={(retirementAge) => setV({ retirementAge })} error={e.retirementAge} unit="years" disabled={ro} hint="Used for left-over service (BR-001, BR-002)" />
+        <Num label="Retirement age" value={v.retirementAge} onChange={(retirementAge) => setV({ retirementAge })} error={e.retirementAge} unit="years" disabled={ro} hint="Used for left-over service" />
         <Choose label="Financial year starts in" value={String(v.financialYearStartMonth)} options={MONTHS} onChange={(m) => setV({ financialYearStartMonth: Number(m) })} disabled={ro} />
       </Block>
-      <Block title="Service targets" description="REQ-135: working days only (F-14). Sundays, second Saturdays and the holidays below do not count. A loan's clock starts when its last surety signs. 0 = no target.">
+      <Block title="Service targets" description="Working days only. Sundays, second Saturdays and the holidays below do not count. A loan's clock starts when its last surety signs. 0 = no target.">
         <Num label="Membership" value={v.membershipTargetHours} onChange={(membershipTargetHours) => setV({ membershipTargetHours })} error={e.membershipTargetHours} unit="working hours" hint="From submission" disabled={ro} />
         <Num label="Loan" value={v.loanTargetDays} onChange={(loanTargetDays) => setV({ loanTargetDays })} error={e.loanTargetDays} unit="working days" hint="From the last surety's signature" disabled={ro} />
         <Lines label="Holidays" placeholder="2026-10-02" split={/[\s,]+/} value={v.holidays} onChange={(holidays) => setV({ holidays })} error={e.holidays} disabled={ro} />
       </Block>
-      <Block title="Caste categories" description="F-07: asked on every membership application and member record. One category per line.">
+      <Block title="Caste categories" description="Asked on every membership application and member record. One category per line.">
         <Lines label="Categories" placeholder="OC" split={/\n/} value={v.casteCategories} onChange={(casteCategories) => setV({ casteCategories })} error={e.casteCategories} disabled={ro} />
       </Block>
-      <Block title="Risk guards" description="Placeholders until the society confirms them (D-055)." tag={ph('maxGuaranteesPerSurety')}>
-        <Num label="Loans one member may guarantee" value={v.maxGuaranteesPerSurety} onChange={(maxGuaranteesPerSurety) => setV({ maxGuaranteesPerSurety })} error={e.maxGuaranteesPerSurety} unit="open loans" hint="BR-014" disabled={ro} />
+      <Block title="Risk guards" description="Placeholders until the society confirms them." tag={ph('maxGuaranteesPerSurety')}>
+        <Num label="Loans one member may guarantee" value={v.maxGuaranteesPerSurety} onChange={(maxGuaranteesPerSurety) => setV({ maxGuaranteesPerSurety })} error={e.maxGuaranteesPerSurety} unit="open loans" disabled={ro} />
         <Num label="First EMI at most" value={v.emiToNetSalaryMaxPercent} onChange={(emiToNetSalaryMaxPercent) => setV({ emiToNetSalaryMaxPercent })} error={e.emiToNetSalaryMaxPercent} unit="% of net salary" hint="Warning only, never blocks" disabled={ro} />
       </Block>
     </Editor>
@@ -220,11 +220,11 @@ function ProductEdit({ product, onClose }: { product: LoanProduct; onClose: () =
       <Num label="Maximum instalments" value={p.maxInstalments} onChange={(maxInstalments) => set({ maxInstalments })} error={e.maxInstalments} unit="months" />
       <MoneyField label="Minimum amount" value={p.minAmount} onChange={(minAmount) => set({ minAmount })} error={e.minAmount} />
       <MoneyField label="Maximum amount" value={p.maxAmount} onChange={(maxAmount) => set({ maxAmount })} error={e.maxAmount} />
-      <Num label="Penal interest" value={p.penalRatePercent} onChange={(penalRatePercent) => set({ penalRatePercent })} error={e.penalRatePercent} unit="% a year" hint="On unpaid instalments. 0 until the society confirms (F-06)" decimals />
+      <Num label="Penal interest" value={p.penalRatePercent} onChange={(penalRatePercent) => set({ penalRatePercent })} error={e.penalRatePercent} unit="% a year" hint="On unpaid instalments. 0 until the society confirms" decimals />
       <Num label="Share deposit" value={p.shareDepositPercent} onChange={(shareDepositPercent) => set({ shareDepositPercent })} error={e.shareDepositPercent} unit="% of loan" decimals />
       <Num label="Running loans allowed" value={p.maxConcurrent} onChange={(maxConcurrent) => set({ maxConcurrent })} error={e.maxConcurrent} unit="at once" />
       {p.code === 'DEPOSIT' ? <Num label="Loan limit" value={p.depositMarginPercent ?? Number.NaN} onChange={(depositMarginPercent) => set({ depositMarginPercent })} error={e.depositMarginPercent} unit="% of the FD" /> : null}
-      <Block title="Workflow (D-030)">
+      <Block title="Workflow">
         <Num label="Sureties required" value={p.suretiesRequired} onChange={(suretiesRequired) => set({ suretiesRequired })} error={e.suretiesRequired} unit="members" hint="0 skips the surety stage" />
         <Checkbox checked={p.ddoCertificationRequired} onChange={(ddoCertificationRequired) => set({ ddoCertificationRequired })} label="Department DDO certifies the application" />
         <Checkbox checked={p.topupAllowed} onChange={(topupAllowed) => set({ topupAllowed })} label="Members may ask for a top-up" />
@@ -307,14 +307,20 @@ function Deposits({ b, title }: { b: SettingsBundle; title: string }) {
 
   return (
     <Editor title={title} onBack={back} canEdit={b.canEdit} dirty={form.dirty} a={a} onSave={() => a.run(() => api.settings.updateValues(v))} onDiscard={form.reset}>
-      <Block title="Fixed deposit rates" description="One rate per tenure band. Bands must not overlap. Preview: ₹1,00,000 paid on maturity (quarterly compounding, Q-313)." tag={isPlaceholder(b, 'fdSlabs')}>
+      <Block title="Fixed deposit rates" description="One rate per tenure band. Bands must not overlap. Preview: ₹1,00,000 paid on maturity (quarterly compounding)." tag={isPlaceholder(b, 'fdSlabs')}>
         {v.fdSlabs.map((slab, i) => {
           const m = Number.isFinite(slab.ratePercent) && slab.ratePercent > 0 && Number.isFinite(slab.fromMonths) ? calculateFdMaturity({ principal: LAKH, ratePercent: slab.ratePercent, tenureMonths: slab.fromMonths, payout: 'ON_MATURITY', openedOn: '2026-01-01' }) : undefined;
           return (
             <Card key={i}>
               <View style={{ gap: space[6] }}>
-                <Num label="From" value={slab.fromMonths} onChange={(fromMonths) => setSlab(i, { fromMonths })} error={e[`fdSlabs.${i}.fromMonths`]} unit="months" disabled={ro} />
-                <Num label="To" value={slab.toMonths} onChange={(toMonths) => setSlab(i, { toMonths })} error={e[`fdSlabs.${i}.toMonths`]} unit="months" disabled={ro} />
+                <View style={{ flexDirection: 'row', gap: space[4] }}>
+                  <View style={{ flex: 1 }}>
+                    <Num label="From" value={slab.fromMonths} onChange={(fromMonths) => setSlab(i, { fromMonths })} error={e[`fdSlabs.${i}.fromMonths`]} unit="months" disabled={ro} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Num label="To" value={slab.toMonths} onChange={(toMonths) => setSlab(i, { toMonths })} error={e[`fdSlabs.${i}.toMonths`]} unit="months" disabled={ro} />
+                  </View>
+                </View>
                 <Num label="Rate" value={slab.ratePercent} onChange={(ratePercent) => setSlab(i, { ratePercent })} error={e[`fdSlabs.${i}.ratePercent`]} unit="%" decimals disabled={ro} />
                 <KeyValue label="₹1,00,000 grows to" value={m ? `${formatINR(m.maturityValue)} in ${slab.fromMonths} m` : '—'} />
                 {!ro && v.fdSlabs.length > 1 ? <Button text="Remove band" subType="inline" buttonType="danger" leftSlot={Trash2} style={{ alignSelf: 'flex-start' }} onPress={() => set({ fdSlabs: v.fdSlabs.filter((_, j) => j !== i) })} /> : null}
@@ -341,7 +347,7 @@ function Deposits({ b, title }: { b: SettingsBundle; title: string }) {
           />
         ) : null}
       </Block>
-      <Block title="Fixed deposit minimum" description="The smallest FD the society accepts (Q-313)." tag={isPlaceholder(b, 'fdMinAmount')}>
+      <Block title="Fixed deposit minimum" description="The smallest FD the society accepts." tag={isPlaceholder(b, 'fdMinAmount')}>
         <MoneyField label="Minimum amount" value={v.fdMinAmount} onChange={(fdMinAmount) => set({ fdMinAmount })} error={e.fdMinAmount} disabled={ro} />
       </Block>
       <Block title="Other deposits" description="Annual rates credited to members' compulsory and savings deposits." tag={isPlaceholder(b, 'crdRatePercent')}>
@@ -353,7 +359,7 @@ function Deposits({ b, title }: { b: SettingsBundle; title: string }) {
         <Toggle label="Daily maturity processing" checked={v.fdMaturityJobEnabled} onChange={(fdMaturityJobEnabled) => set({ fdMaturityJobEnabled })} disabled={ro} />
         <Num label="Run after" value={v.fdMaturityRunHour} onChange={(fdMaturityRunHour) => set({ fdMaturityRunHour })} error={e.fdMaturityRunHour} unit="o'clock" hint="0 to 23" disabled={ro} />
       </Block>
-      <Block title="Premature withdrawal" description={`The penalty comes only out of the interest: the member always gets the full principal back. ${rateCut ? 'Interest is paid at the FD rate less this many percentage points.' : 'This percent of the interest earned is kept as the penalty.'} 0 means no penalty (F-06).`} tag={isPlaceholder(b, 'fdPrematurePenaltyPercent') || isPlaceholder(b, 'fdPrematurePenaltyMethod')}>
+      <Block title="Premature withdrawal" description={`The penalty comes only out of the interest: the member always gets the full principal back. ${rateCut ? 'Interest is paid at the FD rate less this many percentage points.' : 'This percent of the interest earned is kept as the penalty.'} 0 means no penalty.`} tag={isPlaceholder(b, 'fdPrematurePenaltyPercent') || isPlaceholder(b, 'fdPrematurePenaltyMethod')}>
         <Toggle label="Premature withdrawal allowed" checked={v.fdPrematureWithdrawalEnabled} onChange={(fdPrematureWithdrawalEnabled) => set({ fdPrematureWithdrawalEnabled })} disabled={ro} />
         <Choose label="How the penalty is worked out" value={v.fdPrematurePenaltyMethod} options={[{ value: 'RATE_CUT', label: 'Cut the interest rate by the penalty' }, { value: 'SHARE_OF_INTEREST', label: 'Take a share of the interest earned' }]} onChange={(x) => set({ fdPrematurePenaltyMethod: x as DepositValues['fdPrematurePenaltyMethod'] })} disabled={ro} />
         <Num label="Penalty" value={v.fdPrematurePenaltyPercent} onChange={(fdPrematurePenaltyPercent) => set({ fdPrematurePenaltyPercent })} error={e.fdPrematurePenaltyPercent} unit={rateCut ? 'points' : '% of interest'} decimals disabled={ro} />
@@ -379,28 +385,28 @@ function InsuranceDemand({ b, title }: { b: SettingsBundle; title: string }) {
 
   return (
     <Editor title={title} onBack={back} canEdit={b.canEdit} dirty={form.dirty} a={a} onSave={() => a.run(() => api.settings.updateValues(v))} onDiscard={form.reset}>
-      <Block title="Monthly heads" description="Added to every member's demand each cycle (BR-009). Changes apply from the next generated sheet." tag={ph('rrfMonthly') || ph('crdMonthly')}>
+      <Block title="Monthly heads" description="Added to every member's demand each cycle. Changes apply from the next generated sheet." tag={ph('rrfMonthly') || ph('crdMonthly')}>
         <MoneyField label="RRF per month" value={v.rrfMonthly} onChange={(rrfMonthly) => set({ rrfMonthly })} error={e.rrfMonthly} disabled={ro} />
         <MoneyField label="CRD per month" value={v.crdMonthly} onChange={(crdMonthly) => set({ crdMonthly })} error={e.crdMonthly} disabled={ro} />
         <MoneyField label="SRDS per month" value={v.srdsMonthly} onChange={(srdsMonthly) => set({ srdsMonthly })} error={e.srdsMonthly} disabled={ro} hint="Only members with an SRDS account" />
       </Block>
-      <Block title="Insurance" description="BR-008: collected once a year in the collection month." tag={ph('insurance')}>
+      <Block title="Insurance" description="Collected once a year in the collection month." tag={ph('insurance')}>
         <MoneyField label="Members with a loan" value={v.insurance.loaneeAmount} onChange={(loaneeAmount) => set({ insurance: { ...v.insurance, loaneeAmount } })} error={e['insurance.loaneeAmount']} disabled={ro} />
         <MoneyField label="Members without a loan" value={v.insurance.nonLoaneeAmount} onChange={(nonLoaneeAmount) => set({ insurance: { ...v.insurance, nonLoaneeAmount } })} error={e['insurance.nonLoaneeAmount']} disabled={ro} />
         <Choose label="Collection month" value={String(v.insurance.collectionMonth)} options={MONTHS} onChange={(m) => set({ insurance: { ...v.insurance, collectionMonth: Number(m) } })} disabled={ro} />
       </Block>
-      <Block title="Defaulters" description="BR-020: a member becomes a defaulter after this many short cycles in a row." tag={ph('defaulterCycles')}>
+      <Block title="Defaulters" description="A member becomes a defaulter after this many short cycles in a row." tag={ph('defaulterCycles')}>
         <Num label="Short cycles in a row" value={v.defaulterCycles} onChange={(defaulterCycles) => set({ defaulterCycles })} error={e.defaulterCycles} unit="cycles" disabled={ro} />
-        <Num label="Recover from sureties after" value={v.suretyRecoveryAfterCycles} onChange={(suretyRecoveryAfterCycles) => set({ suretyRecoveryAfterCycles })} error={e.suretyRecoveryAfterCycles} unit="months in a row" hint="F-13: the sureties then pay equal shares" disabled={ro} />
+        <Num label="Recover from sureties after" value={v.suretyRecoveryAfterCycles} onChange={(suretyRecoveryAfterCycles) => set({ suretyRecoveryAfterCycles })} error={e.suretyRecoveryAfterCycles} unit="months in a row" hint="The sureties then pay equal shares" disabled={ro} />
       </Block>
-      <Block title="Sending and deductions" description="The sheet must reach the DDO this many days before the 1st (society: 3–5). A deduction may never leave the member less than the minimum take-home pay (R1)." tag={ph('demandSendByDays') || ph('minTakeHomePay')}>
-        <Num label="Send to the DDO" value={v.demandSendByDays} onChange={(demandSendByDays) => set({ demandSendByDays })} error={e.demandSendByDays} unit="days before the 1st" disabled={ro} />
+      <Block title="Sending and deductions" description="The sheet must reach the DDO this many days before the 1st (society: 3–5). A deduction may never leave the member less than the minimum take-home pay." tag={ph('demandSendByDays') || ph('minTakeHomePay')}>
+        <Num label="Send to the DDO before the 1st" value={v.demandSendByDays} onChange={(demandSendByDays) => set({ demandSendByDays })} error={e.demandSendByDays} unit="days" disabled={ro} />
         <MoneyField label="Minimum take-home pay" value={v.minTakeHomePay} onChange={(minTakeHomePay) => set({ minTakeHomePay })} error={e.minTakeHomePay} disabled={ro} hint="₹0 = only the salary limit applies" />
       </Block>
-      <Block title="Penal interest" description="BR-012 (F-06): simple interest per day on the unpaid loan instalment only, from the cycle's last day plus these grace days, until paid. The rate is set per loan product." tag={ph('penalGraceDays')}>
+      <Block title="Penal interest" description="Simple interest per day on the unpaid loan instalment only, from the cycle's last day plus these grace days, until paid. The rate is set per loan product." tag={ph('penalGraceDays')}>
         <Num label="Grace days" value={v.penalGraceDays} onChange={(penalGraceDays) => set({ penalGraceDays })} error={e.penalGraceDays} unit="days" disabled={ro} />
       </Block>
-      <Section title="Recovery priority" description="BR-011, set by the agreement (§3.6). A short salary deduction is applied top to bottom." right={<Lock size={14} color={color.text.tertiary} accessibilityLabel="Locked" />}>
+      <Section title="Recovery priority" description="Set by the agreement (§3.6). A short salary deduction is applied top to bottom." right={<Lock size={14} color={color.text.tertiary} accessibilityLabel="Locked" />}>
         <Card>
           {order.map((h, i) => (
             <Text key={h} role="body">
@@ -456,14 +462,16 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
             <Text role="body" tone="secondary">
               {rows.length} offices. DDOs certify membership and loan applications and deduct dues from salary.
             </Text>
-            {rows.map((r) => (
-              <RecordCard key={r.id} title={r.name} subtitle={`${r.code} · ${r.memberCount} members`} caption={`DDO ${r.ddoName}, ${r.ddoDesignation}`} {...(canEdit ? { onPress: () => setEditing(r) } : {})}>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-                  <Tag text={r.ddoUserId ? 'Has login' : 'No login yet'} color={r.ddoUserId ? 'success' : 'neutral'} size="xs" />
-                  {r.kind === 'EXTERNAL_OFFICE' ? <Tag text="Outside Secretariat" color="neutral" size="xs" /> : null}
-                </View>
-              </RecordCard>
-            ))}
+            <Stack2>
+              {rows.map((r) => (
+                <RecordCard key={r.id} title={r.name} subtitle={`${r.code} · ${r.memberCount} members`} caption={`DDO ${r.ddoName}, ${r.ddoDesignation}`} {...(canEdit ? { onPress: () => setEditing(r) } : {})}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
+                    <Tag text={r.ddoUserId ? 'Has login' : 'No login yet'} color={r.ddoUserId ? 'success' : 'neutral'} size="xs" />
+                    {r.kind === 'EXTERNAL_OFFICE' ? <Tag text="Outside Secretariat" color="neutral" size="xs" /> : null}
+                  </View>
+                </RecordCard>
+              ))}
+            </Stack2>
           </>
         )}
       </Loaded>
@@ -538,9 +546,11 @@ function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
       <Loaded q={users} what="users">
         {(rows) => (
           <>
-            {rows.map((r) => (
-              <RecordCard key={r.id} title={r.name} subtitle={r.userId} caption={[ROLE_LABELS[r.role], deptName(r.departmentId)].filter(Boolean).join(' · ')} tag={<Tag text={r.active === false ? 'Inactive' : 'Active'} color={r.active === false ? 'neutral' : 'success'} size="xs" />} {...(canEdit ? { onPress: () => setEditing(r) } : {})} />
-            ))}
+            <Stack2>
+              {rows.map((r) => (
+                <RecordCard key={r.id} title={r.name} subtitle={r.userId} caption={[ROLE_LABELS[r.role], deptName(r.departmentId)].filter(Boolean).join(' · ')} tag={<Tag text={r.active === false ? 'Inactive' : 'Active'} color={r.active === false ? 'neutral' : 'success'} size="xs" />} {...(canEdit ? { onPress: () => setEditing(r) } : {})} />
+              ))}
+            </Stack2>
           </>
         )}
       </Loaded>
@@ -604,7 +614,7 @@ function TemplateEdit({ t, onClose }: { t: NotificationTemplate; onClose: () => 
     return ok;
   };
   return (
-    <Editor title={t.event} onBack={onClose} canEdit dirty={JSON.stringify(x) !== JSON.stringify(t)} a={a} onSave={save} onDiscard={() => setX(t)} saveText="Save template">
+    <Editor title={plain(t.event)} onBack={onClose} canEdit dirty={JSON.stringify(x) !== JSON.stringify(t)} a={a} onSave={save} onDiscard={() => setX(t)} saveText="Save template">
       <Text role="body" tone="secondary">
         Use the placeholders listed. They are filled in when the message is sent.
       </Text>
@@ -646,15 +656,17 @@ function Templates({ canEdit, title }: { canEdit: boolean; title: string }) {
       <Loaded q={q} what="templates">
         {(rows) => (
           <>
-            {rows.map((t) => (
-              <RecordCard key={t.key} title={t.event} subtitle={AUDIENCE[t.audience]} caption={`${fill(t.title)}: ${fill(t.body)}`} {...(canEdit ? { onPress: () => setEditing(t) } : {})}>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-                  {CHANNELS.map((c) => (
-                    <Tag key={c.id} text={`${c.label}: ${t.channels.includes(c.id) ? 'on' : 'off'}`} color={t.channels.includes(c.id) ? 'primary' : 'neutral'} size="xs" />
-                  ))}
-                </View>
-              </RecordCard>
-            ))}
+            <Stack2>
+              {rows.map((t) => (
+                <RecordCard key={t.key} title={plain(t.event)} subtitle={AUDIENCE[t.audience]} caption={`${fill(t.title)}: ${fill(t.body)}`} {...(canEdit ? { onPress: () => setEditing(t) } : {})}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
+                    {CHANNELS.map((c) => (
+                      <Tag key={c.id} text={`${c.label}: ${t.channels.includes(c.id) ? 'on' : 'off'}`} color={t.channels.includes(c.id) ? 'primary' : 'neutral'} size="xs" />
+                    ))}
+                  </View>
+                </RecordCard>
+              ))}
+            </Stack2>
           </>
         )}
       </Loaded>
@@ -664,24 +676,25 @@ function Templates({ canEdit, title }: { canEdit: boolean; title: string }) {
 
 // ---- ST-68m Change history -----------------------------------------------------------------
 
+/** The server names settings by their field: rrfMonthly reads as RRF monthly. */
+const readable = (text: string) => text.replace(/\b[a-z]+[A-Z][A-Za-z]*\b/g, (w) => w.replace(/([A-Z])/g, ' $1').toLowerCase()).replace(/\b(rrf|crd|srds|fd)\b/g, (w) => w.toUpperCase());
+
 function ChangeHistory({ b, title }: { b: SettingsBundle; title: string }) {
   return (
     <Screen header={<Header title={title} onBack={back} />}>
       {!b.recentChanges.length ? (
         <EmptyState icon={Lock} title="No changes yet" description="Every saved change to settings, users, departments or templates appears here with the person and time." />
       ) : (
-        <Card>
-          <View style={{ gap: space[6] }}>
-            {b.recentChanges.map((c) => (
-              <View key={c.id} style={{ gap: space[1] }}>
-                <Text role="body">{c.summary}</Text>
-                <Text role="caption" tone="tertiary">
-                  {ENTITY[c.entity] ?? c.entity} · {c.actorName} · {formatDisplayDateTime(c.at)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </Card>
+        <Stack2>
+          {b.recentChanges.map((c) => (
+            <View key={c.id} style={{ gap: space[1], padding: space[8] }}>
+              <Text role="body">{readable(c.summary)}</Text>
+              <Text role="caption" tone="tertiary">
+                {ENTITY[c.entity] ?? c.entity} · {c.actorName} · {formatDisplayDateTime(c.at)}
+              </Text>
+            </View>
+          ))}
+        </Stack2>
       )}
     </Screen>
   );

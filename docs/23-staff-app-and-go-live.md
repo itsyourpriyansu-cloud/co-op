@@ -1,6 +1,8 @@
 # 23 · Staff mobile UI: plan and task tracker
 
-> Version 0.5 · 2026-11-10 · S1–S8 built and tested on Expo web against the backend. §3, §4.2 and §4.3 now describe what was built. Only S10, the real-phone check, is open.
+> Version 0.7 · 2026-11-10 · Full screen audit (D-110): §4.2 updated, internal numbers out of the staff copy.
+> Version 0.6 · 2026-11-10 · Register layout for the staff screens (D-109): §4.2 updated.
+> Version 0.5 · 2026-11-10 · S1–S9 built and tested on Expo web against the backend. §5 ticked means built and tested on web at 412 and 360 px wide. §3, §4.2 and §4.3 describe what was built. Only S10, the real-phone check, is open.
 > Version 0.4 · 2026-11-10 · D-107: build and test everything against the backend first, real-phone check last (S10).
 > Version 0.3 · 2026-11-10 · S0 started: iOS identifier added, both native bundles build, device walk waiting on the owner.
 > Version 0.2 · 2026-11-10 · Status: **Accepted (D-101, D-106)**. No staff screen is built yet.
@@ -69,7 +71,7 @@ apps/member-app/src/
     auth.tsx                     + persona channel for staff demo sign-in, meLoading
     staffLoans.ts  staffMembers.ts  staffJoining.ts  staffDeposits.ts  staffCollections.ts  staffSettings.ts
                                  labels, query keys and pure helpers for each module
-  ui/                            unchanged, except the picker placeholder tone (contrast, axe)
+  ui/                            unchanged, except the picker placeholder tone and a web-only tabIndex on Screen (both axe)
   theme.ts                       unchanged
 ```
 
@@ -98,9 +100,10 @@ The design system is frozen (Blend blue, Inter, Lucide, tokens through `@/theme`
 | Desktop | Phone |
 |---|---|
 | Sidebar | 5 bottom tabs by role, as `(member)/_layout.tsx`. Other sections sit in More |
-| Data table | `Card` per record: name and General No. first, `Text role="amount"`, `StatusTag`, one caption line saying what it waits on |
+| Data table | The register (`Stack2` + `RecordCard`): one surface with ruled rows. Name and General No. on the left, amount and `StatusTag` on the right, one caption line saying what it waits on |
 | Filters up to 4 values | `Segmented` with counts, as the Loans tab |
-| Filters over 4 values (joining stages, departments) | `SelectField`, labelled "Show" |
+| Filters and search on a list | `FilterBar`: search, then a row of compact `SelectField` chips that scrolls sideways, so records stay near the top |
+| Summary figures | `TileGrid`: one ruled surface, not separate boxes. Home leads with one figure, what is waiting on you |
 | Large lists (members, receipts) | Server paging with a "Load more" `Button` at the end of the `Screen` |
 | Decision drawer | Pushed decision screen (§4.1), with `ask()` before anything irreversible (`RNAlert.alert` on phones, `confirm` on web) |
 | Detail tabs, up to 4 | `Segmented` |
@@ -109,7 +112,7 @@ The design system is frozen (Blend blue, Inter, Lucide, tokens through `@/theme`
 | Demand and recovery grid | One member per step with `WizardProgress`, totals in the `footer`, draft saved through `saveEntry` |
 | Denomination counter | `NumberStepper` per note, total in the `footer` |
 | Permissions matrix | `SelectField` for the role, then `Section` per module |
-| Report tables | `Section` per group, `Card` per row, `KeyValue` totals. First 50 rows, then "Show more" |
+| Report tables | The register (`Stack2` + `RecordCard`) under a `FilterBar`: member name first, General No. below it, the grand total on top, empty lines left out |
 | Ctrl+K search | Search icon in the `Header` opens a screen with a `TextField` and `Card` results |
 | Snackbar | `Alert` at the top of the screen, as the member screens do |
 | CSV download | `Share.share` from React Native with the CSV as text |
@@ -163,74 +166,74 @@ One row for each console screen, drawer, report and printable. Route is the cons
 
 | Console | Route | Phone | Phase | Done |
 |---|---|---|---|---|
-| AU-01 Staff login | `login` | AU-01m | S1 | ☐ |
-| AU-03 Forgot password | `login` | AU-03m | S1 | ☐ |
-| SYS-01 No access | `no-access` | SYS-01m | S1 | ☐ |
-| SYS-02 Not found | `*` | SYS-02m | S1 | ☐ |
-| SYS-03 Error / maintenance | error element | SYS-03m | S1 | ☐ |
-| ST-04 My profile, password, signature | account menu | ST-04m | S1 | ☐ |
-| Global search | topbar | Search | S1 | ☐ |
+| AU-01 Staff login | `login` | AU-01m | S1 | ☑ |
+| AU-03 Forgot password | `login` | AU-03m | S1 | ☑ |
+| SYS-01 No access | `no-access` | SYS-01m | S1 | ☑ |
+| SYS-02 Not found | `*` | SYS-02m | S1 | ☑ |
+| SYS-03 Error / maintenance | error element | SYS-03m | S1 | ☑ |
+| ST-04 My profile, password, signature | account menu | ST-04m | S1 | ☑ |
+| Global search | topbar | Search | S1 | ☑ |
 
 ### Work
 
 | Console | Route | Phone | Phase | Done |
 |---|---|---|---|---|
-| ST-01 Dashboard, 5 role variants | `dashboard` | ST-01m | S2 | ☐ |
-| ST-02 Work Queue | `queue` | ST-02m | S2 | ☐ |
-| ST-03 Notifications, composer, member questions | `notifications` | ST-03m | S2 | ☐ |
+| ST-01 Dashboard, 5 role variants | `dashboard` | ST-01m | S2 | ☑ |
+| ST-02 Work Queue | `queue` | ST-02m | S2 | ☑ |
+| ST-03 Notifications, composer, member questions | `notifications` | ST-03m | S2 | ☑ |
 
 ### Joining and members
 
 | Console | Route | Phone | Phase | Done |
 |---|---|---|---|---|
-| ST-14 Joining | `joining` | ST-14m | S3 | ☐ |
-| ST-15 Application detail | `joining/:id` | ST-15m | S3 | ☐ |
-| ST-16 DDO certify drawer | on `joining/:id` | ST-16m | S3 | ☐ |
-| ST-17 Approval drawer | on `joining/:id` | ST-17m | S3 | ☐ |
-| ST-10 Member index | `members` | ST-10m | S3 | ☐ |
-| ST-11 Member create / edit | `members/new`, `members/:id/edit` | ST-11m | S3 | ☐ |
-| ST-12 Member profile, 11 tabs | `members/:id` | ST-12m | S3 | ☐ |
-| ST-13 Transfer drawer | on `members/:id` | ST-13m | S3 | ☐ |
-| ST-18 Change requests | `members/change-requests` | ST-18m | S3 | ☐ |
-| Settlement, member leaves (D-098) | `members/:id/settlement` | SETTLE-m | S3 | ☐ |
+| ST-14 Joining | `joining` | ST-14m | S3 | ☑ |
+| ST-15 Application detail | `joining/:id` | ST-15m | S3 | ☑ |
+| ST-16 DDO certify drawer | on `joining/:id` | ST-16m | S3 | ☑ |
+| ST-17 Approval drawer | on `joining/:id` | ST-17m | S3 | ☑ |
+| ST-10 Member index | `members` | ST-10m | S3 | ☑ |
+| ST-11 Member create / edit | `members/new`, `members/:id/edit` | ST-11m | S3 | ☑ |
+| ST-12 Member profile, 11 tabs | `members/:id` | ST-12m | S3 | ☑ |
+| ST-13 Transfer drawer | on `members/:id` | ST-13m | S3 | ☑ |
+| ST-18 Change requests | `members/change-requests` | ST-18m | S3 | ☑ |
+| Settlement, member leaves (D-098) | `members/:id/settlement` | SETTLE-m | S3 | ☑ |
 
 ### Loans
 
 | Console | Route | Phone | Phase | Done |
 |---|---|---|---|---|
-| ST-20 Loans index | `loans` | ST-20m | S4 | ☐ |
-| ST-21 Application on behalf | `loans/new` | ST-21m | S4 | ☐ |
-| ST-22 Top-up | `loans/new` (top-up) | ST-22m | S4 | ☐ |
-| ST-23 Loan detail | `loans/:id` | ST-23m | S4 | ☐ |
-| ST-24 Review drawer | on `loans/:id` | ST-24m | S4 | ☐ |
-| ST-25 DDO certify / manual record | on `loans/:id` | ST-25m | S4 | ☐ |
-| ST-26 Assessment, office use | on `loans/:id` | ST-26m | S4 | ☐ |
-| ST-27 Sanction | on `loans/:id` | ST-27m | S4 | ☐ |
-| ST-28 Disbursement | on `loans/:id` | ST-28m | S4 | ☐ |
-| Surety recovery (D-097) | on `loans/:id` | SURETY-m | S4 | ☐ |
+| ST-20 Loans index | `loans` | ST-20m | S4 | ☑ |
+| ST-21 Application on behalf | `loans/new` | ST-21m | S4 | ☑ |
+| ST-22 Top-up | `loans/new` (top-up) | ST-22m | S4 | ☑ |
+| ST-23 Loan detail | `loans/:id` | ST-23m | S4 | ☑ |
+| ST-24 Review drawer | on `loans/:id` | ST-24m | S4 | ☑ |
+| ST-25 DDO certify / manual record | on `loans/:id` | ST-25m | S4 | ☑ |
+| ST-26 Assessment, office use | on `loans/:id` | ST-26m | S4 | ☑ |
+| ST-27 Sanction | on `loans/:id` | ST-27m | S4 | ☑ |
+| ST-28 Disbursement | on `loans/:id` | ST-28m | S4 | ☑ |
+| Surety recovery (D-097) | on `loans/:id` | SURETY-m | S4 | ☑ |
 
 ### Deposits
 
 | Console | Route | Phone | Phase | Done |
 |---|---|---|---|---|
-| ST-30 Deposits index | `deposits` | ST-30m | S5 | ☐ |
-| ST-31 Open at counter | `deposits/new` | ST-31m | S5 | ☐ |
-| ST-32 Deposit detail | `deposits/:id` | ST-32m | S5 | ☐ |
-| ST-33 Payment + acceptance | on `deposits/:id` | ST-33m | S5 | ☐ |
+| ST-30 Deposits index | `deposits` | ST-30m | S5 | ☑ |
+| ST-31 Open at counter | `deposits/new` | ST-31m | S5 | ☑ |
+| ST-32 Deposit detail | `deposits/:id` | ST-32m | S5 | ☑ |
+| ST-33 Payment + acceptance | on `deposits/:id` | ST-33m | S5 | ☑ |
 
 ### Collections
 
 | Console | Route | Phone | Phase | Done |
 |---|---|---|---|---|
-| ST-40 Demand sheets | `demand-sheets` | ST-40m | S6 | ☐ |
-| ST-41 Generate | `demand-sheets/generate` | ST-41m | S6 | ☐ |
-| ST-42 Sheet detail, certify and send, deduction entry | `demand-sheets/:id` | ST-42m | S6 | ☐ |
-| ST-43 Recovery and allocation | `demand-sheets/:id/recovery` | ST-43m | S6 | ☐ |
-| ST-44 Payments, reported tab | `payments` | ST-44m | S6 | ☐ |
-| ST-45 New receipt | `payments/new` | ST-45m | S6 | ☐ |
-| ST-46 Receipt | `payments/:id` | ST-46m | S6 | ☐ |
-| ST-47 Verify reported payment | on `payments` | ST-47m | S6 | ☐ |
-| Penal waiver | on member dues | WAIVE-m | S6 | ☐ |
+| ST-40 Demand sheets | `demand-sheets` | ST-40m | S6 | ☑ |
+| ST-41 Generate | `demand-sheets/generate` | ST-41m | S6 | ☑ |
+| ST-42 Sheet detail, certify and send, deduction entry | `demand-sheets/:id` | ST-42m | S6 | ☑ |
+| ST-43 Recovery and allocation | `demand-sheets/:id/recovery` | ST-43m | S6 | ☑ |
+| ST-44 Payments, reported tab | `payments` | ST-44m | S6 | ☑ |
+| ST-45 New receipt | `payments/new` | ST-45m | S6 | ☑ |
+| ST-46 Receipt | `payments/:id` | ST-46m | S6 | ☑ |
+| ST-47 Verify reported payment | on `payments` | ST-47m | S6 | ☑ |
+| Penal waiver | on member dues | WAIVE-m | S6 | ☑ |
 
 ### Reports (S7)
 
@@ -238,33 +241,33 @@ The screens are ST-50m (catalogue, `reports`) and ST-51m (viewer, `reports/:id`)
 
 | Report id | Title | Done |
 |---|---|---|
-| `dues` | Dues list | ☐ |
-| `defaulters` | Defaulters list | ☐ |
-| `dept-unpaid` | Department-wise unpaid collections | ☐ |
-| `dept-less` | Department-wise less collections | ☐ |
-| `defaulter-notice` | Defaulter notice (print) | ☐ |
-| `loans-ledger` | Loans ledger | ☐ |
-| `maturity` | Maturity report | ☐ |
-| `member-ledger` | Member-wise ledger | ☐ |
-| `retirement` | Retirement report | ☐ |
+| `dues` | Dues list | ☑ |
+| `defaulters` | Defaulters list | ☑ |
+| `dept-unpaid` | Department-wise unpaid collections | ☑ |
+| `dept-less` | Department-wise less collections | ☑ |
+| `defaulter-notice` | Defaulter notice (print) | ☑ |
+| `loans-ledger` | Loans ledger | ☑ |
+| `maturity` | Maturity report | ☑ |
+| `member-ledger` | Member-wise ledger | ☑ |
+| `retirement` | Retirement report | ☑ |
 
 ### Printables, ST-52m (S7)
 
 | Document | Route opened in the browser | Done |
 |---|---|---|
-| Defaulter notice | `reports/print/defaulter-notice` | ☐ |
-| F1 Membership form | `reports/print/membership` | ☐ |
-| F2 / F3 Loan form | `reports/print/loan-form` | ☐ |
-| F4 FD form | `reports/print/fd-form` | ☐ |
-| F5 / F6 Agreement | `reports/print/agreement` | ☐ |
-| F7 / F8 / F9 Bond and receipt | `reports/print/loan-bond` | ☐ |
-| F10 FD voucher | `reports/print/fd-voucher` | ☐ |
-| Sanction letter | `loans/:id/letter` | ☐ |
-| FDR | `deposits/:id/fdr` | ☐ |
-| Receipt | `payments/:id` | ☐ |
-| Demand sheet | `demand-sheets/:id` | ☐ |
-| Report print | `reports/:id` | ☐ |
-| Gratuity / settlement letter | `members/:id/settlement` | ☐ |
+| Defaulter notice | `reports/print/defaulter-notice` | ☑ |
+| F1 Membership form | `reports/print/membership` | ☑ |
+| F2 / F3 Loan form | `reports/print/loan-form` | ☑ |
+| F4 FD form | `reports/print/fd-form` | ☑ |
+| F5 / F6 Agreement | `reports/print/agreement` | ☑ |
+| F7 / F8 / F9 Bond and receipt | `reports/print/loan-bond` | ☑ |
+| F10 FD voucher | `reports/print/fd-voucher` | ☑ |
+| Sanction letter | `loans/:id/letter` | ☑ |
+| FDR | `deposits/:id/fdr` | ☑ |
+| Receipt | `payments/:id` | ☑ |
+| Demand sheet | `demand-sheets/:id` | ☑ |
+| Report print | `reports/:id` | ☑ |
+| Gratuity / settlement letter | `members/:id/settlement` | ☑ |
 
 ### Settings (S8)
 
@@ -272,15 +275,15 @@ The screens are ST-50m (catalogue, `reports`) and ST-51m (viewer, `reports/:id`)
 
 | Console | Section | Phone | Done |
 |---|---|---|---|
-| ST-60 General | `general` | ST-60m | ☐ |
-| ST-61 Users | `users` | ST-61m | ☐ |
-| ST-62 Permissions | `permissions` | ST-62m | ☐ |
-| ST-63 Templates | `templates` | ST-63m | ☐ |
-| ST-64 Loan products | `loan-products` | ST-64m | ☐ |
-| ST-65 Deposit schemes | `deposits` | ST-65m | ☐ |
-| ST-66 Insurance and demand | `insurance-demand` | ST-66m | ☐ |
-| ST-67 Departments and DDOs | `departments` | ST-67m | ☐ |
-| ST-68 Change history | `history` | ST-68m | ☐ |
+| ST-60 General | `general` | ST-60m | ☑ |
+| ST-61 Users | `users` | ST-61m | ☑ |
+| ST-62 Permissions | `permissions` | ST-62m | ☑ |
+| ST-63 Templates | `templates` | ST-63m | ☑ |
+| ST-64 Loan products | `loan-products` | ST-64m | ☑ |
+| ST-65 Deposit schemes | `deposits` | ST-65m | ☑ |
+| ST-66 Insurance and demand | `insurance-demand` | ST-66m | ☑ |
+| ST-67 Departments and DDOs | `departments` | ST-67m | ☑ |
+| ST-68 Change history | `history` | ST-68m | ☑ |
 
 ### Deliberately not on the phone
 
@@ -296,7 +299,7 @@ Order changed by D-107: every screen is built and tested against the real backen
 ### S0 Build baseline
 - [x] Add `ios.bundleIdentifier` to `app.json` (`in.tgseccsl.member`)
 - [x] Install from the lockfile; `npm run typecheck` for the app is clean; `expo export` builds the iOS and Android bundles (5.5 MB each)
-- [ ] Backend, database and Expo web running for the tests
+- [x] Backend, database and Expo web running for the tests
 
 **Exit:** the existing phone e2e suite passes against the backend.
 
@@ -318,51 +321,51 @@ Check these first. They come from reading the code and cannot show up on Expo we
 **Exit:** every journey works on both phones.
 
 ### S1 Staff shell and sign-in
-- [ ] `staff/_layout.tsx`, `staff/(tabs)/_layout.tsx` with role tabs, `index.tsx` routing, Welcome path
-- [ ] `staff-login.tsx` and the rest of §4.4
-- [ ] More screen by permission, search, system screens, ST-04m (reuse `SignatureCard`, `profile/signature.tsx`)
-- [ ] Add `journeys-staff`, `states-staff`, `a11y-staff` to the `phone` project in `playwright.config.ts`
+- [x] `staff/_layout.tsx`, `staff/(tabs)/_layout.tsx` with role tabs, `index.tsx` routing, Welcome path
+- [x] `staff-login.tsx` and the rest of §4.4
+- [x] More screen by permission, search, system screens, ST-04m (reuse `SignatureCard`, `profile/signature.tsx`)
+- [x] Add `journeys-staff`, `states-staff`, `a11y-staff` to the `phone` project in `playwright.config.ts`
 
 **Exit:** all 6 staff personas sign in and see only what they may. Members and applicants see no change.
 
 ### S2 Work
-- [ ] All rows of the Work table
+- [x] All rows of the Work table
 
 **Exit:** queue and dashboard counts equal the console for every role.
 
 ### S3 Joining and members
-- [ ] All rows of the table
+- [x] All rows of the table
 
 **Exit:** a join journey runs from the applicant through every staff step using only the phone.
 
 ### S4 Loans
-- [ ] All rows of the table
+- [x] All rows of the table
 
 **Exit:** a member applies, staff take it through sanction and disbursement on the phone, and the console shows the same result.
 
 ### S5 Deposits
-- [ ] All rows of the table
+- [x] All rows of the table
 
 **Exit:** the FD journey passes on the phone.
 
 ### S6 Collections
-- [ ] All rows of the table, with §4.5
+- [x] All rows of the table, with §4.5
 
 **Exit:** the month-end journey passes on the phone; totals equal the console.
 
 ### S7 Reports and prints
-- [ ] All rows of both tables, CSV through `Share`
+- [x] All rows of both tables, CSV through `Share`
 
 **Exit:** every report equals the console for the same filters; every Print button opens the right document.
 
 ### S8 Settings
-- [ ] All rows of the table
+- [x] All rows of the table
 
 **Exit:** an Admin edit made on the phone shows as a new version in the console.
 
 ### S9 Parity and polish
-- [ ] Audit every §5 row against §4.6 at phone sizes on web
-- [ ] Full `npm run e2e:phone`, `npm run e2e:console`, `npm run typecheck`, `npm test`
+- [x] Audit every §5 row against §4.6 at phone sizes on web
+- [x] Full `npm run e2e:phone`, `npm run e2e:console`, `npm run typecheck`, `npm test`
 
 **Exit:** the parity matrix is 100% ticked; the existing suites are still green.
 

@@ -20,7 +20,7 @@ export default function LoanAction() {
   const { id, action } = useLocalSearchParams<{ id: string; action: string }>();
   const q = useQuery({ queryKey: ['loan', id], queryFn: () => api.loans.get(id) });
   return (
-    <Loaded q={q} what="this loan">
+    <Loaded page q={q} what="this loan">
       {(d) => <Decision d={d} action={action} />}
     </Loaded>
   );
@@ -165,7 +165,7 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
       ) : null}
 
       {action === 'secretarySign' || action === 'presidentSign' || action === 'sendBack' ? (
-        <Section title="Sign-offs (D-027)">
+        <Section title="Sign-offs">
           <Card>
             {[
               { role: 'Assessed by the Accountant', s: l.signOffs?.assessment },

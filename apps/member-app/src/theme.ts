@@ -20,7 +20,8 @@ export const FONT_BY_WEIGHT: Record<NativeTextStyle['fontWeight'], string> = {
 /** RN text style for a role, using the matching Inter face. */
 export function textStyle(role: TextRoleName) {
   const { fontWeight, ...rest } = theme.text[role];
-  return { ...rest, fontFamily: FONT_BY_WEIGHT[fontWeight] };
+  // Figures line up in a column, as in a ledger.
+  return { ...rest, fontFamily: FONT_BY_WEIGHT[fontWeight], ...(role === 'amount' ? { fontVariant: ['tabular-nums' as const] } : {}) };
 }
 
 /** Secondary text on the brand-blue hero cards: 5:1 on brand.solid (WCAG AA, D-064). Replaces translucent white. */

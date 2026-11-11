@@ -14,7 +14,7 @@ export default function DepositDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ['deposit', id], queryFn: () => api.deposits.get(id), refetchInterval: 20_000 });
   return (
-    <Loaded q={q} what="this deposit">
+    <Loaded page q={q} what="this deposit">
       {(d) => <Body d={d} refetching={q.isRefetching} refetch={() => void q.refetch()} />}
     </Loaded>
   );
@@ -73,7 +73,10 @@ function Body({ d, refetching, refetch }: { d: DepositDetail; refetching: boolea
       <Section title="Next step">
         <Card>
           {d.actions.length ? (
-            <Tag text="Your turn" color="primary" />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[3] }}>
+              <Tag text="Your turn" color="primary" />
+              <Text role="label">{primary.map((a) => ACTION_LABEL[a] ?? a).join(' or ')}</Text>
+            </View>
           ) : (
             <Text role="body" tone="secondary">
               {d.waitingOn ? `Waiting on ${d.waitingOn}` : dep.status === 'ACTIVE' ? 'Running. Interest is paid as chosen; the FDR is with the member.' : 'No further steps.'}
@@ -170,7 +173,7 @@ function Body({ d, refetching, refetch }: { d: DepositDetail; refetching: boolea
       ) : null}
 
       {dep.signOffs?.secretary || dep.signOffs?.president ? (
-        <Expand title="Accepted by (D-027)">
+        <Expand title="Accepted by">
           <KeyValue label="Secretary" value={dep.signOffs?.secretary ? `${dep.signOffs.secretary.byName} · ${formatDisplayDateTime(dep.signOffs.secretary.at)}` : 'Pending'} />
           <KeyValue label="President" value={dep.signOffs?.president ? `${dep.signOffs.president.byName} · ${formatDisplayDateTime(dep.signOffs.president.at)}` : 'Pending'} />
         </Expand>
