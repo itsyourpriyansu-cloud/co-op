@@ -17,7 +17,8 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { downloadCsv } from '../collections/collections';
 
-const FILTER_KEYS: ReportFilterKey[] = ['cycle', 'departmentId', 'minCycles', 'from', 'to', 'scheme', 'memberId', 'product', 'withinMonths'];
+const FILTER_KEYS: ReportFilterKey[] = ['cycle', 'departmentId', 'minCycles', 'from', 'to', 'scheme', 'memberId', 'product', 'withinMonths', 'account', 'book', 'asOf', 'month'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function show(c: ReportColumn, v: ReportCell): string {
   if (v === null || v === undefined || v === '') return '—';
@@ -123,6 +124,31 @@ export function ReportViewerPage() {
             {def.filters.includes('withinMonths') && (
               <div className="w-48">
                 <SingleSelectV2 label="Retiring within" placeholder="12 months" items={[{ items: ['3', '6', '12', '24', '36'].map((n) => ({ label: `${n} months`, value: n })) }]} selected={filters.withinMonths ?? '12'} onSelect={(v) => set('withinMonths', v)} />
+              </div>
+            )}
+            {def.filters.includes('book') && (
+              <div className="w-48">
+                <SingleSelectV2 label="Book" placeholder="Day book" items={[{ items: [{ label: 'Day book', value: 'DAY' }, { label: 'Cash book', value: 'CASH' }, { label: 'Bank book', value: 'BANK' }] }]} selected={filters.book ?? r?.filters.book ?? 'DAY'} onSelect={(v) => set('book', v)} />
+              </div>
+            )}
+            {def.filters.includes('account') && (
+              <div className="w-72">
+                <SingleSelectV2 label="Account" placeholder="Bank" items={[{ items: (opts.accounts ?? []).map((a) => ({ label: `${a.code} ${a.name}`, value: a.code })) }]} selected={filters.account ?? r?.filters.account ?? ''} onSelect={(v) => set('account', v)} />
+              </div>
+            )}
+            {def.filters.includes('scheme') && (
+              <div className="w-44">
+                <SingleSelectV2 label="Scheme" placeholder="All schemes" items={[{ items: [{ label: 'All schemes', value: '' }, { label: 'FD', value: 'FD' }, { label: 'CRD', value: 'CRD' }, { label: 'SRDS', value: 'SRDS' }] }]} selected={filters.scheme ?? ''} onSelect={(v) => set('scheme', v || undefined)} />
+              </div>
+            )}
+            {def.filters.includes('month') && (
+              <div className="w-44">
+                <SingleSelectV2 label="Month" placeholder="This month" items={[{ items: MONTHS.map((m, i) => ({ label: m, value: String(i + 1) })) }]} selected={filters.month ?? r?.filters.month ?? ''} onSelect={(v) => set('month', v)} />
+              </div>
+            )}
+            {def.filters.includes('asOf') && (
+              <div className="w-44">
+                <TextInputV2 label="As on" type="date" value={filters.asOf ?? r?.filters.asOf ?? ''} onChange={(e) => set('asOf', e.target.value || undefined)} />
               </div>
             )}
             {def.filters.includes('from') && (

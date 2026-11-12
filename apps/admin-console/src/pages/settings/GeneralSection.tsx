@@ -5,7 +5,7 @@ import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, TextFiel
 import { api } from '@/lib/api';
 import { MONTH_ITEMS, isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories'>;
+type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths'>;
 const pick = (s: SocietySettings): Values => ({
   shareValue: s.shareValue,
   admissionFee: s.admissionFee,
@@ -19,6 +19,8 @@ const pick = (s: SocietySettings): Values => ({
   loanTargetDays: s.loanTargetDays,
   holidays: s.holidays,
   casteCategories: s.casteCategories,
+  minAppVersion: s.minAppVersion,
+  applicantDataRetentionMonths: s.applicantDataRetentionMonths,
 });
 
 export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
@@ -76,6 +78,14 @@ export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
       <FormSection title="Risk guards" description="Placeholders until the society confirms them (D-055)." tag={ph('maxGuaranteesPerSurety')}>
         <NumberField label="Loans one member may guarantee" name="maxGuaranteesPerSurety" value={v.maxGuaranteesPerSurety} onChange={(maxGuaranteesPerSurety) => setV({ maxGuaranteesPerSurety })} errors={errors} unit="open loans" disabled={ro} hint="BR-014" />
         <NumberField label="First EMI at most" name="emiToNetSalaryMaxPercent" value={v.emiToNetSalaryMaxPercent} onChange={(emiToNetSalaryMaxPercent) => setV({ emiToNetSalaryMaxPercent })} errors={errors} unit="% of net salary" disabled={ro} hint="Warning only, never blocks" />
+      </FormSection>
+
+      <FormSection title="Mobile app" description="Raise this when an old version of the app must stop working (for example after a security fix). People on an older version see an update screen. 0.0.0 lets every version in.">
+        <TextField label="Oldest version allowed" name="minAppVersion" value={v.minAppVersion} onChange={(minAppVersion) => setV({ minAppVersion: minAppVersion.trim() })} errors={errors} placeholder="1.0.0" disabled={ro} />
+      </FormSection>
+
+      <FormSection title="Personal data" description="DPDP Act 2023: a rejected or withdrawn application, its documents and the applicant's app sign-in are deleted this long after the last change. Members' records are kept as the law requires." tag={ph('applicantDataRetentionMonths')}>
+        <NumberField label="Delete closed applications after" name="applicantDataRetentionMonths" value={v.applicantDataRetentionMonths} onChange={(applicantDataRetentionMonths) => setV({ applicantDataRetentionMonths })} errors={errors} unit="months" disabled={ro} />
       </FormSection>
 
       <SaveBar

@@ -1,0 +1,4 @@
+generalNo,scheme,accountNo,fdrNo,openedOn,principal,tenureMonths,ratePercent,payoutFrequency,monthlyAmount,balance
+9001,CRD,,,2012-04-10,,,,,,12000
+9002,SRDS,,,2006-01-20,,,,,,8400.50
+9002,FD,FDA/0457,OLD/FD/0457,2025-08-01,100000,24,7.5,QUARTERLY,,

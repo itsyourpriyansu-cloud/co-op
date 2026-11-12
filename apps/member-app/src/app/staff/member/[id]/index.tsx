@@ -1,13 +1,17 @@
 // ST-12m Member profile: quick actions, then the console's tabs as sections that open in place.
+import { useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { FileUp } from 'lucide-react-native';
+import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR, REQUIRED_DOCUMENTS } from '@tgs/domain';
 import type { MemberDetail, MemberLoanRow } from '@tgs/types';
+import { FileButton } from '@/components/FileButton';
 import { ActionAlert, ask, Expand, Loaded, PrintButton, StatTile, TileGrid, useAction, useCan } from '@/components/staff';
+import { pickDocumentImage } from '@/lib/files';
 import { api } from '@/lib/api';
 import { changeValue, EVENT_LABEL, fieldLabel, MANDATE_LABEL, retiringLabel, SCHEME_LABEL } from '@/lib/staffMembers';
-import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Tag, Text } from '@/ui';
+import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, SelectField, StageTracker, StatusTag, Tag, Text } from '@/ui';
 import { space } from '@/theme';
 
 const address = (a: { line1: string; line2?: string; city: string; district: string; pincode: string }) => [a.line1, a.line2, a.city, a.district, a.pincode].filter(Boolean).join(', ');
@@ -262,10 +266,8 @@ function Body({ d, refetching, refetch }: { d: MemberDetail; refetching: boolean
         )}
       </Expand>
 
-      <Expand title="Documents">
-        {d.documents.map((doc) => (
-          <KeyValue key={doc.type} label={doc.label} value={`${doc.fileName} · ${formatDisplayDate(doc.uploadedOn)}`} />
-        ))}
+      <Expand title="Documents" badge={d.documents.length ? <Tag text={String(d.documents.length)} color="neutral" size="xs" /> : undefined}>
+        <Documents d={d} />
       </Expand>
 
       <Expand title="Change requests" badge={pending ? <Tag text={String(pending)} color="warning" size="xs" /> : undefined}>
@@ -298,5 +300,44 @@ function Body({ d, refetching, refetch }: { d: MemberDetail; refetching: boolean
         <PrintButton text="Print F1 membership form" path={`/reports/print/membership?member=${m.id}`} />
       </View>
     </Screen>
+  );
+}
+
+/** G1 (D-111): uploaded documents; office staff add photos. */
+function Documents({ d }: { d: MemberDetail }) {
+  const action = useAction();
+  const [type, setType] = useState(REQUIRED_DOCUMENTS[0]!.type);
+  const add = () =>
+    void action.run(async () => {
+      const picked = await pickDocumentImage();
+      if (picked) await api.documents.uploadFor(d.member.id, { type, ...picked });
+    });
+  return (
+    <View style={{ gap: space[4] }}>
+      {d.documents.length ? (
+        d.documents.map((doc) => (
+          <View key={doc.fileId} style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
+            <View style={{ flex: 1, gap: space[1] }}>
+              <Text role="bodyStrong">{doc.label}</Text>
+              <Text role="caption" tone="tertiary">
+                {doc.fileName} · {formatDisplayDate(doc.uploadedOn)} · {doc.uploadedBy}
+              </Text>
+            </View>
+            <FileButton fileId={doc.fileId} mime={doc.mime} consolePath={`/members/${d.member.id}`} />
+          </View>
+        ))
+      ) : (
+        <Text role="caption" tone="tertiary">
+          No documents on file. Papers from before the app are in the office file.
+        </Text>
+      )}
+      {d.can.edit && (
+        <View style={{ gap: space[3] }}>
+          <SelectField label="Add a document" value={type} options={REQUIRED_DOCUMENTS.map((x) => ({ value: x.type, label: x.label }))} onChange={(v) => setType(v as typeof type)} />
+          <Button text="Choose a photo" buttonType="secondary" leftSlot={FileUp} fullWidth loading={action.busy} onPress={add} />
+        </View>
+      )}
+      <ActionAlert action={action} />
+    </View>
   );
 }

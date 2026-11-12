@@ -68,6 +68,10 @@ export type Permission =
   | 'messages.send'
   /** ST-03 reply to member questions from MB-13 (D-063). */
   | 'support.reply'
+  /** G1 (D-111): read the audit log (who changed what, when). */
+  | 'audit.view'
+  /** G2 (D-111): year-end work: annual interest, dividend, financial year close. */
+  | 'ledger.close'
   | 'settings.view'
   | 'settings.edit'
   | 'users.manage'

@@ -107,6 +107,8 @@ export class ProfileChangesService {
     const pendingFields = (await this.repo.forMember(m.id)).filter((r) => r.status === 'PENDING').flatMap((r) => r.fields.map((f) => f.field));
     const fieldErrors = validateChangeRequest(m, input, pendingFields, await businessToday(this.app));
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
+    // G1 (D-111): the proof must be a file this member uploaded.
+    if (body.documentFileId) await this.app.documents.assertOwn(user.id, body.documentFileId);
     const fields = input.fields.map(({ field, newValue }) => ({ field, oldValue: profileFieldValue(m, field), newValue: newValue.trim() }));
     const r: ProfileChangeRequest = {
       id: `pcr-${randomUUID().slice(0, 8)}`,
@@ -114,6 +116,7 @@ export class ProfileChangesService {
       fields,
       reason: input.reason.trim(),
       ...(body.documentName?.trim() ? { documentName: body.documentName.trim() } : {}),
+      ...(body.documentFileId ? { documentFileId: body.documentFileId } : {}),
       route: changeRequestRoute(fields.map((f) => f.field)),
       status: 'PENDING',
       createdAt: new Date().toISOString(),

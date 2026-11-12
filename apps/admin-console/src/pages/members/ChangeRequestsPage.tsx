@@ -33,6 +33,7 @@ import { SideDrawer } from '@/components/SideDrawer';
 import { StatusTag } from '@/components/StatusTag';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
+import { openFile } from '@/lib/files';
 import { cn } from '@/lib/utils';
 import { MembersTabs } from './MembersPage';
 import { changeValue, fieldLabel } from './members';
@@ -142,8 +143,13 @@ function DecisionDrawer({ row, onClose }: { row: ChangeRequestRow | null; onClos
             <FileText size={20} className="shrink-0 text-brand-text" aria-hidden />
             <div className="min-w-0">
               <p className="truncate text-label text-fg">{row.documentName}</p>
-              <p className="text-caption text-fg-tertiary">Supporting document (simulated, no preview)</p>
+              <p className="text-caption text-fg-tertiary">Supporting document</p>
             </div>
+            {row.documentFileId && (
+              <button type="button" className="ml-auto text-label text-brand-text hover:underline" onClick={() => void openFile(row.documentFileId!)}>
+                Open
+              </button>
+            )}
           </div>
         )}
         <section className="flex flex-col gap-2">

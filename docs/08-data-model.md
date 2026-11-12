@@ -1,5 +1,6 @@
 # 08 · Data Model
 
+> Version 0.11 · 2026-11-12 · G7 (D-117): `declarations.privacyConsent`, `SignatureRecord.privacyVersion`, setting `applicantDataRetentionMonths`. v0.10 · G4 (D-114): `push_tokens`, setting `minAppVersion`. v0.9 · G2 (D-112): `ledger_accounts.parent_code`, `office_vouchers`, `financial_years`, new heads. v0.8 · G1 (D-111): `idempotency_keys`; `files` holds documents (`purpose` DOCUMENT, `doc_type`, `file_name`, `uploaded_by`); `profile_change_requests.document_file_id`; `Receipt.purpose` LOAN_CLOSURE and `coins`; `DepositAccount.interestPayouts`.
 > Version 0.7 · 2026-10-30 · Production tables: see `docs/22` §5.1 (P1 auth), §5.2 (P2 masters: versioned settings and loan products, REQ-130) and §5.3 (P3 ledger: chart, journal entries and lines, REQ-131)
 > Version 0.5 · 2026-10-24
 > Entities for the mock store and TypeScript types. Fields tagged [A] are contractual, [P] proposed, `?` optional. All money values are stored as **integer paise** [P] to avoid floating-point errors, and displayed as ₹.
@@ -213,4 +214,26 @@ Caste categories (Q-406) · Nominee relations · Document types (Q-403) · Disbu
 - `TransferEvent` gained `id, effectiveDate?, remarks?, recordedAt?, recordedByName?`. Seed version 7.
 
 ### Stored files (D-096)
-`files`: id, owner id (member, applicant or staff), purpose (`SIGNATURE`), mime, size, width, height, SHA-256 of the plain file, and the file itself encrypted with AES-256-GCM (`sealed`: IV · tag · ciphertext). Rows are never changed; the latest per owner is the current signature. Signed records hold the file id: `MembershipApplication.signature.fileId`, `Loan.signature.fileId`, `LoanSurety.signatureFileId`, `DepositAccount.signature.fileId`, `StaffSignOff.signatureFileId` (loan, membership and FD sign-offs), `RecoveryMandate.signatureFileId` (member) and `agreedSignatureFileId` (DDO).
+`files`: id, owner id (member, applicant or staff), purpose (`SIGNATURE` or, since G1, `DOCUMENT` with `doc_type`, `file_name`, `uploaded_by`; width / height 0 for a PDF), mime, size, width, height, SHA-256 of the plain file, and the file itself encrypted with AES-256-GCM (`sealed`: IV · tag · ciphertext). Rows are never changed; the latest per owner is the current signature. Signed records hold the file id: `MembershipApplication.signature.fileId`, `Loan.signature.fileId`, `LoanSurety.signatureFileId`, `DepositAccount.signature.fileId`, `StaffSignOff.signatureFileId` (loan, membership and FD sign-offs), `RecoveryMandate.signatureFileId` (member) and `agreedSignatureFileId` (DDO).
+
+## 11. As built (G1, D-111)
+- `idempotency_keys`: scope (session id), key, request hash, status IN_PROGRESS / DONE, status code, stored response, created at. Primary key (scope, key). Rows older than a day are purged by the daily job.
+- `files` documents: see Stored files above. `MemberDocument` and `StoredDocument` carry `fileId` and `mime`; `MembershipForm.documents[].fileId`; `ProfileChangeRequest.documentFileId`.
+- `Receipt.purpose` gains `LOAN_CLOSURE`; `Receipt.coins` (paise under ₹10, closure only). `Loan.closedOn` is set on early closure.
+- `DepositAccount.interestPayouts[]`: date, amount, voucher no.; voucher kind `INTEREST`.
+- Permissions `audit.view` (Super Admin) and `ledger.close` (Accountant), migration 0027.
+
+## 12. As built (G2, D-112)
+- `ledger_accounts.parent_code`: a sub-head's main head (null for main heads). New heads: 2500 Dividend payable (per member), 3300 Surplus / deficit, 4500 Interest from bank, 4900 Other income, 5210 Interest on share deposit, 5300 Salaries, 5400 Rent, 5500 Printing and stationery, 5600 Audit fees, 5700 Bank charges, 5800 General body, 5900 Other office expenses (migration 0030).
+- `office_vouchers`: voucher no. (unique, `PV-` / `RV-YYYY-NNNN`), kind, date, head code, amount, mode, reference, party, narration, entry id, created by / name / at.
+- `financial_years`: fy (`2026-27`, key), start, end, closing entry id, surplus, closed by / name / at. Its end date is the posting lock.
+- Journal sources `VOUCHER`, `ANNUAL_INTEREST`, `DIVIDEND`, `DIVIDEND_PAYMENT`, `YEAR_CLOSE`. Settings `shareDepositRatePercent`, `depositInterestBasis`.
+
+## 13. As built (G4, D-114)
+- `push_tokens`: token (key), user id (member, applicant or staff), platform ios / android, created, last seen (migration 0031).
+- `SocietySettings.minAppVersion` (`0.0.0`, migration 0032).
+
+## 14. As built (G7, D-117)
+- `MembershipApplicationForm.declarations.privacyConsent`; `SignatureRecord.privacyVersion` (`PN-2026.1`).
+- `SocietySettings.applicantDataRetentionMonths` (12, migration 0033).
+

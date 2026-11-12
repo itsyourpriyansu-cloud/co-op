@@ -10,10 +10,10 @@
 
 | | |
 |---|---|
-| **Current step** | E. **Staff mobile UI: S0–S9 built and tested on Expo web against the backend (D-106, D-107, D-108).** Every console function has a phone screen under `apps/member-app/src/app/staff/`. `docs/23` is the tracker. Branch `v2`; the user commits by hand |
-| **Next action** | **S10: the owner checks both apps on a real Android phone and an iPhone with Expo Go** (`docs/23` §6, what to try first is listed there). Fix any native bugs found. Later, when asked: Azure deployment; loan / deposit register import once the society sends samples. Waiting on the society: F-06, F-09, F-10, F-13, F-14 |
-| **Blockers** | S10 needs `backend/.env` (the owner's database password) and phones on the same Wi-Fi as the laptop. Later, outside this work: **member sign-in on production needs F-10 (WhatsApp provider)** |
-| **Last updated** | 2026-11-10 |
+| **Current step** | F. **Production readiness G1–G8 built (D-111 … D-118).** `docs/24` is the tracker; only owner items are open. Staff mobile UI S0–S9 built earlier (E). Branch `v2`; the user commits by hand |
+| **Next action** | **Owner work, in `docs/go-live-checklist.md` §1:** Azure subscription and first deploy (`infra/README.md`), store accounts and the real-phone check (S10, `docs/23` §6), WhatsApp number and approved templates (F-10), real registers and a staging import rehearsal (F-11), UAT (`docs/uat-script.md`), training, cutover date |
+| **Blockers** | Local runs need `backend/.env` (the owner's database password). Member sign-in on production needs F-10. Waiting on the society: F-06, F-09, F-10, F-11, F-13, F-14 |
+| **Last updated** | 2026-11-12 |
 
 ---
 
@@ -71,6 +71,19 @@ Tick a phase only when its exit test has passed.
 - [x] S8 Settings
 - [x] S9 Parity and polish
 - [ ] S10 Real-phone check (the owner, last)
+
+## F. Production readiness (task lists in `docs/24`)
+Built by Claude; the owner items under each phase stay open until done by hand.
+
+- [x] G1 Money safety and records (D-111)
+- [x] G2 Accounting (D-112)
+- [x] G3 Platform: CI, deploy, Azure, files, jobs (D-113)
+- [x] G4 Store release (D-114)
+- [x] G5 Real WhatsApp and email senders (D-115)
+- [x] G6 Data migration imports (D-116)
+- [x] G7 Hardening, DPDP, load test (D-117)
+- [x] G8 Go-live papers, key rotation (D-118)
+- [ ] Owner items (`docs/go-live-checklist.md` §1)
 
 ---
 
@@ -137,3 +150,4 @@ Tick a phase only when its exit test has passed.
 | 2026-11-10 | **S0 started:** `ios.bundleIdentifier` added; `node_modules` reinstalled from the lockfile (it was older than the lockfile); app typecheck clean after regenerating Expo's typed routes; iOS and Android bundles build (5.5 MB each). expo-doctor: 10 packages a patch behind SDK 58, left as they are. Device walk not done: `backend/.env` is absent and needs the owner's database password | S0 device walk |
 | 2026-11-10 | **S1–S9 built** (D-108): every console function on the phone under `src/app/staff/` (45 route files), React Native only, nothing new, nothing committed. Tested on Expo web against the backend on a throw-away PostgreSQL: staff journeys 14/14, staff states 10/10, staff axe + nothing cut off at 360 px 48/48, member phone 41/41, console 154/154 (151 in the full run; the 3 that hit a demo-reset time limit passed after it was raised, 40/40 on those files), backend 143, root 307, typecheck green. All 48 staff screens reviewed by eye at 412 px. Bugs found and fixed: hidden tabs unreachable (`href: null`), guard landing on Home, default dates ignoring the demo clock, duplicate recovery screen, raw date on the demand sheet. Not checked: real phones (S10) | S10 real-phone check |
 | 2026-11-11 | **Staff screens redesigned and audited** (D-109, D-110): register layout with the `interface-design` skill inside the frozen design system; all 63 staff screens captured full length at 412 px and fixed (back arrow on records that fail to load, reports and cash slip compacted, internal rule numbers out of the copy, cut-off text, units on narrow fields). Phone suite 113/113 on Expo web against the backend, typecheck green. Console suite not re-run (console code unchanged). Not seen: the two DDO certify screens with data, wizard steps after the first; not checked: real phones (S10) | S10 real-phone check |
+| 2026-11-12 | **Production readiness G5–G8 built** (D-115 … D-118; G1–G4 earlier, D-111 … D-114): WhatsApp Cloud API and Azure email senders (OTP_NOT_SENT when a code cannot go out), loan / deposit / opening-balance imports with reconciliation, guards moved before validation and a whole-API sign-in sweep, DPDP consent (PN-2026.1) and applicant erasure after the retention setting, load test (60 users, p95 0.52 s, 0 errors), key rotation tool, runbook, UAT script, training guides, go-live checklist. Backend 184/184, root 312/312, e2e 267/267 (259 in the full run; 8 rerun and passing after two test fixes: Divya uploads her own documents (G1 ownership check), the report loop allows 19 reports and the empty state), typecheck green. Not checked: real Azure, real WhatsApp, real phones, Docker build (CI only) | Owner items |

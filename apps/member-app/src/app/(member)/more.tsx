@@ -5,6 +5,7 @@ import { Bell, Calculator, ChevronRight, FlaskConical, Handshake, LifeBuoy, LogO
 import { useAuth } from '@/lib/auth';
 import { Card, Screen, Text } from '@/ui';
 import { color, space, touchTarget } from '@/theme';
+import { DEMO_TOOLS } from '@/lib/serverUrl';
 
 const items: Array<{ icon: LucideIcon; label: string; href: Href }> = [
   { icon: UserRound, label: 'Profile & agreements', href: '/profile' },
@@ -31,8 +32,8 @@ export default function More() {
         ))}
       </Card>
       <Card padded={false}>
-        <Row icon={FlaskConical} label="Demo settings" onPress={() => router.push('/demo-settings')} />
-        <Row icon={LogOut} label="Sign out" onPress={() => void signOut()} danger divider />
+        {DEMO_TOOLS ? <Row icon={FlaskConical} label="Demo settings" onPress={() => router.push('/demo-settings')} /> : null}
+        <Row icon={LogOut} label="Sign out" onPress={() => void signOut()} danger divider={DEMO_TOOLS} />
       </Card>
     </Screen>
   );

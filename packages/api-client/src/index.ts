@@ -77,10 +77,26 @@ import {
   type MemberDues,
   type MemberNotices,
   type MySignature,
+  type DocumentUploadInput,
+  type LedgerHead,
+  type HeadInput,
+  type OfficeVoucher,
+  type OfficeVoucherInput,
+  type OfficeVoucherList,
+  type YearEndStatus,
+  type InterestPreview,
+  type DividendPreview,
+  type StoredDocument,
+  type FileContent,
   type SignatureImage,
   type SuretyRecoveryPanel,
   type SettlementView,
   type MyPayments,
+  type AuditLogEntry,
+  type AuditLogList,
+  type AuditLogParams,
+  type LoanClosureInput,
+  type LoanClosureQuote,
   type NewReceiptInput,
   type PaymentReport,
   type PaymentReportRow,
@@ -123,6 +139,11 @@ export class ApiError extends Error {
     this.fieldErrors = body.fieldErrors;
     this.ruleId = body.ruleId;
   }
+}
+
+/** A fresh Idempotency-Key for one form (G1, D-111). Random enough per user; no crypto API needed on Hermes. */
+export function newIdempotencyKey(): string {
+  return `k${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}${Math.random().toString(36).slice(2, 12)}`;
 }
 
 export function isApiError(e: unknown): e is ApiError {
@@ -168,22 +189,27 @@ export function createApiClient(options: ApiClientOptions) {
     body?: unknown,
     versioned = true,
     retried = false,
+    /** G1 (D-111): one key per form, so a retry after a time-out returns the first answer. */
+    idempotencyKey?: string,
   ): Promise<T> {
     const url = (await resolveBase()) + (versioned ? API_PREFIX : '') + path;
     const token = options.getToken ? await options.getToken() : undefined;
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (token) headers.Authorization = `Bearer ${token}`;
+    if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
 
     // Manual timeout: AbortSignal.timeout is not available on every JS engine (Hermes).
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const payload = body === undefined ? undefined : JSON.stringify(body);
+    // G1: a document upload (up to ~7 MB of base64) gets two minutes on a slow phone network.
+    const timer = setTimeout(() => controller.abort(), payload && payload.length > 500_000 ? 120_000 : timeoutMs);
     let res: Response;
     try {
       res = await fetch(url, {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: payload,
         signal: controller.signal,
       });
     } catch {
@@ -204,7 +230,7 @@ export function createApiClient(options: ApiClientOptions) {
       // Sign-in calls answer 401 for a bad step; never renew on those (or on the renewal itself).
       const isAuthCall = path.startsWith('/auth/');
       if (res.status === 401 && !retried && !isAuthCall && options.refreshSession && token) {
-        if (await refreshOnce()) return request<T>(method, path, body, versioned, true);
+        if (await refreshOnce()) return request<T>(method, path, body, versioned, true, idempotencyKey);
       }
       if (res.status === 401) options.onUnauthenticated?.();
       throw new ApiError(res.status, errorBody);
@@ -214,6 +240,8 @@ export function createApiClient(options: ApiClientOptions) {
 
   return {
     health: () => request<Health>('GET', '/health', undefined, false),
+    /** G4 (D-114): the oldest app version allowed; read before sign-in. */
+    appConfig: () => request<{ minAppVersion: string }>('GET', '/app/config'),
     me: () => request<Me>('GET', '/me'),
     auth: {
       loginAsPersona: (personaId: string, channel: Channel) =>
@@ -242,6 +270,9 @@ export function createApiClient(options: ApiClientOptions) {
       savePreferences: (input: Partial<MemberPreferences>) => request<MemberPreferences>('PUT', '/me/preferences', input),
       support: () => request<SupportCenter>('GET', '/me/support'),
       createTicket: (input: { subject: string; message: string; category: NonNullable<SupportTicket['category']> }) => request<SupportTicket>('POST', '/me/support/tickets', input),
+      /** G4 (D-114): this phone receives pushes for whoever is signed in (members and staff). */
+      registerPush: (token: string, platform: 'ios' | 'android') => request<{ ok: true }>('POST', '/me/push-token', { token, platform }),
+      removePush: (token: string) => request<{ ok: true }>('DELETE', '/me/push-token', { token }),
     },
     demo: {
       personas: (channel?: Channel) =>
@@ -274,6 +305,29 @@ export function createApiClient(options: ApiClientOptions) {
       mine: () => request<MySignature | null>('GET', '/me/signature'),
       upload: (pngBase64: string) => request<MySignature>('PUT', '/me/signature', { png: pngBase64 }),
       image: (fileId: string) => request<SignatureImage>('GET', `/signatures/${fileId}`),
+    },
+    /** G2 (D-112): office vouchers, sub-heads, year end. */
+    accounts: {
+      heads: () => request<LedgerHead[]>('GET', '/accounts/heads'),
+      addHead: (input: HeadInput) => request<LedgerHead>('POST', '/accounts/heads', input),
+      updateHead: (code: string, patch: { name?: string; active?: boolean }) => request<LedgerHead>('PATCH', `/accounts/heads/${encodeURIComponent(code)}`, patch),
+      vouchers: (params: { from?: string; to?: string; kind?: 'PAYMENT' | 'RECEIPT'; page?: number; pageSize?: number } = {}) => request<OfficeVoucherList>('GET', `/accounts/vouchers${toQuery(params)}`),
+      voucher: (id: string) => request<OfficeVoucher>('GET', `/accounts/vouchers/${id}`),
+      createVoucher: (input: OfficeVoucherInput, idempotencyKey?: string) => request<OfficeVoucher>('POST', '/accounts/vouchers', input, true, false, idempotencyKey),
+      yearEnd: (fy?: string) => request<YearEndStatus>('GET', `/accounts/year-end${toQuery({ fy })}`),
+      interestPreview: (fy: string) => request<InterestPreview>('GET', `/accounts/year-end/interest${toQuery({ fy })}`),
+      postInterest: (fy: string) => request<InterestPreview>('POST', '/accounts/year-end/interest', { fy }),
+      dividendPreview: (fy: string, rate: number) => request<DividendPreview>('GET', `/accounts/year-end/dividend${toQuery({ fy, rate })}`),
+      declareDividend: (input: { fy: string; ratePercent: number; resolution: string }) => request<DividendPreview>('POST', '/accounts/year-end/dividend', input),
+      payDividend: (fy: string) => request<DividendPreview>('POST', '/accounts/year-end/dividend/pay', { fy }),
+      closeYear: (fy: string) => request<YearEndStatus>('POST', '/accounts/year-end/close', { fy }),
+    },
+    /** G1 (D-111): documents (JPEG, PNG or PDF as base64). */
+    documents: {
+      mine: () => request<StoredDocument[]>('GET', '/me/documents'),
+      upload: (input: DocumentUploadInput) => request<StoredDocument>('POST', '/me/documents', input),
+      uploadFor: (memberId: string, input: DocumentUploadInput) => request<StoredDocument>('POST', `/members/${memberId}/documents`, input),
+      file: (fileId: string) => request<FileContent>('GET', `/files/${fileId}`),
     },
     /** ST-50 / ST-51 / ST-52 (M9). */
     reports: {
@@ -376,13 +430,13 @@ export function createApiClient(options: ApiClientOptions) {
     deposits: {
       list: (params: DepositListParams = {}) => request<DepositList>('GET', `/deposits${toQuery(params)}`),
       get: (id: string) => request<DepositDetail>('GET', `/deposits/${id}`),
-      open: (memberId: string, input: FdRequestInput) => request<DepositDetail>('POST', '/deposits', { memberId, ...input }),
+      open: (memberId: string, input: FdRequestInput, idempotencyKey?: string) => request<DepositDetail>('POST', '/deposits', { memberId, ...input }, true, false, idempotencyKey),
       act: (id: string, action: string, input: DepositActionInput = {}) => request<DepositDetail>('POST', `/deposits/${id}/actions/${action}`, input),
       demoAct: (id: string) => request<DepositDetail>('POST', `/deposits/${id}/demo-act`),
       /** P6b (D-086): what an early withdrawal would pay today. */
       withdrawalPreview: (id: string) => request<FdSettlement>('GET', `/deposits/${id}/withdrawal-preview`),
       /** P6b: run the daily FD maturity job now (Admin). */
-      runMaturity: () => request<{ matured: number; date: string }>('POST', '/deposits/maturity/run'),
+      runMaturity: () => request<{ matured: number; date: string; interestPaid?: number }>('POST', '/deposits/maturity/run'),
     },
     /** Staff: demand sheets (ST-40 … ST-43). */
     demand: {
@@ -395,11 +449,19 @@ export function createApiClient(options: ApiClientOptions) {
       /** P7b (D-088): save, submit or send back the deduction entry. */
       entry: (id: string, action: 'saveEntry' | 'submitEntry' | 'rejectEntry', body: Partial<DeductionEntryInput> & { reason?: string } = {}) => request<DemandSheetDetail>('POST', `/demand/sheets/${id}/entry/${action}`, body),
     },
+    /** G1 (D-111): the audit log (Super Admin). */
+    audit: {
+      list: (params: AuditLogParams = {}) => request<AuditLogList>('GET', `/audit${toQuery(params)}`),
+      get: (id: string) => request<AuditLogEntry>('GET', `/audit/${id}`),
+    },
     /** Staff: receipts and member-reported payments (ST-44 … ST-47). */
     receipts: {
       list: (params: ReceiptListParams = {}) => request<ReceiptList>('GET', `/receipts${toQuery(params)}`),
       get: (id: string) => request<ReceiptDetail>('GET', `/receipts/${id}`),
-      create: (input: NewReceiptInput) => request<ReceiptDetail>('POST', '/receipts', input),
+      create: (input: NewReceiptInput, idempotencyKey?: string) => request<ReceiptDetail>('POST', '/receipts', input, true, false, idempotencyKey),
+      /** G1 (D-111, BR-040): pay a loan off early. */
+      closureQuote: (loanId: string) => request<LoanClosureQuote>('GET', `/loans/${loanId}/closure`),
+      closeLoan: (loanId: string, input: LoanClosureInput, idempotencyKey?: string) => request<ReceiptDetail>('POST', `/loans/${loanId}/closure`, input, true, false, idempotencyKey),
       dues: (memberId: string) => request<MemberDues>('GET', `/members/${memberId}/dues`),
       /** P7b-3 (D-088): defaulter status and notices received as borrower or surety (backend only). */
       notices: (memberId: string) => request<MemberNotices>('GET', `/members/${memberId}/notices`),

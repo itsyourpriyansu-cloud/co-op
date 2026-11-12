@@ -9,7 +9,6 @@ import {
   keepsAppAccess,
   maskMobile,
   PROFILE_FIELDS,
-  REQUIRED_DOCUMENTS,
   transferEffectiveCycle,
   validateMemberInput,
 } from '@tgs/domain';
@@ -63,14 +62,9 @@ interface LegacySummary {
 
 const OPEN_LOAN = new Set(['ACTIVE', 'SANCTIONED']);
 
-function documentsOf(m: Member): MemberDocument[] {
-  return REQUIRED_DOCUMENTS.filter((d) => d.required || m.employmentType === 'APPROVED_PROBATIONER').map((d) => ({
-    type: d.type,
-    label: d.label,
-    fileName: `${d.type.toLowerCase().replace(/_/g, '-')}-${m.generalNo}.${d.type === 'PHOTO' ? 'jpg' : 'pdf'}`,
-    uploadedOn: m.joinedSocietyOn,
-    uploadedBy: 'Society office',
-  }));
+/** G1 (D-111): the documents actually uploaded for this member, newest first (joining files move here on admission). */
+async function documentsOf(app: FastifyInstance, m: Member): Promise<MemberDocument[]> {
+  return (await app.documents.list(m.id)).map((d) => ({ type: d.type, label: d.label, fileName: d.fileName, uploadedOn: d.uploadedAt.slice(0, 10), uploadedBy: d.uploadedBy, fileId: d.fileId, mime: d.mime }));
 }
 
 /**
@@ -385,7 +379,7 @@ export class MembersService {
       shares: legacy.shares,
       serviceEvents: events,
       mandate,
-      documents: documentsOf(m),
+      documents: await documentsOf(this.app, m),
       changeRequests,
       pendingFields: changeRequests.filter((r) => r.status === 'PENDING').flatMap((r) => r.fields.map((f) => f.field)),
     };
@@ -508,7 +502,7 @@ export class MembersService {
       serviceEvents: events,
       mandate,
       ...(upcoming ? { upcomingTransfer: { ...upcoming, toDepartmentName: await deptName(upcoming.toDepartmentId), fromDepartmentName: await deptName(upcoming.fromDepartmentId) } } : {}),
-      documents: documentsOf(m),
+      documents: await documentsOf(this.app, m),
       changeRequests: await this.app.profileChanges.forMember(m.id),
       ledger: legacy.ledger,
       can: {

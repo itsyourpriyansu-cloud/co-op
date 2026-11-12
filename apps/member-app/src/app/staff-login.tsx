@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { isApiError } from '@tgs/api-client';
 import { ROLE_LABELS, type Persona, type Session, type TotpSetup } from '@tgs/types';
 import { api } from '@/lib/api';
+import { markStaffActive } from '@/lib/appLock';
 import { useAuth } from '@/lib/auth';
 import * as storage from '@/lib/storage';
 import { AppMark } from '@/components/AppMark';
@@ -49,6 +50,7 @@ export default function StaffLogin() {
 
   const finish = async (next: Session, mustChange: boolean) => {
     if (mustChange) await storage.setItem(MUST_CHANGE_KEY, '1');
+    markStaffActive();
     await adoptSession(next);
     setCode('');
     if (mustChange) setStep({ kind: 'change' });
@@ -85,6 +87,7 @@ export default function StaffLogin() {
 
   const quick = (p: Persona) =>
     void run(p.id, async () => {
+      markStaffActive();
       await loginAsPersona(p.id, 'console');
       router.replace('/staff/home');
     });

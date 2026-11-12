@@ -11,3 +11,4 @@ export * from './deposits.model';
 export * from './collections.model';
 export * from './notifications.model';
 export * from './files.model';
+export * from './idempotency.model';

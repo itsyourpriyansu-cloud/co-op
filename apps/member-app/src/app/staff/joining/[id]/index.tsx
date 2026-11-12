@@ -47,7 +47,7 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
   const perm = f.address?.sameAsPresent ? 'Same as present address' : [f.address?.permanent?.line1, f.address?.permanent?.city, f.address?.permanent?.pincode].filter(Boolean).join(', ');
   const docs = f.documents ?? [];
   const decl = f.declarations ?? {};
-  const accepted = { byelaws: decl.byelawsAccepted, noOtherSociety: decl.noOtherSociety, recoveryMandate: decl.recoveryMandateAccepted };
+  const accepted = { byelaws: decl.byelawsAccepted, noOtherSociety: decl.noOtherSociety, recoveryMandate: decl.recoveryMandateAccepted, privacy: decl.privacyConsent };
   const failing = d.checks.filter((c) => !c.pass).length;
   const primary = d.actions.find(isPrimaryAction);
   const secondary = d.actions.filter((a) => !isPrimaryAction(a));
@@ -144,7 +144,7 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
       </Expand>
 
       <Expand title="Declarations">
-        {app.signature ? <Alert type="primary" heading={`Signed with OTP by ${f.personal?.fullName ?? app.name}`} description={`${formatDisplayDateTime(app.signature.signedAt)} · mobile ${f.personal?.mobile ?? '—'} · text version ${app.signature.textVersion}`} /> : null}
+        {app.signature ? <Alert type="primary" heading={`Signed with OTP by ${f.personal?.fullName ?? app.name}`} description={`${formatDisplayDateTime(app.signature.signedAt)} · mobile ${f.personal?.mobile ?? '—'} · text version ${app.signature.textVersion}${app.signature.privacyVersion ? ` · privacy notice ${app.signature.privacyVersion}` : ""}`} /> : null}
         {d.agreements.map((a) => (
           <View key={a.key} style={{ gap: space[2] }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>

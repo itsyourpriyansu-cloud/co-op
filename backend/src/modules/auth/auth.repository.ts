@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
 import type { Tx } from '../../db/transaction';
 import { appAccounts, otpChallenges, refreshTokens, staffUsers } from '../../models';
@@ -10,6 +10,13 @@ export type RefreshRow = typeof refreshTokens.$inferSelect;
 
 export class AuthRepository {
   constructor(private readonly db: Database) {}
+
+  /** G3 (D-113): expired refresh tokens and one-time codes can never be used again; the daily job removes them. */
+  async purgeExpired(before: Date): Promise<{ tokens: number; codes: number }> {
+    const tokens = await this.db.delete(refreshTokens).where(lt(refreshTokens.expiresAt, before)).returning({ id: refreshTokens.id });
+    const codes = await this.db.delete(otpChallenges).where(lt(otpChallenges.expiresAt, before)).returning({ id: otpChallenges.id });
+    return { tokens: tokens.length, codes: codes.length };
+  }
 
   // ---- staff ----
   async staffByUsername(username: string): Promise<StaffRow | undefined> {

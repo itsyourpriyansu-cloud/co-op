@@ -70,3 +70,17 @@ export const memberPreferences = pgTable('member_preferences', {
     .references(() => members.id),
   data: jsonb('data').$type<MemberPreferences>().notNull(),
 });
+
+/** G4 (D-114): phones that receive push notifications. A token moves to whoever signed in last on that phone. */
+export const pushTokens = pgTable(
+  'push_tokens',
+  {
+    token: text('token').primaryKey(),
+    /** The notification recipient: a member, applicant or staff user id. */
+    userId: text('user_id').notNull(),
+    platform: text('platform').$type<'ios' | 'android'>().notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    lastSeenAt: ts('last_seen_at').notNull().defaultNow(),
+  },
+  (t) => [index('push_tokens_user_idx').on(t.userId)],
+);

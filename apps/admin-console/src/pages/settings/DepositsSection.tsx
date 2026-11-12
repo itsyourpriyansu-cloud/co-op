@@ -10,8 +10,9 @@ import { isPlaceholder, useSettingsSave } from './shared';
 
 type Values = Pick<
   SocietySettings,
-  'fdSlabs' | 'fdMinAmount' | 'savingsRatePercent' | 'crdRatePercent' | 'srdsRatePercent' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent'
+  'fdSlabs' | 'fdMinAmount' | 'savingsRatePercent' | 'crdRatePercent' | 'srdsRatePercent' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent' | 'shareDepositRatePercent' | 'depositInterestBasis'
 >;
+const BASIS = [{ items: [{ label: 'Balance at the year end', value: 'YEAR_END' }, { label: 'Average of the 12 month-end balances', value: 'AVERAGE_MONTH_END' }] }];
 const ON_OFF = [{ items: [{ label: 'On', value: 'on' }, { label: 'Off', value: 'off' }] }];
 const METHODS = [{ items: [{ label: 'Cut the interest rate by the penalty', value: 'RATE_CUT' }, { label: 'Take a share of the interest earned', value: 'SHARE_OF_INTEREST' }] }];
 const PRINCIPAL = toPaise(100000);
@@ -30,6 +31,8 @@ export function DepositsSection({ bundle }: { bundle: SettingsBundle }) {
     fdPrematureWithdrawalEnabled: s.fdPrematureWithdrawalEnabled,
     fdPrematurePenaltyMethod: s.fdPrematurePenaltyMethod,
     fdPrematurePenaltyPercent: s.fdPrematurePenaltyPercent,
+    shareDepositRatePercent: s.shareDepositRatePercent,
+    depositInterestBasis: s.depositInterestBasis,
   });
   const save = useSettingsSave(api.settings.updateValues, 'Deposit rates saved');
   const v = form.draft!;
@@ -110,6 +113,8 @@ export function DepositsSection({ bundle }: { bundle: SettingsBundle }) {
         <NumberField label="CRD" name="crdRatePercent" value={v.crdRatePercent} onChange={(crdRatePercent) => set({ crdRatePercent })} errors={errors} unit="% a year" decimals disabled={ro} />
         <NumberField label="SRDS" name="srdsRatePercent" value={v.srdsRatePercent} onChange={(srdsRatePercent) => set({ srdsRatePercent })} errors={errors} unit="% a year" decimals disabled={ro} />
         <NumberField label="Savings" name="savingsRatePercent" value={v.savingsRatePercent} onChange={(savingsRatePercent) => set({ savingsRatePercent })} errors={errors} unit="% a year" decimals disabled={ro} />
+        <NumberField label="Share deposit" name="shareDepositRatePercent" value={v.shareDepositRatePercent} onChange={(shareDepositRatePercent) => set({ shareDepositRatePercent })} errors={errors} unit="% a year" decimals disabled={ro} />
+        <SingleSelectV2 label="Interest worked on" placeholder="Choose" items={BASIS} selected={v.depositInterestBasis} onSelect={(x) => set({ depositInterestBasis: x as Values['depositInterestBasis'] })} disabled={ro} />
       </FormSection>
 
       <FormSection title="FD maturity" description="Each day after this hour (India time) the society marks fixed deposits that have reached their maturity date as matured and books their interest. Running it again changes nothing." columns={3}>

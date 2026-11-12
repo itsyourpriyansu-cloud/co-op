@@ -7,6 +7,7 @@ import { ROLE_LABELS, type LoanDetail, type Role } from '@tgs/types';
 import { ActionAlert, ask, Expand, Loaded, PrintButton, RuleChecks, useAction, useToday } from '@/components/staff';
 import { StaffSanctionSheet } from '@/components/StaffSanctionSheet';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { ACTION_LABEL, formFor, SECONDARY } from '@/lib/staffLoans';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Tag, Text } from '@/ui';
 import { space } from '@/theme';
@@ -57,6 +58,30 @@ function SuretyRecovery({ loanId }: { loanId: string }) {
       </Card>
       {!p.recoveries.length && p.eligible && p.canRaise ? <Button text="Recover from sureties" buttonType="secondary" fullWidth loading={a.busy} disabled={a.busy || a.unconfirmed} onPress={() => void raise()} /> : null}
       <ActionAlert action={a} heading="Not raised" />
+    </Section>
+  );
+}
+
+/** G1 (D-111, BR-040): what closing early costs today; the Cashier or Accountant takes the payment. */
+function Closure({ loanId }: { loanId: string }) {
+  const { session } = useAuth();
+  const q = useQuery({ queryKey: ['loan-closure', loanId], queryFn: () => api.receipts.closureQuote(loanId), retry: false });
+  const p = q.data;
+  if (!p) return null;
+  const canReceive = session?.user.role === 'CASHIER' || session?.user.role === 'ACCOUNTANT';
+  return (
+    <Section title="Close the loan early" description="Outstanding principal and interest up to today">
+      <Card>
+        <KeyValue label="Principal outstanding" value={formatINR(p.principal)} />
+        <KeyValue label={`Interest from ${formatDisplayDate(p.interestFrom)}`} value={formatINR(p.interest)} />
+        <KeyValue label="To close today" value={formatINR(p.total)} emphasis />
+        {p.blockers.map((b) => (
+          <Text key={b} role="caption" tone="warning">
+            {b}
+          </Text>
+        ))}
+      </Card>
+      {canReceive && p.canClose ? <Button text="Take the closing payment" buttonType="secondary" fullWidth onPress={() => router.push(`/staff/loan/${loanId}/close`)} /> : null}
     </Section>
   );
 }
@@ -312,6 +337,7 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
       ) : null}
 
       {l.status === 'ACTIVE' && l.sureties.length > 0 ? <SuretyRecovery loanId={l.id} /> : null}
+      {l.status === 'ACTIVE' ? <Closure loanId={l.id} /> : null}
 
       <Expand title="Borrower">
         <KeyValue label="Designation" value={d.member.designation} />

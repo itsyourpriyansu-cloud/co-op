@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  addDays,
   calculateFdMaturity,
   DEPOSIT_STAGE_OWNER,
   denominationsFor,
@@ -229,7 +230,7 @@ export class DepositsService {
       deposit: d,
       member: { id: m.id, name: m.name, generalNo: m.generalNo, departmentName: dept?.name ?? '', designation: m.designation, mobileMasked: m.mobileMasked, fatherName: m.fatherName },
       ...(mat ? { maturity: { date: mat.date, value: mat.value, totalInterest: mat.totalInterest, periodicInterest: mat.periodicInterest } } : {}),
-      payouts: mat && d.payoutFrequency && d.principal && d.tenureMonths ? fdPayoutSchedule({ principal: d.principal, ratePercent: d.ratePercent, tenureMonths: d.tenureMonths, payout: d.payoutFrequency, openedOn: mat.openedOn }).map((p) => ({ ...p, paid: d.status !== 'REQUESTED' && p.date <= today })) : [],
+      payouts: mat && d.payoutFrequency && d.principal && d.tenureMonths ? fdPayoutSchedule({ principal: d.principal, ratePercent: d.ratePercent, tenureMonths: d.tenureMonths, payout: d.payoutFrequency, openedOn: mat.openedOn }).map((p) => { const v = d.interestPayouts?.find((x) => x.date === p.date); return { ...p, paid: !!v, ...(v ? { voucherNo: v.voucherNo } : {}) }; }) : [],
       ledger: await this.ledgerOf(d),
       stages: d.scheme === 'FD' ? stagesFor(d) : [],
       actions,
@@ -427,10 +428,12 @@ export class DepositsService {
    * status re-checked, so a second run (or a second server) changes nothing. Interest on FDs paid at
    * maturity is booked as payable to the member (Dr FD interest, Cr interest payable on FDs).
    */
-  async runMaturity(request?: FastifyRequest, opts: { manual?: boolean } = {}): Promise<{ matured: number; date: string }> {
+  async runMaturity(request?: FastifyRequest, opts: { manual?: boolean } = {}): Promise<{ matured: number; date: string; interestPaid: number }> {
     const settings = await this.app.masters.settings();
-    if (!settings.fdMaturityJobEnabled) return opts.manual ? fail('RULE_VIOLATION', 'FD maturity processing is switched off in Settings.') : { matured: 0, date: '' };
+    if (!settings.fdMaturityJobEnabled) return opts.manual ? fail('RULE_VIOLATION', 'FD maturity processing is switched off in Settings.') : { matured: 0, date: '', interestPaid: 0 };
     const [today, at] = await Promise.all([businessToday(this.app), businessNow(this.app)]);
+    // Periodic interest first, so the last period is paid before the FD is marked matured.
+    const interestPaid = await this.runPayouts(request, today, at);
     const due = (await this.repo.list('FD')).filter((d) => d.status === 'ACTIVE' && d.maturityDate && d.maturityDate <= today);
     const changed: DepositAccount[] = [];
     for (const x of due) {
@@ -455,7 +458,53 @@ export class DepositsService {
       if (saved) changed.push(saved);
     }
     await this.app.db.insert(systemInfo).values({ key: LAST_RUN_KEY, value: { date: today } }).onConflictDoUpdate({ target: systemInfo.key, set: { value: { date: today }, updatedAt: new Date() } });
-    return { matured: changed.length, date: today };
+    return { matured: changed.length, date: today, interestPaid };
+  }
+
+  /**
+   * G1 (D-111): FDs with monthly, quarterly or half-yearly interest (form F4) are paid each period on
+   * its date, to the member's bank account: Dr FD interest, Cr bank, an F10 voucher and a message.
+   * Each FD is locked and its paid periods re-checked, so a second run or server pays nothing twice.
+   */
+  async runPayouts(request: FastifyRequest | undefined, today: string, at: string): Promise<number> {
+    const owed = (d: DepositAccount) => {
+      const paid = new Set((d.interestPayouts ?? []).map((p) => p.date));
+      return fdPayoutSchedule({ principal: d.principal ?? 0, ratePercent: d.ratePercent, tenureMonths: d.tenureMonths ?? 0, payout: d.payoutFrequency ?? 'ON_MATURITY', openedOn: d.openedOn }).filter((p) => p.date <= today && !paid.has(p.date));
+    };
+    const due = (await this.repo.list('FD')).filter((d) => (d.status === 'ACTIVE' || d.status === 'MATURED') && d.payoutFrequency && d.payoutFrequency !== 'ON_MATURITY' && owed(d).length);
+    let count = 0;
+    for (const x of due) {
+      const notes: Array<{ amount: number; date: string; fdrNo: string }> = [];
+      await withTransaction(this.app.db, async (tx) => {
+        const d = await this.repo.lock(tx, x.id);
+        if (!d) return;
+        const m = await this.app.members.byId(d.memberId);
+        for (const p of owed(d)) {
+          const fdrNo = d.fdrNo ?? d.accountNo;
+          await this.post(tx, `Interest on FD ${fdrNo} (${m?.name ?? d.memberId}) for the period to ${formatDisplayDate(p.date)}`, 'FD_INTEREST', fdrNo, p.date, SYSTEM, [
+            { accountCode: FD_INTEREST_EXPENSE, debit: p.amount, credit: 0 },
+            { accountCode: ACCOUNT.BANK, debit: 0, credit: p.amount },
+          ]);
+          await this.voucher(tx, d, 'INTEREST', p.amount, p.amount, p.date, SYSTEM);
+          d.interestPayouts = [...(d.interestPayouts ?? []), { ...p, voucherNo: d.vouchers!.at(-1)!.no }];
+          notes.push({ amount: p.amount, date: p.date, fdrNo });
+          count += 1;
+        }
+        await this.repo.save(tx, d);
+        await this.app.audit.record(request, { action: 'deposit.interest', entity: 'deposit', entityId: d.id, summary: `Interest paid on FD ${d.fdrNo ?? d.accountNo}: ${notes.map((n) => `${formatINR(n.amount)} for ${formatDisplayDate(n.date)}`).join(', ')}`, actor: { id: SYSTEM.id, name: SYSTEM.name, role: 'SYSTEM' as never } }, tx);
+      });
+      for (const n of notes) await notifyMember(this.app, x.memberId, 'fd.interestPaid', { fdrNo: n.fdrNo, amount: formatINR(n.amount), date: formatDisplayDate(n.date) }, `/deposit/${x.id}`);
+    }
+    return count;
+  }
+
+  /** G3 (D-113): one message per FD a month before it matures (template `fd.maturing`). */
+  async remindMaturing(today: string): Promise<number> {
+    const until = addDays(today, 30);
+    const due = (await this.repo.list('FD')).filter((d) => d.status === 'ACTIVE' && d.maturityDate && d.maturityDate > today && d.maturityDate <= until);
+    let sent = 0;
+    for (const d of due) if (await this.app.notifications.notifyOnce(d.memberId, 'fd.maturing', { fdrNo: d.fdrNo ?? d.accountNo, maturityDate: formatDisplayDate(d.maturityDate!) }, `/deposit/${d.id}`)) sent += 1;
+    return sent;
   }
 
   /** The scheduler runs the job once a day, after the configured hour (IST). */
@@ -505,7 +554,7 @@ export class DepositsService {
 
   /** One transition with its side effects (ST-33, D-027), in one transaction. `demo` acts as the stage owner. */
   /** F10 (D-099): a numbered voucher for money paid out of an FD, with the paying Cashier's (Treasurer's) signature. */
-  private async voucher(tx: Tx, d: DepositAccount, kind: 'MATURITY' | 'PREMATURE' | 'REFUND', amount: number, interest: number, date: string, actor: Actor, demo?: boolean): Promise<void> {
+  private async voucher(tx: Tx, d: DepositAccount, kind: 'MATURITY' | 'PREMATURE' | 'REFUND' | 'INTEREST', amount: number, interest: number, date: string, actor: Actor, demo?: boolean): Promise<void> {
     const no = `VR-${date.slice(0, 4)}-${String(await this.repo.nextNumber(tx, 'VR')).padStart(5, '0')}`;
     const signatureFileId = actor.role === 'CASHIER' ? await this.app.signatures.signOff(actor.id, demo) : undefined;
     d.vouchers = [...(d.vouchers ?? []), { no, kind, amount, interest, date, paidByName: actor.name, ...(signatureFileId ? { signatureFileId } : {}) }];

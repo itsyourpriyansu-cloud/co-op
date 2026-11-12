@@ -10,6 +10,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Channel, Me, Session } from '@tgs/types';
 import { api } from './api';
+import { registerForPush, unregisterPush } from './push';
 import { loadServerUrl } from './serverUrl';
 import { clearSession, getCachedSession, loadSession, onUnauthenticated, saveSession } from './session';
 
@@ -53,6 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       onUnauthenticated(null);
     };
   }, [queryClient]);
+
+  // G4 (D-114): each signed-in person on this phone gets their pushes; re-sent at every start (tokens can change).
+  useEffect(() => {
+    if (ready && session) void registerForPush();
+  }, [ready, session?.user.id]);
 
   const meQuery = useQuery({
     queryKey: ['me', session?.user.id],
@@ -98,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session]);
 
   const logout = useCallback(async () => {
+    await unregisterPush();
     await api.auth.logout(getCachedSession()?.refreshToken).catch(() => undefined);
     await clearSession();
     setSession(null);

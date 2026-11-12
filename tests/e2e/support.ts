@@ -71,6 +71,17 @@ export async function apiCall<T = unknown>(request: APIRequestContext, method: '
   return (await r.json()) as T;
 }
 
+/** G1 (D-111): a draft may only point at files its applicant uploaded, so the applicant uploads copies of `docs` first. */
+export async function uploadOwnDocuments(request: APIRequestContext, token: string, docs: unknown): Promise<unknown[]> {
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const out = [];
+  for (const d of (docs ?? []) as Array<{ type: string }>) {
+    const up = await apiCall<{ fileId: string; fileName: string; mime: string }>(request, 'POST', '/me/documents', token, { type: d.type, fileName: `${d.type}.png`, data: png });
+    out.push({ ...d, fileId: up.fileId, fileName: up.fileName, mime: up.mime });
+  }
+  return out;
+}
+
 // ---- sign-in ---------------------------------------------------------------------------------
 
 /** Console: sign in through the API and put the session in storage (the login screen has its own test). */

@@ -6,6 +6,7 @@ import { brand } from '@tgs/design-tokens';
 import { AppMark } from '@/components/AppMark';
 import { Button, Card, Screen, Text } from '@/ui';
 import { color, onBrandMuted, radius, space, onBrandTile } from '@/theme';
+import { DEMO_TOOLS } from '@/lib/serverUrl';
 
 const HOW = [
   { icon: Smartphone, title: 'Apply from your phone', body: 'About 8 minutes. Save and finish later.' },
@@ -17,7 +18,7 @@ export default function Welcome() {
   return (
     <Screen>
       <View style={styles.hero}>
-        <Pressable onLongPress={() => router.push('/demo-settings')} accessibilityHint="Long-press for demo settings" delayLongPress={600}>
+        <Pressable disabled={!DEMO_TOOLS} onLongPress={() => router.push('/demo-settings')} {...(DEMO_TOOLS ? { accessibilityHint: 'Long-press for demo settings' } : {})} delayLongPress={600}>
           <AppMark size={72} />
         </Pressable>
         <View style={{ gap: space[3] }}>

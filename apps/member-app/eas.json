@@ -1,6 +1,7 @@
 {
   "cli": {
-    "appVersionSource": "local"
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -9,11 +10,28 @@
     },
     "preview": {
       "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "http://192.168.1.10:4000" }
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://app-tgseccsl-staging.azurewebsites.net",
+        "EXPO_PUBLIC_DEMO_TOOLS": "0"
+      }
     },
     "production": {
-      "android": { "buildType": "app-bundle" }
+      "environment": "production",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://app-tgseccsl-production.azurewebsites.net",
+        "EXPO_PUBLIC_DEMO_TOOLS": "0"
+      }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }

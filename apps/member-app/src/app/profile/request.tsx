@@ -7,6 +7,8 @@ import { Paperclip, Send } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import { changeRequestRoute, formatDisplayDate, formatINR, NOMINEE_RELATIONS, PROFILE_FIELDS, profileFieldValue } from '@tgs/domain';
 import type { ProfileField } from '@tgs/types';
+import { api } from '@/lib/api';
+import { pickDocumentImage } from '@/lib/files';
 import { useMyProfile, useRequestChange } from '@/lib/profile';
 import { Alert, Button, Card, Checkbox, DateField, Header, Screen, Section, SelectField, Text, TextField } from '@/ui';
 import { space } from '@/theme';
@@ -25,7 +27,24 @@ export default function RequestChange() {
   const [picked, setPicked] = useState<ProfileField[]>([]);
   const [values, setValues] = useState<Partial<Record<ProfileField, string>>>({});
   const [reason, setReason] = useState('');
-  const [doc, setDoc] = useState<string>();
+  const [doc, setDoc] = useState<{ name: string; fileId: string }>();
+  const [attaching, setAttaching] = useState(false);
+  const [attachError, setAttachError] = useState<string>();
+  // G1 (D-111): a photo of the proof, uploaded and encrypted before the request is sent.
+  const attach = async () => {
+    setAttachError(undefined);
+    try {
+      const picked = await pickDocumentImage();
+      if (!picked) return;
+      setAttaching(true);
+      const f = await api.documents.upload({ type: 'SUPPORTING', ...picked });
+      setDoc({ name: f.fileName, fileId: f.fileId });
+    } catch (e) {
+      setAttachError(isApiError(e) ? (e.fieldErrors?.data ?? e.message) : e instanceof Error ? e.message : 'Upload failed. Try again.');
+    } finally {
+      setAttaching(false);
+    }
+  };
 
   const route = useMemo(() => (picked.length ? changeRequestRoute(picked) : undefined), [picked]);
   const errors = isApiError(send.error) ? (send.error.fieldErrors ?? {}) : {};
@@ -61,7 +80,7 @@ export default function RequestChange() {
           fullWidth
           disabled={!picked.length}
           loading={send.isPending}
-          onPress={() => send.mutate({ fields: picked.map((field) => ({ field, newValue: values[field] ?? '' })), reason, ...(doc ? { documentName: doc } : {}) })}
+          onPress={() => send.mutate({ fields: picked.map((field) => ({ field, newValue: values[field] ?? '' })), reason, ...(doc ? { documentName: doc.name, documentFileId: doc.fileId } : {}) })}
         />
       }
     >
@@ -108,8 +127,8 @@ export default function RequestChange() {
           <Card>
             <View style={{ gap: space[8] }}>
               <TextField label="Reason" value={reason} onChangeText={setReason} placeholder="e.g. Promoted from 01 Oct 2026" error={errors.reason} required multiline />
-              {/* Prototype: a file picker is simulated by attaching a named document. */}
-              <Button text={doc ? `Attached: ${doc}` : 'Attach proof (order, ID, certificate)'} buttonType="secondary" leftSlot={Paperclip} fullWidth onPress={() => setDoc(doc ? undefined : 'supporting-document.pdf')} />
+              <Button text={doc ? `Attached: ${doc.name} (tap to replace)` : 'Attach a photo of the proof (order, ID, certificate)'} buttonType="secondary" leftSlot={Paperclip} fullWidth loading={attaching} onPress={() => void attach()} />
+              {attachError ? <Alert type="error" heading="Not attached" description={attachError} /> : null}
               {route === 'DDO_THEN_OFFICE' ? <Alert type="primary" heading="Your DDO confirms this first" description="Employment and pay details are checked by your department before the office updates them." /> : <Alert type="neutral" heading="The society office reviews this" />}
             </View>
           </Card>

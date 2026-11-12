@@ -7,6 +7,7 @@ import { isApiError } from '@tgs/api-client';
 import { amountInWords, formatDisplayDate, formatINR, validateMembershipForm } from '@tgs/domain';
 import type { JoiningReference, MembershipDocumentType, MembershipForm, Nominee } from '@tgs/types';
 import { api } from '@/lib/api';
+import { pickDocumentImage } from '@/lib/files';
 import { SignatureCard } from '@/components/SignatureCard';
 import { errorsForStep, firstIncompleteStep, STEPS, useJoiningReference, useMyApplication, useSaveDraft } from '@/lib/joining';
 import { Alert, Button, Card, Checkbox, ChoiceCard, DateField, Divider, Header, KeyValue, NumberStepper, OtpInput, Screen, Segmented, SelectField, Skeleton, Text, TextField, WizardProgress } from '@/ui';
@@ -295,24 +296,31 @@ function SharesStep({ form, update, errors, reference }: StepProps) {
   );
 }
 
-// ---- Step 5 · Documents (simulated upload in the prototype) ------------------------------------
+// ---- Step 5 · Documents (G1, D-111: real photos, stored encrypted on the server) ---------------
 function DocumentsStep({ form, update, errors, reference }: StepProps) {
   const [uploading, setUploading] = useState<string | null>(null);
+  const [failed, setFailed] = useState<Record<string, string>>({});
   const docs = form.documents ?? [];
-  const upload = (type: MembershipDocumentType) => {
-    setUploading(type);
-    setTimeout(() => {
-      const fileName = `${type.toLowerCase().replace(/_/g, '-')}.${type === 'PHOTO' ? 'jpg' : 'pdf'}`;
-      update({ documents: [...docs.filter((d) => d.type !== type), { type, fileName, uploadedAt: new Date().toISOString() }] });
+  const upload = async (type: MembershipDocumentType) => {
+    setFailed((f) => ({ ...f, [type]: '' }));
+    try {
+      const picked = await pickDocumentImage();
+      if (!picked) return;
+      setUploading(type);
+      const f = await api.documents.upload({ type, ...picked });
+      update({ documents: [...docs.filter((d) => d.type !== type), { type, fileName: f.fileName, uploadedAt: f.uploadedAt, fileId: f.fileId }] });
+    } catch (e) {
+      setFailed((f) => ({ ...f, [type]: isApiError(e) ? (e.fieldErrors?.data ?? e.message) : e instanceof Error ? e.message : 'Upload failed. Try again.' }));
+    } finally {
       setUploading(null);
-    }, 700);
+    }
   };
   return (
     <View style={{ gap: space[6] }}>
-      <Alert type="neutral" heading="Clear photos or PDFs" description="Prototype: tapping Upload attaches a sample file. The real app opens the camera or file picker." />
+      <Alert type="neutral" heading="Clear photos" description="Photograph each document flat, in good light, so every word can be read. JPEG or PNG, up to 5 MB each." />
       {reference.requiredDocuments.map((d) => {
         const done = docs.find((x) => x.type === d.type);
-        const err = errors[`documents.${d.type}`];
+        const err = failed[d.type] || errors[`documents.${d.type}`];
         return (
           <Card key={d.type} style={err ? { borderColor: color.status.danger.solid } : undefined}>
             <View style={styles.docRow}>
@@ -328,7 +336,7 @@ function DocumentsStep({ form, update, errors, reference }: StepProps) {
                   {err ?? (done ? done.fileName : d.hint)}
                 </Text>
               </View>
-              <Button text={done ? 'Replace' : 'Upload'} buttonType="secondary" size="sm" leftSlot={done ? undefined : FileUp} loading={uploading === d.type} onPress={() => upload(d.type as MembershipDocumentType)} />
+              <Button text={done ? 'Replace' : 'Upload'} buttonType="secondary" size="sm" leftSlot={done ? undefined : FileUp} loading={uploading === d.type} onPress={() => void upload(d.type as MembershipDocumentType)} />
             </View>
           </Card>
         );
@@ -338,7 +346,7 @@ function DocumentsStep({ form, update, errors, reference }: StepProps) {
 }
 
 // ---- Step 6 · Declarations & salary recovery agreement -----------------------------------------
-const DECL_FIELD = { byelaws: 'byelawsAccepted', noOtherSociety: 'noOtherSociety', recoveryMandate: 'recoveryMandateAccepted' } as const;
+const DECL_FIELD = { byelaws: 'byelawsAccepted', noOtherSociety: 'noOtherSociety', recoveryMandate: 'recoveryMandateAccepted', privacy: 'privacyConsent' } as const;
 
 function AgreementsStep({ form, update, errors, reference }: StepProps) {
   const [open, setOpen] = useState<string | null>(null);
@@ -346,7 +354,7 @@ function AgreementsStep({ form, update, errors, reference }: StepProps) {
   return (
     <View style={{ gap: space[8] }}>
       <Text role="body" tone="secondary">
-        Read the key points. You sign all three together with an OTP at the end.
+        Read the key points. You sign all four together with an OTP at the end.
       </Text>
       {reference.agreements.map((a) => {
         const field = DECL_FIELD[a.key];
@@ -424,7 +432,7 @@ function ReviewStep({ form, errors, reference, goTo }: StepProps & { goTo: (step
         ['Nominee', form.nominee?.name ? `${form.nominee.name} (${form.nominee.relation ?? '—'})` : undefined],
       ])}
       {block('Documents', 4, [['Uploaded', `${form.documents?.length ?? 0} of ${reference.requiredDocuments.length}`]])}
-      {block('Declarations', 5, [['Signed with OTP', 'Bye-laws · No other society · Salary recovery']])}
+      {block('Declarations', 5, [['Signed with OTP', 'Bye-laws · No other society · Salary recovery · Privacy consent']])}
     </View>
   );
 }

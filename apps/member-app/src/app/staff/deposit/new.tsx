@@ -1,5 +1,6 @@
 // ST-31m Open an FD at the counter (form F4): member, deposit, holders, nominee. The Cashier then records the payment.
 import { useEffect, useMemo, useState } from 'react';
+import { newIdempotencyKey } from '@tgs/api-client';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -19,6 +20,8 @@ export default function NewDeposit() {
   const profile = useQuery({ queryKey: ['member', member?.id], queryFn: () => api.members.get(member!.id), enabled: !!member });
   const [v, setV] = useState<FdRequestInput>({ principal: Number.NaN, tenureMonths: 24, payoutFrequency: 'ON_MATURITY', holding: 'SINGLE', nominee: { name: '', relation: 'Spouse' } });
   const [showErrors, setShowErrors] = useState(false);
+  // G1 (D-111): one key per form, so a retry after a time-out cannot open a second FD.
+  const [idemKey] = useState(newIdempotencyKey);
   const a = useAction();
   const set = (p: Partial<FdRequestInput>) => setV((x) => ({ ...x, ...p }));
 
@@ -42,7 +45,7 @@ export default function NewDeposit() {
     if (Object.keys(local).length) return;
     let saved: DepositDetail | undefined;
     const ok = await a.run(async () => {
-      saved = await api.deposits.open(member!.id, clean);
+      saved = await api.deposits.open(member!.id, clean, idemKey);
     });
     if (ok && saved) router.replace(`/staff/deposit/${saved.deposit.id}`);
   };

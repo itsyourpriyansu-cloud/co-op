@@ -12,6 +12,7 @@ export const toRequest = (r: Row): ProfileChangeRequest => ({
   fields: r.fields,
   reason: r.reason,
   ...(r.documentName ? { documentName: r.documentName } : {}),
+  ...(r.documentFileId ? { documentFileId: r.documentFileId } : {}),
   route: r.route,
   status: r.status,
   createdAt: r.createdAt.toISOString(),
@@ -48,7 +49,7 @@ export class ProfileChangesRepository {
   }
 
   async insert(tx: Tx, r: ProfileChangeRequest): Promise<void> {
-    await tx.insert(profileChangeRequests).values({ ...r, documentName: r.documentName ?? null, createdAt: new Date(r.createdAt), ddoCertified: r.ddoCertified ?? null, decidedByName: null, decidedAt: null, remarks: null });
+    await tx.insert(profileChangeRequests).values({ ...r, documentName: r.documentName ?? null, documentFileId: r.documentFileId ?? null, createdAt: new Date(r.createdAt), ddoCertified: r.ddoCertified ?? null, decidedByName: null, decidedAt: null, remarks: null });
   }
 
   async save(tx: Tx, r: ProfileChangeRequest): Promise<void> {

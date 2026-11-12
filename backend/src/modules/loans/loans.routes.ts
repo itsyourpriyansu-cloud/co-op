@@ -23,7 +23,7 @@ const listQuery = z.object({
 export const loansRoutes: FastifyPluginAsyncZod = async (app) => {
   const c = new LoansController(app.loans, app.loanWorkflow);
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const st = ['loans'];
   const mb = ['my loans'];
   const ok = (name: string) => ({ 200: passthrough(name) });

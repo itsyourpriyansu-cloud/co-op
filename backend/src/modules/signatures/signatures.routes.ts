@@ -8,7 +8,7 @@ const ok = (name: string) => ({ 200: z.any().describe(`${name} (packages/types)`
 export const signaturesRoutes: FastifyPluginAsyncZod = async (app) => {
   const s = app.signatures;
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const tags = ['signatures'];
   const noStore = { 'cache-control': 'no-store' };
 

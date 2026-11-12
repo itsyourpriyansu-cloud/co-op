@@ -1,5 +1,6 @@
 # 11 · Service / API Contracts
 
+> v0.15 · 2026-11-12 · G5 (D-115): `OutboxMessage.status` SENT / `failed`; `POST /auth/otp/start` may answer RULE_VIOLATION `OTP_NOT_SENT`. v0.14 · G4 (D-114): `GET /app/config`, `POST` / `DELETE /me/push-token`. v0.13 · G2 (D-112): `/accounts/heads`, `/accounts/vouchers`, `/accounts/year-end/*`; 11 accounting reports. v0.12 · G1 (D-111): `Idempotency-Key` on POSTs; `GET/POST /loans/:id/closure`; `GET /audit`, `GET /audit/:id`; `GET/POST /me/documents`, `POST /members/:id/documents`, `GET /files/:id`; `runMaturity` returns `interestPaid`. Backend only (the mock API is the prototype demo, D-100).
 > Version 0.10 · 2026-10-29 · `GET /health` also answered by the backend (`service: tgseccsl-backend`, plus `database` status, D-073) · Status: **[P] HTTP contracts served by `apps/mock-api` (D-021)** and consumed by both apps through `packages/api-client`.
 > v0.11 · 2026-10-29 · Backend auth endpoints (P1a, D-076): staff login + TOTP, member mobile OTP, refresh/logout, users reset-password/reset-totp, PUT /permissions/:role. Contracts and examples in the backend OpenAPI at `/docs`. `Session` gains optional `refreshToken`, `expiresInSeconds`.
 > v0.12 · 2026-10-30 · Backend P2 (D-079): settings, loan products, society, departments, templates and rates served by the backend with the same shapes; new `GET /settings/versions`, `GET /settings/loan-products/:code/versions`; demo reset resets both servers.
@@ -298,3 +299,43 @@ Served by `apps/mock-api/src/insight.ts` + `reports.ts`, called through `api.das
 | `notifications.list / count / read / readAll` | GET /notifications · GET /notifications/count · POST …/:id/read · POST …/read-all | The signed-in staff user's in-app notifications; count adds open member questions for `support.reply` |
 | `notifications.preview / send / messages` | POST /messages/preview · POST /messages · GET /messages | `messages.send`. Audience MEMBER / DEPARTMENT / DEFAULTERS / RETIRING; send → in-app notification per recipient + `OutboxMessage` (DELIVERED_SIMULATED) |
 | `notifications.tickets / reply` | GET /support/tickets · POST /support/tickets/:id/reply `{text, close}` | `support.reply`. Reply → ANSWERED + member notification (link `/account/help`); close → CLOSED; replying to a closed one = 409 |
+
+## G1 additions (backend, D-111)
+
+| Client call | HTTP | Notes |
+|---|---|---|
+| any POST | header `Idempotency-Key: [A-Za-z0-9_-]{8,100}` | Same key + body → first response replayed (`idempotent-replay: true`); other body → 400; still running → 409 `ALREADY_POSTED`. `receipts.create`, `receipts.closeLoan`, `deposits.open` send one |
+| `receipts.closureQuote(loanId)` | GET /loans/:id/closure | `LoanClosureQuote`: principal, interest, total, `canClose`, `blockers`, `draftCycles` |
+| `receipts.closeLoan(loanId, input, key)` | POST /loans/:id/closure | Cashier / Accountant. `LoanClosureInput` {mode CASH / BANK_TRANSFER, amount = total, denominations, coins, reference}. 201 `Receipt` (`LOAN_CLOSURE`) |
+| `audit.list(params)` / `audit.get(id)` | GET /audit?q&entity&actorId&from&to&page&pageSize · GET /audit/:id | `audit.view`. Newest first; dates are IST days; single row adds before / after |
+| `documents.mine()` / `documents.upload(input)` | GET /me/documents · POST /me/documents | `DocumentUploadInput` {type, fileName, data base64}. 201 `StoredDocument` |
+| `documents.uploadFor(memberId, input)` | POST /members/:id/documents | `members.edit`; DDO own department |
+| `documents.file(fileId)` | GET /files/:id | `FileContent` {mime, fileName, dataUrl}. Owner, or staff with `members.view` / `membership.view` (DDO own department); else 404 |
+
+## G2 additions (backend, D-112)
+
+| Client call | HTTP | Notes |
+|---|---|---|
+| `accounts.heads()` | GET /accounts/heads | `ledger.view`. `LedgerHead[]` {code, name, type, parentCode, active} |
+| `accounts.addHead(input)` / `updateHead(code, patch)` | POST /accounts/heads · PATCH /accounts/heads/:code | `ledger.post`. Sub-heads under INCOME / EXPENSE main heads only (BR-044) |
+| `accounts.vouchers(params)` / `voucher(id)` | GET /accounts/vouchers?kind&page&pageSize · GET /accounts/vouchers/:id | `ledger.view`. Newest first; `reversed` when its entry was reversed |
+| `accounts.createVoucher(input, key)` | POST /accounts/vouchers | `ledger.post`, Idempotency-Key. `OfficeVoucherInput` {kind PAYMENT / RECEIPT, headCode, amount, mode CASH / BANK, reference, party, narration, date}. 201 `OfficeVoucher` |
+| `accounts.yearEnd(fy?)` | GET /accounts/year-end?fy | `ledger.view`. `YearEndStatus`: range, income, expense, surplus, `canClose`, `blockers`, `interestPosted`, closed, dividend, years |
+| `accounts.interestPreview(fy)` / `postInterest(fy)` | GET / POST /accounts/year-end/interest | POST needs `ledger.close`. Once per year, after it ends (BR-045) |
+| `accounts.dividendPreview(fy, rate)` / `declareDividend(input)` / `payDividend(fy)` | GET / POST /accounts/year-end/dividend · POST /accounts/year-end/dividend/pay | POST needs `ledger.close`; the year must be closed (BR-046) |
+| `accounts.closeYear(fy)` | POST /accounts/year-end/close | `ledger.close`. Then any posting dated in the year → 422 `LED-CLOSED` (BR-047) |
+| `reports.run(id, filters)` | GET /reports/:id | New ids (need `ledger.view`): `books` (book DAY / CASH / BANK), `general-ledger` (account), `trial-balance` (asOf), `profit-loss`, `balance-sheet` (asOf), `receipts-payments`, `monthly-receipts` / `monthly-payments` (month), `deposits-ledger` (scheme), `shares-ledger`, `dob-anniversary` (month) |
+
+## G4 additions (backend, D-114)
+
+| Client call | HTTP | Notes |
+|---|---|---|
+| `appConfig()` | GET /app/config | No sign-in. `{ minAppVersion }` (BR-048) |
+| `account.registerPush(token, platform)` | POST /me/push-token | Any signed-in user. `{ token: ExponentPushToken[…], platform: ios / android }`; the token moves to the caller |
+| `account.removePush(token)` | DELETE /me/push-token | Removes it only if it belongs to the caller (sign-out) |
+
+## G5 changes (backend, D-115)
+
+- `notifications.send()` → `OutboxMessage.status` is `SENT` when a real provider took the message (`failed` = how many it refused), `DELIVERED_SIMULATED` with the simulated senders.
+- `auth.otpStart()` and every call that sends a signing or mobile-change code answer `RULE_VIOLATION` with `ruleId: OTP_NOT_SENT` when WhatsApp refused the code. `OtpStarted.channel` is `WHATSAPP` with the real sender.
+

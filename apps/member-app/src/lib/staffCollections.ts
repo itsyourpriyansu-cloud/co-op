@@ -15,7 +15,7 @@ export const HEAD_COLUMNS: Array<{ head: DemandHead; label: string }> = [
 
 export const HEAD_LABEL = Object.fromEntries(HEAD_COLUMNS.map((c) => [c.head, c.label])) as Record<DemandHead, string>;
 export const SOURCE_LABEL: Record<Receipt['source'], string> = { SALARY_RECOVERY: 'Salary recovery', CASH: 'Cash', BANK_TRANSFER: 'Bank transfer', ADJUSTMENT: 'Adjustment' };
-export const PURPOSE_LABEL: Record<NonNullable<Receipt['purpose']>, string> = { DUES: 'Dues', SHARE_CAPITAL: 'Share capital', FD: 'Fixed deposit', SURETY_RECOVERY: 'As surety' };
+export const PURPOSE_LABEL: Record<NonNullable<Receipt['purpose']>, string> = { DUES: 'Dues', SHARE_CAPITAL: 'Share capital', FD: 'Fixed deposit', SURETY_RECOVERY: 'As surety', LOAN_CLOSURE: 'Loan closed early' };
 export const REPORT_MODE_LABEL = { BANK_TRANSFER: 'Bank transfer', UPI: 'UPI', CHEQUE_DEPOSIT: 'Cheque deposit' } as const;
 export const ENTRY_LABEL: Record<string, string> = { DRAFT: 'draft saved', SUBMITTED: 'submitted, waiting for the Accountant', UNDER_REVIEW: 'under review', REJECTED: 'sent back to the DDO', APPROVED: 'approved', POSTED: 'posted' };
 

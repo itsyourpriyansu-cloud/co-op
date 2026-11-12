@@ -27,12 +27,12 @@ export const ledgerRoutes: FastifyPluginAsyncZod = async (app) => {
   const view = requirePermission('ledger.view');
   const post = requirePermission('ledger.post', 'Only the Accountant can post to the books.');
 
-  app.get('/ledger/accounts', { preHandler: view, schema: { tags, summary: 'Chart of accounts', security, response: { 200: z.array(accountSchema) } } }, controller.accounts);
-  app.get('/ledger/trial-balance', { preHandler: view, schema: { tags, summary: 'Trial balance (debits must equal credits)', security, querystring: trialBalanceQuery, response: { 200: trialBalanceSchema } } }, controller.trialBalance);
-  app.get('/ledger/accounts/:code/lines', { preHandler: view, schema: { tags, summary: "One account's lines with a running balance", security, params: codeParams, querystring: rangeQuery, response: { 200: accountLedgerSchema } } }, controller.accountLedger);
-  app.get('/ledger/members/:memberId/statement', { preHandler: view, schema: { tags, summary: "A member's statement across loans, shares and deposits", security, params: memberParams, querystring: rangeQuery, response: { 200: memberStatementSchema } } }, controller.memberStatement);
-  app.get('/ledger/journals', { preHandler: view, schema: { tags, summary: 'Journal entries, newest first', security, querystring: journalsQuery, response: { 200: journalPageSchema } } }, controller.journals);
-  app.get('/ledger/journals/:id', { preHandler: view, schema: { tags, summary: 'One journal entry with its lines', security, params: idParams, response: { 200: journalSchema } } }, controller.journal);
-  app.post('/ledger/journals', { preHandler: post, schema: { tags, summary: 'Post a manual journal (must balance)', security, body: manualJournalBody, response: { 200: journalSchema } } }, controller.postManual);
-  app.post('/ledger/journals/:id/reverse', { preHandler: post, schema: { tags, summary: 'Reverse an entry (posts its mirror image)', security, params: idParams, body: reverseBody, response: { 200: journalSchema } } }, controller.reverse);
+  app.get('/ledger/accounts', { onRequest: view, schema: { tags, summary: 'Chart of accounts', security, response: { 200: z.array(accountSchema) } } }, controller.accounts);
+  app.get('/ledger/trial-balance', { onRequest: view, schema: { tags, summary: 'Trial balance (debits must equal credits)', security, querystring: trialBalanceQuery, response: { 200: trialBalanceSchema } } }, controller.trialBalance);
+  app.get('/ledger/accounts/:code/lines', { onRequest: view, schema: { tags, summary: "One account's lines with a running balance", security, params: codeParams, querystring: rangeQuery, response: { 200: accountLedgerSchema } } }, controller.accountLedger);
+  app.get('/ledger/members/:memberId/statement', { onRequest: view, schema: { tags, summary: "A member's statement across loans, shares and deposits", security, params: memberParams, querystring: rangeQuery, response: { 200: memberStatementSchema } } }, controller.memberStatement);
+  app.get('/ledger/journals', { onRequest: view, schema: { tags, summary: 'Journal entries, newest first', security, querystring: journalsQuery, response: { 200: journalPageSchema } } }, controller.journals);
+  app.get('/ledger/journals/:id', { onRequest: view, schema: { tags, summary: 'One journal entry with its lines', security, params: idParams, response: { 200: journalSchema } } }, controller.journal);
+  app.post('/ledger/journals', { onRequest: post, schema: { tags, summary: 'Post a manual journal (must balance)', security, body: manualJournalBody, response: { 200: journalSchema } } }, controller.postManual);
+  app.post('/ledger/journals/:id/reverse', { onRequest: post, schema: { tags, summary: 'Reverse an entry (posts its mirror image)', security, params: idParams, body: reverseBody, response: { 200: journalSchema } } }, controller.reverse);
 };

@@ -9,7 +9,7 @@ const ok = (name: string) => ({ 200: z.any().describe(`${name} (packages/types)`
 export const insightRoutes: FastifyPluginAsyncZod = async (app) => {
   const service = new InsightService(app);
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const tags = ['dashboard'];
 
   app.get('/work-queue', { ...pre, schema: { tags, summary: 'Everything waiting on me, oldest first, with REQ-135 service-target flags', security, response: ok('WorkQueue') } }, (r) => service.workQueue(sessionOf(r)));

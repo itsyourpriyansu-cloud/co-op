@@ -13,6 +13,8 @@ import { api } from '@/lib/api';
 import { Alert, Button, Card, DateField, EmptyState, Header, KeyValue, Screen, Section, SelectField, Skeleton, Text } from '@/ui';
 import { space } from '@/theme';
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 function show(c: ReportColumn, v: ReportCell): string {
   if (v === null || v === undefined || v === '') return '—';
   if (c.type === 'money') return v === 0 ? '–' : formatINR(Number(v));
@@ -141,19 +143,24 @@ export default function ReportViewer() {
       {def && opts ? (
         <View style={{ gap: space[4] }}>
           {has('memberId') ? <MemberPicker value={member} onPick={(m) => (setMember(m), set('memberId', m?.id))} /> : null}
-          {(['cycle', 'departmentId', 'product', 'minCycles', 'withinMonths'] as const).some(has) ? (
+          {(['cycle', 'departmentId', 'product', 'minCycles', 'withinMonths', 'book', 'account', 'scheme', 'month'] as const).some(has) ? (
             <FilterBar>
               {has('cycle') ? <SelectField compact label="Month" placeholder="Latest posted" value={filters.cycle ?? r?.filters.cycle ?? ''} options={opts.cycles.map((c) => ({ value: c, label: formatCycle(c) }))} onChange={(v) => set('cycle', v)} /> : null}
           {has('departmentId') ? <SelectField compact label="Department" searchable value={filters.departmentId ?? ''} options={[{ value: '', label: 'All departments' }, ...opts.departments.map((d) => ({ value: d.id, label: d.name }))]} onChange={(v) => set('departmentId', v || undefined)} /> : null}
           {has('product') ? <SelectField compact label="Loan type" value={filters.product ?? ''} options={[{ value: '', label: 'All loan types' }, ...opts.products.map((p) => ({ value: p.code, label: p.name }))]} onChange={(v) => set('product', v || undefined)} /> : null}
           {has('minCycles') ? <SelectField compact label="Short in a row" value={filters.minCycles ?? String(opts.defaulterCycles)} options={['1', '2', '3', '4', '6'].map((n) => ({ value: n, label: `${n}+ cycle${n === '1' ? '' : 's'}${Number(n) === opts.defaulterCycles ? ' (setting)' : ''}` }))} onChange={(v) => set('minCycles', v)} /> : null}
           {has('withinMonths') ? <SelectField compact label="Retiring within" value={filters.withinMonths ?? '12'} options={['3', '6', '12', '24', '36'].map((n) => ({ value: n, label: `${n} months` }))} onChange={(v) => set('withinMonths', v)} /> : null}
+          {has('book') ? <SelectField compact label="Book" value={filters.book ?? r?.filters.book ?? 'DAY'} options={[{ value: 'DAY', label: 'Day book' }, { value: 'CASH', label: 'Cash book' }, { value: 'BANK', label: 'Bank book' }]} onChange={(v) => set('book', v)} /> : null}
+          {has('account') ? <SelectField compact label="Account" searchable value={filters.account ?? r?.filters.account ?? ''} options={(opts.accounts ?? []).map((a) => ({ value: a.code, label: `${a.code} ${a.name}` }))} onChange={(v) => set('account', v)} /> : null}
+          {has('scheme') ? <SelectField compact label="Scheme" value={filters.scheme ?? ''} options={[{ value: '', label: 'All schemes' }, { value: 'FD', label: 'FD' }, { value: 'CRD', label: 'CRD' }, { value: 'SRDS', label: 'SRDS' }]} onChange={(v) => set('scheme', v || undefined)} /> : null}
+          {has('month') ? <SelectField compact label="Month" value={filters.month ?? r?.filters.month ?? ''} options={MONTHS.map((m, i) => ({ value: String(i + 1), label: m }))} onChange={(v) => set('month', v)} /> : null}
             </FilterBar>
           ) : null}
           {/* Remounts once when the server's default arrives; DateField keeps its own text after that. */}
           <View style={{ flexDirection: 'row', gap: space[4] }}>
           {has('from') ? <View style={{ flex: 1 }}><DateField key={`from-${filters.from ? 'set' : (r?.filters.from ?? '')}`} label="From" value={filters.from ?? r?.filters.from} onChange={(d) => d && set('from', d)} /></View> : null}
           {has('to') ? <View style={{ flex: 1 }}><DateField key={`to-${filters.to ? 'set' : (r?.filters.to ?? '')}`} label="To" value={filters.to ?? r?.filters.to} onChange={(d) => d && set('to', d)} error={errorMsg?.includes('start') ? errorMsg : undefined} /></View> : null}
+          {has('asOf') ? <View style={{ flex: 1 }}><DateField key={`asof-${filters.asOf ? 'set' : (r?.filters.asOf ?? '')}`} label="As on" value={filters.asOf ?? r?.filters.asOf} onChange={(d) => d && set('asOf', d)} /></View> : null}
           </View>
           {Object.keys(filters).length ? <Button text="Clear filters" subType="inline" style={{ alignSelf: 'flex-start' }} onPress={clear} /> : null}
         </View>

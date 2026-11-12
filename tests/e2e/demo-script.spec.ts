@@ -3,6 +3,10 @@
 //   npx playwright test demo-script --repeat-each=2     (must pass twice in a row)
 import type { BrowserContext, Page } from '@playwright/test';
 import { API, apiCall, apiToken, consoleAs, CONSOLE_URL, ErrorTracker, expect, OTP, PHONE_URL, phoneAs, resetDemo, setFailureRate, shot, tap, test } from './support';
+import { fileURLToPath } from 'node:url';
+
+// G1: any small PNG stands in for a photographed document.
+const DOC_PNG = fileURLToPath(new URL('./fixtures/signature.png', import.meta.url));
 
 test.describe.configure({ mode: 'serial' });
 
@@ -107,13 +111,16 @@ test('Act 2 · joining the society (phone → console → phone)', async ({ page
   await pick(phone, 'Relationship', 'Father');
   await tap(phone, 'Save & continue');
   // Documents: upload every required one.
+  // G1 (D-111): real files through the picker, stored encrypted on the server.
   for (let i = 0; i < 3; i++) {
+    const chooser = phone.waitForEvent('filechooser');
     await phone.getByRole('button', { name: 'Upload' }).first().click();
-    await phone.waitForTimeout(900);
+    await (await chooser).setFiles(DOC_PNG);
+    await expect(phone.getByRole('button', { name: 'Replace' })).toHaveCount(i + 1);
   }
   await tap(phone, 'Save & continue');
   // Declarations.
-  for (let i = 0; i < 3; i++) await phone.getByText('I agree').nth(i).click();
+  for (let i = 0; i < 4; i++) await phone.getByText('I agree').nth(i).click();
   await tap(phone, 'Save & continue');
   // Review → sign.
   await expect(phone.getByText('Everything looks complete')).toBeVisible();

@@ -21,6 +21,7 @@ import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
 import { businessCycle, businessNow, businessToday } from '../../common/utils/business-date';
 import { createSenders, type MessageSender } from '../../integrations/messaging';
+import { expoPush, simulatedPush, type PushSender } from '../../integrations/push';
 import type { NotificationsRepository, StoredNotification } from './notifications.repository';
 
 type Via = Partial<Record<MessageChannel, DeliveryStatus>>;
@@ -57,12 +58,43 @@ const newId = (prefix: string) => `${prefix}-${randomUUID().slice(0, 8)}`;
  */
 export class NotificationsService {
   readonly senders: Record<MessageChannel, MessageSender>;
+  push: PushSender;
 
   constructor(
     private readonly app: FastifyInstance,
     readonly repo: NotificationsRepository,
   ) {
     this.senders = createSenders(app.log, app.env);
+    this.push = app.env.PUSH_PROVIDER === 'expo' ? expoPush(app.env.EXPO_ACCESS_TOKEN) : simulatedPush(app.log);
+  }
+
+  /** G4 (D-114): the signed-in phone asks for pushes (Expo push token). */
+  async registerPush(user: SessionUser, body: { token?: string; platform?: string }): Promise<{ ok: true }> {
+    const token = (body?.token ?? '').trim();
+    if (!/^(Exponent|Expo)PushToken\[[\w-]{10,200}\]$/.test(token)) fail('VALIDATION_ERROR', 'Not a push token.', { fieldErrors: { token: 'Not a push token' } });
+    if (body.platform !== 'ios' && body.platform !== 'android') fail('VALIDATION_ERROR', 'Choose ios or android.', { fieldErrors: { platform: 'ios or android' } });
+    await this.repo.savePushToken(token, user.id, body.platform);
+    return { ok: true };
+  }
+
+  /** Sign-out on the phone: stop pushes to it for this user. */
+  async removePush(user: SessionUser, body: { token?: string }): Promise<{ ok: true }> {
+    if (body?.token) await this.repo.deletePushTokens([body.token], user.id);
+    return { ok: true };
+  }
+
+  /** Pushes never block or fail the action that caused them; a dead token is forgotten. */
+  private async pushTo(userId: string, title: string, body: string, link?: string): Promise<void> {
+    try {
+      const tokens = await this.repo.pushTokensOf(userId);
+      if (!tokens.length) return;
+      const results = await this.push.send(tokens.map((to) => ({ to, title, body, ...(link ? { link } : {}) })));
+      await this.repo.deletePushTokens(results.filter((r) => r.unregistered).map((r) => r.to));
+      const failed = results.filter((r) => !r.ok && !r.unregistered);
+      if (failed.length) this.app.log.warn({ failed: failed.length, error: failed[0]!.error }, 'push not accepted');
+    } catch (err) {
+      this.app.log.warn({ err }, 'push failed');
+    }
   }
 
   // ---- sending ----
@@ -71,11 +103,18 @@ export class NotificationsService {
    * An in-app notification by template (ST-63) to a member or staff user; a member also gets it on
    * each other channel of the template they switched on (MB-14). Undefined when the template is missing.
    */
+  /** G3 (D-113): send a reminder only if this recipient never got this template for this link. */
+  async notifyOnce(recipientId: string, templateKey: string, vars: Vars, link: string): Promise<boolean> {
+    if (await this.repo.exists(recipientId, templateKey, link)) return false;
+    return Boolean(await this.notify(recipientId, templateKey, vars, link));
+  }
+
   async notify(recipientId: string, templateKey: string, vars: Vars, link?: string): Promise<{ id: string; via: Via } | undefined> {
     const t = (await this.app.masters.templates()).find((x) => x.key === templateKey);
     if (!t) return undefined;
     const n: StoredNotification = { id: newId('ntf'), recipientId, title: fill(t.title, vars), body: fill(t.body, vars), channel: 'IN_APP', createdAt: await businessNow(this.app), read: false, ...(link ? { link } : {}), via: {} };
     await this.repo.insert(n, templateKey);
+    await this.pushTo(recipientId, n.title, n.body, link);
     const member = await this.app.members.byId(recipientId);
     if (member) {
       const on = (await this.preferencesOf(member)).channels;
@@ -202,12 +241,20 @@ export class NotificationsService {
     const msg: OutboxMessage = { id: newId('msg'), at, byId: user.id, byName: user.name, channel: input.channel, audienceLabel: p.audienceLabel, recipients: p.recipients, skipped: p.skipped, title: input.title || 'Message from the society', body: input.body, ...(input.templateKey ? { templateKey: input.templateKey } : {}), status: 'DELIVERED_SIMULATED' };
     await this.repo.insertMessage(msg);
     const vars = await this.varsFor(p.send);
+    const outcomes: string[] = [];
     for (const m of p.send) {
       const v = vars.get(m.id)!;
       const n: StoredNotification = { id: newId('ntf'), recipientId: m.id, title: fill(msg.title, v), body: fill(input.body, v), channel: 'IN_APP', createdAt: at, read: false, via: {} };
       await this.repo.insert(n, input.templateKey);
       n.via = await this.deliver(m, [input.channel], n.title, n.body, { notificationId: n.id, messageId: msg.id });
       await this.repo.setVia(n.id, n.via);
+      outcomes.push(n.via[input.channel] ?? 'FAILED');
+    }
+    // G5 (D-115): record what the provider really did.
+    if (!outcomes.includes('SIMULATED')) {
+      const failed = outcomes.filter((o) => o === 'FAILED').length;
+      Object.assign(msg, { status: 'SENT' }, failed ? { failed } : {});
+      await this.repo.updateMessage(msg);
     }
     await this.app.audit.record(request, { action: 'send', entity: 'message', entityId: msg.id, summary: `${input.channel} to ${p.audienceLabel} (${p.recipients})` });
     return msg;

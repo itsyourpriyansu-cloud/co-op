@@ -2,7 +2,7 @@
 // phone in a second phone-sized context. Setup that is not the hand-off itself uses the API.
 import type { APIRequestContext, Page } from '@playwright/test';
 import { formatINR } from '@tgs/domain';
-import { apiCall, apiToken, consoleAs, CONSOLE_URL, expect, OTP, PHONE_URL, phoneAs, phoneContext, resetDemo, shot, tap, test } from './support';
+import { apiCall, apiToken, consoleAs, CONSOLE_URL, expect, OTP, PHONE_URL, phoneAs, phoneContext, resetDemo, shot, tap, test, uploadOwnDocuments } from './support';
 
 /**
  * After pressing "Act as <owner>": wait until the flow is done, or the next stage's (enabled) "Act as"
@@ -42,7 +42,8 @@ async function divyaApplies(request: APIRequestContext) {
   const sample = await apiCall<{ application: { form: Record<string, unknown> } }>(request, 'GET', `/membership/applications/${list.rows.find((r) => r.status === 'ACTIVE')!.id}`, admin);
   const divya = await apiToken(request, 'apl-divya', 'app');
   await apiCall(request, 'POST', '/membership/me/eligibility', divya.token, { worksInSecretariatDept: true, regularOrApprovedProbationer: true, memberOfOtherCreditSocietyWithDues: false });
-  const form = { ...sample.application.form, personal: { ...(sample.application.form.personal as object), fullName: 'Divya S' } };
+  const documents = await uploadOwnDocuments(request, divya.token, sample.application.form.documents);
+  const form = { ...sample.application.form, documents, personal: { ...(sample.application.form.personal as object), fullName: 'Divya S' } };
   await apiCall(request, 'PUT', '/membership/me/draft', divya.token, form);
   const sign = await apiCall<{ otpRef: string }>(request, 'POST', '/membership/me/sign/request', divya.token);
   await apiCall(request, 'POST', '/membership/me/submit', divya.token, { otpRef: sign.otpRef, otp: OTP });

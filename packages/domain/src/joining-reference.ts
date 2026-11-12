@@ -3,6 +3,8 @@
 import type { JoiningReference } from '@tgs/types';
 
 export const TEXT_VERSION = 'F1+F6-2026.1';
+/** G7 (D-117): the privacy notice the applicant consents to (DPDP Act 2023). Bump it when the notice changes. */
+export const PRIVACY_NOTICE_VERSION = 'PN-2026.1';
 
 export const REQUIRED_DOCUMENTS: JoiningReference['requiredDocuments'] = [
   { type: 'PHOTO', label: 'Passport photo', hint: 'Recent, plain background', required: true },
@@ -38,5 +40,20 @@ export const AGREEMENTS: JoiningReference['agreements'] = [
     ],
     text:
       'I authorise my pay disbursing officer, and any pay disbursing officer under whom I may serve in future, to recover on demand by the society from my monthly salary any instalment of a loan, thrift deposit or other sum due by me to The Telangana Secretariat Employees Co-operative Credit Society Ltd., as borrower or as surety. I accept a demand certified by an officer of the society as conclusive evidence of my liability. Sums remaining unpaid at my retirement or earlier death may be recovered from the gratuity sanctioned to me or my dependants. I shall not ask for the suspension of the recovery. If I am transferred out of the Secretariat, the society may communicate this agreement to my new pay disbursing officer.',
+  },
+  {
+    // G7 (D-117) [P]: wording for the society to approve.
+    key: 'privacy',
+    title: 'Privacy notice and consent',
+    version: PRIVACY_NOTICE_VERSION,
+    summary: [
+      'The society uses your details only to run your membership, loans, deposits and salary recovery.',
+      'Your department pay officer (DDO) sees what is needed for the salary deductions.',
+      'Messages reach you by WhatsApp, email and the app. Nothing is sold or shared for marketing.',
+      'If you are not admitted or you withdraw, your application is deleted after the period the society sets.',
+      'You may ask the office to see or correct your data, or withdraw consent. Records the law requires are kept.',
+    ],
+    text:
+      'I consent to The Telangana Secretariat Employees Co-operative Credit Society Ltd. processing the personal data in this application, and in my membership, loans, deposits and recoveries, for running my membership and meeting its legal duties under the Digital Personal Data Protection Act, 2023. I understand that my pay disbursing officer receives the data needed to make salary deductions, that I may ask the society to access, correct or erase my data or withdraw this consent by writing to the society office, and that records the society must keep by law are retained for that period. The full privacy notice is at the society office and on the society website.',
   },
 ];

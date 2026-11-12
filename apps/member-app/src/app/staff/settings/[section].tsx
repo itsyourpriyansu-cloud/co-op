@@ -128,13 +128,13 @@ const back = () => router.back();
 
 // ---- ST-60m General ------------------------------------------------------------------------
 
-type GeneralValues = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories'>;
+type GeneralValues = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths'>;
 
 function General({ b, title }: { b: SettingsBundle; title: string }) {
   const ro = !b.canEdit;
   const x = b.settings;
   const society = useDraft<SocietyProfile>(b.society);
-  const values = useDraft<GeneralValues>({ shareValue: x.shareValue, admissionFee: x.admissionFee, minShares: x.minShares, maxShares: x.maxShares, retirementAge: x.retirementAge, financialYearStartMonth: x.financialYearStartMonth, maxGuaranteesPerSurety: x.maxGuaranteesPerSurety, emiToNetSalaryMaxPercent: x.emiToNetSalaryMaxPercent, membershipTargetHours: x.membershipTargetHours, loanTargetDays: x.loanTargetDays, holidays: x.holidays, casteCategories: x.casteCategories });
+  const values = useDraft<GeneralValues>({ shareValue: x.shareValue, admissionFee: x.admissionFee, minShares: x.minShares, maxShares: x.maxShares, retirementAge: x.retirementAge, financialYearStartMonth: x.financialYearStartMonth, maxGuaranteesPerSurety: x.maxGuaranteesPerSurety, emiToNetSalaryMaxPercent: x.emiToNetSalaryMaxPercent, membershipTargetHours: x.membershipTargetHours, loanTargetDays: x.loanTargetDays, holidays: x.holidays, casteCategories: x.casteCategories, minAppVersion: x.minAppVersion, applicantDataRetentionMonths: x.applicantDataRetentionMonths });
   const a = useAction();
   const s = society.draft;
   const v = values.draft;
@@ -188,6 +188,12 @@ function General({ b, title }: { b: SettingsBundle; title: string }) {
       <Block title="Risk guards" description="Placeholders until the society confirms them." tag={ph('maxGuaranteesPerSurety')}>
         <Num label="Loans one member may guarantee" value={v.maxGuaranteesPerSurety} onChange={(maxGuaranteesPerSurety) => setV({ maxGuaranteesPerSurety })} error={e.maxGuaranteesPerSurety} unit="open loans" disabled={ro} />
         <Num label="First EMI at most" value={v.emiToNetSalaryMaxPercent} onChange={(emiToNetSalaryMaxPercent) => setV({ emiToNetSalaryMaxPercent })} error={e.emiToNetSalaryMaxPercent} unit="% of net salary" hint="Warning only, never blocks" disabled={ro} />
+      </Block>
+      <Block title="Mobile app" description="Raise this when an old version must stop working. People on an older version see an update screen. 0.0.0 lets every version in.">
+        <TextField label="Oldest version allowed" value={v.minAppVersion} onChangeText={(minAppVersion) => setV({ minAppVersion: minAppVersion.trim() })} error={e.minAppVersion} placeholder="1.0.0" editable={!ro} />
+      </Block>
+      <Block title="Personal data" description="DPDP: a rejected or withdrawn application, its documents and the applicant's sign-in are deleted this long after the last change." tag={ph('applicantDataRetentionMonths')}>
+        <Num label="Delete closed applications after" value={v.applicantDataRetentionMonths} onChange={(applicantDataRetentionMonths) => setV({ applicantDataRetentionMonths })} error={e.applicantDataRetentionMonths} unit="months" disabled={ro} />
       </Block>
     </Editor>
   );
@@ -292,12 +298,12 @@ function LoanProducts({ b, title }: { b: SettingsBundle; title: string }) {
 
 // ---- ST-65m Deposit schemes ----------------------------------------------------------------
 
-type DepositValues = Pick<SocietySettings, 'fdSlabs' | 'fdMinAmount' | 'savingsRatePercent' | 'crdRatePercent' | 'srdsRatePercent' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent'>;
+type DepositValues = Pick<SocietySettings, 'fdSlabs' | 'fdMinAmount' | 'savingsRatePercent' | 'crdRatePercent' | 'srdsRatePercent' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent' | 'shareDepositRatePercent' | 'depositInterestBasis'>;
 
 function Deposits({ b, title }: { b: SettingsBundle; title: string }) {
   const ro = !b.canEdit;
   const s = b.settings;
-  const form = useDraft<DepositValues>({ fdSlabs: s.fdSlabs, fdMinAmount: s.fdMinAmount, savingsRatePercent: s.savingsRatePercent, crdRatePercent: s.crdRatePercent, srdsRatePercent: s.srdsRatePercent, fdMaturityJobEnabled: s.fdMaturityJobEnabled, fdMaturityRunHour: s.fdMaturityRunHour, fdPrematureWithdrawalEnabled: s.fdPrematureWithdrawalEnabled, fdPrematurePenaltyMethod: s.fdPrematurePenaltyMethod, fdPrematurePenaltyPercent: s.fdPrematurePenaltyPercent });
+  const form = useDraft<DepositValues>({ fdSlabs: s.fdSlabs, fdMinAmount: s.fdMinAmount, savingsRatePercent: s.savingsRatePercent, crdRatePercent: s.crdRatePercent, srdsRatePercent: s.srdsRatePercent, fdMaturityJobEnabled: s.fdMaturityJobEnabled, fdMaturityRunHour: s.fdMaturityRunHour, fdPrematureWithdrawalEnabled: s.fdPrematureWithdrawalEnabled, fdPrematurePenaltyMethod: s.fdPrematurePenaltyMethod, fdPrematurePenaltyPercent: s.fdPrematurePenaltyPercent, shareDepositRatePercent: s.shareDepositRatePercent, depositInterestBasis: s.depositInterestBasis });
   const a = useAction();
   const v = form.draft;
   const e = a.fields;
@@ -354,6 +360,8 @@ function Deposits({ b, title }: { b: SettingsBundle; title: string }) {
         <Num label="CRD" value={v.crdRatePercent} onChange={(crdRatePercent) => set({ crdRatePercent })} error={e.crdRatePercent} unit="% a year" decimals disabled={ro} />
         <Num label="SRDS" value={v.srdsRatePercent} onChange={(srdsRatePercent) => set({ srdsRatePercent })} error={e.srdsRatePercent} unit="% a year" decimals disabled={ro} />
         <Num label="Savings" value={v.savingsRatePercent} onChange={(savingsRatePercent) => set({ savingsRatePercent })} error={e.savingsRatePercent} unit="% a year" decimals disabled={ro} />
+        <Num label="Share deposit" value={v.shareDepositRatePercent} onChange={(shareDepositRatePercent) => set({ shareDepositRatePercent })} error={e.shareDepositRatePercent} unit="% a year" decimals disabled={ro} />
+        <Choose label="Interest worked on" value={v.depositInterestBasis} options={[{ value: 'YEAR_END', label: 'Balance at the year end' }, { value: 'AVERAGE_MONTH_END', label: 'Average of the 12 month-end balances' }]} onChange={(x) => set({ depositInterestBasis: x as DepositValues['depositInterestBasis'] })} disabled={ro} />
       </Block>
       <Block title="FD maturity" description="Each day after this hour (India time) fixed deposits that have reached their maturity date are marked matured and their interest booked. Running it again changes nothing.">
         <Toggle label="Daily maturity processing" checked={v.fdMaturityJobEnabled} onChange={(fdMaturityJobEnabled) => set({ fdMaturityJobEnabled })} disabled={ro} />

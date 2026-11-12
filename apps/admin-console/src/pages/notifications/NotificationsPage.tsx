@@ -1,7 +1,7 @@
 // ST-03 Notifications (D-063): my in-app notifications (deep links), member questions from MB-13
 // (Accountant / Super Admin reply, the member sees it on the phone), and the simulated message
 // composer — channel, recipients (member, department, defaulters, retiring), template, preview, send →
-// the sent log with "Delivered (simulated)".
+// the sent log with what each provider did (G5, D-115).
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -36,7 +36,7 @@ export function NotificationsPage() {
     <>
       <PageHeader
         title="Notifications"
-        description="What the society system told you, questions from members, and messages sent to members (delivery is simulated)."
+        description="What the society system told you, questions from members, and messages sent to members."
         actions={can('messages.send') ? <ButtonV2 text="Send a message" leftSlot={{ slot: <Send size={16} /> }} onClick={() => setComposing(true)} /> : undefined}
       />
       <div className="mb-5">
@@ -218,7 +218,7 @@ function SentMessages({ onCompose }: { onCompose: () => void }) {
                       {m.skipped ? <span className="block text-caption text-fg-tertiary">{m.skipped} skipped</span> : null}
                     </td>
                     <td className="px-5 py-3">
-                      <TagV2 text="Delivered (simulated)" color={TagV2Color.SUCCESS} size={TagV2Size.XS} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
+                      <TagV2 text={m.status === 'SENT' ? (m.failed ? `${m.failed} not delivered` : 'Sent') : 'Delivered (simulated)'} color={m.failed ? TagV2Color.WARNING : TagV2Color.SUCCESS} size={TagV2Size.XS} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
                     </td>
                   </tr>
                 );
@@ -277,7 +277,7 @@ function Composer({ open, onClose, onSent }: { open: boolean; onClose: () => voi
     try {
       const m = await api.notifications.send(i);
       await qc.invalidateQueries({ queryKey: ['messages'] });
-      addSnackbarV2({ header: `${CHANNEL[m.channel].label} sent to ${m.recipients} member${m.recipients === 1 ? '' : 's'}`, description: 'Delivery is simulated. Each member also sees it in the app.', variant: SnackbarV2Variant.SUCCESS });
+      addSnackbarV2({ header: `${CHANNEL[m.channel].label} sent to ${m.recipients} member${m.recipients === 1 ? '' : 's'}`, description: `${m.status === 'SENT' ? (m.failed ? `${m.failed} could not be delivered. ` : '') : 'Delivery is simulated. '}Each member also sees it in the app.`, variant: SnackbarV2Variant.SUCCESS });
       reset();
       onClose();
       onSent();
@@ -293,7 +293,7 @@ function Composer({ open, onClose, onSent }: { open: boolean; onClose: () => voi
       open={open}
       onClose={onClose}
       title="Send a message"
-      description="Simulated: nothing leaves the prototype. Members also get it in the app."
+      description="Members also get it in the app."
       width={640}
       footer={
         <div className="flex items-center justify-between gap-3">

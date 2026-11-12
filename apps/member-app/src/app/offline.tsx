@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import { RotateCcw, Server, WifiOff } from 'lucide-react-native';
 import { api } from '@/lib/api';
-import { getServerUrl } from '@/lib/serverUrl';
+import { DEMO_TOOLS, getServerUrl } from '@/lib/serverUrl';
 import { Alert, Button, EmptyState, Screen } from '@/ui';
 
 export default function Offline() {
@@ -29,7 +29,7 @@ export default function Offline() {
       footer={
         <>
           <Button text="Try again" leftSlot={RotateCcw} size="lg" fullWidth loading={checking} onPress={() => void retry()} />
-          <Button text="Change server" leftSlot={Server} buttonType="secondary" size="lg" fullWidth onPress={() => router.push('/demo-settings')} />
+          {DEMO_TOOLS ? <Button text="Change server" leftSlot={Server} buttonType="secondary" size="lg" fullWidth onPress={() => router.push('/demo-settings')} /> : null}
         </>
       }
     >

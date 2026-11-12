@@ -1,5 +1,6 @@
 # 22 · Production backend plan
 
+> Version 0.32 · 2026-11-12 · v0.32: G8 go-live papers and `db:rotate-key` (D-118). v0.31: G7 hardening (D-117): guards before validation, route sweep, DPDP consent and retention, load test. v0.30: G6 data migration (D-116): deposit, loan and opening-balance imports, reconciliation. v0.29: G5 WhatsApp Cloud API and ACS email senders (D-115). v0.28: G4 store release (D-114): push tokens and sender, app config, shorter staff sign-in, store-review sign-in. v0.27: G3 platform (D-113): CI and deploy workflows, `infra/` Bicep, Blob file store, `db:bootstrap`, daily housekeeping job. v0.26: G2 accounting built (D-112): `modules/accounts`, accounting reports, period lock. v0.25: production readiness G1 built (D-111, tracker `docs/24`): idempotency plugin, early loan closure, FD periodic payouts in the daily job, audit log routes, documents module.
 > Version 0.24 · 2026-11-06 · v0.24: P9 built (D-100): fallback removed, apps default to the backend, hardening, backups + restore drill, Dockerfile, member register import, performance check.
 > Version 0.23 · 2026-11-05 · v0.23: society answers (D-093): steps A–F before P9; A built.
 > Version 0.22 · 2026-11-04 · v0.22: P8d built, P8 complete: demo controls on the backend, exit test passed with the fallback off (D-092).
@@ -331,6 +332,19 @@ P7a moves what the prototype does; the extras in the P7 row that the prototype n
 | **P8d Fallback off** ✅ (bridge code deleted in P9) | Demo controls on the backend (clock in the database, failure rate, personas, scenarios, dataset, sample, state) when `DEMO_MODE` is on; remove the record sync, session bridge and `/__demo/notify`; exit test: the full Playwright suite with the fallback switched off |
 
 Not in P8: server-side Excel / PDF, SMS provider (society: no SMS), push (needs the signed APK), Telugu.
+
+### 5.8 Production readiness (D-111, `docs/24`)
+
+| Phase | Delivers |
+|---|---|
+| **G1** ✅ | `plugins/idempotency.ts` + `idempotency_keys` (0026); permissions `audit.view`, `ledger.close` (0027); `modules/documents` (files `DOCUMENT`, 0028; change-request proof, 0029); `collections` early closure; `deposits.runPayouts` inside the maturity job; `modules/audit` routes |
+| **G2** ✅ | `modules/accounts` (heads, office vouchers, year end: interest, close, dividend); `ledger_accounts.parent_code`, `office_vouchers`, `financial_years`, new heads (0030); period lock in `ledger.post` (`LED-CLOSED`); `reports/accounting-reports.ts` (11 statements, `ledger.view`) |
+| **G3** ✅ | `.github/workflows/{ci,deploy,deploy-environment}.yml`; `infra/main.bicep` (+ staging / production params, README); `integrations/azure-blob.ts` behind `FILE_STORE`; `db/bootstrap.ts` (in the container start); `plugins/jobs.ts` daily housekeeping (FD maturity reminders, expired refresh tokens / OTPs, idempotency keys), one server per day via `system_info` |
+| **G4** ✅ | `integrations/push.ts` (simulated / Expo, `PUSH_PROVIDER`); `push_tokens` (0031) and `/me/push-token`; `notify()` also pushes; `GET /app/config` + `minAppVersion` (0032); `STAFF_REFRESH_TOKEN_TTL_DAYS`; `STORE_REVIEW_MOBILE` / `STORE_REVIEW_OTP`. App: `app.config.ts`, `eas.json`, update gate, staff lock, push registration, account deletion; console `/privacy`, `/account-deletion`; `docs/store-release.md` |
+| **G5** ✅ | `integrations/whatsapp-cloud.ts` (`WHATSAPP_PROVIDER=meta`, notice + authentication templates), `integrations/acs-email.ts` (`EMAIL_PROVIDER=acs`, managed identity via `integrations/azure-identity.ts`), `createSenders` picks by env; OTP refused with `OTP_NOT_SENT` when not sent; sent-message status `SENT` / `failed`; Bicep: Communication Services + email domain + role; `senders.test.ts` |
+| **G6** ✅ | `modules/deposits/register-import.ts`, `modules/loans/register-import.ts`, `modules/ledger/opening-import.ts` (opening entry + `reconcileOpening`), CLI `src/db/import-books.ts` (`db:import`), templates and samples in `backend/import/`; `books-import.test.ts` |
+| **G7** ✅ | Guards are `onRequest` hooks; `plugins/security.test.ts` (route sweep + member isolation); DPDP consent agreement `PN-2026.1` and `applicantDataRetentionMonths` (0033) with `joining.eraseClosedApplications` in housekeeping, `FileStore.removeOwner`, blob delete; `scripts/load-test.ts` (`load-test`); `docs/security-review.md` |
+| **G8** ✅ | `src/db/rotate-key.ts` (`db:rotate-key`, blob `put` with overwrite) + test; `docs/runbook.md`, `docs/uat-script.md`, `docs/training-guides.md`, `docs/go-live-checklist.md` |
 
 ## 6. Rules carried over
 

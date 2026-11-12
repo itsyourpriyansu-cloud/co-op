@@ -4,6 +4,11 @@ import { Platform } from 'react-native';
 import * as storage from './storage';
 
 const KEY = 'tgs.serverUrl';
+/**
+ * G4 (D-114): demo tools (server switch, demo reset) exist only in development builds. Preview and
+ * store builds set EXPO_PUBLIC_DEMO_TOOLS=0, so nobody can point a member's app at another server.
+ */
+export const DEMO_TOOLS = process.env.EXPO_PUBLIC_DEMO_TOOLS !== '0';
 export const DEFAULT_SERVER_URL =
   process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'web' ? 'http://localhost:4100' : 'http://10.0.2.2:4100');
 
@@ -15,7 +20,7 @@ export function getServerUrl(): string {
 
 export async function loadServerUrl(): Promise<string> {
   try {
-    current = (await storage.getItem(KEY)) ?? DEFAULT_SERVER_URL;
+    current = (DEMO_TOOLS ? await storage.getItem(KEY) : null) ?? DEFAULT_SERVER_URL;
   } catch {
     current = DEFAULT_SERVER_URL;
   }

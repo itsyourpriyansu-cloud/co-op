@@ -2,16 +2,20 @@
 import { useState } from 'react';
 import { Alert as RNAlert, View } from 'react-native';
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { RotateCcw, Server } from 'lucide-react-native';
 import { createApiClient, isApiError } from '@tgs/api-client';
 import { formatDisplayDate } from '@tgs/domain';
 import { api } from '@/lib/api';
-import { getServerUrl, normaliseServerUrl, saveServerUrl } from '@/lib/serverUrl';
+import { DEMO_TOOLS, getServerUrl, normaliseServerUrl, saveServerUrl } from '@/lib/serverUrl';
 import { Alert, Button, Card, Header, Screen, Text, TextField } from '@/ui';
 import { space } from '@/theme';
 
 export default function DemoSettings() {
+  return DEMO_TOOLS ? <DemoSettingsScreen /> : <Redirect href="/" />;
+}
+
+function DemoSettingsScreen() {
   const [url, setUrl] = useState(getServerUrl());
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);

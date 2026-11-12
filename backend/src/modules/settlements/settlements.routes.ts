@@ -10,7 +10,7 @@ const idParams = z.object({ id: z.string().min(1) });
 export const settlementsRoutes: FastifyPluginAsyncZod = async (app) => {
   const s = new SettlementsService(app);
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const tags = ['members'];
 
   app.get('/members/:id/settlement', { ...pre, schema: { tags, summary: 'The member, their exit and the final settlement statement', security, params: idParams, response: ok('SettlementView') } }, (r) => s.view(sessionOf(r), r.params.id));

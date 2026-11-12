@@ -1,4 +1,5 @@
-import type { SessionUser } from '@tgs/types';
+import type { AuditLogEntry, AuditLogList, AuditLogParams, SessionUser } from '@tgs/types';
+import { fail } from '../../common/errors/app-error';
 import type { FastifyRequest } from 'fastify';
 import type { Tx } from '../../db/transaction';
 import type { AuditRepository } from './audit.repository';
@@ -16,7 +17,19 @@ export interface AuditEvent {
 
 /** Writes the append-only audit log (docs/07 §7). Call inside the same transaction as the change. */
 export class AuditService {
-  constructor(private readonly repo: AuditRepository) {}
+  constructor(readonly repo: AuditRepository) {}
+
+  /** G1 (D-111): the audit log viewer (permission audit.view, checked by the route). */
+  async list(p: AuditLogParams): Promise<AuditLogList> {
+    const page = Math.max(1, Math.floor(p.page ?? 1));
+    const pageSize = Math.min(200, Math.max(1, Math.floor(p.pageSize ?? 50)));
+    const [{ items, total }, entities] = await Promise.all([this.repo.list({ ...p, page, pageSize }), this.repo.entities()]);
+    return { items, total, page, pageSize, entities };
+  }
+
+  async get(id: string): Promise<AuditLogEntry> {
+    return (await this.repo.get(id)) ?? fail('NOT_FOUND', 'Audit entry not found.');
+  }
 
   record(request: FastifyRequest | undefined, event: AuditEvent, tx?: Tx): Promise<void> {
     const actor = event.actor ?? request?.session;

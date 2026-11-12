@@ -1,6 +1,8 @@
 import type { DeliveryStatus, MessageChannel } from '@tgs/types';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Env } from '../config/env';
+import { acsEmail } from './acs-email';
+import { whatsAppCloud } from './whatsapp-cloud';
 
 /**
  * Outside messaging (D-074, docs/22 §5.7): one sender per channel behind this interface, so a real
@@ -12,6 +14,8 @@ export interface OutgoingMessage {
   to: string;
   title: string;
   body: string;
+  /** G5: a one-time code; WhatsApp sends it with the authentication template. */
+  otp?: string;
 }
 
 export interface SendResult {
@@ -34,8 +38,14 @@ export function simulatedSender(log: FastifyBaseLogger, production: boolean, fro
   };
 }
 
-// shortcut: every channel is simulated; add the real WhatsApp / email adapters here once F-10 names the provider and number.
-export function createSenders(log: FastifyBaseLogger, env: Pick<Env, 'NODE_ENV' | 'WHATSAPP_FROM' | 'EMAIL_FROM'>): Record<MessageChannel, MessageSender> {
+/** G5 (D-115): the real WhatsApp (Meta Cloud API) and email (Azure Communication Services) senders, chosen by the environment. */
+export function createSenders(log: FastifyBaseLogger, env: Env, fetchImpl: typeof fetch = fetch): Record<MessageChannel, MessageSender> {
   const production = env.NODE_ENV === 'production';
-  return { WHATSAPP: simulatedSender(log, production, env.WHATSAPP_FROM), EMAIL: simulatedSender(log, production, env.EMAIL_FROM) };
+  return {
+    WHATSAPP:
+      env.WHATSAPP_PROVIDER === 'meta'
+        ? whatsAppCloud({ phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID, token: env.WHATSAPP_TOKEN, apiVersion: env.WHATSAPP_API_VERSION, noticeTemplate: env.WHATSAPP_NOTICE_TEMPLATE, otpTemplate: env.WHATSAPP_OTP_TEMPLATE, language: env.WHATSAPP_LANGUAGE, fetchImpl })
+        : simulatedSender(log, production, env.WHATSAPP_FROM),
+    EMAIL: env.EMAIL_PROVIDER === 'acs' ? acsEmail({ endpoint: env.ACS_ENDPOINT, from: env.EMAIL_FROM, clientId: env.AZURE_CLIENT_ID, fetchImpl }) : simulatedSender(log, production, env.EMAIL_FROM),
+  };
 }

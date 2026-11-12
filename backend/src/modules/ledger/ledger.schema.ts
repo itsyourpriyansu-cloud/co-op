@@ -13,6 +13,7 @@ export const accountSchema = z.object({
   memberLevel: z.boolean(),
   active: z.boolean(),
   description: z.string().optional(),
+  parentCode: z.string().optional(),
 });
 
 const entryBase = {

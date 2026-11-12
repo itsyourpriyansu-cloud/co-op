@@ -13,12 +13,12 @@ export const usersRoutes: FastifyPluginAsyncZod = async (app) => {
   const security = [{ bearer: [] }];
   const manage = requirePermission('users.manage', 'Only the Super Admin can manage users.');
 
-  app.get('/users', { preHandler: requirePermission('settings.view'), schema: { tags, summary: 'Staff users', security, response: { 200: staffUserListSchema } } }, controller.list);
-  app.post('/users', { preHandler: manage, schema: { tags, summary: 'Add a staff user', security, body: staffUserInput, response: { 200: staffUserListSchema } } }, controller.create);
-  app.put('/users/:id', { preHandler: manage, schema: { tags, summary: 'Edit or deactivate a staff user', security, params: userIdParam, body: staffUserInput, response: { 200: staffUserListSchema } } }, controller.update);
-  app.post('/users/:id/reset-password', { preHandler: manage, schema: { tags, summary: 'Give the user a temporary password', security, params: userIdParam, response: { 200: temporaryPasswordSchema } } }, controller.resetPassword);
-  app.post('/users/:id/reset-totp', { preHandler: manage, schema: { tags, summary: 'Make the user set up a new authenticator', security, params: userIdParam, response: { 200: staffUserListSchema } } }, controller.resetTotp);
+  app.get('/users', { onRequest: requirePermission('settings.view'), schema: { tags, summary: 'Staff users', security, response: { 200: staffUserListSchema } } }, controller.list);
+  app.post('/users', { onRequest: manage, schema: { tags, summary: 'Add a staff user', security, body: staffUserInput, response: { 200: staffUserListSchema } } }, controller.create);
+  app.put('/users/:id', { onRequest: manage, schema: { tags, summary: 'Edit or deactivate a staff user', security, params: userIdParam, body: staffUserInput, response: { 200: staffUserListSchema } } }, controller.update);
+  app.post('/users/:id/reset-password', { onRequest: manage, schema: { tags, summary: 'Give the user a temporary password', security, params: userIdParam, response: { 200: temporaryPasswordSchema } } }, controller.resetPassword);
+  app.post('/users/:id/reset-totp', { onRequest: manage, schema: { tags, summary: 'Make the user set up a new authenticator', security, params: userIdParam, response: { 200: staffUserListSchema } } }, controller.resetTotp);
 
   const staffOnly = [requireAuth, requireRole('SUPER_ADMIN', 'ACCOUNTANT', 'SECRETARY', 'PRESIDENT', 'CASHIER', 'DDO')];
-  app.post('/auth/staff/password', { preHandler: staffOnly, schema: { tags: ['auth'], summary: 'Change my staff password', security, body: changePasswordBody, response: { 200: okSchema } } }, controller.changeOwnPassword);
+  app.post('/auth/staff/password', { onRequest: staffOnly, schema: { tags: ['auth'], summary: 'Change my staff password', security, body: changePasswordBody, response: { 200: okSchema } } }, controller.changeOwnPassword);
 };

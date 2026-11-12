@@ -21,7 +21,7 @@ const otpBody = z.object({ otpRef: z.string().optional(), otp: z.string().option
 export const joiningRoutes: FastifyPluginAsyncZod = async (app) => {
   const c = new JoiningController(app.joining);
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const mj = ['joining'];
   const st = ['membership'];
 

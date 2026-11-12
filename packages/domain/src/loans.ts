@@ -87,6 +87,15 @@ export function calculateAccruedInterest(outstanding: Paise, annualRatePercent: 
   return roundToRupee((outstanding * annualRatePercent * days) / (100 * 365));
 }
 
+/**
+ * BR-040 (G1, D-111): paying a loan off early: the outstanding principal plus interest up to today,
+ * accrued the same way as a top-up settlement (BR-007). No pre-closure charge: none is in the rules.
+ */
+export function calculateLoanClosure(input: { outstandingPrincipal: Paise; ratePercent: number; lastInterestChargedOn: ISODate; today: ISODate }) {
+  const interest = calculateAccruedInterest(input.outstandingPrincipal, input.ratePercent, input.lastInterestChargedOn, input.today);
+  return { principal: input.outstandingPrincipal, interest, total: input.outstandingPrincipal + interest };
+}
+
 /** BR-007 + BR-004: what a top-up settles and what the member receives. */
 export function calculateTopupSettlement(input: {
   outstandingPrincipal: Paise;

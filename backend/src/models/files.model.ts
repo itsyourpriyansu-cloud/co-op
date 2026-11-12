@@ -13,9 +13,14 @@ export const files = pgTable(
     id: text('id').primaryKey(),
     /** Member, applicant or staff user id. */
     ownerId: text('owner_id').notNull(),
-    purpose: text('purpose').$type<'SIGNATURE'>().notNull(),
+    purpose: text('purpose').$type<'SIGNATURE' | 'DOCUMENT'>().notNull(),
+    /** G1 (D-111): a DOCUMENT's kind (PHOTO, ID_PROOF, ...), its original name and who uploaded it. */
+    docType: text('doc_type'),
+    fileName: text('file_name'),
+    uploadedBy: text('uploaded_by'),
     mime: text('mime').notNull(),
     size: integer('size').notNull(),
+    /** 0 for a PDF. */
     width: integer('width').notNull(),
     height: integer('height').notNull(),
     /** SHA-256 of the plain file, recorded on what it signs. */

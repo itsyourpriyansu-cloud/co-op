@@ -1,10 +1,11 @@
 // ST-45m New receipt at the counter: member, what they owe, purpose and mode (cash slip, BR-029), live allocation.
-// shortcut: a repeat is guarded in the UI only (docs/23 §4.5), a server idempotency key needs a backend change.
+// One Idempotency-Key per form (G1, D-111): a retry after a time-out returns the first receipt.
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { allocateDuesPayment, amountInWords, formatCycle, formatINR } from '@tgs/domain';
+import { newIdempotencyKey } from '@tgs/api-client';
 import type { MemberPick, NewReceiptInput, ReceiptDetail } from '@tgs/types';
 import { ActionAlert, ask, CashStatus, countsTotal, DenominationCounter, Loaded, MemberPicker, MoneyField, useAction, useCan, useTodayDate, type Counts } from '@/components/staff';
 import { api } from '@/lib/api';
@@ -26,6 +27,7 @@ export default function NewReceipt() {
   const [remarks, setRemarks] = useState('');
   const { today, date, setDate } = useTodayDate();
   const a = useAction();
+  const [idemKey] = useState(newIdempotencyKey);
 
   const recovery = dues.data?.suretyRecoveries?.find((r) => r.id === recoveryId);
   const owed = dues.data ? (purpose === 'DUES' ? dues.data.totalArrears : purpose === 'SURETY_RECOVERY' ? (recovery?.due ?? 0) : dues.data.shareCapitalDue) : 0;
@@ -48,7 +50,7 @@ export default function NewReceipt() {
     if (!(await ask('Save receipt', `${formatINR(amt)} from ${member!.name}. This posts to the ledger and cannot be undone here.`, 'Save receipt'))) return;
     let saved: ReceiptDetail | undefined;
     const ok = await a.run(async () => {
-      saved = await api.receipts.create({ memberId: member!.id, purpose, ...(purpose === 'SURETY_RECOVERY' && recoveryId ? { recoveryId } : {}), mode, amount: amt, date: date!, ...(mode === 'CASH' ? { denominations: counts } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(remarks.trim() ? { remarks: remarks.trim() } : {}) });
+      saved = await api.receipts.create({ memberId: member!.id, purpose, ...(purpose === 'SURETY_RECOVERY' && recoveryId ? { recoveryId } : {}), mode, amount: amt, date: date!, ...(mode === 'CASH' ? { denominations: counts } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(remarks.trim() ? { remarks: remarks.trim() } : {}) }, idemKey);
     });
     if (ok && saved) router.replace(`/staff/payment/${saved.receipt.id}`);
   };

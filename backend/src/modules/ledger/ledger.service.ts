@@ -53,11 +53,11 @@ const toLine = (l: LineRow, accounts: Map<string, AccountRow>) => ({
 export class LedgerService {
   constructor(
     private readonly app: FastifyInstance,
-    private readonly repo: LedgerRepository,
+    readonly repo: LedgerRepository,
   ) {}
 
   async accounts() {
-    return (await this.repo.accounts()).map((a) => ({ code: a.code, name: a.name, type: a.type, normalSide: normalSide(a.type), memberLevel: a.memberLevel, active: a.active, ...(a.description ? { description: a.description } : {}) }));
+    return (await this.repo.accounts()).map((a) => ({ code: a.code, name: a.name, type: a.type, normalSide: normalSide(a.type), memberLevel: a.memberLevel, active: a.active, ...(a.description ? { description: a.description } : {}), ...(a.parentCode ? { parentCode: a.parentCode } : {}) }));
   }
 
   /** Validates and posts one balanced entry in `tx` (the caller's transaction) or a new one. */
@@ -68,6 +68,9 @@ export class LedgerService {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.entryDate)) fail('VALIDATION_ERROR', 'Use the date as YYYY-MM-DD.', { fieldErrors: { entryDate: 'Use YYYY-MM-DD' } });
 
     const run = async (t: Tx) => {
+      // G2 (D-112): a closed financial year takes no more postings.
+      const closed = await this.repo.closedThrough(t);
+      if (closed && input.entryDate <= closed) fail('RULE_VIOLATION', `The books are closed up to ${closed}. Date the entry after that.`, { ruleId: 'LED-CLOSED', fieldErrors: { entryDate: `After ${closed}` } });
       const accounts = await this.repo.accountsByCode([...new Set(input.lines.map((l) => l.accountCode))], t);
       const errors: Record<string, string> = {};
       input.lines.forEach((l, i) => {

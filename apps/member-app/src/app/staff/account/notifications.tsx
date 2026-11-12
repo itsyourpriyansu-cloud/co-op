@@ -1,4 +1,4 @@
-// ST-03m Notifications: what the system told me, member questions, sent messages (delivery is simulated).
+// ST-03m Notifications: what the system told me, member questions, sent messages (with what each provider did, G5).
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
@@ -98,7 +98,7 @@ function Sent() {
         rows.length ? (
           <Stack2>
             {rows.map((m) => (
-              <RecordCard key={m.id} title={m.title} subtitle={`${m.channel === 'EMAIL' ? 'Email' : 'WhatsApp'} · ${m.audienceLabel}`} tag={<Tag text="Delivered (simulated)" color="success" size="xs" />} caption={`${m.body}\n${formatDisplayDateTime(m.at)} · ${m.byName} · ${m.recipients} recipient${m.recipients === 1 ? '' : 's'}${m.skipped ? `, ${m.skipped} skipped` : ''}`} />
+              <RecordCard key={m.id} title={m.title} subtitle={`${m.channel === 'EMAIL' ? 'Email' : 'WhatsApp'} · ${m.audienceLabel}`} tag={<Tag text={m.status === 'SENT' ? (m.failed ? `${m.failed} not delivered` : 'Sent') : 'Delivered (simulated)'} color={m.failed ? 'warning' : 'success'} size="xs" />} caption={`${m.body}\n${formatDisplayDateTime(m.at)} · ${m.byName} · ${m.recipients} recipient${m.recipients === 1 ? '' : 's'}${m.skipped ? `, ${m.skipped} skipped` : ''}`} />
             ))}
           </Stack2>
         ) : (

@@ -1,8 +1,8 @@
 import type { ConsoleRole, MembershipApplication } from '@tgs/types';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, lt, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
 import type { Tx } from '../../db/transaction';
-import { membershipApplications, staffUsers } from '../../models';
+import { appAccounts, deliveries, membershipApplications, notifications, pushTokens, refreshTokens, staffUsers } from '../../models';
 
 const columns = (a: MembershipApplication) => ({
   applicationNo: a.applicationNo,
@@ -53,6 +53,24 @@ export class JoiningRepository {
     await tx.execute(sql`lock table ${membershipApplications} in share row exclusive mode`);
     const [row] = await tx.select({ n: sql<number>`count(*)::int` }).from(membershipApplications).where(sql`${membershipApplications.data} ? 'shareReceipt'`);
     return `SH-${year}-${String((row?.n ?? 0) + 1).padStart(4, '0')}`;
+  }
+
+  /** G7 (D-117): rejected or withdrawn applications last changed before `before`. */
+  async closedBefore(before: Date): Promise<Array<{ id: string; applicationNo: string; applicantId: string; status: string }>> {
+    return this.db
+      .select({ id: membershipApplications.id, applicationNo: membershipApplications.applicationNo, applicantId: membershipApplications.applicantId, status: membershipApplications.status })
+      .from(membershipApplications)
+      .where(and(inArray(membershipApplications.status, ['REJECTED', 'WITHDRAWN']), lt(membershipApplications.updatedAt, before)));
+  }
+
+  /** G7 (D-117, DPDP): the application, the applicant's sign-in and everything sent to them. Files are erased by the file store. */
+  async eraseApplicant(tx: Tx, applicationId: string, applicantId: string): Promise<void> {
+    await tx.delete(notifications).where(eq(notifications.recipientId, applicantId));
+    await tx.delete(deliveries).where(eq(deliveries.recipientId, applicantId));
+    await tx.delete(pushTokens).where(eq(pushTokens.userId, applicantId));
+    await tx.delete(refreshTokens).where(and(eq(refreshTokens.subjectType, 'APP'), eq(refreshTokens.subjectId, applicantId)));
+    await tx.delete(appAccounts).where(and(eq(appAccounts.kind, 'APPLICANT'), eq(appAccounts.applicantId, applicantId)));
+    await tx.delete(membershipApplications).where(eq(membershipApplications.id, applicationId));
   }
 
   async insert(tx: Tx, a: MembershipApplication): Promise<void> {
