@@ -1,5 +1,6 @@
 // Sidebar structure (docs/12 §2.1, docs/19 §1) and which milestone delivers each module (docs/14).
 import {
+  BookOpenText,
   ChartColumn,
   FileSpreadsheet,
   HandCoins,
@@ -7,6 +8,7 @@ import {
   LayoutDashboard,
   Palette,
   PiggyBank,
+  ScrollText,
   ReceiptIndianRupee,
   Settings,
   UserPlus,
@@ -53,6 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Money',
     items: [
       { id: 'demand-sheets', path: '/demand-sheets', label: 'Demand Sheets', icon: FileSpreadsheet, permission: 'collections.view', milestone: 'M7', screens: 'ST-40 – ST-43', description: 'Department-wise monthly demand, certification and salary recovery.' },
+      { id: 'accounts', path: '/accounts', label: 'Accounts', icon: BookOpenText, permission: 'ledger.view', milestone: 'G2', screens: 'ST-48', description: 'Office vouchers, chart of accounts and the year end.' },
       { id: 'payments', path: '/payments', label: 'Payments', icon: ReceiptIndianRupee, permission: 'collections.view', milestone: 'M7', screens: 'ST-44 – ST-47', description: 'Receipts with denominations, bank transfers, member-reported payments.' },
     ],
   },
@@ -66,6 +69,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Admin',
     items: [
       { id: 'settings', path: '/settings', label: 'Settings', icon: Settings, permission: 'settings.view', milestone: 'M2', screens: 'ST-60 – ST-67', description: 'Products, rates, workflows, departments, users and permissions.' },
+      { id: 'audit', path: '/audit', label: 'Audit Log', icon: ScrollText, permission: 'audit.view', milestone: 'G1', screens: 'ST-69', description: 'Who changed what and when. Read only.' },
       { id: 'design', path: '/design', label: 'Design System', icon: Palette, permission: 'demo.control', milestone: 'Live', screens: 'docs/18 · docs/19', description: 'Tokens, Blend components, patterns, every UI state and the scenario catalog.' },
     ],
   },

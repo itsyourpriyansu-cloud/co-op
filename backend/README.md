@@ -26,10 +26,14 @@ The console, the member app and the e2e suite use it by default (P9, D-100). The
 | `npm run db:generate -w @tgs/backend` | Writes a new SQL migration after changing `src/models` |
 | `npm run db:migrate -w @tgs/backend` | Applies pending migrations to `DATABASE_URL` |
 | `npm run db:seed -w @tgs/backend` | Loads the fictional demo data (dev only) |
+| `npm run db:bootstrap -w @tgs/backend` | G3: fills an empty production database (chart, permissions, settings v1, loan products, society profile, departments, templates) and creates the first Super Admin from `BOOTSTRAP_ADMIN_*`. Never changes edited data; the container runs it after the migrations |
 | `npm run db:studio -w @tgs/backend` | Drizzle Studio to browse the tables |
 | `npm run db:backup -w @tgs/backend` | Dump of `DATABASE_URL` into `backend/backups/` (git-ignored). Needs `pg_dump` on PATH, in `PG_BIN`, or the Windows PostgreSQL 18 folder |
 | `npm run db:restore-drill -w @tgs/backend [-- file.dump]` | Restores a dump (a fresh one if none) into a throw-away database, compares row counts and the ledger, drops it |
 | `npm run db:import-register -w @tgs/backend -- <file.csv> [--as-on YYYY-MM-DD] [--commit]` | Member register import (F-11): checks every row, writes only with `--commit` and no problems. Template and a fictional sample in `import/` |
+| `DATA_ENCRYPTION_KEY=<old> NEW_DATA_ENCRYPTION_KEY=<new> npm run db:rotate-key -w @tgs/backend` | G8 (D-118): re-encrypt authenticator secrets and stored files under a new key, app stopped (docs/runbook.md §6) |
+| `npm run load-test -w @tgs/backend -- --url <server> [--users 60] [--seconds 90] [--think 5000]` | G7 (D-117): load test against a DEMO_MODE server with `RATE_LIMIT_PER_MINUTE=0`; prints p50 / p95 per screen and PASS / FAIL (docs/security-review.md) |
+| `npm run db:import -w @tgs/backend -- <deposits\|loans\|opening\|reconcile> <file.csv> [--as-on YYYY-MM-DD] [--commit]` | G6 (D-116): deposit and loan registers, the other opening balances (one entry against 3900), then the reconciliation against the society's trial balance. Order: members → deposits → loans → opening → reconcile. Templates and samples in `import/` |
 
 ## Layout
 

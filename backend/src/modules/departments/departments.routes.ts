@@ -11,7 +11,7 @@ export const departmentsRoutes: FastifyPluginAsyncZod = async (app) => {
   const staff = requireRole('SUPER_ADMIN', 'ACCOUNTANT', 'SECRETARY', 'PRESIDENT', 'CASHIER', 'DDO');
   const edit = requirePermission('settings.edit', 'Only the Super Admin can change settings.');
 
-  app.get('/departments', { preHandler: staff, schema: { tags, summary: 'Departments with member counts and DDO logins', security, response: { 200: departmentListSchema } } }, controller.list);
-  app.post('/departments', { preHandler: edit, schema: { tags, summary: 'Add a department', security, body: departmentInput, response: { 200: departmentListSchema } } }, controller.create);
-  app.put('/departments/:id', { preHandler: edit, schema: { tags, summary: 'Edit a department', security, params: departmentParams, body: departmentInput, response: { 200: departmentListSchema } } }, controller.update);
+  app.get('/departments', { onRequest: staff, schema: { tags, summary: 'Departments with member counts and DDO logins', security, response: { 200: departmentListSchema } } }, controller.list);
+  app.post('/departments', { onRequest: edit, schema: { tags, summary: 'Add a department', security, body: departmentInput, response: { 200: departmentListSchema } } }, controller.create);
+  app.put('/departments/:id', { onRequest: edit, schema: { tags, summary: 'Edit a department', security, params: departmentParams, body: departmentInput, response: { 200: departmentListSchema } } }, controller.update);
 };

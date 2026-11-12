@@ -24,8 +24,9 @@ export class TokensService {
     return this.app.jwt.sign(claims, { expiresIn: this.app.env.ACCESS_TOKEN_TTL_SECONDS });
   }
 
-  private refreshExpiry(): Date {
-    return new Date(Date.now() + this.app.env.REFRESH_TOKEN_TTL_DAYS * 86_400_000);
+  /** G4 (D-114): a staff phone holds signing power, so its sign-in lapses sooner than a member's. */
+  private refreshExpiry(subjectType: Subject): Date {
+    return new Date(Date.now() + (subjectType === 'STAFF' ? this.app.env.STAFF_REFRESH_TOKEN_TTL_DAYS : this.app.env.REFRESH_TOKEN_TTL_DAYS) * 86_400_000);
   }
 
   /** New sign-in: a fresh token family. */
@@ -39,7 +40,7 @@ export class TokensService {
       tokenHash: sha256(refreshToken),
       device: request.headers['user-agent']?.slice(0, 200) ?? null,
       ip: request.ip,
-      expiresAt: this.refreshExpiry(),
+      expiresAt: this.refreshExpiry(subjectType),
     });
     return { token: this.accessToken(user, subjectType, subjectId), refreshToken, expiresInSeconds: this.app.env.ACCESS_TOKEN_TTL_SECONDS, user };
   }
@@ -72,7 +73,7 @@ export class TokensService {
           tokenHash: sha256(refreshToken),
           device: request.headers['user-agent']?.slice(0, 200) ?? null,
           ip: request.ip,
-          expiresAt: this.refreshExpiry(),
+          expiresAt: this.refreshExpiry(row!.subjectType),
         },
         tx,
       );

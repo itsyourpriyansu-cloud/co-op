@@ -1,7 +1,7 @@
-import { and, asc, count, desc, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, lte, max, notInArray, sql, type SQL } from 'drizzle-orm';
 import type { Database } from '../../db/client';
 import type { Tx } from '../../db/transaction';
-import { journalEntries, journalLines, ledgerAccounts } from '../../models';
+import { financialYears, journalEntries, journalLines, ledgerAccounts } from '../../models';
 
 export type AccountRow = typeof ledgerAccounts.$inferSelect;
 export type EntryRow = typeof journalEntries.$inferSelect;
@@ -71,6 +71,45 @@ export class LedgerRepository {
       .innerJoin(journalEntries, eq(journalEntries.id, journalLines.entryId))
       .where(and(...inRange({ to: asOf })))
       .groupBy(journalLines.accountCode);
+  }
+
+  /** G2 (D-112): the last day of the latest closed financial year (nothing may be posted on or before it). */
+  async closedThrough(tx?: Tx): Promise<string | null> {
+    const [row] = await (tx ?? this.db).select({ d: max(financialYears.endDate) }).from(financialYears);
+    return row?.d ?? null;
+  }
+
+  async bySource(source: string, sourceRef: string, tx?: Tx): Promise<EntryRow | undefined> {
+    const [row] = await (tx ?? this.db).select().from(journalEntries).where(and(eq(journalEntries.source, source), eq(journalEntries.sourceRef, sourceRef))).limit(1);
+    return row;
+  }
+
+  /** Debit and credit totals per account for entries dated in a range, leaving out some sources (e.g. YEAR_CLOSE for a P&L). */
+  totalsBetween(range: DateRange, exceptSources: string[] = [], tx?: Tx) {
+    return (tx ?? this.db)
+      .select({
+        accountCode: journalLines.accountCode,
+        debit: sql<string>`coalesce(sum(${journalLines.debit}), 0)`,
+        credit: sql<string>`coalesce(sum(${journalLines.credit}), 0)`,
+      })
+      .from(journalLines)
+      .innerJoin(journalEntries, eq(journalEntries.id, journalLines.entryId))
+      .where(and(...inRange(range), ...(exceptSources.length ? [notInArray(journalEntries.source, exceptSources)] : [])))
+      .groupBy(journalLines.accountCode);
+  }
+
+  /** G2: each member's balance (credit − debit) on member-level accounts at each of `dates`. */
+  async memberCreditBalancesAt(codes: string[], dates: string[], tx?: Tx): Promise<Array<{ d: string; memberId: string; accountCode: string; balance: number }>> {
+    // Dates and codes are checked here and inlined: an array parameter would expand to a list.
+    if (!dates.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)) || !codes.every((c) => /^[\d.]+$/.test(c))) throw new Error('Bad date or account code');
+    const res = await (tx ?? this.db).execute<{ d: string; member_id: string; account_code: string; balance: string }>(sql`
+      select to_char(me.d, 'YYYY-MM-DD') as d, l.member_id, l.account_code, sum(l.credit - l.debit) as balance
+      from unnest(${sql.raw(`array[${dates.map((d) => `'${d}'`).join(',')}]::date[]`)}) as me(d)
+      join journal_entries e on e.entry_date <= me.d
+      join journal_lines l on l.entry_id = e.id
+      where l.member_id is not null and l.account_code in ${sql.raw(`(${codes.map((c) => `'${c}'`).join(',')})`)}
+      group by me.d, l.member_id, l.account_code`);
+    return res.rows.map((r) => ({ d: r.d, memberId: r.member_id, accountCode: r.account_code, balance: Number(r.balance) }));
   }
 
   /** Lines with their entry, oldest first, for a statement or an account ledger. */

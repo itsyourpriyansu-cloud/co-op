@@ -148,7 +148,7 @@ export function FdVoucherPrintPage() {
               <span>Date: {formatDisplayDate(v.date)}</span>
             </div>
             <p className="mt-4 text-body leading-relaxed">
-              Received an amount of <strong>{formatINR(v.amount)}</strong> (in words) Rupees {amountInWords(v.amount)} only towards {v.kind === 'REFUND' ? 'Refund of FDR' : v.kind === 'PREMATURE' ? 'Interest on FDR and Refund of FDR (closed before maturity)' : 'Interest on FDR and Refund of FDR (on maturity)'}
+              Received an amount of <strong>{formatINR(v.amount)}</strong> (in words) Rupees {amountInWords(v.amount)} only towards {v.kind === 'INTEREST' ? `Interest on FDR for the period ending ${formatDisplayDate(v.date)}` : v.kind === 'REFUND' ? 'Refund of FDR' : v.kind === 'PREMATURE' ? 'Interest on FDR and Refund of FDR (closed before maturity)' : 'Interest on FDR and Refund of FDR (on maturity)'}
             </p>
             <ol className="mt-3 list-decimal pl-6 text-body">
               <li>FDR {dep.fdrNo ?? dep.accountNo}: principal {formatINR(v.amount - v.interest)}</li>
@@ -167,6 +167,59 @@ export function FdVoucherPrintPage() {
               <Sign label="Treasurer (Cashier)" name={v.paidByName} {...(v.signatureFileId ? { fileId: v.signatureFileId } : {})} />
             </div>
             <p className="mt-6 text-[10px] text-[#777]">Digital twin of the society's fixed deposit voucher (F10). The member and the Secretary sign the printed copy.</p>
+          </PrintSheet>
+        )}
+      </ViewState>
+    </>
+  );
+}
+
+/** G2 (D-112): an office payment or receipt voucher (expense paid, other income received). */
+export function OfficeVoucherPrintPage() {
+  const [params] = useSearchParams();
+  const id = params.get('id') ?? '';
+  const q = useQuery({ queryKey: ['office-voucher', id], queryFn: () => api.accounts.voucher(id), enabled: Boolean(id) });
+  const v = q.data;
+  const pay = v?.kind === 'PAYMENT';
+  return (
+    <>
+      <Toolbar back="/accounts" label="Accounts" ready={Boolean(v)} />
+      <ViewState state={q.isLoading ? 'loading' : !v ? 'empty' : 'ready'} layout="detail">
+        {v && (
+          <PrintSheet>
+            <Letterhead />
+            <h2 className="mt-4 text-center text-card-title tracking-wide">{pay ? 'PAYMENT VOUCHER' : 'RECEIPT VOUCHER'}</h2>
+            <div className="mt-4 flex justify-between text-body">
+              <span>Vr. No. {v.voucherNo}</span>
+              <span>Date: {formatDisplayDate(v.date)}</span>
+            </div>
+            {v.reversed && <p className="mt-2 text-center text-label text-danger-fg">CANCELLED (entry reversed)</p>}
+            <p className="mt-4 text-body leading-relaxed">
+              {pay ? 'Paid to' : 'Received from'} <strong>{v.party}</strong> a sum of <strong>{formatINR(v.amount)}</strong> (Rupees {amountInWords(v.amount)} only) towards {v.narration}.
+            </p>
+            <table className="mt-4 w-full border border-[#555] text-body">
+              <tbody>
+                <tr className="border-b border-[#555]">
+                  <td className="px-3 py-1.5">Head of account</td>
+                  <td className="px-3 py-1.5">
+                    {v.headCode} {v.headName}
+                  </td>
+                </tr>
+                <tr className="border-b border-[#555]">
+                  <td className="px-3 py-1.5">{pay ? 'Paid by' : 'Received by'}</td>
+                  <td className="px-3 py-1.5">{v.mode === 'CASH' ? 'Cash' : `Bank, ref. ${v.reference ?? ''}`}</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-1.5">Journal entry</td>
+                  <td className="px-3 py-1.5">{v.entryNo}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="mt-10 grid grid-cols-3 gap-8 text-body">
+              <Sign label="Prepared by (Accountant)" name={v.createdByName} />
+              <Sign label="Secretary" />
+              <Sign label={pay ? "Receiver's signature" : 'Cashier'} />
+            </div>
           </PrintSheet>
         )}
       </ViewState>

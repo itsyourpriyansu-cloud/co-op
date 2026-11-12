@@ -19,6 +19,8 @@ export const ledgerAccounts = pgTable('ledger_accounts', {
   active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
   description: text('description'),
+  /** G2 (D-112): a sub-head the Accountant added under this head (e.g. 5800.01 under 5800). */
+  parentCode: text('parent_code'),
 });
 
 export const journalEntries = pgTable(
@@ -74,3 +76,46 @@ export const journalLines = pgTable(
     index('journal_lines_ref_idx').on(t.refType, t.refId),
   ],
 );
+
+/**
+ * G2 (D-112): office income and expenses (rent, salaries, bank interest…) paid or received by cash
+ * or bank. Each voucher posts one journal entry; a correction reverses that entry.
+ */
+export const officeVouchers = pgTable(
+  'office_vouchers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** PV-2026-0001 (payment) or RV-2026-0001 (receipt). */
+    voucherNo: text('voucher_no').notNull(),
+    kind: text('kind').$type<'PAYMENT' | 'RECEIPT'>().notNull(),
+    voucherDate: date('voucher_date', { mode: 'string' }).notNull(),
+    headCode: text('head_code')
+      .notNull()
+      .references(() => ledgerAccounts.code),
+    amount: money('amount').notNull(),
+    mode: text('mode').$type<'CASH' | 'BANK'>().notNull(),
+    reference: text('reference'),
+    /** Paid to (payment) or received from (receipt). */
+    party: text('party').notNull(),
+    narration: text('narration').notNull(),
+    entryId: uuid('entry_id')
+      .notNull()
+      .references(() => journalEntries.id),
+    createdBy: text('created_by').notNull(),
+    createdByName: text('created_by_name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('office_vouchers_no_uq').on(t.voucherNo), index('office_vouchers_date_idx').on(t.voucherDate)],
+);
+
+/** G2 (D-112): a closed financial year. Nothing may be posted on or before `endDate` once closed. */
+export const financialYears = pgTable('financial_years', {
+  fy: text('fy').primaryKey(),
+  startDate: date('start_date', { mode: 'string' }).notNull(),
+  endDate: date('end_date', { mode: 'string' }).notNull(),
+  closingEntryId: uuid('closing_entry_id').references(() => journalEntries.id),
+  surplus: money('surplus').notNull(),
+  closedBy: text('closed_by').notNull(),
+  closedByName: text('closed_by_name').notNull(),
+  closedAt: timestamp('closed_at', { withTimezone: true }).notNull().defaultNow(),
+});

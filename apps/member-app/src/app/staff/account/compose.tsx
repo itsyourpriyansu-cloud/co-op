@@ -54,7 +54,7 @@ export default function Compose() {
       }
     >
       <Text role="body" tone="secondary">
-        Simulated: nothing leaves the society server. Members also get it in the app.
+        Members also get it in the app.
       </Text>
       <Filter label="Channel" value={channel} options={[{ value: 'WHATSAPP', label: 'WhatsApp' }, { value: 'EMAIL', label: 'Email' }]} onChange={(c) => (setChannel(c), reset())} />
       <SelectField label="To" value={kind} options={[{ value: 'DEFAULTERS', label: 'All defaulters' }, { value: 'DEPARTMENT', label: 'A department' }, { value: 'RETIRING', label: 'Retiring soon' }, { value: 'MEMBER', label: 'One member' }]} onChange={(k) => (setKind(k as Kind), reset())} />

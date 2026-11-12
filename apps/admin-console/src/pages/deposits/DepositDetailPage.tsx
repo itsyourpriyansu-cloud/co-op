@@ -233,7 +233,7 @@ export function DepositDetailPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {dep.fdrNo && <ButtonV2 text="FDR" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => navigate(`/deposits/${dep.id}/fdr`)} />}
-                {dep.vouchers?.map((v) => <ButtonV2 key={v.no} text={`Voucher ${v.no}`} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => navigate(`/reports/print/fd-voucher?deposit=${dep.id}&vr=${v.no}`)} />)}
+                {dep.vouchers?.filter((v) => v.kind !== 'INTEREST').map((v) => <ButtonV2 key={v.no} text={`Voucher ${v.no}`} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => navigate(`/reports/print/fd-voucher?deposit=${dep.id}&vr=${v.no}`)} />)}
                 {secondary.map((a) => (
                   <ButtonV2 key={a} text={ACTION_LABEL[a] ?? a} buttonType={ButtonV2Type.SECONDARY} onClick={() => setDrawer(a)} />
                 ))}
@@ -303,6 +303,11 @@ export function DepositDetailPage() {
                           <span>{formatDisplayDate(p.date)}</span>
                           <span className="flex items-center gap-3">
                             <Money value={p.amount} />
+                            {p.voucherNo && (
+                              <button type="button" className="text-caption text-link underline underline-offset-2" onClick={() => navigate(`/reports/print/fd-voucher?deposit=${dep.id}&vr=${p.voucherNo}`)}>
+                                {p.voucherNo}
+                              </button>
+                            )}
                             <TagV2 text={p.paid ? 'Paid' : 'Due'} size={TagV2Size.XS} color={p.paid ? TagV2Color.SUCCESS : TagV2Color.NEUTRAL} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
                           </span>
                         </li>

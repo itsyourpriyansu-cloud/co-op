@@ -27,10 +27,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'loans.create',
     'deposits.open',
     'deposits.withdraw',
+    'audit.view',
   ],
   // R2 keeps the member master and decides profile change requests (docs/03, D-057).
   // P3 (D-080) [P]: the Accountant keeps the books; signers and the Cashier read them, the Super Admin only reads.
-  ACCOUNTANT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'collections.enterDeduction', 'collections.postRecovery', 'collections.waivePenal', 'collections.recoverFromSureties', 'reports.view', 'ledger.view', 'ledger.post', 'messages.send', 'support.reply', 'members.edit', 'members.decideChanges', 'loans.create', 'deposits.open'],
+  ACCOUNTANT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'collections.enterDeduction', 'collections.postRecovery', 'collections.waivePenal', 'collections.recoverFromSureties', 'reports.view', 'ledger.view', 'ledger.post', 'ledger.close', 'messages.send', 'support.reply', 'members.edit', 'members.decideChanges', 'loans.create', 'deposits.open'],
   SECRETARY: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view'],
   PRESIDENT: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view'],
   CASHIER: [...STAFF_COMMON, 'deposits.view', 'collections.view', 'reports.view', 'ledger.view', 'deposits.open'],
@@ -65,10 +66,12 @@ export const PERMISSION_LABELS: Array<{ key: Permission; label: string; group: s
   { key: 'reports.view', label: 'Reports', group: 'Insight' },
   { key: 'ledger.view', label: 'Books of account (read)', group: 'Money' },
   { key: 'ledger.post', label: 'Manual journals and reversals', group: 'Money' },
+  { key: 'ledger.close', label: 'Year-end: annual interest, dividend, close the year', group: 'Money' },
   { key: 'messages.send', label: 'Send messages to members (simulated)', group: 'Insight' },
   { key: 'support.reply', label: 'Answer member questions', group: 'Insight' },
   { key: 'settings.view', label: 'View settings', group: 'Admin' },
   { key: 'settings.edit', label: 'Change settings', group: 'Admin' },
   { key: 'users.manage', label: 'Manage users', group: 'Admin' },
+  { key: 'audit.view', label: 'Audit log', group: 'Admin' },
   { key: 'demo.control', label: 'Demo controls', group: 'Demo' },
 ];

@@ -79,7 +79,7 @@ export class CollectionsRepository {
   }
 
   async saveLine(tx: Tx, sheetId: string, l: DemandLine): Promise<void> {
-    await tx.update(demandLines).set({ components: l.components, recovered: l.recovered ?? null, entry: entryOf(l) }).where(and(eq(demandLines.sheetId, sheetId), eq(demandLines.memberId, l.memberId)));
+    await tx.update(demandLines).set({ components: l.components, totalDemand: l.totalDemand, recovered: l.recovered ?? null, entry: entryOf(l) }).where(and(eq(demandLines.sheetId, sheetId), eq(demandLines.memberId, l.memberId)));
   }
 
   /** Each member's unpaid dues from posted sheets before a cycle (P7b: "previous outstanding"). */

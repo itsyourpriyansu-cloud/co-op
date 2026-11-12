@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, X } from 'lucide-react';
 import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type, ModalV2, TextAreaV2, TextInputV2 } from '@juspay/blend-design-system';
-import { isApiError } from '@tgs/api-client';
+import { isApiError, newIdempotencyKey } from '@tgs/api-client';
 import { allocateDuesPayment, amountInWords, formatINR } from '@tgs/domain';
 import type { MemberPick, NewReceiptInput } from '@tgs/types';
 import { useAuth } from '@/app/auth';
@@ -81,8 +81,10 @@ export function NewReceiptPage() {
     },
   });
 
+  // G1 (D-111): one key per form, so a retry after a time-out returns the first receipt.
+  const [idemKey] = useState(newIdempotencyKey);
   const save = useMutation({
-    mutationFn: () => api.receipts.create({ memberId: member!.id, purpose, ...(purpose === 'SURETY_RECOVERY' && recoveryId ? { recoveryId } : {}), mode, amount: amt, date, ...(mode === 'CASH' ? { denominations: counts } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(remarks.trim() ? { remarks: remarks.trim() } : {}) }),
+    mutationFn: () => api.receipts.create({ memberId: member!.id, purpose, ...(purpose === 'SURETY_RECOVERY' && recoveryId ? { recoveryId } : {}), mode, amount: amt, date, ...(mode === 'CASH' ? { denominations: counts } : {}), ...(reference.trim() ? { reference: reference.trim() } : {}), ...(remarks.trim() ? { remarks: remarks.trim() } : {}) }, idemKey),
     onSuccess: (r) => navigate(`/payments/${r.receipt.id}`),
   });
   const errors = fieldErrorsOf(save.error);

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { API_PREFIX } from '../config/constants';
+import { auditRoutes } from './audit/audit.routes';
 import { authRoutes } from './auth/auth.routes';
 import { demoRoutes } from './demo/demo.routes';
 import { departmentsRoutes } from './departments/departments.routes';
@@ -14,6 +15,8 @@ import { collectionsRoutes } from './collections/collections.routes';
 import { profileChangesRoutes } from './profile-changes/profile-changes.routes';
 import { settlementsRoutes } from './settlements/settlements.routes';
 import { signaturesRoutes } from './signatures/signatures.routes';
+import { documentsRoutes } from './documents/documents.routes';
+import { accountsRoutes } from './accounts/accounts.routes';
 import { reportsRoutes } from './reports/reports.routes';
 import { insightRoutes } from './insight/insight.routes';
 import { notificationsRoutes } from './notifications/notifications.routes';
@@ -31,9 +34,11 @@ export async function registerModules(app: FastifyInstance): Promise<void> {
       await api.register(authRoutes);
       await api.register(usersRoutes);
       await api.register(permissionsRoutes);
+      await api.register(auditRoutes);
       await api.register(mastersRoutes);
       await api.register(departmentsRoutes);
       await api.register(ledgerRoutes);
+      await api.register(accountsRoutes);
       await api.register(membersRoutes);
       await api.register(profileChangesRoutes);
       await api.register(joiningRoutes);
@@ -44,6 +49,7 @@ export async function registerModules(app: FastifyInstance): Promise<void> {
       await api.register(insightRoutes);
       await api.register(reportsRoutes);
       await api.register(signaturesRoutes);
+      await api.register(documentsRoutes);
       await api.register(settlementsRoutes);
       await api.register(demoRoutes);
     },

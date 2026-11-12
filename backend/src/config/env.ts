@@ -35,8 +35,18 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().min(32).optional(),
   /** Encrypts TOTP secrets at rest. Required in production; a fixed dev value otherwise. */
   DATA_ENCRYPTION_KEY: z.string().min(32).optional(),
+  /** G3 (D-113): where file bytes live. `database` (encrypted in PostgreSQL) or `azure-blob` (encrypted, in Blob Storage via managed identity). */
+  FILE_STORE: z.enum(['database', 'azure-blob']).default('database'),
+  AZURE_STORAGE_ACCOUNT: z.string().trim().default(''),
+  AZURE_STORAGE_CONTAINER: z.string().trim().default('files'),
+  /** A user-assigned managed identity's client id; empty uses the system-assigned identity. */
+  AZURE_CLIENT_ID: z.string().trim().default(''),
+  /** G1 (D-111): largest document upload (photo, ID card, order). 5 MB. */
+  DOCUMENT_MAX_BYTES: z.coerce.number().int().min(100_000).max(20_000_000).default(5 * 1024 * 1024),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).default(30),
+  /** G4 (D-114): staff sign-ins (console and staff screens) end after this many days without use. */
+  STAFF_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).default(7),
   OTP_TTL_SECONDS: z.coerce.number().int().min(60).default(300),
   /** Console roles that must use an authenticator code (Super Admin and the signers, D-068). */
   TOTP_ROLES: z
@@ -49,12 +59,34 @@ const EnvSchema = z.object({
     .default('true')
     .transform((v) => v === 'true'),
   // ---- F-10 (D-093): outside messaging; only the simulated provider until the society names one ----
-  WHATSAPP_PROVIDER: z.enum(['simulated']).default('simulated'),
+  // G5 (D-115): `meta` sends through the WhatsApp Cloud API with the society's approved templates.
+  WHATSAPP_PROVIDER: z.enum(['simulated', 'meta']).default('simulated'),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().trim().default(''),
+  /** A permanent system-user token from Meta Business (Key Vault in production). */
+  WHATSAPP_TOKEN: z.string().trim().default(''),
+  WHATSAPP_API_VERSION: z.string().trim().default('v21.0'),
+  /** Approved template with two body values: {{1}} title, {{2}} text. */
+  WHATSAPP_NOTICE_TEMPLATE: z.string().trim().default('society_notice'),
+  /** Approved authentication template (copy-code button). */
+  WHATSAPP_OTP_TEMPLATE: z.string().trim().default('login_code'),
+  WHATSAPP_LANGUAGE: z.string().trim().default('en'),
   /** The society's WhatsApp Business number (F-10). */
   WHATSAPP_FROM: z.string().trim().default(''),
-  EMAIL_PROVIDER: z.enum(['simulated']).default('simulated'),
+  // G5 (D-115): `acs` sends through Azure Communication Services with the managed identity.
+  EMAIL_PROVIDER: z.enum(['simulated', 'acs']).default('simulated'),
+  ACS_ENDPOINT: z.string().trim().default(''),
   /** The sender address for society email (F-10). */
   EMAIL_FROM: z.string().trim().default(''),
+  /** G4 / G5 (D-114): push notifications. `simulated` logs them; `expo` sends through the Expo push service. */
+  PUSH_PROVIDER: z.enum(['simulated', 'expo']).default('simulated'),
+  /** Only if "enhanced push security" is on for the Expo project. */
+  EXPO_ACCESS_TOKEN: z.string().trim().default(''),
+  /**
+   * G4 (D-114): the one mobile Apple and Google reviewers sign in with (a fictional member with no
+   * money, created by the Admin). Its code is this fixed one and is never sent. Empty = off. Remove after review.
+   */
+  STORE_REVIEW_MOBILE: z.string().trim().regex(/^(\d{10})?$/, 'STORE_REVIEW_MOBILE must be 10 digits').default(''),
+  STORE_REVIEW_OTP: z.string().trim().regex(/^(\d{6})?$/, 'STORE_REVIEW_OTP must be 6 digits').default(''),
   /** Password given to the seeded demo staff (dev/test only). */
   SEED_STAFF_PASSWORD: z.string().min(8).default('Society@2026'),
 });
@@ -78,6 +110,10 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   if (production && (!raw.JWT_SECRET || !raw.DATA_ENCRYPTION_KEY)) {
     throw new Error('Invalid backend configuration: JWT_SECRET and DATA_ENCRYPTION_KEY are required in production.');
   }
+  if (raw.WHATSAPP_PROVIDER === 'meta' && !(raw.WHATSAPP_PHONE_NUMBER_ID && raw.WHATSAPP_TOKEN)) throw new Error('Invalid backend configuration: WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TOKEN are required when WHATSAPP_PROVIDER=meta.');
+  if (raw.EMAIL_PROVIDER === 'acs' && !(raw.ACS_ENDPOINT && raw.EMAIL_FROM)) throw new Error('Invalid backend configuration: ACS_ENDPOINT and EMAIL_FROM are required when EMAIL_PROVIDER=acs.');
+  if (!raw.STORE_REVIEW_MOBILE !== !raw.STORE_REVIEW_OTP) throw new Error('Invalid backend configuration: set both STORE_REVIEW_MOBILE and STORE_REVIEW_OTP, or neither.');
+  if (raw.FILE_STORE === 'azure-blob' && !raw.AZURE_STORAGE_ACCOUNT) throw new Error('Invalid backend configuration: AZURE_STORAGE_ACCOUNT is required when FILE_STORE=azure-blob.');
   // P9 (D-100): in production only the apps' own origins may call the API.
   if (production && !raw.CORS_ORIGIN.length) throw new Error('Invalid backend configuration: CORS_ORIGIN is required in production (the console and app origins).');
   const env: Env = {

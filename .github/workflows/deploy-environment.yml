@@ -1,0 +1,100 @@
+# G3 (D-113): deploy one environment. Called by deploy.yml.
+# Needs these GitHub environment variables (Settings → Environments → <env> → Variables):
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP, TGS_PREFIX
+# Resource names follow infra/main.bicep.
+name: Deploy environment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: ${{ inputs.environment }}
+    env:
+      RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+      APP: app-tgseccsl-${{ inputs.environment }}
+      SWA: swa-tgseccsl-${{ inputs.environment }}
+      DB: psql-tgseccsl-${{ inputs.environment }}
+      ACR: acr${{ vars.TGS_PREFIX }}${{ inputs.environment == 'production' && 'prd' || 'stg' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push the backend image
+        run: |
+          az acr login -n "$ACR"
+          IMAGE="$ACR.azurecr.io/tgseccsl-backend:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      # Migrations run when the new container starts, against the live database, before the swap.
+      # They must only add (expand-only), so the old version keeps working until it is swapped out.
+      - name: Back up the database first (production)
+        if: inputs.environment == 'production'
+        run: az postgres flexible-server backup create -g "$RG" -n "$DB" --backup-name "pre-deploy-${GITHUB_SHA::12}"
+
+      - name: Start the new image in the staging slot
+        run: |
+          az webapp config container set -g "$RG" -n "$APP" --slot staging --container-image-name "$IMAGE" > /dev/null
+          az webapp restart -g "$RG" -n "$APP" --slot staging
+
+      - name: Smoke test the slot
+        run: |
+          URL="https://$(az webapp show -g "$RG" -n "$APP" --slot staging --query defaultHostName -o tsv)/health"
+          for i in $(seq 1 60); do
+            BODY=$(curl -fsS --max-time 10 "$URL" || true)
+            if [ "$(echo "$BODY" | jq -r '.ok and .database.ok' 2>/dev/null)" = "true" ]; then echo "$BODY"; exit 0; fi
+            sleep 10
+          done
+          echo "The new version did not become healthy: $BODY"; exit 1
+
+      - name: Swap into production (the old version stays in the slot for rollback)
+        run: az webapp deployment slot swap -g "$RG" -n "$APP" --slot staging --target-slot production
+
+      - name: Check the live API
+        run: |
+          URL="https://$(az webapp show -g "$RG" -n "$APP" --query defaultHostName -o tsv)"
+          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors "$URL/health" | jq -e '.ok and .database.ok'
+          echo "API_URL=$URL" >> "$GITHUB_ENV"
+
+      - name: Build the console
+        run: |
+          npm ci
+          npm run build:console
+        env:
+          VITE_API_URL: ${{ env.API_URL }}
+
+      - name: Fetch the console deploy token
+        run: |
+          TOKEN=$(az staticwebapp secrets list -n "$SWA" -g "$RG" --query properties.apiKey -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "SWA_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Publish the console
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ env.SWA_TOKEN }}
+          action: upload
+          app_location: apps/admin-console/dist
+          skip_app_build: true
+          skip_api_build: true

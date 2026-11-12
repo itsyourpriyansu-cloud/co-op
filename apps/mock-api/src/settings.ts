@@ -33,9 +33,9 @@ const keysOf = (o: object, prefix = ''): string[] =>
 
 const SETTINGS_KEYS: Array<keyof SocietySettings> = [
   'shareValue', 'admissionFee', 'minShares', 'maxShares', 'retirementAge', 'financialYearStartMonth', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent',
-  'insurance', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'defaulterCycles', 'fdSlabs', 'fdMinAmount', 'savingsRatePercent', 'crdRatePercent', 'srdsRatePercent', 'penalGraceDays',
+  'insurance', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'defaulterCycles', 'fdSlabs', 'fdMinAmount', 'savingsRatePercent', 'crdRatePercent', 'srdsRatePercent', 'shareDepositRatePercent', 'depositInterestBasis', 'penalGraceDays',
   'fdMaturityJobEnabled', 'fdMaturityRunHour', 'fdPrematureWithdrawalEnabled', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent',
-  'demandSendByDays', 'minTakeHomePay', 'membershipTargetHours', 'loanTargetDays', 'holidays', 'casteCategories', 'suretyRecoveryAfterCycles',
+  'demandSendByDays', 'minTakeHomePay', 'membershipTargetHours', 'loanTargetDays', 'holidays', 'casteCategories', 'minAppVersion', 'applicantDataRetentionMonths', 'suretyRecoveryAfterCycles',
 ];
 
 export function ratesReference(store: Store): RatesReference {

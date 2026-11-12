@@ -324,9 +324,11 @@ export interface DepositAccount {
   cancelledReason?: string;
   closedOn?: ISODate;
   /** F10 (D-099): a voucher for every payment out of the FD (maturity, early withdrawal, refund). Treasurer = the Cashier (F-04). */
-  vouchers?: Array<{ no: string; kind: 'MATURITY' | 'PREMATURE' | 'REFUND'; amount: Paise; interest: Paise; date: ISODate; paidByName: string; signatureFileId?: string }>;
+  vouchers?: Array<{ no: string; kind: 'MATURITY' | 'PREMATURE' | 'REFUND' | 'INTEREST'; amount: Paise; interest: Paise; date: ISODate; paidByName: string; signatureFileId?: string }>;
   /** P6b: interest booked as payable when the maturity job matured it (paid out at payout). */
   maturityInterestAccrued?: Paise;
+  /** G1 (D-111): periodic interest paid to the member's bank account, one row per period (F4 payout option). */
+  interestPayouts?: Array<{ date: ISODate; amount: Paise; voucherNo: string }>;
   /** P6b: a premature withdrawal, with the method and rate used at the time. */
   prematureWithdrawal?: FdSettlement & { date: ISODate; byName: string; at: ISODateTime };
   /** Request → acceptance history (ST-32 activity, MB-09 tracker). */
@@ -441,10 +443,12 @@ export interface Receipt {
   source: ReceiptSource;
   amount: Paise;
   denominations?: Partial<Record<500 | 200 | 100 | 50 | 20 | 10, number>>;
+  /** Cash below ₹10 taken in coins (loan closure only, G1). */
+  coins?: Paise;
   cycle?: Cycle;
   allocations: Array<{ head: DemandHead; loanId?: string; amount: Paise; cycle?: Cycle }>;
   /** What a counter / bank receipt was for. Salary recoveries have none (they follow the demand). */
-  purpose?: 'FD' | 'DUES' | 'SHARE_CAPITAL' | 'SURETY_RECOVERY';
+  purpose?: 'FD' | 'DUES' | 'SHARE_CAPITAL' | 'SURETY_RECOVERY' | 'LOAN_CLOSURE';
   depositId?: string;
   reference?: string;
   /** M7: who took the money (cashier), from which sheet or member report. */
@@ -472,14 +476,18 @@ export interface MembershipForm {
   };
   shares?: { sharesProposed?: number };
   nominee?: { name?: string; relation?: Nominee['relation']; address?: string };
-  documents?: Array<{ type: MembershipDocumentType; fileName: string; uploadedAt: ISODateTime }>;
-  declarations?: { byelawsAccepted?: boolean; noOtherSociety?: boolean; recoveryMandateAccepted?: boolean };
+  /** G1 (D-111): `fileId` points at the uploaded file (POST /me/documents). */
+  documents?: Array<{ type: MembershipDocumentType; fileName: string; uploadedAt: ISODateTime; fileId?: string }>;
+  /** G7 (D-117): privacyConsent = DPDP consent to the privacy notice (its version is on the signature). */
+  declarations?: { byelawsAccepted?: boolean; noOtherSociety?: boolean; recoveryMandateAccepted?: boolean; privacyConsent?: boolean };
 }
 
 /** Sign with OTP (D-031): who, when and which text version was agreed. */
 export interface SignatureRecord {
   signedAt: ISODateTime;
   textVersion: string;
+  /** G7 (D-117): the privacy notice consented to with this signature (membership applications). */
+  privacyVersion?: string;
   method: 'OTP';
   /** F-01 (D-096): the signature image on file when it was signed. */
   fileId?: string;
@@ -573,8 +581,9 @@ export interface ProfileChangeRequest {
   memberId: string;
   fields: ProfileFieldChange[];
   reason: string;
-  /** Simulated upload: file name only. */
+  /** The proof's file name; `documentFileId` opens it (G1, D-111). */
   documentName?: string;
+  documentFileId?: string;
   route: 'OFFICE' | 'DDO_THEN_OFFICE';
   status: ChangeRequestStatus;
   createdAt: ISODateTime;
@@ -680,6 +689,10 @@ export interface SocietySettings {
   loanTargetDays: number;
   /** F-07 (D-095): caste categories the forms offer (Telangana list by default), edited by the Admin. */
   casteCategories: string[];
+  /** G4 (D-114): app versions older than this (e.g. `1.2.0`) must update before use. `0.0.0` = no minimum. */
+  minAppVersion: string;
+  /** G7 (D-117, DPDP): months after which a rejected or withdrawn applicant's personal data is deleted. */
+  applicantDataRetentionMonths: number;
   /** F-13 (D-097): a loan unpaid this many posted cycles in a row may be recovered from its sureties. */
   suretyRecoveryAfterCycles: number;
   /** F-14 (D-093): public holidays the office is closed (YYYY-MM-DD). Sundays and second Saturdays never count. */
@@ -695,6 +708,10 @@ export interface SocietySettings {
   fdPrematureWithdrawalEnabled: boolean;
   fdPrematurePenaltyMethod: FdPenaltyMethod;
   fdPrematurePenaltyPercent: number;
+  /** G2 (D-112) [P]: annual interest on the share deposit (BR-044). */
+  shareDepositRatePercent: number;
+  /** G2 (D-112) [P]: balance the annual interest is worked on: the year-end balance or the average of the 12 month-ends. */
+  depositInterestBasis: 'YEAR_END' | 'AVERAGE_MONTH_END';
   placeholders: string[];
 }
 

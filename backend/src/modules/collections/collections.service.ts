@@ -15,6 +15,8 @@ import {
   penalDue,
   type DeductionEntryAction,
   buildDemandComponents,
+  calculateLoanClosure,
+  lastInterestChargedOn,
   demandSheetActionsFor,
   departmentForCycle,
   formatCycle,
@@ -43,6 +45,8 @@ import type {
   Department,
   DepositAccount,
   Loan,
+  LoanClosureInput,
+  LoanClosureQuote,
   LoanProductCode,
   LoanStage,
   Member,
@@ -1026,6 +1030,106 @@ export class CollectionsService {
       return receipt;
     });
     return this.receiptDetail(await this.view(), r);
+  }
+
+  // ---- G1 (D-111, BR-040): paying a loan off early at the counter ----
+  /** What closing a loan today costs and whether it can close now. Locks the loan when given a transaction. */
+  async closureQuote(user: SessionUser, loanId: string, tx?: Tx): Promise<LoanClosureQuote> {
+    await this.requireView(user);
+    const loan = (tx ? await this.app.loans.repo.lock(tx, loanId) : await this.app.loans.repo.find(loanId)) ?? fail('NOT_FOUND', 'Loan not found.');
+    const m = (await this.app.members.byId(loan.memberId)) ?? fail('NOT_FOUND', 'Loan not found.');
+    if (user.role === 'DDO' && m.departmentId !== user.departmentId) fail('NOT_FOUND', 'Loan not found.');
+    const today = await businessToday(this.app);
+    const interestFrom = lastInterestChargedOn(loan, today);
+    const q = calculateLoanClosure({ outstandingPrincipal: loan.outstandingPrincipal, ratePercent: loan.ratePercent, lastInterestChargedOn: interestFrom, today });
+    const rows = await this.repo.linesOfMember(loan.memberId, tx);
+    const onLoan = (line: DemandLine) => line.components.filter((c) => c.loanId === loan.id);
+    const blockers: string[] = [];
+    if (loan.status !== 'ACTIVE') blockers.push('Only a running loan can be closed.');
+    const unpaid = sum(rows.filter((r) => r.sheet.status === 'RECOVERY_POSTED').flatMap((r) => onLoan(r.line).filter((c) => c.head === 'PRINCIPAL' || c.head === 'INTEREST').map((c) => c.amount - c.allocated)));
+    if (unpaid > 0) blockers.push(`${formatINR(unpaid)} of earlier instalments on this loan is unpaid. Take it as dues first (New receipt), then close the loan.`);
+    for (const r of rows.filter((x) => (x.sheet.status === 'CERTIFIED' || x.sheet.status === 'SENT_TO_DDO') && onLoan(x.line).length))
+      blockers.push(`The ${formatCycle(r.sheet.cycle)} demand with this instalment is ${r.sheet.status === 'CERTIFIED' ? 'already certified' : 'with the DDO'}. Close the loan after that recovery is posted.`);
+    const draftCycles = rows.filter((r) => r.sheet.status === 'GENERATED' && onLoan(r.line).length).map((r) => r.sheet.cycle);
+    return { loanId: loan.id, loanNo: loan.loanNo ?? loan.applicationNo, memberId: m.id, memberName: m.name, generalNo: m.generalNo, asOf: today, interestFrom, ratePercent: loan.ratePercent, ...q, canClose: blockers.length === 0, blockers, draftCycles };
+  }
+
+  /** Takes the closing payment: receipt, one ledger entry, the loan closes and leaves any draft demand. */
+  async closeLoan(request: FastifyRequest, loanId: string, input: Partial<LoanClosureInput>): Promise<ReceiptDetail> {
+    const user = sessionOf(request);
+    await this.requireView(user);
+    if (!this.canReceive(user)) fail('FORBIDDEN', 'Only the Cashier or the Accountant takes payments.');
+    const at = await businessNow(this.app);
+    const { rec, q } = await withTransaction(this.app.db, async (tx) => {
+      const q = await this.closureQuote(user, loanId, tx);
+      if (!q.canClose) fail('RULE_VIOLATION', q.blockers[0]!, { ruleId: 'BR-040' });
+      const fieldErrors: Record<string, string> = {};
+      if (input.amount !== q.total) fieldErrors.amount = `Collect ${formatINR(q.total)} (principal and interest to today)`;
+      if (input.mode === 'CASH') {
+        const coins = input.coins ?? 0;
+        if (!Number.isInteger(coins) || coins < 0 || coins >= 1000) fieldErrors.coins = 'Coins are for less than ₹10 only';
+        const check = validateDenominations(input.denominations ?? {}, (input.amount ?? 0) - coins);
+        if (!check.pass) fieldErrors.denominations = check.message;
+      } else if (input.mode === 'BANK_TRANSFER') {
+        if (!input.reference?.trim()) fieldErrors.reference = 'Enter the UTR / transfer reference';
+      } else fieldErrors.mode = 'Choose how it was paid';
+      if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
+
+      // Draft sheets drop this loan's instalment, so the DDO is never asked to deduct it.
+      for (const { sheet } of (await this.repo.linesOfMember(q.memberId, tx)).filter((r) => r.sheet.status === 'GENERATED')) {
+        const sh = (await this.repo.sheet(sheet.id, tx, true))!;
+        const line = sh.lines.find((l) => l.memberId === q.memberId)!;
+        if (!line.components.some((c) => c.loanId === loanId)) continue;
+        line.components = line.components.filter((c) => c.loanId !== loanId);
+        line.totalDemand = sum(line.components.map((c) => c.amount));
+        await this.repo.saveLine(tx, sh.id, line);
+        sh.totalDemand = sum(sh.lines.map((l) => l.totalDemand));
+        const { lines: _l, ...head } = sh;
+        await this.repo.saveSheetHead(tx, head);
+      }
+
+      const loan = (await this.app.loans.repo.lock(tx, loanId))!;
+      const seq = await this.repo.nextReceiptSeq(tx);
+      const receiptNo = `RCP-C-${String(seq).padStart(6, '0')}`;
+      const rec: Receipt = {
+        id: `rcpt-c-${randomUUID().slice(0, 8)}`,
+        receiptNo,
+        memberId: q.memberId,
+        date: q.asOf,
+        source: input.mode === 'CASH' ? 'CASH' : 'BANK_TRANSFER',
+        amount: q.total,
+        ...(input.mode === 'CASH' ? { denominations: input.denominations!, ...(input.coins ? { coins: input.coins } : {}) } : {}),
+        ...(input.reference?.trim() ? { reference: input.reference.trim() } : {}),
+        ...(input.remarks?.trim() ? { remarks: input.remarks.trim() } : {}),
+        allocations: [...(q.principal ? [{ head: 'PRINCIPAL' as const, loanId, amount: q.principal }] : []), ...(q.interest ? [{ head: 'INTEREST' as const, loanId, amount: q.interest }] : [])],
+        purpose: 'LOAN_CLOSURE',
+        byName: user.name,
+        byId: user.id,
+        at,
+      };
+      await this.repo.insertReceipt(tx, rec);
+      await this.app.ledger.post(
+        {
+          entryDate: q.asOf,
+          narration: `Receipt ${receiptNo}: ${q.memberName} (${q.generalNo}) closed loan ${q.loanNo} early`,
+          source: 'RECEIPT',
+          sourceRef: receiptNo,
+          postedBy: { id: user.id, name: user.name },
+          lines: [
+            { accountCode: input.mode === 'CASH' ? ACCOUNT.CASH : ACCOUNT.BANK, debit: q.total, credit: 0 },
+            ...(q.principal ? [{ accountCode: LOAN_ACCOUNT[loan.product], debit: 0, credit: q.principal, memberId: q.memberId, refType: 'LOAN' as const, refId: loanId }] : []),
+            ...(q.interest ? [{ accountCode: HEAD_ACCOUNT.INTEREST!, debit: 0, credit: q.interest }] : []),
+          ],
+        },
+        tx,
+      );
+      await this.app.loans.repo.save(tx, { ...loan, status: 'CLOSED', outstandingPrincipal: 0, closedOn: q.asOf, events: [...loan.events, { at, actorId: user.id, actorName: user.name, actorRole: user.role, action: 'close', fromStatus: 'ACTIVE', toStatus: 'CLOSED', remarks: `Closed early at the counter, receipt ${receiptNo}` }] });
+      for (const r of (await this.repo.recoveriesOfLoan(loanId, tx)).filter((x) => x.status === 'OPEN')) await this.repo.saveRecovery(tx, { ...r, status: 'CLOSED', closedReason: 'BORROWER_PAID' });
+      await this.app.audit.record(request, { action: 'loan.close', entity: 'loan', entityId: loanId, summary: `${q.loanNo} closed early by ${q.memberName}: ${formatINR(q.principal)} principal + ${formatINR(q.interest)} interest, receipt ${receiptNo}` }, tx);
+      return { rec, q };
+    });
+    await notifyMember(this.app, q.memberId, 'loan.closed', { loanNo: q.loanNo, amount: formatINR(q.total), receiptNo: rec.receiptNo }, `/loan/${loanId}`);
+    return this.receiptDetail(await this.view(), rec);
   }
 
   /** P6: an FD payment's receipt (the ledger entry is the deposit's own). */

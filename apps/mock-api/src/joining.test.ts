@@ -29,7 +29,7 @@ const COMPLETE: MembershipForm = {
     { type: 'ID_PROOF', fileName: 'id.pdf', uploadedAt: '2026-10-24T10:00:00Z' },
     { type: 'APPOINTMENT_ORDER', fileName: 'order.pdf', uploadedAt: '2026-10-24T10:00:00Z' },
   ],
-  declarations: { byelawsAccepted: true, noOtherSociety: true, recoveryMandateAccepted: true },
+  declarations: { byelawsAccepted: true, noOtherSociety: true, recoveryMandateAccepted: true, privacyConsent: true },
 };
 
 async function signUp() {
@@ -45,7 +45,7 @@ describe('joining from the Member App', () => {
     const ref = await call<{ departments: unknown[]; agreements: unknown[] }>('GET', '/joining/reference');
     expect(ref.status).toBe(200);
     expect(ref.body.departments).toHaveLength(15);
-    expect(ref.body.agreements).toHaveLength(3);
+    expect(ref.body.agreements).toHaveLength(4);
   });
 
   it('validates sign-up and rejects an existing member’s mobile', async () => {

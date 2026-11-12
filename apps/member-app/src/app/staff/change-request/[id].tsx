@@ -7,6 +7,7 @@ import { formatDisplayDateTime } from '@tgs/domain';
 import type { ChangeRequestRow } from '@tgs/types';
 import { ActionAlert, DoneAlert, Loaded, useAction } from '@/components/staff';
 import { api } from '@/lib/api';
+import { FileButton } from '@/components/FileButton';
 import { changeValue, fieldLabel } from '@/lib/staffMembers';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, StatusTag, Text, TextField } from '@/ui';
 import { space } from '@/theme';
@@ -94,6 +95,7 @@ function Decide({ r, onSaved }: { r: ChangeRequestRow; onSaved: (r: ChangeReques
       {r.documentName ? (
         <Card>
           <KeyValue label="Supporting document" value={r.documentName} />
+          {r.documentFileId ? <FileButton fileId={r.documentFileId} consolePath="/members/change-requests" /> : null}
         </Card>
       ) : null}
       <Section title="Route">

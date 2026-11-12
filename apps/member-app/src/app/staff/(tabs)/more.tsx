@@ -1,10 +1,11 @@
 // Every section the role may open that is not already a tab, then the account (docs/23 §4.3).
 import { router, type Href } from 'expo-router';
-import { Bell, ChartColumn, FileSpreadsheet, FlaskConical, HandCoins, LogOut, PenLine, PiggyBank, ReceiptIndianRupee, Search, Settings, UserPlus, UserRound, Users, type LucideIcon } from 'lucide-react-native';
+import { Bell, BookOpenText, ChartColumn, FileSpreadsheet, FlaskConical, HandCoins, LogOut, PenLine, PiggyBank, ReceiptIndianRupee, ScrollText, Search, Settings, UserPlus, UserRound, Users, type LucideIcon } from 'lucide-react-native';
 import type { Permission } from '@tgs/types';
 import { Row, TABS_BY_ROLE, useCan } from '@/components/staff';
 import { useAuth } from '@/lib/auth';
 import { Card, Screen, Skeleton, Text } from '@/ui';
+import { DEMO_TOOLS } from '@/lib/serverUrl';
 
 const SECTIONS: Array<{ tab?: string; icon: LucideIcon; label: string; href: Href; permission: Permission }> = [
   { tab: 'joining', icon: UserPlus, label: 'Joining', href: '/staff/joining', permission: 'membership.view' },
@@ -14,8 +15,10 @@ const SECTIONS: Array<{ tab?: string; icon: LucideIcon; label: string; href: Hre
   { tab: 'deposits', icon: PiggyBank, label: 'Deposits', href: '/staff/deposits', permission: 'deposits.view' },
   { tab: 'demand', icon: FileSpreadsheet, label: 'Demand sheets', href: '/staff/demand', permission: 'collections.view' },
   { tab: 'payments', icon: ReceiptIndianRupee, label: 'Payments', href: '/staff/payments', permission: 'collections.view' },
+  { icon: BookOpenText, label: 'Accounts', href: '/staff/accounts', permission: 'ledger.view' },
   { tab: 'reports', icon: ChartColumn, label: 'Reports', href: '/staff/reports', permission: 'reports.view' },
   { icon: Settings, label: 'Settings', href: '/staff/settings', permission: 'settings.view' },
+  { icon: ScrollText, label: 'Audit log', href: '/staff/audit', permission: 'audit.view' },
 ];
 
 export default function More() {
@@ -45,8 +48,8 @@ export default function More() {
         <Row icon={UserRound} label="My account" divider onPress={() => router.push('/staff/account')} />
       </Card>
       <Card padded={false}>
-        <Row icon={FlaskConical} label="Demo settings" onPress={() => router.push('/demo-settings')} />
-        <Row icon={LogOut} label="Sign out" danger divider onPress={() => void signOut()} />
+        {DEMO_TOOLS ? <Row icon={FlaskConical} label="Demo settings" onPress={() => router.push('/demo-settings')} /> : null}
+        <Row icon={LogOut} label="Sign out" danger divider={DEMO_TOOLS} onPress={() => void signOut()} />
       </Card>
     </Screen>
   );

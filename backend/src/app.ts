@@ -10,6 +10,7 @@ import { dbPlugin } from './plugins/db';
 import { demoFailuresPlugin } from './plugins/demo-failures';
 import { errorHandlerPlugin } from './plugins/error-handler';
 import { securityPlugin } from './plugins/security';
+import { idempotencyPlugin } from './plugins/idempotency';
 import { jobsPlugin } from './plugins/jobs';
 import { servicesPlugin } from './plugins/services';
 import { swaggerPlugin } from './plugins/swagger';
@@ -48,6 +49,8 @@ export async function buildApp({ env, dbHandle, logger = true }: BuildAppOptions
   const perMinute = env.RATE_LIMIT_PER_MINUTE ?? (env.NODE_ENV === 'production' ? 600 : 0);
   if (env.NODE_ENV !== 'test') await app.register(rateLimit, perMinute ? { global: true, max: perMinute, timeWindow: '1 minute' } : { global: false });
   await app.register(servicesPlugin);
+  // G1 (D-111): a repeated POST with the same Idempotency-Key gets the first answer back.
+  await app.register(idempotencyPlugin);
   // P9 (D-100): the API explorer is for development; production does not serve it.
   if (env.NODE_ENV !== 'production') await app.register(swaggerPlugin);
   // Demo "simulate network errors" must sit before every route it can fail (docs/20).

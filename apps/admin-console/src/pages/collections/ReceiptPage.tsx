@@ -72,6 +72,7 @@ export function ReceiptPage() {
                 {DENOMINATIONS.filter((n) => r.denominations?.[n])
                   .map((n) => `₹${n} × ${r.denominations![n]}`)
                   .join(' · ')}
+                {r.coins ? ` · coins ${formatINR(r.coins)}` : ''}
               </p>
             )}
             {r.remarks && <p className="mt-2 text-caption">Remarks: {r.remarks}</p>}

@@ -12,10 +12,14 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate.ts",
     "db:seed": "tsx --env-file-if-exists=.env src/db/seed/index.ts",
+    "db:bootstrap": "tsx --env-file-if-exists=.env src/db/bootstrap.ts",
     "db:studio": "drizzle-kit studio",
     "db:backup": "tsx --env-file-if-exists=.env src/db/backup.ts",
     "db:restore-drill": "tsx --env-file-if-exists=.env src/db/backup.ts drill",
-    "db:import-register": "tsx --env-file-if-exists=.env src/db/import-register.ts"
+    "db:import-register": "tsx --env-file-if-exists=.env src/db/import-register.ts",
+    "db:import": "tsx --env-file-if-exists=.env src/db/import-books.ts",
+    "load-test": "tsx scripts/load-test.ts",
+    "db:rotate-key": "tsx --env-file-if-exists=.env src/db/rotate-key.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.1",

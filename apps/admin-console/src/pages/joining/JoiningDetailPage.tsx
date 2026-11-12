@@ -168,7 +168,7 @@ function DocumentsTab({ d }: { d: MembershipDetail }) {
 function DeclarationsTab({ d }: { d: MembershipDetail }) {
   const app = d.application;
   const decl = app.form?.declarations ?? {};
-  const accepted = { byelaws: decl.byelawsAccepted, noOtherSociety: decl.noOtherSociety, recoveryMandate: decl.recoveryMandateAccepted };
+  const accepted = { byelaws: decl.byelawsAccepted, noOtherSociety: decl.noOtherSociety, recoveryMandate: decl.recoveryMandateAccepted, privacy: decl.privacyConsent };
   return (
     <div className="flex flex-col gap-4">
       {app.signature && (
@@ -177,7 +177,7 @@ function DeclarationsTab({ d }: { d: MembershipDetail }) {
           <div>
             <p className="text-label text-fg">Signed with OTP by {app.form?.personal?.fullName ?? app.name}</p>
             <p className="text-caption text-fg-secondary">
-              {formatDisplayDateTime(app.signature.signedAt)} · mobile {app.form?.personal?.mobile ?? '—'} · text version {app.signature.textVersion}
+              {formatDisplayDateTime(app.signature.signedAt)} · mobile {app.form?.personal?.mobile ?? '—'} · text version {app.signature.textVersion}{app.signature.privacyVersion ? ` · privacy notice ${app.signature.privacyVersion}` : ''}
             </p>
           </div>
         </div>

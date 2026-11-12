@@ -17,4 +17,5 @@ export class MastersController {
   templates = () => this.service.templates();
   updateTemplate = (r: Req<Partial<NotificationTemplate>, { key: string }>) => this.service.updateTemplate(r, r.params.key, r.body);
   rates = () => this.service.rates();
+  appConfig = async () => ({ minAppVersion: (await this.service.settings()).minAppVersion ?? '0.0.0' });
 }

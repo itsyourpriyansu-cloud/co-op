@@ -62,6 +62,7 @@ export function validateMembershipForm(form: MembershipForm | undefined, require
   if (!f.declarations?.byelawsAccepted) e['declarations.byelawsAccepted'] = 'Please accept the bye-laws';
   if (!f.declarations?.noOtherSociety) e['declarations.noOtherSociety'] = 'Please confirm this declaration';
   if (!f.declarations?.recoveryMandateAccepted) e['declarations.recoveryMandateAccepted'] = 'Please accept the salary recovery agreement';
+  if (!f.declarations?.privacyConsent) e['declarations.privacyConsent'] = 'Please give your consent to the privacy notice';
   return e;
 }
 

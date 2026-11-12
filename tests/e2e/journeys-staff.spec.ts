@@ -1,7 +1,7 @@
 // Staff journeys on the phone (docs/23 §6 exit tests), through the staff screens against the backend.
 // Setup that is not the subject of a test (a member applying, sureties signing) goes through the API.
 import type { APIRequestContext, Page } from '@playwright/test';
-import { apiCall, apiToken, consoleAs, expect, OTP, phoneAs, PHONE_URL, phoneSettled, resetDemo, shot, staffAs, tap, test } from './support';
+import { apiCall, apiToken, consoleAs, expect, OTP, phoneAs, PHONE_URL, phoneSettled, resetDemo, shot, staffAs, tap, test, uploadOwnDocuments } from './support';
 
 /** Sravani applies for an Ordinary loan with Lakshmi and Mahesh as sureties; both sign → ACCOUNTANT_REVIEW. */
 async function loanAtReview(request: APIRequestContext): Promise<string> {
@@ -27,7 +27,7 @@ async function divyaApplies(request: APIRequestContext) {
   await apiCall(request, 'POST', '/membership/me/eligibility', divya.token, { worksInSecretariatDept: true, regularOrApprovedProbationer: true, memberOfOtherCreditSocietyWithDues: false });
   // In Finance, so the Finance DDO persona can certify it.
   const form = sample.application.form;
-  await apiCall(request, 'PUT', '/membership/me/draft', divya.token, { ...form, personal: { ...(form.personal as object), fullName: 'Divya S' }, employment: { ...(form.employment as object), departmentId: 'dept-fin' } });
+  await apiCall(request, 'PUT', '/membership/me/draft', divya.token, { ...form, documents: await uploadOwnDocuments(request, divya.token, form.documents), personal: { ...(form.personal as object), fullName: 'Divya S' }, employment: { ...(form.employment as object), departmentId: 'dept-fin' } });
   const sign = await apiCall<{ otpRef: string }>(request, 'POST', '/membership/me/sign/request', divya.token);
   await apiCall(request, 'POST', '/membership/me/submit', divya.token, { otpRef: sign.otpRef, otp: OTP });
   const after = await apiCall<{ rows: Array<{ id: string; name: string }> }>(request, 'GET', '/membership/applications', admin);
@@ -315,6 +315,7 @@ test.describe('staff journeys', () => {
   });
 
   test('S7 every report equals the server for the same filters', async ({ page, request }) => {
+    test.setTimeout(300_000); // 19 reports since G2 (D-112) added the accounting statements
     const { token } = await apiToken(request, 'stf-accountant', 'console');
     const cat = await apiCall<{ reports: Array<{ id: string; title: string; kind: string; available: boolean; filters: string[] }> }>(request, 'GET', '/reports', token);
     const defs = cat.reports.filter((r) => r.available && r.kind === 'table' && !r.filters.includes('memberId'));
@@ -323,7 +324,8 @@ test.describe('staff journeys', () => {
       const server = await apiCall<{ rowCount: number }>(request, 'GET', `/reports/${def.id}`, token);
       await staffAs(page, request, 'stf-accountant', `/staff/report/${def.id}`);
       await phoneSettled(page);
-      await expect(page.getByText(new RegExp(`\\b${server.rowCount.toLocaleString('en-IN')} rows? ·`)).first(), def.id).toBeVisible();
+      const expected = server.rowCount === 0 ? page.getByText('Nothing matches these filters') : page.getByText(new RegExp(`\\b${server.rowCount.toLocaleString('en-IN')} rows? ·`));
+      await expect(expected.first(), def.id).toBeVisible();
     }
     await staffAs(page, request, 'stf-accountant', '/staff/reports');
     await phoneSettled(page);

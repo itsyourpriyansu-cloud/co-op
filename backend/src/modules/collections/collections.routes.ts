@@ -11,7 +11,7 @@ const body = z.record(z.string(), z.unknown());
 export const collectionsRoutes: FastifyPluginAsyncZod = async (app) => {
   const c = new CollectionsController(app.collections);
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const st = ['collections'];
   const mb = ['my payments'];
   const ok = (name: string) => ({ 200: passthrough(name) });
@@ -32,6 +32,9 @@ export const collectionsRoutes: FastifyPluginAsyncZod = async (app) => {
   // F-13 (D-097): recover an overdue loan from its sureties.
   app.get('/loans/:id/surety-recovery', { ...pre, schema: { tags: st, summary: 'Can this loan be recovered from its sureties, and what each would owe', security, params: idParams, response: ok('SuretyRecoveryPanel') } }, (r) => app.collections.suretyRecoveryPanel(sessionOf(r), r.params.id));
   app.post('/loans/:id/surety-recovery', { ...pre, schema: { tags: st, summary: 'Ask every surety for an equal share of what is overdue (Accountant)', security, params: idParams, body: z.object({}).nullish(), response: ok('SuretyRecoveryPanel') } }, (r) => app.collections.raiseSuretyRecovery(r, r.params.id));
+  // G1 (D-111, BR-040): pay a loan off early at the counter.
+  app.get('/loans/:id/closure', { ...pre, schema: { tags: st, summary: 'What closing this loan today costs, and whether it can close now', security, params: idParams, response: ok('LoanClosureQuote') } }, (r) => app.collections.closureQuote(sessionOf(r), r.params.id));
+  app.post('/loans/:id/closure', { ...pre, schema: { tags: st, summary: 'Take the closing payment (Cashier or Accountant): receipt, ledger, loan closed', security, params: idParams, body, response: { 201: passthrough('ReceiptDetail') } } }, async (r, reply) => reply.status(201).send(await app.collections.closeLoan(r, r.params.id, r.body as never)));
   app.get('/members/:id/notices', { ...pre, schema: { tags: st, summary: 'Defaulter status and the notices a member received, as borrower or surety (P7b-3)', security, params: idParams, response: ok('MemberNotices') } }, c.notices);
   app.post('/members/:id/dues/penal-waiver', { ...pre, schema: { tags: st, summary: 'Waive penal interest on one cycle (Accountant, reason required, R5)', security, params: idParams, body: z.object({ sheetId: z.string().optional(), amount: z.number().optional(), reason: z.string().max(500).optional() }).nullish(), response: ok('MemberDues') } }, c.waivePenal as never);
   app.get('/payment-reports', { ...pre, schema: { tags: st, summary: 'Payments members reported (MB-18)', security, querystring: z.object({ status: z.string().optional() }), response: ok('PaymentReportRow[]') } }, c.reports);

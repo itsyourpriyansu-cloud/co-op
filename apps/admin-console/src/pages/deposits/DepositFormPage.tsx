@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Trash2, X } from 'lucide-react';
 import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type, SnackbarV2Variant, TextInputV2, addSnackbarV2 } from '@juspay/blend-design-system';
-import { isApiError } from '@tgs/api-client';
+import { isApiError, newIdempotencyKey } from '@tgs/api-client';
 import { amountInWords, calculateFdMaturity, fdRateFor, formatDisplayDate, formatINR, validateFdRequest } from '@tgs/domain';
 import type { FdHolder, FdRequestInput, MemberPick } from '@tgs/types';
 import { FormSection, MoneyField, NumberField, TextField, fieldErrorsOf } from '@/components/Form';
@@ -46,6 +46,8 @@ export function DepositFormPage() {
   const profile = useQuery({ queryKey: ['member', member?.id], queryFn: () => api.members.get(member!.id), enabled: Boolean(member) });
   const [v, setV] = useState<FdRequestInput>({ principal: 0, tenureMonths: 24, payoutFrequency: 'ON_MATURITY', holding: 'SINGLE', nominee: { name: '', relation: 'Spouse' } });
   const [showErrors, setShowErrors] = useState(false);
+  // G1 (D-111): one key per form, so a retry after a time-out cannot open a second FD.
+  const [idemKey] = useState(newIdempotencyKey);
   const set = (p: Partial<FdRequestInput>) => setV((x) => ({ ...x, ...p }));
 
   // Nominee defaults from the member master (F4 item 9).
@@ -61,7 +63,7 @@ export function DepositFormPage() {
   const mat = useMemo(() => (rate && v.principal > 0 && today ? calculateFdMaturity({ principal: v.principal, ratePercent: rate, tenureMonths: v.tenureMonths, payout: v.payoutFrequency, openedOn: today }) : undefined), [rate, v.principal, v.tenureMonths, v.payoutFrequency, today]);
 
   const save = useMutation({
-    mutationFn: () => api.deposits.open(member!.id, v),
+    mutationFn: () => api.deposits.open(member!.id, v, idemKey),
     onSuccess: (d) => {
       void qc.invalidateQueries({ queryKey: ['deposits'] });
       addSnackbarV2({ header: `Request ${d.deposit.accountNo} saved`, description: 'Record the payment to send it for acceptance.', variant: SnackbarV2Variant.SUCCESS });

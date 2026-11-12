@@ -1,7 +1,7 @@
 import type { AppNotification, DeliveryStatus, MemberPreferences, MessageChannel, OutboxMessage, SupportTicket } from '@tgs/types';
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
-import { deliveries, memberPreferences, messages, notifications, supportTickets } from '../../models';
+import { deliveries, memberPreferences, messages, notifications, pushTokens, supportTickets } from '../../models';
 
 type Via = Partial<Record<MessageChannel, DeliveryStatus>>;
 export type StoredNotification = AppNotification & { via: Via };
@@ -23,6 +23,25 @@ export class NotificationsRepository {
 
   async insert(n: StoredNotification, templateKey?: string): Promise<void> {
     await this.db.insert(notifications).values({ id: n.id, recipientId: n.recipientId, title: n.title, body: n.body, link: n.link ?? null, templateKey: templateKey ?? null, read: false, via: n.via, createdAt: n.createdAt });
+  }
+
+  /** G4 (D-114): a phone's push token belongs to whoever signed in on it last. */
+  async savePushToken(token: string, userId: string, platform: 'ios' | 'android'): Promise<void> {
+    await this.db.insert(pushTokens).values({ token, userId, platform }).onConflictDoUpdate({ target: pushTokens.token, set: { userId, platform, lastSeenAt: sql`now()` } });
+  }
+
+  async deletePushTokens(tokens: string[], userId?: string): Promise<void> {
+    if (!tokens.length) return;
+    await this.db.delete(pushTokens).where(userId ? and(inArray(pushTokens.token, tokens), eq(pushTokens.userId, userId)) : inArray(pushTokens.token, tokens));
+  }
+
+  async pushTokensOf(userId: string): Promise<string[]> {
+    return (await this.db.select({ token: pushTokens.token }).from(pushTokens).where(eq(pushTokens.userId, userId))).map((r) => r.token);
+  }
+
+  /** G3 (D-113): reminders are sent once; this says whether one went out already. */
+  async exists(recipientId: string, templateKey: string, link: string): Promise<boolean> {
+    return (await this.db.select({ id: notifications.id }).from(notifications).where(and(eq(notifications.recipientId, recipientId), eq(notifications.templateKey, templateKey), eq(notifications.link, link))).limit(1)).length > 0;
   }
 
   async setVia(id: string, via: Via): Promise<void> {
@@ -59,6 +78,10 @@ export class NotificationsRepository {
 
   async insertMessage(m: OutboxMessage): Promise<void> {
     await this.db.insert(messages).values({ id: m.id, at: m.at, data: m });
+  }
+
+  async updateMessage(m: OutboxMessage): Promise<void> {
+    await this.db.update(messages).set({ data: m }).where(eq(messages.id, m.id));
   }
 
   // ---- support ----

@@ -12,7 +12,7 @@ const anyBody = z.record(z.string(), z.unknown()).nullish();
 export const notificationsRoutes: FastifyPluginAsyncZod = async (app) => {
   const c = new NotificationsController(app.notifications);
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const st = ['notifications'];
   const me = ['member app'];
 
@@ -32,6 +32,8 @@ export const notificationsRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post('/me/notifications/:id/read', { ...pre, schema: { tags: me, summary: 'Mark one read', security, params: idParams, body: anyBody, response: ok('{ ok }') } }, c.myRead);
   app.get('/me/preferences', { ...pre, schema: { tags: me, summary: 'Channels I receive messages on', security, response: ok('MemberPreferences') } }, c.preferences);
   app.put('/me/preferences', { ...pre, schema: { tags: me, summary: 'Change my channels', security, body: anyBody, response: ok('MemberPreferences') } }, c.savePreferences);
+  app.post('/me/push-token', { ...pre, schema: { tags: me, summary: 'G4: this phone receives push notifications (members and staff)', security, body: anyBody, response: ok('{ ok }') } }, c.registerPush);
+  app.delete('/me/push-token', { ...pre, schema: { tags: me, summary: 'G4: stop push notifications to this phone (sign-out)', security, body: anyBody, response: ok('{ ok }') } }, c.removePush);
   app.get('/me/support', { ...pre, schema: { tags: me, summary: 'Office contact, FAQs and my questions', security, response: ok('SupportCenter') } }, c.support);
   app.post('/me/support/tickets', { ...pre, schema: { tags: me, summary: 'Ask the society office a question', security, body: anyBody, response: { 201: passthrough('SupportTicket') } } }, async (r, reply) => reply.code(201).send(await c.ask(r)));
 };

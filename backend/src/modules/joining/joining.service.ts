@@ -11,6 +11,7 @@ import {
   primaryMembershipAction,
   REQUIRED_DOCUMENTS,
   TEXT_VERSION,
+  PRIVACY_NOTICE_VERSION,
   validateMembershipForm,
 } from '@tgs/domain';
 import { DESIGNATIONS } from '@tgs/mock-data';
@@ -98,6 +99,26 @@ export class JoiningService {
     readonly repo: JoiningRepository,
   ) {}
 
+  /**
+   * G7 (D-117, DPDP): a rejected or withdrawn applicant's personal data (application, documents,
+   * signature, app sign-in, notifications) is erased `applicantDataRetentionMonths` after the last
+   * change. Only the audit line (application number and status, no personal data) is kept.
+   */
+  async eraseClosedApplications(now = new Date()): Promise<number> {
+    const months = (await this.app.masters.settings()).applicantDataRetentionMonths;
+    const before = new Date(now);
+    before.setMonth(before.getMonth() - months);
+    const due = await this.repo.closedBefore(before);
+    for (const a of due) {
+      await withTransaction(this.app.db, async (tx) => {
+        const files = await this.app.documents.store.removeOwner(a.applicantId, tx);
+        await this.repo.eraseApplicant(tx, a.id, a.applicantId);
+        await this.app.audit.record(undefined, { action: 'membership.erase', entity: 'membershipApplication', entityId: a.id, summary: `Application ${a.applicationNo} (${a.status.toLowerCase()}) erased after ${months} months with ${files} files (DPDP)`, actor: { id: 'system', name: 'Daily housekeeping' } }, tx);
+      });
+    }
+    return due.length;
+  }
+
   // ---- MJ reference (public) ----
   async reference(): Promise<JoiningReference> {
     const [society, departments, settings] = await Promise.all([this.app.masters.society(), this.app.departments.all(), this.app.masters.settings()]);
@@ -162,9 +183,12 @@ export class JoiningService {
       const a = (mine && (await this.repo.lock(tx, mine.id))) ?? fail('NOT_FOUND', 'Start with the eligibility check.');
       if (!editable(a)) fail('INVALID_TRANSITION', 'This application has been submitted and can no longer be edited.');
       // D-065: uploads are stamped with the business date; a re-sent document keeps its first stamp.
+      // G1 (D-111): a new document must be a file this applicant uploaded (POST /me/documents).
       if (patch.documents) {
         const before = a.form?.documents ?? [];
-        patch = { ...patch, documents: patch.documents.map((d) => ({ ...d, uploadedAt: before.find((b) => b.type === d.type && b.fileName === d.fileName)?.uploadedAt ?? now })) };
+        const same = (b: { type: string; fileName: string; fileId?: string }, d: { type: string; fileName: string; fileId?: string }) => b.type === d.type && b.fileName === d.fileName && b.fileId === d.fileId;
+        for (const d of patch.documents) if (!before.some((b) => same(b, d))) await this.app.documents.assertOwn(user.id, d.fileId ?? '');
+        patch = { ...patch, documents: patch.documents.map((d) => ({ ...d, uploadedAt: before.find((b) => same(b, d))?.uploadedAt ?? now })) };
       }
       const next = { ...a, form: mergeForm(a.form, patch) };
       await this.repo.save(tx, next);
@@ -210,7 +234,7 @@ export class JoiningService {
         regularAppointmentDate: f.employment?.regularAppointmentDate ?? '',
         sharesProposed: f.shares?.sharesProposed ?? 0,
         submittedOn: a.submittedOn ?? today,
-        signature: { signedAt: now, textVersion: TEXT_VERSION, method: 'OTP', fileId },
+        signature: { signedAt: now, textVersion: TEXT_VERSION, privacyVersion: PRIVACY_NOTICE_VERSION, method: 'OTP', fileId },
       };
       await this.repo.save(tx, next);
       await this.app.audit.record(request, { action: resubmit ? 'resubmit' : 'submit', entity: 'membershipApplication', entityId: a.id, summary: `${next.name} ${resubmit ? 'resubmitted' : 'submitted'} membership application ${a.applicationNo}` }, tx);

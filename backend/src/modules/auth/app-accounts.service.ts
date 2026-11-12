@@ -4,6 +4,7 @@ import { fail } from '../../common/errors/app-error';
 import { randomCode, sameHash, sha256 } from '../../common/utils/crypto';
 import { withTransaction, type Tx } from '../../db/transaction';
 import type { AuthRepository } from './auth.repository';
+import { isReviewMobile, sendCode } from './otp.service';
 
 const DEMO_OTP = '123456';
 type CodePurpose = 'MOBILE_CHANGE' | 'SIGN';
@@ -14,6 +15,11 @@ export class AppAccountsService {
     private readonly app: FastifyInstance,
     private readonly repo: AuthRepository,
   ) {}
+
+  /** G3 (D-113): daily clean-up of sign-in records that expired more than a day ago. */
+  purgeExpired(): Promise<{ tokens: number; codes: number }> {
+    return this.repo.purgeExpired(new Date(Date.now() - 24 * 3600_000));
+  }
 
   /** A mobile already used by someone else's sign-in, e.g. an applicant. */
   async assertMobileFree(mobile: string, memberId?: string): Promise<void> {
@@ -51,9 +57,10 @@ export class AppAccountsService {
 
   // ---- a code bound to one thing (a member's new mobile, an application to sign, D-031) ----
   async startCode(mobile: string, purpose: CodePurpose, subjectId: string, payload?: unknown): Promise<OtpChallenge> {
-    const code = this.app.env.DEMO_MODE ? DEMO_OTP : randomCode();
+    const review = isReviewMobile(this.app.env, mobile);
+    const code = review ? this.app.env.STORE_REVIEW_OTP : this.app.env.DEMO_MODE ? DEMO_OTP : randomCode();
     const row = await this.repo.insertOtp({ mobile, purpose, subjectId, ...(payload !== undefined ? { payload } : {}), codeHash: sha256(`${mobile}:${code}`), channel: 'SIMULATED', expiresAt: new Date(Date.now() + this.app.env.OTP_TTL_SECONDS * 1000) });
-    await this.app.notifications.senders.WHATSAPP.send({ channel: 'WHATSAPP', to: mobile, title: 'TGSECCSL one-time code', body: `Your TGSECCSL one-time code is ${code}. Do not share it with anyone.` });
+    if (!review) await sendCode(this.app, mobile, code);
     return { otpRef: row.id, expiresInSeconds: this.app.env.OTP_TTL_SECONDS, ...(this.app.env.DEMO_MODE ? { demoOtp: code } : {}) };
   }
 

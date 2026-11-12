@@ -8,7 +8,7 @@ export const membersRoutes: FastifyPluginAsyncZod = async (app) => {
   const controller = new MembersController(app.members);
   const tags = ['members'];
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
 
   app.get('/members', { ...pre, schema: { tags, summary: 'Members with filters, counts and paging (DDO: own department)', security, querystring: memberListQuery, response: { 200: memberListResponse } } }, controller.list);
   app.get('/members/:id', { ...pre, schema: { tags, summary: 'A member by id or General No.', security, params: memberParams, response: { 200: memberDetailResponse } } }, controller.detail);

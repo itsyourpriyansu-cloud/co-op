@@ -26,13 +26,13 @@ describe('reports (P8c)', () => {
   });
   afterAll(() => app.close());
 
-  it('the catalogue lists 8 table reports and posted cycles; members and the Cashier cannot see it', async () => {
+  it('the catalogue lists 19 table reports (8 + 11 from G2) and posted cycles; members and the Cashier cannot see it', async () => {
     const { reports, options } = (await call('/reports', accountant)).json() as { reports: ReportDef[]; options: ReportOptions };
-    expect(reports.filter((r) => r.available && r.kind === 'table')).toHaveLength(8);
+    expect(reports.filter((r) => r.available && r.kind === 'table')).toHaveLength(19);
     expect(options.cycles.length).toBeGreaterThan(0);
     expect(options.cycles).toEqual([...options.cycles].sort().reverse());
     expect((await call('/reports', await signInAs(app, 'mem-1103'))).statusCode).toBe(403);
-    expect((await call('/reports/trial-balance', accountant)).statusCode).toBe(404);
+    expect((await call('/reports/nope', accountant)).statusCode).toBe(404);
   });
 
   it('every report runs; totals add up the rows', async () => {

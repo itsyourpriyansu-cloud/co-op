@@ -4,6 +4,7 @@ import {
   addMonths,
   allocateRecovery,
   calculateFdMaturity,
+  fdPayoutSchedule,
   calculateInsuranceDue,
   calculateLeftoverService,
   calculateShareDeduction,
@@ -289,7 +290,7 @@ function enrichApplication(rng: Rng, app: MembershipApplication, existingMobile?
       { type: 'ID_PROOF', fileName: 'employee-id-card.pdf', uploadedAt: docAt },
       { type: 'APPOINTMENT_ORDER', fileName: 'appointment-order.pdf', uploadedAt: docAt },
     ],
-    declarations: { byelawsAccepted: true, noOtherSociety: true, recoveryMandateAccepted: true },
+    declarations: { byelawsAccepted: true, noOtherSociety: true, recoveryMandateAccepted: true, privacyConsent: true },
   };
   if (app.form.address && !app.form.address.sameAsPresent) app.form.address.permanent = { line1: `D.No ${rng.int(1, 30)}-${rng.int(1, 99)}, Main Road`, city: 'Warangal', district: 'Hanumakonda', pincode: `5060${pad(rng.int(1, 20), 2)}` };
   app.eligibility = { worksInSecretariatDept: true, regularOrApprovedProbationer: true, memberOfOtherCreditSocietyWithDues: false, checkedAt: submittedAt };
@@ -611,6 +612,8 @@ export function generateData(seed: number): GeneratedData {
       payoutFrequency: payout,
       maturityDate: mat.maturityDate,
       maturityValue: mat.maturityValue,
+      // Periods already past on the seed date count as paid, so the payout job starts from the next one.
+      ...(payout !== 'ON_MATURITY' ? { interestPayouts: fdPayoutSchedule({ principal, ratePercent: rate, tenureMonths: tenure, payout, openedOn }).filter((p) => p.date <= SEED_TODAY).map((p, k) => ({ ...p, voucherNo: `VR-${p.date.slice(0, 4)}-S${pad(fdSeq, 4)}${pad(k, 2)}` })) } : {}),
       balance: principal,
       operationMode: isJoint ? 'EITHER_OR_SURVIVOR' : 'SINGLE',
       jointHolders: isJoint ? [`${rng.pick(FIRST_NAMES_F)} ${m.name.split(' ').at(-1)}`] : [],

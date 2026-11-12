@@ -101,7 +101,7 @@ describe('membership edges (BR-026, F1 validation)', () => {
   const docs = [{ type: 'PHOTO', label: 'Photo' }];
   it('empty form lists every missing field', () => {
     const e = validateMembershipForm(undefined, docs);
-    expect(Object.keys(e)).toEqual(expect.arrayContaining(['personal.fullName', 'address.permanent.line1', 'documents.PHOTO', 'declarations.recoveryMandateAccepted']));
+    expect(Object.keys(e)).toEqual(expect.arrayContaining(['personal.fullName', 'address.permanent.line1', 'documents.PHOTO', 'declarations.recoveryMandateAccepted', 'declarations.privacyConsent']));
   });
   it('complete form passes; bad email, PIN and missing probation months are caught', () => {
     const ok: MembershipForm = {
@@ -111,7 +111,7 @@ describe('membership edges (BR-026, F1 validation)', () => {
       shares: { sharesProposed: 10 },
       nominee: { name: 'N', relation: 'Father' },
       documents: [{ type: 'PHOTO', fileName: 'p.jpg', uploadedAt: '2026-10-24T00:00:00Z' }],
-      declarations: { byelawsAccepted: true, noOtherSociety: true, recoveryMandateAccepted: true },
+      declarations: { byelawsAccepted: true, noOtherSociety: true, recoveryMandateAccepted: true, privacyConsent: true },
     };
     expect(validateMembershipForm(ok, docs)).toEqual({});
     const bad = validateMembershipForm(

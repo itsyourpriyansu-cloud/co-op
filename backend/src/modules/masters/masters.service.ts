@@ -13,9 +13,9 @@ const CHANGE_ENTITIES = ['settings', 'loanProduct', 'society', 'department', 'us
 /** Society settings keys a client may change (anything else in the body is ignored). */
 const SETTINGS_KEYS: Array<keyof SocietySettings> = [
   'shareValue', 'admissionFee', 'minShares', 'maxShares', 'retirementAge', 'financialYearStartMonth', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent',
-  'insurance', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'defaulterCycles', 'fdSlabs', 'fdMinAmount', 'savingsRatePercent', 'crdRatePercent', 'srdsRatePercent', 'penalGraceDays',
+  'insurance', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'defaulterCycles', 'fdSlabs', 'fdMinAmount', 'savingsRatePercent', 'crdRatePercent', 'srdsRatePercent', 'shareDepositRatePercent', 'depositInterestBasis', 'penalGraceDays',
   'fdMaturityJobEnabled', 'fdMaturityRunHour', 'fdPrematureWithdrawalEnabled', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent',
-  'demandSendByDays', 'minTakeHomePay', 'membershipTargetHours', 'loanTargetDays', 'holidays', 'casteCategories', 'suretyRecoveryAfterCycles',
+  'demandSendByDays', 'minTakeHomePay', 'membershipTargetHours', 'loanTargetDays', 'holidays', 'casteCategories', 'minAppVersion', 'applicantDataRetentionMonths', 'suretyRecoveryAfterCycles',
 ];
 
 const PRODUCT_FIELDS: Array<keyof LoanProduct> = [

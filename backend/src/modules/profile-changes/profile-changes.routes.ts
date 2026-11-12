@@ -13,7 +13,7 @@ const idParams = z.object({ id: z.string().min(1) });
 export const profileChangesRoutes: FastifyPluginAsyncZod = async (app) => {
   const controller = new ProfileChangesController(app.profileChanges, app.members);
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const staffTags = ['members'];
   const meTags = ['my profile'];
 

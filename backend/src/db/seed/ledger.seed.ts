@@ -1,6 +1,6 @@
 import { checkJournal, type JournalLineInput } from '@tgs/domain';
 import { sql } from 'drizzle-orm';
-import { journalEntries, journalLines, ledgerAccounts } from '../../models';
+import { financialYears, journalEntries, journalLines, ledgerAccounts, officeVouchers } from '../../models';
 import { ACCOUNT, CHART_OF_ACCOUNTS, DEPOSIT_ACCOUNT, LOAN_ACCOUNT } from '../../modules/ledger/ledger.accounts';
 import { demoDataset } from './dataset';
 import type { Seeder } from '.';
@@ -13,7 +13,7 @@ const chart: Seeder = {
   name: 'ledger-chart',
   run: async (tx) => {
     // The books are append-only (UPDATE/DELETE refused); a dev/demo reseed starts them afresh.
-    await tx.execute(sql`truncate ${journalLines}, ${journalEntries} restart identity`);
+    await tx.execute(sql`truncate ${officeVouchers}, ${financialYears}, ${journalLines}, ${journalEntries} restart identity`);
     await tx.delete(ledgerAccounts);
     await tx.insert(ledgerAccounts).values(CHART_OF_ACCOUNTS.map((a, i) => ({ ...a, sortOrder: i, description: a.description ?? null })));
   },

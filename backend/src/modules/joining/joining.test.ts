@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bearer, reseed, signInAs } from '../../../tests/helpers/auth';
 import { buildTestApp } from '../../../tests/helpers/test-app';
 import { demoDataset } from '../../db/seed/dataset';
+import { makeSignaturePng } from '../../common/utils/png';
 
 describe('joining (P4c)', () => {
   let app: FastifyInstance;
@@ -53,7 +54,14 @@ describe('joining (P4c)', () => {
 
     const { documents, ...form } = ravi.form!;
     await call('PUT', '/membership/me/draft', divya, { ...form, personal: { ...form.personal, fullName: 'Divya S' }, employment: { ...form.employment, employeeId: 'TSDIVYA1' } });
-    const draft = (await call('PUT', '/membership/me/draft', divya, { documents })).json();
+    // G1 (D-111): a document must be a file this applicant uploaded.
+    expect((await call('PUT', '/membership/me/draft', divya, { documents })).json().code).toBe('VALIDATION_ERROR');
+    const uploaded = [];
+    for (const d of documents!) {
+      const f = (await call('POST', '/me/documents', divya, { type: d.type, fileName: d.fileName, data: makeSignaturePng(1).toString('base64') })).json();
+      uploaded.push({ type: d.type, fileName: f.fileName, uploadedAt: f.uploadedAt, fileId: f.fileId });
+    }
+    const draft = (await call('PUT', '/membership/me/draft', divya, { documents: uploaded })).json();
     expect(draft.form.employment.employeeId).toBe('TSDIVYA1');
     expect(draft.form.documents.length).toBe(documents!.length);
 
@@ -102,6 +110,9 @@ describe('joining (P4c)', () => {
     expect(member.mandate).toMatchObject({ signatureFileId: a.signature!.fileId, agreedSignatureFileId: a.ddoCertification!.signatureFileId });
     expect((await call('GET', '/me/signature', divya)).json()).toBeNull(); // moved to the member record with admission
     expect(member.serviceEvents.some((e: { type: string }) => e.type === 'JOINED')).toBe(true);
+    // G1 (D-111): the uploaded documents moved to the member record and open for staff.
+    expect(member.documents.length).toBe(ravi.form!.documents!.length);
+    expect((await call('GET', `/files/${member.documents[0].fileId}`, accountant)).json().dataUrl).toMatch(/^data:image\/png;base64,/);
 
     // The receipt is in the books: bank debited, the member's share capital credited.
     const journals = (await call('GET', '/ledger/journals?source=SHARE_RECEIPT', accountant)).json();

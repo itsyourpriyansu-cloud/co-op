@@ -42,6 +42,7 @@ import { RuleCheckList } from '@/components/RuleCheckList';
 import { StatusTag } from '@/components/StatusTag';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
+import { LoanClosurePanel } from './LoanClosurePanel';
 import { SuretyRecoveryPanel } from './SuretyRecoveryPanel';
 import { cn } from '@/lib/utils';
 import { LoanActionDrawer, SanctionSheetView } from './LoanActionDrawer';
@@ -441,6 +442,7 @@ export function LoanDetailPage() {
                   </Panel>
                 )}
                 {l.status === 'ACTIVE' && l.sureties.length > 0 && <SuretyRecoveryPanel loanId={l.id} />}
+                {l.status === 'ACTIVE' && <LoanClosurePanel loanId={l.id} />}
                 <Panel title="Borrower">
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                     <Field label="Designation">{d.member.designation}</Field>

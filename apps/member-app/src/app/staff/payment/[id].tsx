@@ -52,6 +52,7 @@ export default function ReceiptScreen() {
                   {DENOMINATIONS.filter((n) => r.denominations?.[n])
                     .map((n) => `₹${n} × ${r.denominations![n]}`)
                     .join(' · ')}
+                  {r.coins ? ` · coins ${formatINR(r.coins)}` : ''}
                 </Text>
               ) : null}
               {r.remarks ? (

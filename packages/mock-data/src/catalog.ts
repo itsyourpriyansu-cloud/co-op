@@ -69,6 +69,9 @@ export const SETTINGS: SocietySettings = {
   fdMinAmount: 1_000_000,
   crdRatePercent: 6,
   srdsRatePercent: 6.5,
+  // G2 (D-112) placeholders: the Admin sets the real ones.
+  shareDepositRatePercent: 6,
+  depositInterestBasis: 'YEAR_END',
   minShares: 10,
   maxShares: 100,
   admissionFee: 0,
@@ -82,6 +85,10 @@ export const SETTINGS: SocietySettings = {
   suretyRecoveryAfterCycles: 3,
   // F-07 (D-095): Telangana's categories; the Admin edits the list.
   casteCategories: ['OC', 'BC-A', 'BC-B', 'BC-C', 'BC-D', 'BC-E', 'SC', 'ST'],
+  // G4 (D-114): raised by the Admin when an old app version must stop working.
+  minAppVersion: '0.0.0',
+  // G7 (D-117) [P]: DPDP; the society confirms the period.
+  applicantDataRetentionMonths: 12,
   loanTargetDays: 5,
   // F-14: the Admin keeps the holiday list; a fixed national holiday for the demo (D-093).
   holidays: ['2026-10-02'],
@@ -95,7 +102,7 @@ export const SETTINGS: SocietySettings = {
   fdPrematurePenaltyMethod: 'RATE_CUT',
   // F-06 placeholder (D-093): the Admin sets the real rate.
   fdPrematurePenaltyPercent: 1,
-  placeholders: ['fdPrematurePenaltyPercent', 'holidays', 'shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'demandSendByDays', 'minTakeHomePay', 'loanProducts'],
+  placeholders: ['fdPrematurePenaltyPercent', 'holidays', 'shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'shareDepositRatePercent', 'depositInterestBasis', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'demandSendByDays', 'minTakeHomePay', 'loanProducts', 'applicantDataRetentionMonths'],
 };
 
 export const LOAN_PURPOSES = {
@@ -118,9 +125,11 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
   { key: 'loan.returned', event: 'Loan returned for correction', title: 'Action needed on your loan', body: 'Your loan {applicationNo} needs a correction: {reason}', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'loan.sanctioned', event: 'Loan sanctioned', title: 'Loan sanctioned', body: 'Your {product} of {amount} is sanctioned. EMI {emi} from {firstCycle}.', channels: ['IN_APP', 'WHATSAPP', 'EMAIL'], audience: 'MEMBER' },
   { key: 'loan.disbursed', event: 'Loan disbursed', title: 'Loan disbursed', body: '{netAmount} has been paid for loan {loanNo}.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'loan.closed', event: 'Loan paid off early at the counter (BR-040)', title: 'Loan closed', body: 'Loan {loanNo} is closed. We received {amount} (receipt {receiptNo}). Thank you.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'loan.rejected', event: 'Loan rejected', title: 'Loan not approved', body: 'Your loan {applicationNo} was not approved: {reason}', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'fd.rejected', event: 'Fixed deposit not accepted', title: 'Deposit not accepted', body: 'Your fixed deposit request {requestNo} was not accepted: {reason}. The money will be refunded.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'fd.accepted', event: 'Fixed deposit accepted', title: 'Fixed deposit accepted', body: 'FD {fdrNo} for {amount} is active. Matures on {maturityDate}.', channels: ['IN_APP', 'EMAIL'], audience: 'MEMBER' },
+  { key: 'fd.interestPaid', event: 'Periodic FD interest paid (G1)', title: 'FD interest paid', body: '{amount} interest on FD {fdrNo} for the period to {date} has been paid to your bank account.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'fd.maturing', event: 'Fixed deposit maturing in 30 days', title: 'FD maturing soon', body: 'FD {fdrNo} matures on {maturityDate}. Visit the office to renew or withdraw.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'recovery.posted', event: 'Monthly recovery posted', title: 'Deduction recovered', body: '{amount} was recovered from your {cycle} salary.', channels: ['IN_APP'], audience: 'MEMBER' },
   { key: 'recovery.short', event: 'Short recovery', title: 'Short recovery', body: 'Only {recovered} of {demand} was recovered for {cycle}. See how it was applied.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },

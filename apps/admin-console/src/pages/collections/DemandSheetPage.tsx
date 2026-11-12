@@ -224,7 +224,7 @@ export function DemandSheetPage() {
               open={drawer !== null}
               onClose={() => setDrawer(null)}
               title={drawer === 'certify' ? 'Certify the demand sheet' : 'Send to the DDO'}
-              description={drawer === 'certify' ? 'BR-030: you confirm the demand is correct. Your name and the time are stamped on the sheet.' : 'The DDO deducts these amounts from the salaries. Sending is simulated (email to the DDO).'}
+              description={drawer === 'certify' ? 'BR-030: you confirm the demand is correct. Your name and the time are stamped on the sheet.' : 'The DDO deducts these amounts from the salaries. The sheet appears in the DDO work queue for the deduction entry.'}
               footer={
                 <div className="flex justify-end gap-2">
                   <ButtonV2 text="Cancel" buttonType={ButtonV2Type.SECONDARY} onClick={() => setDrawer(null)} />

@@ -21,7 +21,7 @@ const listQuery = z.object({
 export const depositsRoutes: FastifyPluginAsyncZod = async (app) => {
   const c = new DepositsController(app.deposits);
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const st = ['deposits'];
   const mb = ['my deposits'];
   const ok = (name: string) => ({ 200: passthrough(name) });
@@ -32,7 +32,7 @@ export const depositsRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post('/deposits', { ...pre, schema: { tags: st, summary: 'Open an FD at the counter from the signed form F4', security, body, response: created('DepositDetail') } }, async (req, reply) => reply.status(201).send(await c.open(req as never)));
   app.post('/deposits/:id/actions/:action', { ...pre, schema: { tags: st, summary: 'Payment, acceptance, refund, cancel or payout (money steps post to the ledger)', security, params: z.object({ id: z.string().min(1), action: z.enum(ACTIONS) }), body: body.nullish(), response: ok('DepositDetail') } }, c.act as never);
   app.get('/deposits/:id/withdrawal-preview', { ...pre, schema: { tags: st, summary: 'What a premature withdrawal would pay today (D-086): principal, interest, penalty, payable', security, params: idParams, response: ok('FdSettlement') } }, c.withdrawalPreview);
-  app.post('/deposits/maturity/run', { preHandler: [requireAuth, requirePermission('settings.edit')], schema: { tags: st, summary: 'Run the daily FD maturity job now (Admin); a repeat run changes nothing', security, response: ok('{ matured, date }') } }, c.runMaturity);
+  app.post('/deposits/maturity/run', { onRequest: [requireAuth, requirePermission('settings.edit')], schema: { tags: st, summary: 'Run the daily FD maturity job now (Admin); a repeat run changes nothing', security, response: ok('{ matured, date }') } }, c.runMaturity);
   app.post('/deposits/:id/demo-act', { ...pre, schema: { tags: st, summary: 'Demo: complete the stage as its owner', security, params: idParams, response: ok('DepositDetail') } }, c.demoAct);
 
   app.get('/me/deposits', { ...pre, schema: { tags: mb, summary: 'My deposits and FD requests', security, response: ok('DepositRow[]') } }, c.mine);

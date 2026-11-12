@@ -9,7 +9,7 @@ const ok = (name: string) => ({ 200: z.any().describe(`${name} (packages/types)`
 export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
   const service = new ReportsService(app);
   const security = [{ bearer: [] }];
-  const pre = { preHandler: requireAuth };
+  const pre = { onRequest: requireAuth };
   const tags = ['reports'];
 
   app.get('/reports', { ...pre, schema: { tags, summary: 'The report catalogue and filter options', security, response: ok('{ reports, options }') } }, (r) => service.catalogue(sessionOf(r)));

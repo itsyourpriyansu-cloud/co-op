@@ -1,0 +1,35 @@
+# G3 (D-113): push to main → CI → staging → (approval) → production.
+# Azure sign-in is GitHub OIDC: no Azure password or key is stored in GitHub (infra/README.md).
+# Production waits for the reviewers set on the GitHub "production" environment.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  staging:
+    needs: ci
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: staging
+    secrets: inherit
+
+  production:
+    needs: staging
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: production
+    secrets: inherit

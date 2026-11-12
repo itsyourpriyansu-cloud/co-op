@@ -33,7 +33,7 @@ export function validateFdSlabs(slabs: SocietySettings['fdSlabs']): Record<strin
 }
 
 /** ST-60 / ST-66: society-wide numbers. */
-export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 'minShares' | 'maxShares' | 'retirementAge' | 'defaulterCycles' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'insurance' | 'savingsRatePercent' | 'fdMinAmount' | 'admissionFee' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'financialYearStartMonth'> & Partial<Pick<SocietySettings, 'suretyRecoveryAfterCycles' | 'casteCategories' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'demandSendByDays' | 'minTakeHomePay' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent'>>): Record<string, string> {
+export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 'minShares' | 'maxShares' | 'retirementAge' | 'defaulterCycles' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'insurance' | 'savingsRatePercent' | 'fdMinAmount' | 'admissionFee' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'financialYearStartMonth'> & Partial<Pick<SocietySettings, 'suretyRecoveryAfterCycles' | 'casteCategories' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'demandSendByDays' | 'minTakeHomePay' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent' | 'shareDepositRatePercent' | 'depositInterestBasis' | 'minAppVersion' | 'applicantDataRetentionMonths'>>): Record<string, string> {
   const e: Record<string, string> = {};
   const money = (k: string, v: number, allowZero = true) => {
     if (!(Number.isInteger(v) && (allowZero ? v >= 0 : v > 0))) e[k] = allowZero ? 'Enter ₹0 or more.' : 'Enter more than ₹0.';
@@ -59,6 +59,8 @@ export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 
   if (s.membershipTargetHours !== undefined && !(Number.isInteger(s.membershipTargetHours) && s.membershipTargetHours >= 0 && s.membershipTargetHours <= 720)) e.membershipTargetHours = 'Use 0 to 720 hours.';
   if (s.suretyRecoveryAfterCycles !== undefined && !(Number.isInteger(s.suretyRecoveryAfterCycles) && s.suretyRecoveryAfterCycles >= 1 && s.suretyRecoveryAfterCycles <= 24)) e.suretyRecoveryAfterCycles = 'Use 1 to 24 months.';
   if (s.casteCategories !== undefined && !(Array.isArray(s.casteCategories) && s.casteCategories.length > 0 && s.casteCategories.every((c) => typeof c === 'string' && c.trim().length > 0))) e.casteCategories = 'List at least one category, one per line.';
+  if (s.minAppVersion !== undefined && !VERSION.test(s.minAppVersion)) e.minAppVersion = 'Use a version like 1.2.0.';
+  if (s.applicantDataRetentionMonths !== undefined && !(Number.isInteger(s.applicantDataRetentionMonths) && s.applicantDataRetentionMonths >= 1 && s.applicantDataRetentionMonths <= 120)) e.applicantDataRetentionMonths = 'Use 1 to 120 months.';
   if (s.holidays !== undefined && !(Array.isArray(s.holidays) && s.holidays.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d))))) e.holidays = 'Use dates like 2026-10-02, one per line.';
   if (s.loanTargetDays !== undefined && !(Number.isInteger(s.loanTargetDays) && s.loanTargetDays >= 0 && s.loanTargetDays <= 90)) e.loanTargetDays = 'Use 0 to 90 days.';
   // P7b (D-088): send-by days and the minimum take-home pay (R1).
@@ -68,10 +70,26 @@ export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 
   if (s.fdMaturityJobEnabled !== undefined && typeof s.fdMaturityJobEnabled !== 'boolean') e.fdMaturityJobEnabled = 'Choose on or off.';
   if (s.fdMaturityRunHour !== undefined && !(Number.isInteger(s.fdMaturityRunHour) && s.fdMaturityRunHour >= 0 && s.fdMaturityRunHour <= 23)) e.fdMaturityRunHour = 'Use an hour from 0 to 23.';
   if (s.fdPrematureWithdrawalEnabled !== undefined && typeof s.fdPrematureWithdrawalEnabled !== 'boolean') e.fdPrematureWithdrawalEnabled = 'Choose on or off.';
+  if (s.shareDepositRatePercent !== undefined && !(s.shareDepositRatePercent >= 0 && s.shareDepositRatePercent <= MAX_RATE)) e.shareDepositRatePercent = `Use 0% to ${MAX_RATE}%.`;
+  if (s.depositInterestBasis !== undefined && !['YEAR_END', 'AVERAGE_MONTH_END'].includes(s.depositInterestBasis)) e.depositInterestBasis = 'Choose the balance interest is worked on.';
   if (s.fdPrematurePenaltyMethod !== undefined && !['RATE_CUT', 'SHARE_OF_INTEREST'].includes(s.fdPrematurePenaltyMethod)) e.fdPrematurePenaltyMethod = 'Choose how the penalty is worked out.';
   if (s.fdPrematurePenaltyPercent !== undefined) {
     const max = s.fdPrematurePenaltyMethod === 'SHARE_OF_INTEREST' ? 100 : MAX_RATE;
     if (!(s.fdPrematurePenaltyPercent >= 0 && s.fdPrematurePenaltyPercent <= max)) e.fdPrematurePenaltyPercent = `Use 0% to ${max}%.`;
   }
   return e;
+}
+
+const VERSION = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
+
+/**
+ * G4 (D-114): may an app at `current` (e.g. "1.10.0") still be used when the society requires at
+ * least `minimum`? Numeric per part, so 1.10.0 is newer than 1.9.0. An unreadable version is allowed.
+ */
+export function isAppVersionAllowed(current: string | null | undefined, minimum: string | null | undefined): boolean {
+  if (!current || !minimum || !VERSION.test(current) || !VERSION.test(minimum)) return true;
+  const a = current.split('.').map(Number);
+  const b = minimum.split('.').map(Number);
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i]! > b[i]!;
+  return true;
 }

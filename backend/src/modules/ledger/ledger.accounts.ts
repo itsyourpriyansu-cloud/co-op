@@ -24,15 +24,27 @@ export const CHART_OF_ACCOUNTS: Array<{ code: string; name: string; type: Ledger
   { code: '2320', name: 'RRF', type: 'LIABILITY', memberLevel: false, description: 'Risk / Replace Reserve Fund (Q-301)' },
   { code: '2330', name: 'Savings deposits (closed scheme)', type: 'LIABILITY', memberLevel: true, description: 'D-067: no savings accounts; holds older balances only' },
   { code: '2400', name: 'Insurance contributions', type: 'LIABILITY', memberLevel: false, description: '₹200 / ₹1,000 a year (BR-008)' },
+  { code: '2500', name: 'Dividend payable', type: 'LIABILITY', memberLevel: true, description: 'Declared on share capital, not yet paid (G2)' },
   { code: '2900', name: 'Unidentified receipts', type: 'LIABILITY', memberLevel: false, description: 'Money received but not yet matched to a member' },
   { code: '3100', name: 'Share capital', type: 'EQUITY', memberLevel: true },
+  { code: '3300', name: 'Surplus / deficit', type: 'EQUITY', memberLevel: false, description: 'Income less expenses of each closed year (G2)' },
   { code: '3900', name: 'Opening balance difference', type: 'EQUITY', memberLevel: false, description: 'Balances brought in from the old books' },
   { code: '4100', name: 'Interest on loans', type: 'INCOME', memberLevel: false },
   { code: '4200', name: 'Penal interest', type: 'INCOME', memberLevel: false },
   { code: '4300', name: 'Admission fees', type: 'INCOME', memberLevel: false },
   { code: '4400', name: 'FD premature-withdrawal penalty', type: 'INCOME', memberLevel: false },
+  { code: '4500', name: 'Interest received from bank', type: 'INCOME', memberLevel: false },
+  { code: '4900', name: 'Other income', type: 'INCOME', memberLevel: false },
   { code: '5100', name: 'Interest on fixed deposits', type: 'EXPENSE', memberLevel: false },
   { code: '5200', name: 'Interest on CRD and SRDS', type: 'EXPENSE', memberLevel: false },
+  { code: '5210', name: 'Interest on share deposit', type: 'EXPENSE', memberLevel: false },
+  { code: '5300', name: 'Salaries and honorarium', type: 'EXPENSE', memberLevel: false },
+  { code: '5400', name: 'Rent and office maintenance', type: 'EXPENSE', memberLevel: false },
+  { code: '5500', name: 'Printing and stationery', type: 'EXPENSE', memberLevel: false },
+  { code: '5600', name: 'Audit fees', type: 'EXPENSE', memberLevel: false },
+  { code: '5700', name: 'Bank charges', type: 'EXPENSE', memberLevel: false },
+  { code: '5800', name: 'General body and meeting expenses', type: 'EXPENSE', memberLevel: false },
+  { code: '5900', name: 'Other office expenses', type: 'EXPENSE', memberLevel: false },
 ];
 
 /** Where each loan product's principal sits (P5 posts disbursements and recoveries here). */
@@ -47,4 +59,9 @@ export const ACCOUNT = {
   SHARE_DEPOSIT: '2100',
   SHARE_CAPITAL: '3100',
   OPENING_DIFFERENCE: '3900',
+  /** G2 (D-112) */
+  SURPLUS: '3300',
+  DIVIDEND_PAYABLE: '2500',
+  SHARE_DEPOSIT_INTEREST: '5210',
+  DEPOSIT_INTEREST: '5200',
 } as const;

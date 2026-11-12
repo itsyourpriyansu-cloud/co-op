@@ -8,13 +8,25 @@ import { appSessionUser, maskMobile } from './session-user';
 import type { TokensService } from './tokens.service';
 
 const DEMO_OTP = '123456';
+
+/** G4 (D-114): the store reviewers' fictional member signs in with a fixed code (env), never sent. */
+export const isReviewMobile = (env: { STORE_REVIEW_MOBILE: string; STORE_REVIEW_OTP: string }, mobile: string) => Boolean(env.STORE_REVIEW_MOBILE && env.STORE_REVIEW_OTP && mobile === env.STORE_REVIEW_MOBILE);
+/** Sends a one-time code by WhatsApp (G5, D-115: the authentication template); a code that did not leave is refused, so nobody waits for it. */
+export async function sendCode(app: FastifyInstance, mobile: string, code: string): Promise<void> {
+  const r = await app.notifications.senders.WHATSAPP.send({ channel: 'WHATSAPP', to: mobile, title: 'TGSECCSL one-time code', body: `Your TGSECCSL one-time code is ${code}. Do not share it with anyone.`, otp: code }).catch((err: Error) => ({ status: 'FAILED' as const, provider: 'unknown', error: err.message }));
+  if (r.status === 'FAILED') {
+    app.log.error({ provider: r.provider, error: r.error }, 'one-time code not sent');
+    fail('RULE_VIOLATION', 'The code could not be sent to WhatsApp just now. Please try again in a few minutes.', { ruleId: 'OTP_NOT_SENT' });
+  }
+}
+
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 15;
 const MAX_PER_WINDOW = 5;
 
 /**
- * Member App sign-in and sign-up by mobile number + one-time code (D-067). Delivery is simulated
- * until P8 connects WhatsApp / push; in demo mode the code is always 123456 and is returned.
+ * Member App sign-in and sign-up by mobile number + one-time code (D-067). Delivery by WhatsApp
+ * (G5, simulated unless WHATSAPP_PROVIDER=meta); in demo mode the code is always 123456 and is returned.
  */
 export class OtpService {
   constructor(
@@ -36,7 +48,8 @@ export class OtpService {
     if (recent >= MAX_PER_WINDOW) fail('RULE_VIOLATION', `Too many codes requested. Try again in ${WINDOW_MINUTES} minutes.`, { ruleId: 'OTP_RATE_LIMIT' });
 
     const demo = this.app.env.DEMO_MODE;
-    const code = demo ? DEMO_OTP : randomCode();
+    const review = isReviewMobile(this.app.env, mobile);
+    const code = review ? this.app.env.STORE_REVIEW_OTP : demo ? DEMO_OTP : randomCode();
     const row = await this.repo.insertOtp({
       mobile,
       purpose,
@@ -44,12 +57,13 @@ export class OtpService {
       channel: 'SIMULATED',
       expiresAt: new Date(Date.now() + this.app.env.OTP_TTL_SECONDS * 1000),
     });
-    // By WhatsApp (D-067) through integrations/messaging: simulated until F-10, the text never logged in production.
-    await this.app.notifications.senders.WHATSAPP.send({ channel: 'WHATSAPP', to: mobile, title: 'TGSECCSL one-time code', body: `Your TGSECCSL one-time code is ${code}. Do not share it with anyone.` });
+    // By WhatsApp (D-067, G5) through integrations/messaging; the simulated sender never logs the text in production.
+    if (review) this.app.log.warn('store review sign-in code issued');
+    else await sendCode(this.app, mobile, code);
     return {
       otpRef: row.id,
       expiresInSeconds: this.app.env.OTP_TTL_SECONDS,
-      channel: 'SIMULATED',
+      channel: !review && this.app.env.WHATSAPP_PROVIDER === 'meta' ? 'WHATSAPP' : 'SIMULATED',
       mobileMasked: maskMobile(mobile),
       ...(demo ? { demoOtp: code } : {}),
     };

@@ -1,0 +1,1 @@
+ALTER TABLE "profile_change_requests" ADD COLUMN "document_file_id" text;

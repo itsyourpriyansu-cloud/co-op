@@ -10,14 +10,14 @@ export const permissionsRoutes: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     '/permissions',
-    { preHandler: requirePermission('settings.view'), schema: { tags, summary: 'Role → permission matrix', security: [{ bearer: [] }], response: { 200: permissionMatrixSchema } } },
+    { onRequest: requirePermission('settings.view'), schema: { tags, summary: 'Role → permission matrix', security: [{ bearer: [] }], response: { 200: permissionMatrixSchema } } },
     controller.matrix,
   );
 
   app.put(
     '/permissions/:role',
     {
-      preHandler: requirePermission('users.manage', 'Only the Super Admin can change permissions.'),
+      onRequest: requirePermission('users.manage', 'Only the Super Admin can change permissions.'),
       schema: {
         tags,
         summary: "Replace one console role's permissions",

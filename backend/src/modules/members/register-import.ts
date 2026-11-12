@@ -10,7 +10,7 @@ import { ACCOUNT } from '../ledger/ledger.accounts';
 // checked first; nothing is written unless all rows pass. Each member gets their record, an agreed
 // recovery mandate (the paper F5 is on file), a JOINED event, an app account, a share account and one
 // OPENING journal entry (share capital + share deposit against 3900 Opening balance difference).
-// shortcut: members and shares only; loan and deposit registers follow once the society sends samples (F-11).
+// Loans, deposits and other opening balances: loans/register-import, deposits/register-import, ledger/opening-import (G6).
 
 export const REGISTER_COLUMNS = [
   'generalNo', 'employeeId', 'name', 'fatherName', 'gender', 'caste', 'dob', 'mobile', 'email', 'designation', 'department',
@@ -29,8 +29,18 @@ export interface RegisterImportResult {
   shareDeposit: number;
 }
 
-const rupees = (v: string | undefined) => (v?.trim() ? toPaise(Number(v.replace(/,/g, ''))) : NaN);
-const isDate = (v: string | undefined) => /^\d{4}-\d{2}-\d{2}$/.test(v ?? '');
+export const rupees = (v: string | undefined) => (v?.trim() ? toPaise(Number(v.replace(/,/g, ''))) : NaN);
+export const isDate = (v: string | undefined) => /^\d{4}-\d{2}-\d{2}$/.test(v ?? '');
+/** G6: numbers the system gives itself (loans LN-, FDs FD- / FDR-, requests); register numbers must not look like them. */
+export const RESERVED_NUMBER = /^(LN|APP|SL|FD|FDR|REQ)-/i;
+
+/** G6 (D-116): what every register import answers (rows by spreadsheet number, header = row 1; totals in paise). */
+export interface ImportResult {
+  rows: number;
+  committed: boolean;
+  errors: Array<{ row: number; generalNo: string; fieldErrors: Record<string, string> }>;
+  totals: Record<string, number>;
+}
 
 export async function importMemberRegister(
   app: FastifyInstance,

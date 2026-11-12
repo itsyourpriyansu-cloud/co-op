@@ -73,6 +73,9 @@ function documentsOf(m: Member): MemberDocument[] {
     type: d.type,
     label: d.label,
     fileName: `${d.type.toLowerCase().replace(/_/g, '-')}-${m.generalNo}.${d.type === 'PHOTO' ? 'jpg' : 'pdf'}`,
+    // The prototype holds no files; the backend serves real ones (G1, D-111).
+    fileId: '',
+    mime: d.type === 'PHOTO' ? 'image/jpeg' : 'application/pdf',
     uploadedOn: m.joinedSocietyOn,
     uploadedBy: 'Society office',
   }));

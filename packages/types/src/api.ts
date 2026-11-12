@@ -43,6 +43,37 @@ export interface ListParams {
   filters?: Record<string, string | string[]>;
 }
 
+/** G1 (D-111): one audit log row (docs/07 §7). `before` / `after` only on the single-row read. */
+export interface AuditLogEntry {
+  id: string;
+  at: string;
+  actorId?: string | null;
+  actorName?: string | null;
+  actorRole?: string | null;
+  action: string;
+  entity: string;
+  entityId?: string | null;
+  summary: string;
+  ip?: string | null;
+  before?: unknown;
+  after?: unknown;
+}
+
+export interface AuditLogParams {
+  q?: string;
+  entity?: string;
+  actorId?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AuditLogList extends Paged<AuditLogEntry> {
+  /** Entities that appear in the log, for the filter. */
+  entities: string[];
+}
+
 export interface Paged<T> {
   items: T[];
   page: number;
@@ -205,7 +236,7 @@ export interface JoiningReference {
   /** F-07 (D-095): the caste categories to choose from. */
   casteCategories: string[];
   /** Plain-language summary + full text, versioned (D-031). */
-  agreements: Array<{ key: 'byelaws' | 'noOtherSociety' | 'recoveryMandate'; title: string; summary: string[]; text: string; version: string }>;
+  agreements: Array<{ key: 'byelaws' | 'noOtherSociety' | 'recoveryMandate' | 'privacy'; title: string; summary: string[]; text: string; version: string }>;
 }
 
 export interface Health {
@@ -365,6 +396,35 @@ export interface MemberDocument {
   fileName: string;
   uploadedOn: ISODate;
   uploadedBy: string;
+  /** G1 (D-111): open it with GET /files/:id. */
+  fileId: string;
+  mime: string;
+}
+
+/** G1 (D-111): upload body for POST /me/documents and POST /members/:id/documents (base64). */
+export interface DocumentUploadInput {
+  type: string;
+  fileName?: string;
+  data: string;
+}
+
+export interface StoredDocument {
+  fileId: string;
+  type: string;
+  label: string;
+  fileName: string;
+  mime: 'image/jpeg' | 'image/png' | 'application/pdf';
+  size: number;
+  uploadedAt: ISODateTime;
+  uploadedBy: string;
+}
+
+/** G1 (D-111): GET /files/:id. */
+export interface FileContent {
+  fileId: string;
+  mime: string;
+  fileName: string;
+  dataUrl: string;
 }
 
 export interface MemberLoanRow {
@@ -487,6 +547,8 @@ export interface ChangeRequestInput {
   fields: Array<{ field: ProfileField; newValue: string }>;
   reason: string;
   documentName?: string;
+  /** G1 (D-111): from POST /me/documents. */
+  documentFileId?: string;
 }
 
 // ---- Loans core (ST-20, ST-21, ST-23, MB-03 … MB-05) -------------------------------------------
@@ -780,7 +842,7 @@ export interface DepositDetail {
   member: { id: string; name: string; generalNo: string; departmentName: string; designation: string; mobileMasked: string; fatherName: string };
   /** FD maturity (computed from the request until it is accepted). */
   maturity?: { date: ISODate; value: Paise; totalInterest: Paise; periodicInterest: Paise };
-  payouts: Array<{ date: ISODate; amount: Paise; paid: boolean }>;
+  payouts: Array<{ date: ISODate; amount: Paise; paid: boolean; voucherNo?: string }>;
   ledger: DepositLedgerRow[];
   stages: LoanStage[];
   actions: string[];
@@ -986,6 +1048,38 @@ export interface ReceiptDetail {
   report?: PaymentReport;
 }
 
+/** G1 (D-111): paying a loan off early at the counter, as of today. */
+export interface LoanClosureQuote {
+  loanId: string;
+  loanNo: string;
+  memberId: string;
+  memberName: string;
+  generalNo: string;
+  asOf: ISODate;
+  /** Interest runs from this date (BR-007: end of the last fully paid month, else disbursement). */
+  interestFrom: ISODate;
+  ratePercent: number;
+  principal: Paise;
+  interest: Paise;
+  total: Paise;
+  canClose: boolean;
+  /** Why it cannot close now (unpaid dues on the loan, a demand already certified or with the DDO). */
+  blockers: string[];
+  /** Draft demand sheets this loan's instalment will be taken off. */
+  draftCycles: Cycle[];
+}
+
+export interface LoanClosureInput {
+  mode: 'CASH' | 'BANK_TRANSFER';
+  /** Must equal the quote's total for today. */
+  amount: Paise;
+  denominations?: Partial<Record<500 | 200 | 100 | 50 | 20 | 10, number>>;
+  /** Cash below ₹10 that notes cannot make (an exact closing amount), in paise. */
+  coins?: Paise;
+  reference?: string;
+  remarks?: string;
+}
+
 export interface NewReceiptInput {
   memberId: string;
   purpose: 'DUES' | 'SHARE_CAPITAL' | 'SURETY_RECOVERY';
@@ -1110,8 +1204,11 @@ export interface RoleDashboard {
   recent: Array<{ id: string; ref: string; title: string; subtitle: string; status?: string; entity: 'loan' | 'deposit' | 'membership' | 'receipt'; amount?: Paise; at: ISODate; link: string }>;
 }
 
-export type ReportId = 'dues' | 'defaulters' | 'dept-unpaid' | 'dept-less' | 'maturity' | 'member-ledger' | 'loans-ledger' | 'retirement';
-export type ReportFilterKey = 'cycle' | 'departmentId' | 'minCycles' | 'from' | 'to' | 'scheme' | 'memberId' | 'product' | 'withinMonths';
+export type ReportId =
+  | 'dues' | 'defaulters' | 'dept-unpaid' | 'dept-less' | 'maturity' | 'member-ledger' | 'loans-ledger' | 'retirement'
+  // G2 (D-112) accounting and registers
+  | 'deposits-ledger' | 'shares-ledger' | 'dob-anniversary' | 'receipts-payments' | 'monthly-receipts' | 'monthly-payments' | 'general-ledger' | 'trial-balance' | 'profit-loss' | 'balance-sheet' | 'books';
+export type ReportFilterKey = 'cycle' | 'departmentId' | 'minCycles' | 'from' | 'to' | 'scheme' | 'memberId' | 'product' | 'withinMonths' | 'account' | 'book' | 'asOf' | 'month';
 
 export interface ReportDef {
   id: ReportId | string;
@@ -1159,6 +1256,8 @@ export interface ReportOptions {
   departments: Array<{ id: string; name: string }>;
   products: Array<{ code: LoanProductCode; name: string }>;
   defaulterCycles: number;
+  /** G2 (D-112): ledger heads for the general ledger filter. */
+  accounts?: Array<{ code: string; name: string }>;
 }
 
 /** ST-03 */
@@ -1199,7 +1298,10 @@ export interface OutboxMessage {
   title: string;
   body: string;
   templateKey?: string;
-  status: 'DELIVERED_SIMULATED';
+  /** G5 (D-115): SENT once a real WhatsApp / email provider took it; DELIVERED_SIMULATED with the simulated senders. */
+  status: 'DELIVERED_SIMULATED' | 'SENT';
+  /** Recipients the provider refused (each member's notification shows which). */
+  failed?: number;
 }
 
 export interface StaffTicketRow extends SupportTicket {
@@ -1271,3 +1373,95 @@ export interface SettlementView {
   canExit: boolean;
   canPost: boolean;
 }
+
+// ---- G2 accounts (D-112) ------------------------------------------------------------------------
+
+export type LedgerHeadType = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+
+export interface LedgerHead {
+  code: string;
+  name: string;
+  type: LedgerHeadType;
+  normalSide: 'DEBIT' | 'CREDIT';
+  memberLevel: boolean;
+  active: boolean;
+  description?: string;
+  /** Set on a sub-head the Accountant added. */
+  parentCode?: string;
+}
+
+export interface HeadInput {
+  parentCode: string;
+  name: string;
+}
+
+export interface OfficeVoucher {
+  id: string;
+  voucherNo: string;
+  kind: 'PAYMENT' | 'RECEIPT';
+  date: ISODate;
+  headCode: string;
+  headName: string;
+  amount: Paise;
+  mode: 'CASH' | 'BANK';
+  reference?: string;
+  party: string;
+  narration: string;
+  entryId: string;
+  entryNo: string;
+  /** The journal entry was reversed (the voucher is cancelled). */
+  reversed: boolean;
+  createdByName: string;
+  createdAt: ISODateTime;
+}
+
+export interface OfficeVoucherInput {
+  kind: 'PAYMENT' | 'RECEIPT';
+  date?: ISODate;
+  headCode: string;
+  amount: Paise;
+  mode: 'CASH' | 'BANK';
+  reference?: string;
+  party: string;
+  narration: string;
+}
+
+export type OfficeVoucherList = Paged<OfficeVoucher>;
+
+export interface YearEndStatus {
+  fy: string;
+  from: ISODate;
+  to: ISODate;
+  today: ISODate;
+  /** Years with postings, newest first, plus the current one. */
+  years: string[];
+  closed: null | { closedAt: ISODateTime; closedByName: string; surplus: Paise };
+  income: Paise;
+  expense: Paise;
+  surplus: Paise;
+  interestPosted: null | { entryNo: string; total: Paise };
+  dividend: null | { entryNo: string; ratePercent: number; total: Paise; paid: boolean };
+  canClose: boolean;
+  blockers: string[];
+}
+
+export type InterestScheme = 'SHARE_DEPOSIT' | 'CRD' | 'SRDS';
+
+export interface InterestPreview {
+  fy: string;
+  basis: 'YEAR_END' | 'AVERAGE_MONTH_END';
+  rates: Record<InterestScheme, number>;
+  rows: Array<{ memberId: string; generalNo: string; name: string; scheme: InterestScheme; balance: Paise; interest: Paise }>;
+  totals: Record<InterestScheme, Paise> & { all: Paise };
+  posted: null | { entryNo: string };
+}
+
+export interface DividendPreview {
+  fy: string;
+  ratePercent: number;
+  rows: Array<{ memberId: string; generalNo: string; name: string; shareCapital: Paise; dividend: Paise }>;
+  total: Paise;
+  declared: null | { entryNo: string; ratePercent: number; resolution: string };
+  paid: null | { entryNo: string };
+}
+

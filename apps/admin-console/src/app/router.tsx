@@ -7,6 +7,7 @@ import { NewReceiptPage } from '@/pages/collections/NewReceiptPage';
 import { PaymentsPage } from '@/pages/collections/PaymentsPage';
 import { ReceiptPage } from '@/pages/collections/ReceiptPage';
 import { RecoveryPage } from '@/pages/collections/RecoveryPage';
+import { AuditLogPage } from '@/pages/AuditLogPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { DepositDetailPage } from '@/pages/deposits/DepositDetailPage';
 import { DepositFormPage } from '@/pages/deposits/DepositFormPage';
@@ -29,19 +30,24 @@ import { MembersPage } from '@/pages/members/MembersPage';
 import { ModulePage } from '@/pages/ModulePage';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
 import { AgreementPrintPage, DefaulterNoticePrintPage, FdFormPrintPage, LoanFormPrintPage, MembershipFormPrintPage } from '@/pages/reports/PrintForms';
-import { FdVoucherPrintPage, LoanBondPrintPage } from '@/pages/reports/BondPrints';
+import { FdVoucherPrintPage, LoanBondPrintPage, OfficeVoucherPrintPage } from '@/pages/reports/BondPrints';
+import { AccountsPage } from '@/pages/AccountsPage';
 import { ReportsPage } from '@/pages/reports/ReportsPage';
 import { ReportViewerPage } from '@/pages/reports/ReportViewerPage';
 import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
 import { NoAccessPage, NotFoundPage, RouteErrorPage } from '@/pages/SystemPages';
 import { RequireAuth, RequirePermission } from './guards';
 import { ConsoleShell } from './shell/ConsoleShell';
+import { AccountDeletionPage, PrivacyPage } from '@/pages/PublicPages';
 
-const BUILT = new Set(['dashboard', 'queue', 'design', 'joining', 'members', 'loans', 'deposits', 'demand-sheets', 'payments', 'reports', 'settings']);
+const BUILT = new Set(['dashboard', 'queue', 'design', 'joining', 'members', 'loans', 'deposits', 'demand-sheets', 'payments', 'reports', 'settings', 'audit', 'accounts']);
 
 // Route map mirrors docs/04 §2. Modules render a skeleton page until their milestone (docs/14).
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage />, errorElement: <RouteErrorPage /> },
+  // G4 (D-114): public, linked from the store listings.
+  { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/account-deletion', element: <AccountDeletionPage /> },
   {
     path: '/',
     element: (
@@ -114,9 +120,13 @@ export const router = createBrowserRouter([
           ['reports/print/agreement', <AgreementPrintPage />, 'members.view'],
           ['reports/print/loan-bond', <LoanBondPrintPage />, 'loans.view'],
           ['reports/print/fd-voucher', <FdVoucherPrintPage />, 'deposits.view'],
+          ['reports/print/office-voucher', <OfficeVoucherPrintPage />, 'ledger.view'],
           ['reports/:id', <ReportViewerPage />, 'reports.view'],
           // ST-03 (M9)
           ['notifications', <NotificationsPage />, 'dashboard.view'],
+          // G1 (D-111)
+          ['audit', <AuditLogPage />, 'audit.view'],
+          ['accounts', <AccountsPage />, 'ledger.view'],
         ] as const
       ).map(([path, element, permission]) => ({ path, element: <RequirePermission permission={permission}>{element}</RequirePermission> })),
       {

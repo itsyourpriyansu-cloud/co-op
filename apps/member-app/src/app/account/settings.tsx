@@ -1,15 +1,16 @@
 // MB-14 Settings: where society messages reach you (WhatsApp / Email; in-app is always on),
 // language (English; Telugu is Q-008), and account links. Saving is immediate per switch.
 import { useState } from 'react';
-import { StyleSheet, Switch, View } from 'react-native';
+import { Linking, StyleSheet, Switch, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Mail, MessageCircle, MessageSquareText, Smartphone, type LucideIcon } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import type { MemberPreferences } from '@tgs/types';
+import { consoleUrl } from '@/components/staff';
 import { api } from '@/lib/api';
 import { accountKeys, usePreferences } from '@/lib/account';
-import { Alert, Card, Header, KeyValue, Screen, Section, Skeleton, Tag, Text } from '@/ui';
+import { Alert, Button, Card, Header, KeyValue, Screen, Section, Skeleton, Tag, Text } from '@/ui';
 import { color, radius, space, touchTarget } from '@/theme';
 
 type Channel = keyof MemberPreferences['channels'];
@@ -83,7 +84,7 @@ export default function SettingsScreen() {
             </Card>
             {error ? <Alert type="error" heading="Not saved" description={error} action={error.includes('Profile') ? { text: 'Edit profile', onPress: () => router.push('/profile/edit') } : undefined} /> : null}
             <Text role="caption" tone="tertiary">
-              Demo build: nothing is really sent. The Notifications tab shows where each message would have gone.
+              Everything also appears in the Notifications tab, whichever channels are on.
             </Text>
           </Section>
 
@@ -94,6 +95,11 @@ export default function SettingsScreen() {
                 Telugu is planned once the society confirms the wording.
               </Text>
             </Card>
+          </Section>
+
+          <Section title="Account">
+            <Button text="Privacy notice" buttonType="secondary" fullWidth onPress={() => void Linking.openURL(consoleUrl('/privacy'))} />
+            <Button text="Delete my account" buttonType="secondary" fullWidth onPress={() => router.push('/account/delete')} />
           </Section>
 
         </>

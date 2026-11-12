@@ -124,6 +124,8 @@ export const profileChangeRequests = pgTable(
     fields: jsonb('fields').$type<ProfileFieldChange[]>().notNull(),
     reason: text('reason').notNull(),
     documentName: text('document_name'),
+    /** G1 (D-111): the uploaded proof (files table). */
+    documentFileId: text('document_file_id'),
     route: text('route').$type<ProfileChangeRequest['route']>().notNull(),
     status: text('status').$type<ProfileChangeRequest['status']>().notNull(),
     createdAt: ts('created_at').notNull(),

@@ -1,12 +1,13 @@
 // Staff area guard (D-101, D-106): console roles only, with the same page permissions as the console router.
 import { useEffect, useState } from 'react';
 import { Redirect, Stack, usePathname, type ErrorBoundaryProps } from 'expo-router';
-import { TriangleAlert } from 'lucide-react-native';
+import { LockKeyhole, TriangleAlert } from 'lucide-react-native';
 import { channelForRole, type Permission } from '@tgs/types';
 import { MUST_CHANGE_KEY } from '@/components/staff';
+import { useStaffLock } from '@/lib/appLock';
 import { useAuth } from '@/lib/auth';
 import * as storage from '@/lib/storage';
-import { EmptyState, Screen } from '@/ui';
+import { Button, EmptyState, Screen } from '@/ui';
 import NoAccess from './no-access';
 import { color } from '@/theme';
 
@@ -27,7 +28,9 @@ const ROUTE_PERMISSION: Array<[RegExp, Permission]> = [
 ];
 
 export default function StaffLayout() {
-  const { ready, session, me, meLoading } = useAuth();
+  const { ready, session, me, meLoading, logout } = useAuth();
+  const staffSession = !!session && channelForRole(session.user.role) === 'console';
+  const lock = useStaffLock(ready && staffSession);
   const pathname = usePathname();
   const [mustChange, setMustChange] = useState(false);
   useEffect(() => {
@@ -38,12 +41,26 @@ export default function StaffLayout() {
   if (!ready) return null;
   if (!session || channelForRole(session.user.role) !== 'console') return <Redirect href="/" />;
   if (mustChange) return <Redirect href="/staff-login?change=1" />;
+  // G4 (D-114): after time away the phone's own fingerprint, face or PIN is asked first.
+  if (lock.locked) return <Locked unlock={lock.unlock} signOut={() => void logout()} />;
   // Hold the Stack until the permissions are in: taking a mounted Stack away resets the route to Home.
   if (meLoading) return null;
   const needed = ROUTE_PERMISSION.find(([re]) => re.test(pathname))?.[1];
   if (needed && me && !me.permissions.includes(needed)) return <NoAccess />;
 
   return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg.canvas }, animation: 'slide_from_right' }} />;
+}
+
+/** AU-01m lock: the staff screens after time away. Opens the phone's prompt straight away. */
+function Locked({ unlock, signOut }: { unlock: () => Promise<boolean>; signOut: () => void }) {
+  useEffect(() => {
+    void unlock();
+  }, [unlock]);
+  return (
+    <Screen footer={<Button text="Sign out instead" buttonType="secondary" fullWidth onPress={signOut} />}>
+      <EmptyState icon={LockKeyhole} title="Staff screens locked" description="Unlock with your fingerprint, face or phone PIN. Locked after 5 minutes away." action={{ text: 'Unlock', onPress: () => void unlock() }} />
+    </Screen>
+  );
 }
 
 /** SYS-03m: a screen crashed. */

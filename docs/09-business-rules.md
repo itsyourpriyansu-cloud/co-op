@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.17 · 2026-11-12 · BR-050 personal data (G7, D-117). v0.16: BR-049 go-live data import (G6, D-116). v0.15: BR-048 app security and versions (G4, D-114). v0.14: BR-044 office vouchers, BR-045 annual interest, BR-046 dividend, BR-047 year close and lock (G2, D-112). v0.13: BR-040 … BR-043 (G1, D-111).
 > Version 0.12 · 2026-11-06 · BR-039 final settlement (D-098).
 > Version 0.11 · 2026-11-05 · BR-038 surety recovery (D-097).
 > Version 0.10 · 2026-11-05 · BR-037 working days, BR-012 placeholder rate (D-093).
@@ -269,3 +270,63 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand �
 - Owed: each loan's outstanding principal plus interest from the last paid instalment to the leaving date, penal, other unpaid demand items, surety dues. Held: share capital, share deposit, CRD / SRDS, FDs (early-withdrawal value before maturity).
 - Net owed is recovered from the gratuity through the pay office (F5 / F6); net held is paid to the member, or to the nominee after a death.
 - Posted once the money has moved, offset (net) or in full; one balanced ledger entry; loans, deposits and shares close.
+
+## G1 rules (D-111)
+
+### BR-040 Early loan closure [P] (D-111)
+- A borrower may close an ACTIVE loan at any time by paying **outstanding principal + interest from the last interest charge to today** (`calculateLoanClosure` in `packages/domain`, the same daily interest as BR-039). No pre-closure charge; if the society wants one it becomes a setting.
+- Refused while the loan has unpaid instalments on a posted sheet (take them as dues first) or while it is on a sheet that is CERTIFIED or SENT_TO_DDO (wait for that recovery to post).
+- Paid at the counter by Cashier or Accountant, cash (notes + coins under ₹10) or bank (reference required); the amount must equal the quote. The loan is taken off any draft (GENERATED) sheet, the receipt is `LOAN_CLOSURE`, the ledger gets Dr cash/bank, Cr loan principal, Cr interest income; open surety recoveries close as borrower paid.
+
+### BR-041 FD periodic interest payout [A] FD schedule / [P] (D-111)
+- An FD with monthly, quarterly, half-yearly or yearly payout is paid each period on the dates of `fdPayoutSchedule`. The daily job (with FD maturity) pays every period that has fallen due and is not yet paid: Dr FD interest expense, Cr bank, an F10 voucher (`INTEREST`) and a message to the member. At maturity only the principal is left to pay.
+
+### BR-042 A money form is saved once [P] (D-111)
+- Forms that create money records (counter receipt, loan closure, FD at the counter) send one `Idempotency-Key` per form. A repeat with the same key and body returns the first answer; a different body with the same key, or a repeat while the first is still running, is refused.
+
+### BR-043 Documents [PF] membership form / [P] (D-111)
+- JPEG, PNG or PDF, checked by the file's first bytes, at most `DOCUMENT_MAX_BYTES` (5 MB). Stored encrypted; a new upload is a new file. The owner and staff who may see members or applications open them; a DDO only for their own department; opening someone else's file is audited.
+- A joining form's documents must be files the applicant uploaded; they move to the member record on admission. A profile change request may carry one uploaded proof.
+
+## G2 rules (D-112)
+
+### BR-044 Office vouchers and the chart of accounts [P] (D-112)
+- Main heads are fixed because the modules post to them. Under an income or expense main head the Accountant may add up to 99 sub-heads (`5800.01` …), rename them, and close or reopen them; a closed head takes no new voucher.
+- A **payment voucher** (office expense) posts Dr the expense head, Cr cash or bank; a **receipt voucher** (other income) posts Dr cash or bank, Cr the income head. Bank needs a cheque or transfer reference. Numbered `PV-YYYY-NNNN` / `RV-YYYY-NNNN`, one Idempotency-Key per form (BR-042). Mistakes are corrected by reversing the entry, never by editing.
+
+### BR-045 Annual interest on share deposit, CRD and SRDS [A] deposit heads / [P] rates (D-112)
+- Rates are settings: `shareDepositRatePercent` (PLACEHOLDER 6), the CRD and SRDS rates already in Settings → Deposits. Balance basis `depositInterestBasis` (PLACEHOLDER `YEAR_END`): the member's balance on the last day of the financial year, or `AVERAGE_MONTH_END` (average of the twelve month-end balances). Formula `annualDepositInterest` in `packages/domain`, rounded to the paisa.
+- Credited once per financial year, after it ends, dated the last day of the year: Dr interest on share deposit (5210) / interest on deposits (5200), Cr each member's share deposit / CRD / SRDS. A preview lists every member first.
+
+### BR-046 Dividend on share capital [A] / [P] (D-112)
+- Declared only after the year is closed (it comes out of the surplus), at the rate the general body approved, with the resolution reference. Each member's share capital on the last day of the year × rate (`dividendOn`): Dr surplus (3300), Cr dividend payable (2500) per member. Paid later in one bank entry: Dr dividend payable, Cr bank. Each step once per year.
+
+### BR-047 Financial year close and lock [A] audit / [P] (D-112)
+- The financial year starts in the month set by `financialYearStartMonth` (April). A year can be closed only after its last day, only once, and in order (an earlier year with postings must be closed first).
+- Closing posts one entry dated the last day: every income head Dr, every expense head Cr, the difference to surplus / deficit (3300) (`yearCloseLines`). From then on **no entry may be dated on or before that day** (`LED-CLOSED`); corrections go in the open year.
+- Interest (BR-045) should be credited before closing; the screen warns but does not stop it.
+
+## G4 rules (D-114)
+
+### BR-048 App security, versions and account deletion [P] (D-114)
+- **Staff lock:** the staff screens ask for the phone's own fingerprint, face or PIN on every cold start and after 5 minutes in the background (`LOCK_AFTER_MS`). A phone with no screen lock cannot be asked. There, the shorter staff sign-in is the guard: staff refresh tokens last `STAFF_REFRESH_TOKEN_TTL_DAYS` (7) days without use, members' last `REFRESH_TOKEN_TTL_DAYS` (30).
+- **Oldest version allowed:** `minAppVersion` (Settings → General, default `0.0.0`). An app older than it shows only an update screen (`isAppVersionAllowed`, numeric per part). It is read without sign-in, and the check fails open when the server cannot be reached.
+- **Account deletion:** a member asks in the app (a member question, category APP) or at the office. The office closes the app sign-in and removes app-only data within 30 days. Membership, loan, deposit, share and payment records, with the signed forms, are kept as the society's audit and the law require.
+- **Push:** every in-app notification also goes as a push to each phone the recipient is signed in on. A token belongs to whoever signed in last on that phone. Sign-out removes it, and a token the push service reports as unregistered is deleted.
+- **Store review:** one fictional member's mobile (`STORE_REVIEW_MOBILE`) signs in with a fixed code (`STORE_REVIEW_OTP`) that is never sent. It is set only during a store review.
+
+## G6 rules (D-116)
+
+### BR-049 Bringing the old books in at go-live [P] (D-116)
+- **Order:** members (with share capital and share deposit) → deposits → loans → other opening balances → reconciliation. Every file is checked row by row and nothing is written unless all rows pass.
+- **Loans:** only running loans (outstanding > 0) come in, as ACTIVE, with their sureties (ACCEPTED) and, for a loan against a deposit, the pledged FD. The schedule is worked out fresh: the outstanding over the instalments left at the loan's rate with the product's EMI method, first due the month after the as-on date. If the register gives an EMI, it must agree with that schedule within ₹1. Interest is taken as paid up to the as-on date.
+- **Deposits:** FDs come in with principal, tenure, rate and payout; maturity is worked out with BR-F4 rules, and an FD that matured before the as-on date is settled in the old books first. CRD / SRDS: one account per member with its balance; the monthly amount defaults to the setting.
+- **Register numbers** are kept as printed, but may not look like numbers the system gives (LN-, APP-, SL-, FD-, FDR-, REQ-).
+- **Opening entries:** every member balance and the other heads are posted against 3900 Opening balance difference. When the imports agree with the society's trial balance, every head matches and 3900 is nil; the reconciliation (`db:import reconcile`) shows any head that differs.
+
+## G7 rules (D-117)
+
+### BR-050 Personal data (DPDP Act 2023) [P] (D-117)
+- **Consent:** a membership application cannot be signed without the Privacy notice and consent agreement (`PN-2026.1`); the version is kept on the signature. A new notice version means a new constant and, for members, a new reading in the app.
+- **Retention:** `applicantDataRetentionMonths` (placeholder 12). A REJECTED or WITHDRAWN application not changed for that long is erased by the daily housekeeping: the application, its files (rows and blobs), the applicant's app sign-in, tokens and notifications. One audit line with the application number remains. Member records are not erased; they are kept as the accounts and the law require.
+

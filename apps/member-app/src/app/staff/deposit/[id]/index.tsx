@@ -126,6 +126,7 @@ function Body({ d, refetching, refetch }: { d: DepositDetail; refetching: boolea
             <View key={p.date} style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
               <Text role="body" style={{ flex: 1 }}>
                 {formatDisplayDate(p.date)} · {formatINR(p.amount)}
+                {p.voucherNo ? ` · ${p.voucherNo}` : ''}
               </Text>
               <Tag text={p.paid ? 'Paid' : 'Due'} color={p.paid ? 'success' : 'neutral'} size="xs" />
             </View>
@@ -191,7 +192,7 @@ function Body({ d, refetching, refetch }: { d: DepositDetail; refetching: boolea
 
       <View style={{ gap: space[3] }}>
         {dep.fdrNo ? <PrintButton text="FDR" path={`/deposits/${dep.id}/fdr`} /> : null}
-        {dep.vouchers?.map((v) => <PrintButton key={v.no} text={`Voucher ${v.no}`} path={`/reports/print/fd-voucher?deposit=${dep.id}&vr=${v.no}`} />)}
+        {dep.vouchers?.filter((v) => v.kind !== 'INTEREST').map((v) => <PrintButton key={v.no} text={`Voucher ${v.no}`} path={`/reports/print/fd-voucher?deposit=${dep.id}&vr=${v.no}`} />)}
       </View>
     </Screen>
   );

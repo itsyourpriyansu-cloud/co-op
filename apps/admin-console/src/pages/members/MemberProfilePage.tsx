@@ -28,13 +28,14 @@ import {
   addSnackbarV2,
 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR, REQUIRED_DOCUMENTS } from '@tgs/domain';
 import type { MemberDetail, MemberLoanRow } from '@tgs/types';
 import { Money } from '@/components/Money';
 import { Panel } from '@/components/Panel';
 import { StatusTag } from '@/components/StatusTag';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
+import { openFile } from '@/lib/files';
 import { cn } from '@/lib/utils';
 import { changeValue, EVENT_META, fieldLabel, MANDATE_LABEL, retiringLabel } from './members';
 import { TransferDrawer } from './TransferDrawer';
@@ -263,26 +264,80 @@ function LedgerTab({ d }: { d: MemberDetail }) {
 }
 
 function DocumentsTab({ d }: { d: MemberDetail }) {
+  const qc = useQueryClient();
+  const [type, setType] = useState(REQUIRED_DOCUMENTS[0]!.type);
+  const [error, setError] = useState<string>();
+  const upload = useMutation({
+    mutationFn: async (file: File) => {
+      const data = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.onerror = () => reject(new Error('Could not read the file.'));
+        r.readAsDataURL(file);
+      });
+      return api.documents.uploadFor(d.member.id, { type, fileName: file.name, data });
+    },
+    onMutate: () => setError(undefined),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['member'] }),
+    onError: (e) => setError(isApiError(e) ? (e.fieldErrors?.data ?? e.message) : 'Upload failed. Try again.'),
+  });
   return (
-    <ul className="grid gap-3 sm:grid-cols-2">
-      {d.documents.map((doc) => {
-        const Icon = doc.type === 'PHOTO' ? FileImage : FileText;
-        return (
-          <li key={doc.type} className="flex items-center gap-3 rounded-card border border-line px-4 py-3">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-brand-subtle text-brand-text">
-              <Icon size={20} strokeWidth={1.75} aria-hidden />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-label text-fg">{doc.label}</p>
-              <p className="truncate text-caption text-fg-tertiary">
-                {doc.fileName} · {formatDisplayDate(doc.uploadedOn)} · {doc.uploadedBy}
-              </p>
-            </div>
-          </li>
-        );
-      })}
-      <li className="text-caption text-fg-tertiary sm:col-span-2">Prototype: documents are simulated, so there is no preview or download.</li>
-    </ul>
+    <div className="flex flex-col gap-4">
+      {d.documents.length === 0 ? (
+        <p className="text-caption text-fg-tertiary">No documents on file. Papers from before the app are in the office file.</p>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {d.documents.map((doc) => {
+            const Icon = doc.mime.startsWith('image/') ? FileImage : FileText;
+            return (
+              <li key={doc.fileId} className="flex items-center gap-3 rounded-card border border-line px-4 py-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-brand-subtle text-brand-text">
+                  <Icon size={20} strokeWidth={1.75} aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-label text-fg">{doc.label}</p>
+                  <p className="truncate text-caption text-fg-tertiary">
+                    {doc.fileName} · {formatDisplayDate(doc.uploadedOn)} · {doc.uploadedBy}
+                  </p>
+                </div>
+                <ButtonV2 text="Open" size={ButtonV2Size.SMALL} buttonType={ButtonV2Type.SECONDARY} onClick={() => void openFile(doc.fileId)} />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {d.can.edit && (
+        <div className="flex flex-wrap items-end gap-3 rounded-card border border-dashed border-line px-4 py-3">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-label text-fg">Document</span>
+            <select className="h-10 rounded-control border border-line bg-surface px-3 text-body text-fg" value={type} onChange={(e) => setType(e.target.value as typeof type)}>
+              {REQUIRED_DOCUMENTS.map((x) => (
+                <option key={x.type} value={x.type}>
+                  {x.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-label text-fg">File (JPEG, PNG or PDF, up to 5 MB)</span>
+            <input
+              type="file"
+              aria-label="Document file"
+              accept="image/jpeg,image/png,application/pdf"
+              disabled={upload.isPending}
+              className="text-body text-fg"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (f) upload.mutate(f);
+              }}
+            />
+          </label>
+          {upload.isPending && <span className="text-caption text-fg-secondary">Uploading…</span>}
+          {error && <p className="w-full text-caption text-danger-fg">{error}</p>}
+        </div>
+      )}
+    </div>
   );
 }
 

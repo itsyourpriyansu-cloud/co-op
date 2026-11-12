@@ -43,8 +43,8 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post('/auth/otp/verify', { config: strict, schema: { tags, summary: 'Member App: sign in (or sign up) with the code', body: otpVerifyBody, response: { 200: sessionSchema } } }, controller.otpVerify);
 
   app.post('/auth/refresh', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } }, schema: { tags, summary: 'Swap a refresh token for new tokens (rotation)', body: refreshBody, response: { 200: sessionSchema } } }, controller.refresh);
-  app.post('/auth/logout', { preHandler: requireAuth, schema: { tags, summary: 'End this sign-in', security: secured, body: logoutBody, response: { 200: okSchema } } }, controller.logout);
-  app.get('/me', { preHandler: requireAuth, schema: { tags, summary: 'Signed-in user, channel and permissions', security: secured, response: { 200: meSchema } } }, controller.me);
+  app.post('/auth/logout', { onRequest: requireAuth, schema: { tags, summary: 'End this sign-in', security: secured, body: logoutBody, response: { 200: okSchema } } }, controller.logout);
+  app.get('/me', { onRequest: requireAuth, schema: { tags, summary: 'Signed-in user, channel and permissions', security: secured, response: { 200: meSchema } } }, controller.me);
 
   // Demo sign-in: answers 404 when DEMO_MODE is off (always off in production).
   app.get('/__demo/personas', { schema: { tags: ['demo'], summary: 'Demo personas for one-click sign-in', querystring: personasQuery, response: { 200: z.array(personaSchema) } } }, controller.personas);

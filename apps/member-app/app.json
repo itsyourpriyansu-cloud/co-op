@@ -28,14 +28,6 @@
       "expo-router",
       "expo-status-bar",
       "expo-secure-store",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "usesCleartextTraffic": true
-          }
-        }
-      ],
       "expo-font",
       [
         "expo-splash-screen",

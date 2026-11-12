@@ -68,7 +68,7 @@ describe('members (P4a)', () => {
     expect(d.member).toMatchObject({ id: lakshmi.id, generalNo: '1101', mobile: lakshmi.mobile });
     expect(d.serviceEvents.length).toBeGreaterThan(0);
     expect(d.mandate).toMatchObject({ memberId: lakshmi.id });
-    expect(d.documents.length).toBeGreaterThan(0);
+    expect(d.documents).toEqual([]); // G1 (D-111): only real uploads are listed; seeded members have none
     expect(d.can).toMatchObject({ edit: true, transfer: true, seeFullMobile: true });
     // A DDO sees the masked mobile, and nothing outside their department.
     expect((await get(`/members/${lakshmi.id}`, ddoFin)).json().member.mobile).toBe(lakshmi.mobileMasked);

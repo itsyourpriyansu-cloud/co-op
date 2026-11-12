@@ -25,5 +25,7 @@ export class NotificationsController {
   preferences = (r: FastifyRequest) => this.service.myPreferences(sessionOf(r));
   savePreferences = (r: FastifyRequest) => this.service.savePreferences(sessionOf(r), (r.body ?? {}) as Partial<MemberPreferences>);
   support = (r: FastifyRequest) => this.service.support(sessionOf(r));
+  registerPush = (r: FastifyRequest) => this.service.registerPush(sessionOf(r), (r.body ?? {}) as { token?: string; platform?: string });
+  removePush = (r: FastifyRequest) => this.service.removePush(sessionOf(r), (r.body ?? {}) as { token?: string });
   ask = (r: FastifyRequest) => this.service.ask(r, (r.body ?? {}) as { subject?: string; message?: string; category?: SupportTicket['category'] });
 }

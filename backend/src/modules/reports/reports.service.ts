@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
 import { businessCycle, businessNow, businessToday } from '../../common/utils/business-date';
+import { accountingReport } from './accounting-reports';
 
 // ST-50 catalogue (docs/13 §5, REQ-060…081). shortcut: copied from the mock's; the mock copy goes in P9.
 export const REPORTS: ReportDef[] = [
@@ -14,23 +15,20 @@ export const REPORTS: ReportDef[] = [
   { id: 'defaulter-notice', group: 'Collections', title: 'Defaulter notice', reqId: 'REQ-066', kind: 'print', available: true, filters: ['memberId'], printLink: '/reports/print/defaulter-notice', description: 'Printable letter on the letterhead asking a member to clear the overdue amount.' },
   { id: 'loans-ledger', group: 'Loans', title: 'Loans ledger', reqId: 'REQ-067', kind: 'table', available: true, filters: ['product', 'departmentId', 'from', 'to'], description: 'Each loan with sanctioned amount, recoveries and outstanding, by loan type.' },
   { id: 'maturity', group: 'Deposits & Shares', title: 'Maturity report', reqId: 'REQ-064', kind: 'table', available: true, filters: ['from', 'to', 'scheme'], description: 'Fixed deposits maturing in a date range, by month.' },
-  { id: 'deposits-ledger', group: 'Deposits & Shares', title: 'Deposits ledger', reqId: 'REQ-068', kind: 'table', available: false, filters: [], description: 'Every deposit transaction by account.', note: 'P2, after the MVP.' },
-  { id: 'shares-ledger', group: 'Deposits & Shares', title: 'Shares ledger', reqId: 'REQ-069', kind: 'table', available: false, filters: [], description: 'Share capital and share deposit movements per member.', note: 'P2, after the MVP.' },
+  { id: 'deposits-ledger', group: 'Deposits & Shares', title: 'Deposits ledger', reqId: 'REQ-068', kind: 'table', available: true, filters: ['scheme', 'from', 'to'], description: 'Every FD, CRD and SRDS transaction in the books, by scheme.' },
+  { id: 'shares-ledger', group: 'Deposits & Shares', title: 'Shares ledger', reqId: 'REQ-069', kind: 'table', available: true, filters: ['from', 'to'], description: 'Share capital and share deposit movements per member.' },
   { id: 'member-ledger', group: 'Members', title: 'Member-wise ledger', reqId: 'REQ-065', kind: 'table', available: true, filters: ['memberId', 'from', 'to'], description: 'One member, month by month and head by head, with the running unpaid balance.' },
   { id: 'retirement', group: 'Members', title: 'Retirement report', reqId: 'REQ-073', kind: 'table', available: true, filters: ['withinMonths', 'departmentId'], description: 'Members retiring soon, what they still owe and the loans they stand surety for.' },
-  { id: 'dob-anniversary', group: 'Members', title: 'Birthdays & anniversaries', reqId: 'REQ-074', kind: 'table', available: false, filters: [], description: 'Member birthdays and wedding anniversaries this month.', note: 'P2, after the MVP.' },
-  ...(
-    [
-      ['receipts-payments', 'Receipts & payments', 'REQ-070'],
-      ['monthly-receipts', 'Month-wise receipts', 'REQ-071'],
-      ['monthly-payments', 'Month-wise payments', 'REQ-072'],
-      ['general-ledger', 'General ledger', 'REQ-075'],
-      ['trial-balance', 'Trial balance', 'REQ-076'],
-      ['profit-loss', 'Profit & loss', 'REQ-077'],
-      ['balance-sheet', 'Balance sheet', 'REQ-078'],
-      ['books', 'Day, cash & bank book', 'REQ-079…081'],
-    ] as const
-  ).map(([id, title, reqId]) => ({ id, title, reqId, group: 'Cash & Accounts' as const, kind: 'table' as const, available: false, filters: [] as ReportFilterKey[], description: 'Accounting statement.', note: 'Needs the accounting module (Q-401).' })),
+  { id: 'dob-anniversary', group: 'Members', title: 'Birthdays & anniversaries', reqId: 'REQ-074', kind: 'table', available: true, filters: ['month', 'departmentId'], description: 'Member birthdays and years with the society, for one month.' },
+  // G2 (D-112): the accounting statements, from the journal.
+  { id: 'books', group: 'Cash & Accounts', title: 'Day, cash & bank book', reqId: 'REQ-079…081', kind: 'table', available: true, filters: ['book', 'from', 'to'], description: 'Every entry of each day, or the cash or bank account with its running balance.' },
+  { id: 'general-ledger', group: 'Cash & Accounts', title: 'General ledger', reqId: 'REQ-075', kind: 'table', available: true, filters: ['account', 'from', 'to'], description: 'One account: opening balance, every entry and the running balance.' },
+  { id: 'trial-balance', group: 'Cash & Accounts', title: 'Trial balance', reqId: 'REQ-076', kind: 'table', available: true, filters: ['asOf'], description: 'Every account with its debit or credit balance; the two columns agree.' },
+  { id: 'profit-loss', group: 'Cash & Accounts', title: 'Profit & loss', reqId: 'REQ-077', kind: 'table', available: true, filters: ['from', 'to'], description: 'Income and expenditure for a period and the surplus or deficit.' },
+  { id: 'balance-sheet', group: 'Cash & Accounts', title: 'Balance sheet', reqId: 'REQ-078', kind: 'table', available: true, filters: ['asOf'], description: 'Capital, liabilities and assets on a date.' },
+  { id: 'receipts-payments', group: 'Cash & Accounts', title: 'Receipts & payments', reqId: 'REQ-070', kind: 'table', available: true, filters: ['from', 'to'], description: 'Money in and out of cash and bank by head, with opening and closing balances.' },
+  { id: 'monthly-receipts', group: 'Cash & Accounts', title: 'Month-wise receipts', reqId: 'REQ-071', kind: 'table', available: true, filters: ['from', 'to'], description: 'Cash and bank receipts by head, month by month.' },
+  { id: 'monthly-payments', group: 'Cash & Accounts', title: 'Month-wise payments', reqId: 'REQ-072', kind: 'table', available: true, filters: ['from', 'to'], description: 'Cash and bank payments by head, month by month.' },
 ];
 
 const HEADS: Array<{ head: DemandHead; label: string }> = [
@@ -47,7 +45,10 @@ const HEADS: Array<{ head: DemandHead; label: string }> = [
 const HEAD_LABEL = Object.fromEntries(HEADS.map((h) => [h.head, h.label])) as Record<DemandHead, string>;
 const PAY_TO = { accountName: 'TGSECCSL Dues Collection', accountNo: 'XXXXXXXX3307', ifsc: 'DEMO0000929', upi: 'tgseccsl.dues@demo', counter: 'Society cash counter, 2nd Floor, West Ancillary Building' };
 const DEFAULT_NOTICE = 'Our records show that {overdue} due to the society from your salary deductions has not been recovered in full for {cycles} month(s), as detailed below. Please pay this amount at the society counter or by bank transfer within 15 days of this notice, and report the payment in the member app. If the amount is not paid, the society will recover it from your salary and, where applicable, from your sureties as per the bye-laws and your agreement with the society.';
-const FILTER_KEYS: ReportFilterKey[] = ['cycle', 'departmentId', 'minCycles', 'from', 'to', 'scheme', 'memberId', 'product', 'withinMonths'];
+const FILTER_KEYS: ReportFilterKey[] = ['cycle', 'departmentId', 'minCycles', 'from', 'to', 'scheme', 'memberId', 'product', 'withinMonths', 'account', 'book', 'asOf', 'month'];
+/** G2: read from the journal, so they need `ledger.view` as well (not for DDOs). */
+const LEDGER_REPORTS = new Set(['books', 'general-ledger', 'trial-balance', 'profit-loss', 'balance-sheet', 'receipts-payments', 'monthly-receipts', 'monthly-payments', 'deposits-ledger', 'shares-ledger']);
+const ACCOUNTING_REPORTS = new Set([...LEDGER_REPORTS, 'dob-anniversary']);
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 const allocated = (cs: Array<{ allocated: number }>) => sum(cs.map((c) => c.allocated));
@@ -84,12 +85,14 @@ export class ReportsService {
       departments: departments.map((d) => ({ id: d.id, name: d.name })),
       products: products.map((p) => ({ code: p.code, name: p.name })),
       defaulterCycles: settings.defaulterCycles,
+      accounts: (await this.app.ledger.repo.accounts()).map((a) => ({ code: a.code, name: a.name })),
     };
   }
 
   async catalogue(user: SessionUser): Promise<{ reports: ReportDef[]; options: ReportOptions }> {
     await this.requireView(user);
-    return { reports: REPORTS, options: await this.options() };
+    const ledger = await this.app.permissions.has(user.role, 'ledger.view');
+    return { reports: REPORTS.filter((r) => ledger || !LEDGER_REPORTS.has(r.id)), options: await this.options() };
   }
 
   async run(request: FastifyRequest, id: string, query: Record<string, string | undefined>): Promise<ReportResult> {
@@ -97,6 +100,7 @@ export class ReportsService {
     await this.requireView(user);
     const def = REPORTS.find((r) => r.id === id);
     if (!def || !def.available || def.kind !== 'table') fail('NOT_FOUND', 'This report is not available.');
+    if (LEDGER_REPORTS.has(id) && !(await this.app.permissions.has(user.role, 'ledger.view'))) fail('FORBIDDEN', 'This statement is for the society office.');
     const params: Params = {};
     for (const k of FILTER_KEYS) if (query[k]) params[k] = query[k];
     const [today, cycleNow, now, options, members, departments, lines, loans, deposits, products] = await Promise.all([
@@ -123,6 +127,15 @@ export class ReportsService {
     const posted = (upTo: Cycle) => lines.filter((l) => l.status === 'RECOVERY_POSTED' && l.cycle <= upTo && inDept(l.memberId));
     let columns: ReportColumn[] = [];
     let groups: ReportResult['groups'] = [];
+    let fixedTotals: Record<string, number> | undefined;
+    if (ACCOUNTING_REPORTS.has(id)) {
+      const b = await accountingReport(this.app, id, params, today, members.filter((m) => inDept(m.id)));
+      ({ columns, groups } = b);
+      Object.assign(filters, b.filters);
+      labels.unshift(...b.labels);
+      Object.assign(links, b.links);
+      fixedTotals = b.totals;
+    }
 
     switch (id as ReportId) {
       case 'dues': {
@@ -347,7 +360,7 @@ export class ReportsService {
     }
 
     const all = groups.flatMap((g) => g.rows);
-    const result: ReportResult = { def: def!, asOf: today, generatedAt: now, filters, filterLabels: labels, columns, groups, totals: totalsOf(all, columns), rowCount: all.length, links };
+    const result: ReportResult = { def: def!, asOf: today, generatedAt: now, filters, filterLabels: labels, columns, groups, totals: fixedTotals ?? totalsOf(all, columns), rowCount: all.length, links };
     await this.app.audit.record(request, { action: 'run', entity: 'report', entityId: id, summary: `Ran ${def!.title} (${result.rowCount} rows)` });
     return result;
   }

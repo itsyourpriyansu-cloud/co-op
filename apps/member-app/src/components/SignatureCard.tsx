@@ -9,22 +9,12 @@ import { FileUp } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import { formatDisplayDateTime } from '@tgs/domain';
 import { api } from '@/lib/api';
+import { readBase64 } from '@/lib/files';
 import { Alert, Button, Card, Skeleton, Text } from '@/ui';
 import { radius, space } from '@/theme';
 
 export const signatureKey = ['my-signature'] as const;
 const MAX_BYTES = 200 * 1024;
-
-/** The picked file's bytes as base64 (web: the File; native: the local file). */
-async function readBase64(asset: ImagePicker.ImagePickerAsset): Promise<string> {
-  const blob = (asset as { file?: Blob }).file ?? (await (await fetch(asset.uri)).blob());
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).replace(/^data:[^,]*,/, ''));
-    r.onerror = () => reject(new Error('Could not read the file.'));
-    r.readAsDataURL(blob);
-  });
-}
 
 export function SignatureCard({ purpose }: { purpose?: string }) {
   const qc = useQueryClient();

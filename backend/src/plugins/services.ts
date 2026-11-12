@@ -22,6 +22,10 @@ import { ProfileChangesService } from '../modules/profile-changes/profile-change
 import { MastersService } from '../modules/masters/masters.service';
 import { SignaturesService } from '../modules/signatures/signatures.service';
 import { databaseFileStore } from '../integrations/file-store';
+import { azureBlob } from '../integrations/azure-blob';
+import { DocumentsService } from '../modules/documents/documents.service';
+import { AccountsService } from '../modules/accounts/accounts.service';
+import { AccountsRepository } from '../modules/accounts/accounts.repository';
 import { NotificationsRepository } from '../modules/notifications/notifications.repository';
 import { NotificationsService } from '../modules/notifications/notifications.service';
 
@@ -46,6 +50,10 @@ declare module 'fastify' {
     notifications: NotificationsService;
     /** F-01 (D-096): signatures, encrypted in the file store. */
     signatures: SignaturesService;
+    /** G1 (D-111): joining and member documents, same encrypted store. */
+    documents: DocumentsService;
+    /** G2 (D-112): office vouchers, sub-heads, year end. */
+    accounts: AccountsService;
   }
 }
 
@@ -54,7 +62,10 @@ export const servicesPlugin = fp(
   async (app) => {
     app.decorate('masters', new MastersService(app, new MastersRepository(app.db)));
     app.decorate('notifications', new NotificationsService(app, new NotificationsRepository(app.db)));
-    app.decorate('signatures', new SignaturesService(app, databaseFileStore(app.db, app.env.DATA_ENCRYPTION_KEY)));
+    const { FILE_STORE, AZURE_STORAGE_ACCOUNT: account, AZURE_STORAGE_CONTAINER: container, AZURE_CLIENT_ID: clientId } = app.env;
+    const fileStore = databaseFileStore(app.db, app.env.DATA_ENCRYPTION_KEY, FILE_STORE === 'azure-blob' ? azureBlob({ account, container, clientId }) : undefined);
+    app.decorate('signatures', new SignaturesService(app, fileStore));
+    app.decorate('documents', new DocumentsService(app, fileStore));
     app.decorate('ledger', new LedgerService(app, new LedgerRepository(app.db)));
     app.decorate('departments', new DepartmentsService(app, new DepartmentsRepository(app.db)));
     app.decorate('appAccounts', new AppAccountsService(app, new AuthRepository(app.db)));
@@ -66,6 +77,7 @@ export const servicesPlugin = fp(
     app.decorate('loanWorkflow', new LoanWorkflowService(app, loans));
     app.decorate('deposits', new DepositsService(app, new DepositsRepository(app.db)));
     app.decorate('collections', new CollectionsService(app, new CollectionsRepository(app.db)));
+    app.decorate('accounts', new AccountsService(app, new AccountsRepository(app.db)));
   },
   { name: 'services', dependencies: ['db', 'auth'] },
 );
