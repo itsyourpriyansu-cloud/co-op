@@ -1,6 +1,6 @@
 // Form fields (native mirrors of Blend TextInputV2 / SingleSelectV2): label above, hint below,
 // error replaces hint, 48 dp targets, required marker (docs/12 §5, docs/18 §7).
-import { useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { FlatList, Modal, Platform, Pressable, StyleSheet, TextInput, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
 import { Check, ChevronDown, Search, X } from 'lucide-react-native';
 import { parseISODate, toISODate } from '@tgs/domain';
@@ -178,33 +178,37 @@ export function SelectField({ label, required, hint, error, value, options, onCh
   );
 }
 
-/** 6-box OTP entry backed by one hidden input (autofill + paste friendly). */
+/**
+ * 6-box OTP entry backed by one invisible input laid over the boxes (autofill + paste friendly).
+ * A tap lands on the input itself, so the keypad opens even when the keyboard was dismissed while
+ * the input still held focus (calling focus() then does nothing on Android).
+ */
 export function OtpInput({ value, onChange, error, length = 6 }: { value: string; onChange: (v: string) => void; error?: string; length?: number }) {
-  const ref = useRef<ComponentRef<typeof TextInput>>(null);
   return (
     <View style={{ gap: space[4] }}>
-      <Pressable onPress={() => ref.current?.focus()} style={styles.otpRow} accessibilityLabel="One-time password">
+      <View style={styles.otpRow}>
         {Array.from({ length }, (_, i) => {
           const ch = value[i] ?? '';
           const active = i === Math.min(value.length, length - 1);
           return (
-            <View key={i} style={[styles.otpBox, active && styles.focused, !!error && styles.errored]}>
+            <View key={i} pointerEvents="none" style={[styles.otpBox, active && styles.focused, !!error && styles.errored]}>
               <Text role="metricSm">{ch}</Text>
             </View>
           );
         })}
-      </Pressable>
-      <TextInput
-        ref={ref}
-        value={value}
-        onChangeText={(t) => onChange(t.replace(/\D/g, '').slice(0, length))}
-        keyboardType="number-pad"
-        textContentType="oneTimeCode"
-        autoComplete="sms-otp"
-        autoFocus
-        maxLength={length}
-        style={styles.hidden}
-      />
+        <TextInput
+          accessibilityLabel="One-time password"
+          value={value}
+          onChangeText={(t) => onChange(t.replace(/\D/g, '').slice(0, length))}
+          keyboardType="number-pad"
+          textContentType="oneTimeCode"
+          autoComplete="sms-otp"
+          autoFocus
+          caretHidden
+          maxLength={length}
+          style={styles.otpInput}
+        />
+      </View>
       {error ? (
         <Text role="caption" tone="danger" accessibilityLiveRegion="polite">
           {error}
@@ -240,5 +244,5 @@ const styles = StyleSheet.create({
   option: { minHeight: touchTarget + 8, flexDirection: 'row', alignItems: 'center', gap: space[6], paddingHorizontal: space[8] },
   otpRow: { flexDirection: 'row', gap: space[4], justifyContent: 'space-between' },
   otpBox: { flex: 1, height: 56, borderRadius: radius.control, borderWidth: 1, borderColor: color.border.strong, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg.surface },
-  hidden: { position: 'absolute', opacity: 0, height: 1, width: 1 },
+  otpInput: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0, color: 'transparent' },
 });

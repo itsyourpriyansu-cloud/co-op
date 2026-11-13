@@ -144,6 +144,27 @@ export class NotificationsService {
    * An in-app notification by template (ST-63) to a member or staff user; a member also gets it on
    * each other channel of the template they switched on (MB-14). Undefined when the template is missing.
    */
+  /**
+   * Work has reached a staff stage (docs/10): every active user of the owning role gets an in-app note,
+   * a DDO only for their department. Members and applicants are told by template elsewhere. A failure
+   * here is logged and never undoes the workflow step that already committed.
+   */
+  async notifyStage(owner: string | undefined, title: string, body: string, link: string, where: { departmentId?: string; memberId?: string } = {}): Promise<void> {
+    if (!owner || owner === 'MEMBER' || owner === 'APPLICANT') return;
+    try {
+      const departmentId = where.departmentId ?? (where.memberId ? (await this.app.members.byId(where.memberId))?.departmentId : undefined);
+      const createdAt = await businessNow(this.app);
+      for (const recipientId of await this.repo.staffOfRole(owner, departmentId)) {
+        const n: StoredNotification = { id: newId('ntf'), recipientId, title, body, channel: 'IN_APP', createdAt, read: false, link, via: {} };
+        await this.repo.insert(n, 'work.stage');
+        await this.hub.publish({ recipientId, id: n.id, title });
+        await this.pushTo(recipientId, title, body, link);
+      }
+    } catch (err) {
+      this.app.log.warn({ err, link }, 'staff stage notification failed');
+    }
+  }
+
   /** G3 (D-113): send a reminder only if this recipient never got this template for this link. */
   async notifyOnce(recipientId: string, templateKey: string, vars: Vars, link: string): Promise<boolean> {
     if (await this.repo.exists(recipientId, templateKey, link)) return false;
@@ -481,15 +502,19 @@ export class NotificationsService {
     return (await this.repo.preferences(m.id)) ?? { channels: { WHATSAPP: true, EMAIL: Boolean(m.email) }, language: 'en', ...(m.email ? { email: m.email } : {}) };
   }
 
+  /** Whose notifications these are: a member's, or an applicant's own (their stage updates go to their user id). */
+  private async inboxOwner(user: SessionUser): Promise<string> {
+    return user.role === 'APPLICANT' ? user.id : (await this.app.members.mine(user)).id;
+  }
+
   async myNotifications(user: SessionUser): Promise<MyNotifications> {
-    const m = await this.app.members.mine(user);
-    const items = await this.repo.of(m.id);
-    return { items: items.map(({ via, ...n }) => ({ ...n, alsoSentVia: Object.keys(via) as MessageChannel[] })), unread: await this.repo.unread(m.id) };
+    const owner = await this.inboxOwner(user);
+    const items = await this.repo.of(owner);
+    return { items: items.map(({ via, ...n }) => ({ ...n, alsoSentVia: Object.keys(via) as MessageChannel[] })), unread: await this.repo.unread(owner) };
   }
 
   async myMarkRead(user: SessionUser, id?: string): Promise<{ ok: true }> {
-    const m = await this.app.members.mine(user);
-    if (!(await this.repo.markRead(m.id, id))) fail('NOT_FOUND', 'Notification not found.');
+    if (!(await this.repo.markRead(await this.inboxOwner(user), id))) fail('NOT_FOUND', 'Notification not found.');
     return { ok: true };
   }
 
@@ -535,6 +560,7 @@ export class NotificationsService {
     };
     await this.repo.saveTicket(t, true);
     await this.app.audit.record(request, { action: 'create', entity: 'ticket', entityId: t.id, summary: `${m.name}: ${t.subject}` });
+    await this.notifyStage('ACCOUNTANT', 'Member question', `${m.name} asked: ${t.subject}. Answer it from Notifications → Member questions.`, '/notifications?tab=questions');
     return t;
   }
 

@@ -42,7 +42,7 @@ const EnvSchema = z.object({
   /** A user-assigned managed identity's client id; empty uses the system-assigned identity. */
   AZURE_CLIENT_ID: z.string().trim().default(''),
   /** G1 (D-111): largest document upload (photo, ID card, order). 5 MB. */
-  DOCUMENT_MAX_BYTES: z.coerce.number().int().min(100_000).max(20_000_000).default(5 * 1024 * 1024),
+  DOCUMENT_MAX_BYTES: z.coerce.number().int().min(100_000).max(20_000_000).default(2 * 1024 * 1024),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).default(30),
   /** G4 (D-114): staff sign-ins (console and staff screens) end after this many days without use. */

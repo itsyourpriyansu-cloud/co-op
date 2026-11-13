@@ -5,6 +5,7 @@ import { router, type Href } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Bell, BellOff, CheckCheck, ChevronRight, Settings } from 'lucide-react-native';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { accountKeys, appRouteFor, stamp, useNotifications } from '@/lib/account';
 import { Alert, Button, Card, EmptyState, Header, Screen, Skeleton, Text } from '@/ui';
 import { color, radius, space } from '@/theme';
@@ -14,6 +15,7 @@ const VIA: Record<string, string> = { WHATSAPP: 'WhatsApp', EMAIL: 'Email' };
 export default function Notifications() {
   const qc = useQueryClient();
   const q = useNotifications();
+  const isMember = useAuth().session?.user.role === 'MEMBER';
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: accountKeys.notifications }), qc.invalidateQueries({ queryKey: accountKeys.home })]);
   const open = async (id: string, read: boolean, link?: string) => {
     if (!read) await api.account.readNotification(id).catch(() => undefined);
@@ -28,11 +30,19 @@ export default function Notifications() {
 
   return (
     <Screen
-      header={<Header title="Notifications" onBack={() => router.back()} right={
-            <Pressable accessibilityRole="button" accessibilityLabel="Notification settings" hitSlop={8} onPress={() => router.push('/account/settings')} style={styles.headerBtn}>
-              <Settings size={22} color={color.text.primary} strokeWidth={1.75} />
-            </Pressable>
-          } />}
+      header={
+        <Header
+          title="Notifications"
+          onBack={() => router.back()}
+          right={
+            isMember ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="Notification settings" hitSlop={8} onPress={() => router.push('/account/settings')} style={styles.headerBtn}>
+                <Settings size={22} color={color.text.primary} strokeWidth={1.75} />
+              </Pressable>
+            ) : undefined
+          }
+        />
+      }
       refreshing={q.isRefetching}
       onRefresh={() => void q.refetch()}
     >

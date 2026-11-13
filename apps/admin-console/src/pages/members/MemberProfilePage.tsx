@@ -35,7 +35,7 @@ import { Panel } from '@/components/Panel';
 import { StatusTag } from '@/components/StatusTag';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
-import { openFile } from '@/lib/files';
+import { openFile, prepareDocument } from '@/lib/files';
 import { cn } from '@/lib/utils';
 import { changeValue, EVENT_META, fieldLabel, MANDATE_LABEL, retiringLabel } from './members';
 import { TransferDrawer } from './TransferDrawer';
@@ -269,17 +269,11 @@ function DocumentsTab({ d }: { d: MemberDetail }) {
   const [error, setError] = useState<string>();
   const upload = useMutation({
     mutationFn: async (file: File) => {
-      const data = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(String(r.result));
-        r.onerror = () => reject(new Error('Could not read the file.'));
-        r.readAsDataURL(file);
-      });
-      return api.documents.uploadFor(d.member.id, { type, fileName: file.name, data });
+      return api.documents.uploadFor(d.member.id, { type, ...(await prepareDocument(file)) });
     },
     onMutate: () => setError(undefined),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['member'] }),
-    onError: (e) => setError(isApiError(e) ? (e.fieldErrors?.data ?? e.message) : 'Upload failed. Try again.'),
+    onError: (e) => setError(isApiError(e) ? (e.fieldErrors?.data ?? e.message) : e instanceof Error ? e.message : 'Upload failed. Try again.'),
   });
   return (
     <div className="flex flex-col gap-4">
@@ -319,7 +313,7 @@ function DocumentsTab({ d }: { d: MemberDetail }) {
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-label text-fg">File (JPEG, PNG or PDF, up to 5 MB)</span>
+            <span className="text-label text-fg">File (JPG, PNG or PDF; photos are shrunk, a PDF must be under 2 MB)</span>
             <input
               type="file"
               aria-label="Document file"

@@ -562,6 +562,7 @@ export class DepositsService {
       await this.app.audit.record(request, { action: 'request', entity: 'deposit', entityId: created.id, summary }, tx);
       return created;
     });
+    await this.notifyStaffStage(d);
     return d;
   }
 
@@ -742,7 +743,13 @@ export class DepositsService {
       return d;
     });
     if (note) await notifyMember(this.app, ...note);
+    await this.notifyStaffStage(saved);
     return saved;
+  }
+
+  /** Tells the staff who own the stage the deposit is now at. */
+  private notifyStaffStage(d: DepositAccount): Promise<void> {
+    return this.app.notifications.notifyStage(DEPOSIT_STAGE_OWNER[d.status], 'Deposit waiting for you', `${d.fdrNo ?? d.accountNo} is waiting for your action.`, `/deposits/${d.id}`);
   }
 
   private async post(tx: Tx, narration: string, source: string, sourceRef: string, entryDate: string, actor: Actor, lines: JournalLineInput[]): Promise<string> {

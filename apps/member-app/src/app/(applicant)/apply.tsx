@@ -317,7 +317,7 @@ function DocumentsStep({ form, update, errors, reference }: StepProps) {
   };
   return (
     <View style={{ gap: space[6] }}>
-      <Alert type="neutral" heading="Clear photos" description="Photograph each document flat, in good light, so every word can be read. JPEG or PNG, up to 5 MB each." />
+      <Alert type="neutral" heading="Clear photos" description="Photograph each document flat, in good light, so every word can be read. JPG, PNG or PDF. Photos are shrunk automatically; a PDF must be under 2 MB." />
       {reference.requiredDocuments.map((d) => {
         const done = docs.find((x) => x.type === d.type);
         const err = failed[d.type] || errors[`documents.${d.type}`];

@@ -18,6 +18,9 @@ test.describe('signatures · backend', () => {
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: 'Replace signature' }).click();
     await (await chooser).setFiles(PNG);
+    // Nothing is saved until Submit (D-122).
+    await expect(page.getByRole('img', { name: 'Selected signature, not saved yet' })).toBeVisible();
+    await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page.getByText(/^Uploaded /)).toBeVisible();
     await expect(page.getByRole('img', { name: 'Your signature' })).toBeVisible();
   });
@@ -28,7 +31,10 @@ test.describe('signatures · backend', () => {
     await page.getByText('My signature').click();
     const drawer = page.getByRole('dialog');
     await expect(drawer.getByRole('img', { name: 'Your signature' })).toBeVisible();
-    await drawer.getByLabel('Signature PNG file').setInputFiles(PNG);
+    await drawer.getByLabel('Signature image file').setInputFiles(PNG);
+    // Nothing is saved until Submit (D-122).
+    await expect(drawer.getByRole('img', { name: 'Selected signature, not saved yet' })).toBeVisible();
+    await drawer.getByRole('button', { name: 'Submit' }).click();
     await expect(drawer.getByText(/^Uploaded /)).toBeVisible();
   });
 });

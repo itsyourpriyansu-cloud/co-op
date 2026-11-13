@@ -1,7 +1,7 @@
 import type { AppNotification, DeliveryStatus, MemberPreferences, MessageChannel, OutboxMessage, SupportTicket } from '@tgs/types';
 import { and, asc, count, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
-import { deliveries, memberPreferences, messages, notifications, pushTokens, supportTickets } from '../../models';
+import { deliveries, memberPreferences, messages, notifications, pushTokens, staffUsers, supportTickets } from '../../models';
 
 type Via = Partial<Record<MessageChannel, DeliveryStatus>>;
 export type StoredNotification = AppNotification & { via: Via };
@@ -37,6 +37,12 @@ export class NotificationsRepository {
   async deletePushTokens(tokens: string[], userId?: string): Promise<void> {
     if (!tokens.length) return;
     await this.db.delete(pushTokens).where(userId ? and(inArray(pushTokens.token, tokens), eq(pushTokens.userId, userId)) : inArray(pushTokens.token, tokens));
+  }
+
+  /** Active staff users of a role; a DDO only in `departmentId` when one is given. */
+  async staffOfRole(role: string, departmentId?: string): Promise<string[]> {
+    const where = and(eq(staffUsers.role, role as typeof staffUsers.$inferSelect.role), eq(staffUsers.status, 'ACTIVE'), role === 'DDO' && departmentId ? eq(staffUsers.departmentId, departmentId) : undefined);
+    return (await this.db.select({ id: staffUsers.id }).from(staffUsers).where(where)).map((r) => r.id);
   }
 
   async pushTokensOf(userId: string): Promise<string[]> {

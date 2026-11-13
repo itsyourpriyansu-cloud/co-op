@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { CircleCheck } from 'lucide-react-native';
 import { formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import { ROLE_LABELS, type MembershipDetail, type Role, type WorkflowEvent } from '@tgs/types';
+import { FileButton } from '@/components/FileButton';
+import { SignatureImage } from '@/components/SignatureImage';
 import { Expand, Loaded, PrintButton, RuleChecks } from '@/components/staff';
 import { api } from '@/lib/api';
 import { ACTION_HINT, ACTION_LABEL, certItems, EVENT_TITLE, isPrimaryAction, STEPS } from '@/lib/staffJoining';
@@ -139,12 +141,18 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
       <Expand title="Documents">
         {d.requiredDocuments.map((req) => {
           const doc = docs.find((x) => x.type === req.type);
-          return <KeyValue key={req.type} label={req.label} value={doc ? `${doc.fileName} · ${formatDisplayDateTime(doc.uploadedAt)}` : req.required ? 'Missing (required)' : 'Not needed for regular employees'} />;
+          return (
+            <View key={req.type} style={{ gap: space[2] }}>
+              <KeyValue label={req.label} value={doc ? `${doc.fileName} · ${formatDisplayDateTime(doc.uploadedAt)}` : req.required ? 'Missing (required)' : 'Not needed for regular employees'} />
+              {doc?.fileId ? <FileButton fileId={doc.fileId} mime={doc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : undefined} consolePath={`/joining/${app.id}`} /> : null}
+            </View>
+          );
         })}
       </Expand>
 
       <Expand title="Declarations">
         {app.signature ? <Alert type="primary" heading={`Signed with OTP by ${f.personal?.fullName ?? app.name}`} description={`${formatDisplayDateTime(app.signature.signedAt)} · mobile ${f.personal?.mobile ?? '—'} · text version ${app.signature.textVersion}${app.signature.privacyVersion ? ` · privacy notice ${app.signature.privacyVersion}` : ""}`} /> : null}
+        {app.signature?.fileId ? <SignatureImage fileId={app.signature.fileId} name={f.personal?.fullName ?? app.name} /> : null}
         {d.agreements.map((a) => (
           <View key={a.key} style={{ gap: space[2] }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>

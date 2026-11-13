@@ -31,6 +31,28 @@ describe('notifications (P8a)', () => {
     expect((await call('GET', '/me/notifications', accountant)).statusCode).toBe(403);
   });
 
+  it('work reaching a stage notifies the staff who own it, and nobody else', async () => {
+    const own = (await call('GET', '/notifications', accountant)).json() as StaffNotifications;
+    const other = (await call('GET', '/notifications', cashier)).json() as StaffNotifications;
+    await app.notifications.notifyStage('ACCOUNTANT', 'Loan waiting for you', 'LN-TEST is waiting for your action.', '/loans/ln-test');
+    await app.notifications.notifyStage('MEMBER', 'Not for staff', 'A member-owned stage tells no staff.', '/loans/ln-test');
+    const after = (await call('GET', '/notifications', accountant)).json() as StaffNotifications;
+    expect(after.items).toHaveLength(own.items.length + 1);
+    expect(after.items[0]).toMatchObject({ title: 'Loan waiting for you', link: '/loans/ln-test', read: false });
+    expect(((await call('GET', '/notifications', cashier)).json() as StaffNotifications).items).toHaveLength(other.items.length);
+  });
+
+  it('an applicant reads and clears their own application updates', async () => {
+    const applicant = await signInAs(app, 'apl-ravi');
+    const sent = await app.notifications.notify('apl-ravi', 'membership.stage', { name: 'Ravi', applicationNo: 'MEM-TEST', stage: 'review at the society office' }, '/tracker');
+    const list = (await call('GET', '/me/notifications', applicant)).json() as MyNotifications;
+    expect(list.items[0]).toMatchObject({ id: sent!.id, read: false, link: '/tracker' });
+    expect(list.unread).toBeGreaterThan(0);
+    expect((await call('POST', `/me/notifications/${sent!.id}/read`, applicant)).statusCode).toBe(200);
+    await call('POST', '/me/notifications/read-all', applicant);
+    expect(((await call('GET', '/me/notifications', applicant)).json() as MyNotifications).unread).toBe(0);
+  });
+
   it('a template notification goes in the app and on each channel the member switched on', async () => {
     const before = (await call('GET', '/me/notifications', member)).json() as MyNotifications;
     // Default channels (F-09, D-093): WhatsApp on, email when on file (MB-14). loan.sanctioned goes IN_APP, WHATSAPP, EMAIL.

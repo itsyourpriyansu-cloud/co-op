@@ -1,6 +1,6 @@
 // Screen scaffolding: safe areas, keyboard avoidance, sticky bottom CTA, header with back (docs/12 §2.2).
-import { useEffect, useRef, type ReactNode } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, type ComponentRef, type ReactNode, type RefObject } from 'react';
+import { Animated, Keyboard, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View, type NativeScrollEvent, type NativeSyntheticEvent, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, type LucideIcon } from 'lucide-react-native';
 import { color, radius, space, theme, touchTarget } from '@/theme';
@@ -9,9 +9,43 @@ import { Button } from './Button';
 const layoutWidth = theme.layout.contentMaxWidth;
 import { Text } from './Text';
 
+/**
+ * Keeps the focused field visible above the keyboard (all screens use Screen). The KeyboardAvoidingView
+ * lifts the footer; this scrolls the field itself up, with a margin, above the footer and the keyboard.
+ * Android draws edge to edge (SDK 58), so the window never resizes by itself.
+ */
+function useKeepFocusedFieldVisible(scrollRef: RefObject<ComponentRef<typeof ScrollView> | null>, footerHeight: RefObject<number>) {
+  const scrollY = useRef(0);
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
+      // Wait for the avoiding view to resize before measuring.
+      setTimeout(() => {
+        const field = TextInput.State.currentlyFocusedInput?.();
+        if (!field) return;
+        field.measureInWindow((_x, y, _w, h) => {
+          const visibleBottom = e.endCoordinates.screenY - footerHeight.current - 16;
+          const overlap = y + h - visibleBottom;
+          if (overlap > 0) scrollRef.current?.scrollTo({ y: scrollY.current + overlap, animated: true });
+        });
+      }, 120);
+    });
+    return () => sub.remove();
+  }, [scrollRef, footerHeight]);
+  return (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollY.current = e.nativeEvent.contentOffset.y;
+  };
+}
+
 export function Screen({ children, footer, header, scroll = true, background = color.bg.canvas, contentStyle, refreshing, onRefresh }: { children: ReactNode; footer?: ReactNode; header?: ReactNode; scroll?: boolean; background?: string; contentStyle?: StyleProp<ViewStyle>; refreshing?: boolean; onRefresh?: () => void }) {
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const footerHeight = useRef(0);
+  const onScroll = useKeepFocusedFieldVisible(scrollRef, footerHeight);
   const body = scroll ? (
     <ScrollView
+      ref={scrollRef}
+      onScroll={onScroll}
+      scrollEventThrottle={32}
       contentContainerStyle={[styles.content, contentStyle]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
@@ -26,11 +60,15 @@ export function Screen({ children, footer, header, scroll = true, background = c
   );
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: background }]} edges={['top', 'left', 'right', 'bottom']}>
-      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
         <View style={[styles.fill, styles.column]}>
           {header}
           {body}
-          {footer ? <View style={styles.footer}>{footer}</View> : null}
+          {footer ? (
+            <View style={styles.footer} onLayout={(e) => (footerHeight.current = e.nativeEvent.layout.height)}>
+              {footer}
+            </View>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

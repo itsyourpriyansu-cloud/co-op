@@ -250,7 +250,13 @@ export class JoiningService {
       await this.app.audit.record(request, { action: resubmit ? 'resubmit' : 'submit', entity: 'membershipApplication', entityId: a.id, summary: `${next.name} ${resubmit ? 'resubmitted' : 'submitted'} membership application ${a.applicationNo}` }, tx);
       return next;
     });
+    await this.notifyStaffStage(app);
     return app;
+  }
+
+  /** Tells the staff who own the stage the application is now at. */
+  private notifyStaffStage(a: MembershipApplication): Promise<void> {
+    return this.app.notifications.notifyStage(MEMBERSHIP_STAGE_OWNER[a.status], 'Membership application waiting', `${a.name} (${a.applicationNo}) is waiting for your action.`, `/joining/${a.id}`, { departmentId: a.departmentId });
   }
 
   // ---- ST-14 … ST-17 staff ----
@@ -415,6 +421,7 @@ export class JoiningService {
     const name = saved.form?.personal?.fullName ?? 'applicant';
     if (admitted) await this.app.notifications.notify(admitted.member.id, 'membership.active', { name: admitted.member.name, generalNo: admitted.member.generalNo }, '/');
     else if (STAGE_NOTE[saved.status]) await this.app.notifications.notify(saved.applicantId, 'membership.stage', { name, applicationNo: saved.applicationNo, stage: STAGE_NOTE[saved.status]! }, '/tracker');
+    await this.notifyStaffStage(saved);
     return saved;
   }
 

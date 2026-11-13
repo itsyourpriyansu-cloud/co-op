@@ -18,7 +18,7 @@ export const useSupport = () => useQuery({ queryKey: accountKeys.support, queryF
 /** Notification links are app routes; only the ones the member app has are followed. */
 export function appRouteFor(link?: string): string | undefined {
   if (!link) return undefined;
-  return /^\/(loan\/|deposit\/|payment\/|payments$|surety$|deposits$|loans$|profile)/.test(link) ? link : undefined;
+  return /^\/(loan\/|deposit\/|payment\/|payments$|surety$|deposits$|loans$|profile|tracker$)/.test(link) ? link : undefined;
 }
 
 /** "12 Oct 2026 · 10:42" (dates follow the demo clock, so no "x days ago"). */

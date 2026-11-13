@@ -40,7 +40,9 @@ import { Panel } from '@/components/Panel';
 import { RuleCheckList } from '@/components/RuleCheckList';
 import { StatusTag } from '@/components/StatusTag';
 import { ViewState } from '@/components/ViewState';
+import { SignatureMark } from '@/components/SignatureMark';
 import { api } from '@/lib/api';
+import { openFile } from '@/lib/files';
 import { cn } from '@/lib/utils';
 import { ActionDrawer } from './ActionDrawer';
 import { ACTION_LABEL, certItems, isPrimaryAction, STEPS } from './joining';
@@ -156,11 +158,14 @@ function DocumentsTab({ d }: { d: MembershipDetail }) {
               <p className="text-label text-fg">{req.label}</p>
               <p className="truncate text-caption text-fg-tertiary">{doc ? `${doc.fileName} · ${formatDisplayDateTime(doc.uploadedAt)}` : req.required ? 'Missing (required)' : 'Not needed for regular employees'}</p>
             </div>
-            {doc && <TagV2 text="Uploaded" size={TagV2Size.XS} color={TagV2Color.SUCCESS} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />}
+            {doc?.fileId ? (
+              <ButtonV2 text="View" size={ButtonV2Size.SMALL} buttonType={ButtonV2Type.SECONDARY} onClick={() => void openFile(doc.fileId!)} />
+            ) : (
+              doc && <TagV2 text="Uploaded" size={TagV2Size.XS} color={TagV2Color.SUCCESS} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
+            )}
           </li>
         );
       })}
-      <li className="text-caption text-fg-tertiary sm:col-span-2">Prototype: uploads are simulated, so there is no file preview.</li>
     </ul>
   );
 }
@@ -179,6 +184,11 @@ function DeclarationsTab({ d }: { d: MembershipDetail }) {
             <p className="text-caption text-fg-secondary">
               {formatDisplayDateTime(app.signature.signedAt)} · mobile {app.form?.personal?.mobile ?? '—'} · text version {app.signature.textVersion}{app.signature.privacyVersion ? ` · privacy notice ${app.signature.privacyVersion}` : ''}
             </p>
+            {app.signature.fileId && (
+              <div className="mt-2 rounded-control border border-line bg-surface p-2">
+                <SignatureMark fileId={app.signature.fileId} name={app.form?.personal?.fullName ?? app.name} className="h-14" />
+              </div>
+            )}
           </div>
         </div>
       )}

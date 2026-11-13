@@ -1,10 +1,11 @@
 // MJ-05 Applicant home: draft progress → live stage tracker → welcome (General No.) (D-026, docs/10 §2).
 import { useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowRight, Banknote, CircleX, FlaskConical, LogOut, PartyPopper, PenLine } from 'lucide-react-native';
+import { ArrowRight, Banknote, Bell, CircleX, FlaskConical, LogOut, PartyPopper, PenLine } from 'lucide-react-native';
 import { formatDisplayDate, formatINR, validateMembershipForm } from '@tgs/domain';
+import { useNotifications } from '@/lib/account';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { stagesFor, STEPS, errorsForStep, useJoiningReference, useMyApplication } from '@/lib/joining';
@@ -15,6 +16,7 @@ export default function Tracker() {
   const { session, logout, syncSession } = useAuth();
   const { submitted } = useLocalSearchParams<{ submitted?: string }>();
   const mine = useMyApplication();
+  const unread = useNotifications().data?.unread ?? 0;
   const reference = useJoiningReference();
   const [demoBusy, setDemoBusy] = useState(false);
   const app = mine.data;
@@ -205,6 +207,18 @@ export default function Tracker() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={mine.isRefetching} onRefresh={() => void mine.refetch()} tintColor={color.brand.solid} />}
       >
+        <View style={styles.topBar}>
+          <Pressable accessibilityRole="button" accessibilityLabel={unread ? `Notifications, ${unread} unread` : 'Notifications'} onPress={() => router.push('/notifications' as Href)} style={styles.bell} hitSlop={8}>
+            <Bell size={22} color={color.text.primary} strokeWidth={1.75} />
+            {unread ? (
+              <View style={styles.badge}>
+                <Text role="captionStrong" tone="onBrand" style={{ fontSize: 10, lineHeight: 14 }}>
+                  {unread > 9 ? '9+' : unread}
+                </Text>
+              </View>
+            ) : null}
+          </Pressable>
+        </View>
         {body()}
         <Button text="Sign out" subType="inline" leftSlot={LogOut} onPress={() => void signOut()} style={{ alignSelf: 'center', marginTop: space[8] }} />
       </ScrollView>
@@ -213,6 +227,9 @@ export default function Tracker() {
 }
 
 const styles = StyleSheet.create({
+  topBar: { alignItems: 'flex-end' },
+  bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.default },
+  badge: { position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: color.status.danger.solid, alignItems: 'center', justifyContent: 'center' },
   content: { padding: space[8], gap: space[10], paddingBottom: space[16], width: '100%', maxWidth: theme.layout.contentMaxWidth, alignSelf: 'center' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   rowIcon: { flexDirection: 'row', alignItems: 'center', gap: space[4] },

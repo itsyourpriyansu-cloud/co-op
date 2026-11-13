@@ -286,7 +286,7 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand â
 - Forms that create money records (counter receipt, loan closure, FD at the counter) send one `Idempotency-Key` per form. A repeat with the same key and body returns the first answer; a different body with the same key, or a repeat while the first is still running, is refused.
 
 ### BR-043 Documents [PF] membership form / [P] (D-111)
-- JPEG, PNG or PDF, checked by the file's first bytes, at most `DOCUMENT_MAX_BYTES` (5 MB). Stored encrypted; a new upload is a new file. The owner and staff who may see members or applications open them; a DDO only for their own department; opening someone else's file is audited.
+- JPEG, PNG or PDF, checked by the file's first bytes, at most `DOCUMENT_MAX_BYTES` (2 MB since D-122). The app shrinks photos before upload (long edge 1600 px, JPEG, about 150-400 KB); a PDF is sent as it is, so it must already be under 2 MB. Stored encrypted; a new upload is a new file. The owner and staff who may see members or applications open them; a DDO only for their own department; opening someone else's file is audited.
 - A joining form's documents must be files the applicant uploaded; they move to the member record on admission. A profile change request may carry one uploaded proof.
 
 ## G2 rules (D-112)

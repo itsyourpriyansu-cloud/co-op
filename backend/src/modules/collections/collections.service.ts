@@ -1365,6 +1365,7 @@ export class CollectionsService {
       await this.repo.saveReport(tx, rep, true);
       await this.app.audit.record(request, { action: 'report', entity: 'paymentReport', entityId: rep.id, summary: `${user.name} reported ${formatINR(rep.amount)} (${ref})` }, tx);
     });
+    await this.app.notifications.notifyStage('CASHIER', 'Payment reported by a member', `${user.name} reported ${formatINR(rep.amount)}. Match it with the bank statement.`, '/payments?tab=REPORTED');
     return rep;
   }
 

@@ -293,6 +293,7 @@ export class LoanWorkflowService {
     });
     if (pledgeRelease) await this.loans.pledge(pledgeRelease, null);
     for (const [to, key, vars, link] of notes) await notifyMember(this.app, to, key, vars, link);
+    await this.loans.notifyStaffStage(saved);
     return saved;
   }
 
@@ -369,6 +370,7 @@ export class LoanWorkflowService {
       return l;
     });
     if (note) await notifyMember(this.app, ...note);
+    await this.loans.notifyStaffStage(saved);
     return saved;
   }
 

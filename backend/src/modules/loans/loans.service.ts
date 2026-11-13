@@ -667,7 +667,13 @@ export class LoansService {
     if (l.pledgedDepositId) await this.pledge(l.pledgedDepositId, l.id);
     const product = this.productOf(w, l.product);
     for (const s of l.sureties.filter((x) => x.status === 'PENDING')) await notifyMember(this.app, s.memberId, 'loan.surety', { borrower: m.name, product: product.name, amount: formatINR(l.appliedAmount) }, '/surety');
+    await this.notifyStaffStage(l);
     if (l.events.at(-1)?.action === 'submit') await notifyMember(this.app, m.id, 'loan.submitted', { product: product.name, applicationNo: l.applicationNo, amount: formatINR(l.appliedAmount) }, `/loan/${l.id}`);
+  }
+
+  /** Tells the staff who own the stage the loan is now at (a DDO only for the borrower's department). */
+  notifyStaffStage(l: Loan): Promise<void> {
+    return this.app.notifications.notifyStage(LOAN_STAGE_OWNER[l.status], 'Loan waiting for you', `${l.applicationNo} is waiting for your action.`, `/loans/${l.id}`, { memberId: l.memberId });
   }
 
   /** Reserve or release an FD for a loan against it. */
