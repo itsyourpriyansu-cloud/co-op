@@ -6,7 +6,7 @@ import { formatDisplayDate, formatDisplayDateTime, formatINR, minorMajorityDate 
 import type { DepositDetail } from '@tgs/types';
 import { Expand, Loaded, PrintButton } from '@/components/staff';
 import { api } from '@/lib/api';
-import { ACTION_LABEL, isSecondary, METHOD, PAYOUT, SCHEME } from '@/lib/staffDeposits';
+import { ACTION_LABEL, isSecondary, METHOD, MODE, PAYOUT, SCHEME } from '@/lib/staffDeposits';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Tag, Text } from '@/ui';
 import { space } from '@/theme';
 
@@ -156,7 +156,9 @@ function Body({ d, refetching, refetch }: { d: DepositDetail; refetching: boolea
 
       {dep.payment ? (
         <Expand title={`Receipt ${dep.payment.receiptNo}`}>
-          <KeyValue label="Mode" value={dep.payment.mode === 'CASH' ? 'Cash' : dep.payment.mode === 'TRANSFER' ? 'Bank transfer' : 'Cheque'} />
+          <KeyValue label="Mode" value={MODE[dep.payment.mode] ?? dep.payment.mode} />
+          {dep.renewedFrom ? <KeyValue label="Renewal of" value={dep.renewedFrom.fdrNo} /> : null}
+          {dep.renewedTo ? <KeyValue label="Renewed as" value={dep.renewedTo.accountNo} /> : null}
           <KeyValue label="Date" value={formatDisplayDate(dep.payment.date)} />
           <KeyValue label="Received by" value={dep.payment.byName} />
           <KeyValue label="Reference" value={dep.payment.reference ?? '—'} />

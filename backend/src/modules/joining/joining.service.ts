@@ -57,6 +57,16 @@ const daysBetween = (from: ISODate, to: ISODate) => Math.max(0, Math.round((Date
 const stageSince = (a: MembershipApplication): ISODate => (a.events.at(-1)?.at ?? a.submittedOn ?? '').slice(0, 10);
 const documentsOf = (a: MembershipApplication) => ({ uploaded: requiredDocs.filter((d) => a.form?.documents?.some((x) => x.type === d.type)).length, required: requiredDocs.length });
 const editable = (a: MembershipApplication) => a.status === 'DRAFT' || a.status === 'INFO_REQUESTED';
+/** G9 (D-121): ends the template sentence "…is now at: {stage}." for the applicant. */
+const STAGE_NOTE: Partial<Record<MembershipStatus, string>> = {
+  DDO_CERTIFICATION: 'certification by your department (DDO)',
+  OFFICE_REVIEW: 'review at the society office',
+  APPROVAL_SECRETARY: 'approval by the Secretary',
+  APPROVAL_PRESIDENT: 'approval by the President',
+  SHARE_PAYMENT_PENDING: 'share payment. It is approved; pay the share amount to become a member',
+  INFO_REQUESTED: 'correction. Open the app to see what to change',
+  REJECTED: 'not approved. Open the app to see the reason',
+};
 
 function mergeForm(base: MembershipForm = {}, patch: MembershipForm = {}): MembershipForm {
   return {
@@ -401,6 +411,10 @@ export class JoiningService {
       await this.app.audit.record(request, { action: `membership.${action}`, entity: 'membershipApplication', entityId: a.id, summary: `${actor.name} (${ROLE_LABELS[actor.role]}${opts.demo ? ', demo control' : ''}): ${action} on ${a.applicationNo}${admitted ? `, admitted as General No. ${admitted.member.generalNo}` : ''}` }, tx);
       return out;
     });
+    // G9 (D-121): the applicant hears each stage; on admission the member is welcomed.
+    const name = saved.form?.personal?.fullName ?? 'applicant';
+    if (admitted) await this.app.notifications.notify(admitted.member.id, 'membership.active', { name: admitted.member.name, generalNo: admitted.member.generalNo }, '/');
+    else if (STAGE_NOTE[saved.status]) await this.app.notifications.notify(saved.applicantId, 'membership.stage', { name, applicationNo: saved.applicationNo, stage: STAGE_NOTE[saved.status]! }, '/tracker');
     return saved;
   }
 

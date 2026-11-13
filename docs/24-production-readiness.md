@@ -1,5 +1,6 @@
 # 24 · Production readiness: tracker
 
+> Version 1.0 · 2026-11-13 · G9 built: receipt cancellation, FD renewal, notifications outbox with delivery receipts and live updates (D-119 … D-121).
 > Version 0.9 · 2026-11-12 · G1–G8 built. What remains is owner work (accounts, F-10 / F-11, UAT, real phones, Azure).
 > Version 0.1 · 2026-11-12 · First version (D-111): everything still missing before go-live, from the audit of 2026-11-11.
 > Branch `v2`. The owner commits by hand. Each phase ends with its exit test. Tick a box only when its code and its test are both done.
@@ -22,6 +23,7 @@ Steps marked **(owner)** need something only the owner or the society can give: 
 | G6 Data migration | Loan, deposit and opening-balance imports with templates, checks and a reconciliation report | Import tests: a fictional register imports; trial balance balances after import |
 | G7 Hardening | Security review fixes, DPDP consent and retention, load test script and result | No high findings left; load test result recorded |
 | G8 Go-live papers | Runbook (deploy, rollback, restore, key rotation, incidents), UAT script per role, training guides, parallel-run and go-live checklists, support (hypercare) plan | Documents exist and point at real commands |
+| G9 Flow gaps + notifications | Same-day receipt cancellation with a guarded ledger reversal, FD renewal, notification outbox (retries, delivery / read receipts, failed-send retry, message hours, live console updates) and the missing notices | Backend, root and affected e2e tests green; trial balance balances after a cancellation and a renewal |
 
 ## 3. Tasks
 
@@ -87,6 +89,18 @@ Steps marked **(owner)** need something only the owner or the society can give: 
 - [x] Parallel run and go-live checklists, support plan
 - [ ] (owner) UAT with society staff, training sessions, cutover date
 
+### G9 Flow gaps + notifications
+- [x] Receipt cancellation: same day, another officer with `ledger.post`, reason, latest receipt only; every effect reversed; CANCELLED print; member told (D-119)
+- [x] Ledger page refuses to reverse business entries (`REVERSE_SOURCE`); manual journals and vouchers only (D-119)
+- [x] FD renewal from MATURED: new FD at today's slab, interest added or paid, one `FD_RENEWAL` entry, both acceptances, linked FDRs (D-120)
+- [x] Notification outbox: queued sends, retries with backoff, `SKIP LOCKED` claim, 10 s provider timeout (D-121)
+- [x] WhatsApp status webhook (signed), delivered / read on sent messages and member notices (D-121)
+- [x] Failed sends list and Send again, console and phone (D-121)
+- [x] Live console notifications (server-sent events over PostgreSQL LISTEN / NOTIFY) (D-121)
+- [x] Message hours for broadcasts (Admin setting, 9–21 IST [P]); money and mobile-change alerts always on WhatsApp (D-121)
+- [x] New notices: receipt issued / cancelled, FD matured / paid / renewed / minor turns 18, monthly deduction notice, application stages and welcome, final settlement (D-121)
+- [ ] (owner) Add `WHATSAPP_APP_SECRET` and `WHATSAPP_WEBHOOK_VERIFY_TOKEN` to Key Vault and set the callback in Meta (infra/README.md)
+
 ## 4. Session log
 
 | Date | What |
@@ -100,3 +114,4 @@ Steps marked **(owner)** need something only the owner or the society can give: 
 | 2026-11-12 | G6 built: deposit, loan and opening-balance imports and the reconciliation, all-or-nothing and audited (D-116). The share deposit comes with the member import |
 | 2026-11-12 | G7 built: guards before validation + route sweep test, member isolation test, audit fixes, DPDP consent and retention, load test passed at society peak (D-117, docs/security-review.md) |
 | 2026-11-12 | G8 built: runbook, UAT script, training guides, go-live checklist and support plan, key rotation tool (D-118). All G phases built; owner items listed under each phase |
+| 2026-11-13 | G9 built: receipt cancellation + reversal guard (D-119), FD renewal (D-120), notification outbox, webhook, failed-send retry, live updates, message hours and nine new notices (D-121). Migration 0034 |

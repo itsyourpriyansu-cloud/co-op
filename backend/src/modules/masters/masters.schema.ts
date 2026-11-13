@@ -41,6 +41,8 @@ export const societySettingsSchema = z.object({
   casteCategories: z.array(z.string()),
   minAppVersion: z.string(),
   applicantDataRetentionMonths: z.number().int(),
+  messageWindowStartHour: z.number().int(),
+  messageWindowEndHour: z.number().int(),
   suretyRecoveryAfterCycles: z.number().int(),
   minTakeHomePay: paise,
   placeholders: z.array(z.string()),

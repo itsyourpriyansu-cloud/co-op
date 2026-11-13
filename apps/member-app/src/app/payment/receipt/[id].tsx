@@ -20,6 +20,7 @@ export default function ReceiptView() {
         <Alert type="error" heading="Couldn't load this receipt" description="Go back and try again." />
       ) : (
         <>
+          {r.cancelled ? <Alert type="error" heading="This receipt was cancelled" description={`${formatDisplayDate(r.cancelled.at.slice(0, 10))}: ${r.cancelled.reason}. The amount is back on your dues.`} /> : null}
           <Card>
             <View style={{ gap: space[4] }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>

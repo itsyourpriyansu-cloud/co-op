@@ -1,5 +1,5 @@
 import { managedIdentityToken, type IdentityOptions } from './azure-identity';
-import type { MessageSender } from './messaging';
+import { retryableHttp, SEND_TIMEOUT_MS, type MessageSender } from './messaging';
 
 /**
  * G5 (D-115): email through Azure Communication Services, signed in with the managed identity (no
@@ -21,10 +21,11 @@ export function acsEmail({ endpoint, from, fetchImpl = fetch, ...identity }: Acs
         method: 'POST',
         headers: { authorization: `Bearer ${await token()}`, 'content-type': 'application/json' },
         body: JSON.stringify({ senderAddress: from, recipients: { to: [{ address: m.to }] }, content: { subject: m.title, plainText: `${m.body}\n\n— The Telangana Secretariat Employees Co-operative Credit Society Ltd.` } }),
+        signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
       });
       if (res.status === 202) return { status: 'SENT', provider: 'acs-email' };
       const body = (await res.json().catch(() => ({}))) as { error?: { code?: string; message?: string } };
-      return { status: 'FAILED', provider: 'acs-email', error: `${res.status} ${body.error?.code ?? ''} ${body.error?.message ?? ''}`.trim().slice(0, 300) };
+      return { status: 'FAILED', provider: 'acs-email', retryable: retryableHttp(res.status), error: `${res.status} ${body.error?.code ?? ''} ${body.error?.message ?? ''}`.trim().slice(0, 300) };
     },
   };
 }

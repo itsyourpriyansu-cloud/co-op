@@ -58,9 +58,13 @@ Members sign in with a code sent by WhatsApp. Until this step is done, productio
 
 ```bash
 az keyvault secret set --vault-name $KV -n WHATSAPP-TOKEN --value "<the permanent token>"
+az keyvault secret set --vault-name $KV -n WHATSAPP-APP-SECRET --value "<Meta app > Settings > Basic > App secret>"
+az keyvault secret set --vault-name $KV -n WHATSAPP-WEBHOOK-VERIFY-TOKEN --value "$(openssl rand -hex 24)"
 export TGS_WHATSAPP_PHONE_NUMBER_ID=<phone number id from WhatsApp > API setup>
 az deployment group create -g $RG -f infra/main.bicep -p infra/$ENV.bicepparam
 ```
+
+4. Delivery and read receipts (G9): in the Meta app, WhatsApp > Configuration, set the callback URL to `https://<api host>/api/v1/webhooks/whatsapp`, paste the same verify token, and subscribe to the `messages` field. Meta checks the URL once; after that every status call is signed and the console shows Delivered / Read and lists failed sends under Notifications → Sent messages.
 
 Email needs nothing by hand: the template creates Azure Communication Services with an Azure-managed sender domain (`DoNotReply@<random>.azurecomm.net`). To send from the society's own domain later, add it as a custom domain in the Email Communication Service, verify its DNS records and change `EMAIL_FROM`.
 

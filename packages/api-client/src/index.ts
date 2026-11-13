@@ -114,6 +114,7 @@ import {
   type ComposeInput,
   type ComposePreview,
   type DefaulterNotice,
+  type FailedDelivery,
   type OutboxMessage,
   type ReportDef,
   type ReportFilterKey,
@@ -344,6 +345,37 @@ export function createApiClient(options: ApiClientOptions) {
       messages: () => request<OutboxMessage[]>('GET', '/messages'),
       preview: (input: ComposeInput) => request<ComposePreview>('POST', '/messages/preview', input),
       send: (input: ComposeInput) => request<OutboxMessage>('POST', '/messages', input),
+      /** G9 (D-121): WhatsApp / email sends that failed after their retries; send one again. */
+      failed: () => request<FailedDelivery[]>('GET', '/notifications/deliveries/failed'),
+      retry: (id: string) => request<{ ok: true }>('POST', `/notifications/deliveries/${id}/retry`, {}),
+      /**
+       * G9 (D-121): live notifications (server-sent events) until `signal` aborts or the server ends the
+       * stream; the caller reconnects. Browsers only: React Native's fetch cannot stream (phones get pushes).
+       */
+      stream: async (onEvent: (event: string, data: unknown) => void, signal: AbortSignal): Promise<void> => {
+        const token = options.getToken ? await options.getToken() : undefined;
+        const res = await fetch(`${await resolveBase()}${API_PREFIX}/notifications/stream`, { headers: { Accept: 'text/event-stream', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, signal });
+        if (res.status === 401) {
+          if (await refreshOnce()) return;
+          options.onUnauthenticated?.();
+        }
+        if (!res.ok || !res.body) throw new Error(`Live updates unavailable (${res.status})`);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) return;
+          buffer += decoder.decode(value, { stream: true });
+          for (let i = buffer.indexOf('\n\n'); i >= 0; i = buffer.indexOf('\n\n')) {
+            const lines = buffer.slice(0, i).split('\n');
+            buffer = buffer.slice(i + 2);
+            const event = lines.find((l) => l.startsWith('event:'))?.slice(6).trim() ?? 'message';
+            const data = lines.filter((l) => l.startsWith('data:')).map((l) => l.slice(5).trim()).join('\n');
+            if (data) onEvent(event, JSON.parse(data));
+          }
+        }
+      },
       tickets: () => request<StaffTicketRow[]>('GET', '/support/tickets'),
       reply: (id: string, text: string, close = false) => request<StaffTicketRow>('POST', `/support/tickets/${id}/reply`, { text, close }),
     },
@@ -458,6 +490,8 @@ export function createApiClient(options: ApiClientOptions) {
     receipts: {
       list: (params: ReceiptListParams = {}) => request<ReceiptList>('GET', `/receipts${toQuery(params)}`),
       get: (id: string) => request<ReceiptDetail>('GET', `/receipts/${id}`),
+      /** G9 (D-119): same-day cancellation by the Accountant. */
+      cancel: (id: string, reason: string) => request<ReceiptDetail>('POST', `/receipts/${id}/cancel`, { reason }),
       create: (input: NewReceiptInput, idempotencyKey?: string) => request<ReceiptDetail>('POST', '/receipts', input, true, false, idempotencyKey),
       /** G1 (D-111, BR-040): pay a loan off early. */
       closureQuote: (loanId: string) => request<LoanClosureQuote>('GET', `/loans/${loanId}/closure`),

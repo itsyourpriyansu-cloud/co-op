@@ -9,7 +9,7 @@ import type { ReceiptTab } from '@tgs/types';
 import { FilterBar, Loaded, RecordCard, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { PURPOSE_LABEL, REPORT_MODE_LABEL, SOURCE_LABEL } from '@/lib/staffCollections';
-import { Button, EmptyState, Screen, SelectField, StatusTag, Text, TextField } from '@/ui';
+import { Button, EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
 import { space } from '@/theme';
 
 export default function Payments() {
@@ -86,7 +86,7 @@ export default function Payments() {
               ) : (
                 <Stack2>
                   {items.map((r) => (
-                    <RecordCard key={r.id} title={r.memberName} subtitle={`${r.receiptNo} · ${formatDisplayDate(r.date)}`} amount={formatINR(r.amount)} onPress={() => router.push(`/staff/payment/${r.id}`)} caption={`No. ${r.generalNo} · ${SOURCE_LABEL[r.source]}${r.purpose ? ` · ${PURPOSE_LABEL[r.purpose]}` : r.cycle ? ` · ${formatCycle(r.cycle)}` : ''} · ${r.byName ?? 'Salary recovery'}`} />
+                    <RecordCard key={r.id} title={r.memberName} subtitle={`${r.receiptNo} · ${formatDisplayDate(r.date)}`} amount={formatINR(r.amount)} {...(r.cancelled ? { tag: <Tag text="Cancelled" color="error" size="xs" /> } : {})} onPress={() => router.push(`/staff/payment/${r.id}`)} caption={`No. ${r.generalNo} · ${SOURCE_LABEL[r.source]}${r.purpose ? ` · ${PURPOSE_LABEL[r.purpose]}` : r.cycle ? ` · ${formatCycle(r.cycle)}` : ''} · ${r.byName ?? 'Salary recovery'}`} />
                   ))}
                   {list.hasNextPage ? <View style={{ padding: space[6] }}><Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
                 </Stack2>

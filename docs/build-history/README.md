@@ -23,6 +23,7 @@ Every entry has the same sections: **Built** (screens by ID) · **Key files** ·
 | 14 | [Staff mobile UI: plan](13-staff-app-plan.md) | Done | 2026-11-10 |
 | 15 | [Staff mobile UI: built, S1–S9](14-staff-app.md) | Built, real-phone check open | 2026-11-10 |
 | 16 | [Production readiness G1–G8](15-production-readiness.md) | Built, owner items open | 2026-11-12 |
+| 17 | [G9 flow gaps and notifications](16-flow-gaps-notifications.md) | Built, webhook secrets open | 2026-11-13 |
 
 ## How to resume
 1. `npm install` (once) → `npm run demo` (mock API :4000 + console :5180; `npm run demo:prod` for the built console) → `npm run dev:web` for the phone preview on :8090 (or `npm run dev:app` for Expo Go). Port 5173 belongs to the user's other project: never use or kill it.

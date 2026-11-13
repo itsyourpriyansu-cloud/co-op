@@ -16,7 +16,8 @@ export const MATURING = [
   { label: 'Maturing in 90 days', value: '90' },
 ];
 
-export const ACTION_LABEL: Record<string, string> = { recordPayment: 'Record payment', accept: 'Accept', reject: 'Reject', cancel: 'Cancel request', refund: 'Refund', payout: 'Pay out', withdraw: 'Withdraw early' };
+export const ACTION_LABEL: Record<string, string> = { recordPayment: 'Record payment', accept: 'Accept', reject: 'Reject', cancel: 'Cancel request', refund: 'Refund', payout: 'Pay out', renew: 'Renew', withdraw: 'Withdraw early' };
+export const MODE: Record<string, string> = { CASH: 'Cash', TRANSFER: 'Bank transfer', CHEQUE: 'Cheque', RENEWAL: 'Renewal' };
 export const METHOD: Record<string, string> = { RATE_CUT: 'rate cut', SHARE_OF_INTEREST: 'share of interest' };
 export const SCHEME: Record<string, string> = { FD: 'Fixed deposit', CRD: 'CRD', SRDS: 'SRDS', SAVINGS: 'Savings' };
 export const PAYOUT: Record<string, string> = { MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', HALF_YEARLY: 'Half-yearly', ON_MATURITY: 'On maturity' };

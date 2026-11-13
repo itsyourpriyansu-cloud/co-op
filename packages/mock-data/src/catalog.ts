@@ -89,6 +89,9 @@ export const SETTINGS: SocietySettings = {
   minAppVersion: '0.0.0',
   // G7 (D-117) [P]: DPDP; the society confirms the period.
   applicantDataRetentionMonths: 12,
+  // G9 (D-121) [P]: broadcasts in daytime only (TRAI's 9 am to 9 pm practice); the Admin may change it.
+  messageWindowStartHour: 9,
+  messageWindowEndHour: 21,
   loanTargetDays: 5,
   // F-14: the Admin keeps the holiday list; a fixed national holiday for the demo (D-093).
   holidays: ['2026-10-02'],
@@ -141,4 +144,13 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
   { key: 'surety.recoveryBorrower', event: 'Borrower told the sureties are asked to pay (F-13)', title: 'Your sureties are asked to pay', body: 'Loan {loanNo} has been unpaid for {cycles} months, so the society has asked your sureties to pay {overdue}. Pay at the counter to stop this.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
   { key: 'dues.reminder', event: 'Dues reminder (composer)', title: 'Dues reminder', body: 'Dear {name} (General No. {generalNo}), {overdue} is unpaid on your society account. Please pay at the counter or by bank transfer and report it in the app.', channels: ['WHATSAPP'], audience: 'MEMBER' },
   { key: 'demand.sent', event: 'Demand sheet sent to the DDO', title: 'Demand sheet for {cycle}', body: 'The {cycle} demand for {department} ({members} members, {amount}) is ready to deduct.', channels: ['EMAIL'], audience: 'STAFF' },
+  { key: 'receipt.issued', event: 'Counter receipt issued (G9)', title: 'Receipt {receiptNo}', body: 'We received {amount} on {date}. Receipt {receiptNo}. Thank you.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'receipt.cancelled', event: 'Counter receipt cancelled (G9, D-119)', title: 'Receipt {receiptNo} cancelled', body: 'Receipt {receiptNo} for {amount} was cancelled by the society office: {reason}. Your dues are as they were before it. Contact the office if this is not right.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'fd.matured', event: 'Fixed deposit matured (G9)', title: 'FD matured', body: 'FD {fdrNo} has matured. {amount} is ready. Visit the office to renew it or have it paid to your bank account.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'fd.paid', event: 'Fixed deposit paid out (G9)', title: 'FD paid', body: '{amount} for FD {fdrNo} has been paid to your bank account.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'fd.renewed', event: 'Fixed deposit renewed (G9, D-120)', title: 'FD renewed', body: 'FD {fdrNo} was renewed as a new FD of {amount} for {tenure} months. You get the new receipt (FDR) once the Secretary and the President accept it.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'fd.minorMajor', event: 'The minor on an FD turns 18 (G9)', title: 'FD {fdrNo}: {minor} is now 18', body: '{minor} turned 18 on {date}. They may now hold FD {fdrNo} in their own name. Visit the office with their ID proof to update it.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'demand.memberNotice', event: 'Salary deduction notice when the demand goes to the DDO (G9)', title: 'Salary deduction for {cycle}', body: '{amount} will be deducted from your {cycle} salary for the society. Open Payments in the app to see the breakup.', channels: ['IN_APP'], audience: 'MEMBER' },
+  { key: 'member.settled', event: 'Final settlement posted (G9, F-08)', title: 'Your society account is settled', body: 'Your account with the society was settled on {date}. {result} Collect the settlement statement from the office.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
+  { key: 'account.mobileChanged', event: 'Sign-in mobile number changed (G9, security alert)', title: 'Your mobile number was changed', body: 'The mobile number for your society account was changed to {mobile} on {date}. If you did not do this, call the society office at once.', channels: ['IN_APP', 'WHATSAPP'], audience: 'MEMBER' },
 ];

@@ -308,6 +308,9 @@ export interface DepositAccount {
   operationMode: 'SINGLE' | 'EITHER_OR_SURVIVOR' | 'ANY_ONE_OR_SURVIVOR';
   jointHolders: string[];
   minor?: { name: string; dob: ISODate; guardianName: string; guardianRelation?: string };
+  /** G9 (D-120): this FD was opened by renewing a matured one, or was renewed into a new one. */
+  renewedFrom?: { id: string; fdrNo: string };
+  renewedTo?: { id: string; accountNo: string };
   pledgedToLoanId?: string;
   /** F4 (M6): full holder particulars for joint deposits (the primary holder is the member). */
   holders?: FdHolder[];
@@ -317,7 +320,7 @@ export interface DepositAccount {
   requestedAt?: ISODateTime;
   signature?: { signedAt: ISODateTime; textVersion: string; fileId?: string };
   /** ST-33 step 1: the cashier's receipt (cash with denominations, BR-029, or transfer). */
-  payment?: { mode: 'CASH' | 'TRANSFER' | 'CHEQUE'; amount: Paise; date: ISODate; denominations?: Partial<Record<500 | 200 | 100 | 50 | 20 | 10, number>>; reference?: string; receiptNo: string; byName: string; at: ISODateTime };
+  payment?: { mode: 'CASH' | 'TRANSFER' | 'CHEQUE' | 'RENEWAL'; amount: Paise; date: ISODate; denominations?: Partial<Record<500 | 200 | 100 | 50 | 20 | 10, number>>; reference?: string; receiptNo: string; byName: string; at: ISODateTime };
   /** ST-33 steps 2–3 (D-027). */
   signOffs?: { secretary?: StaffSignOff; president?: StaffSignOff };
   rejection?: StaffSignOff;
@@ -396,7 +399,8 @@ export interface MemberNotice {
   createdAt: ISODateTime;
   /** In-app now; WhatsApp and email come with P8. */
   /** P8a: in-app, then each channel of the template the member has switched on (MB-14). */
-  delivery: { inApp: 'PENDING' | 'SENT' | 'FAILED'; via?: Partial<Record<'WHATSAPP' | 'EMAIL', DeliveryStatus>> };
+  /** G9 (D-121): `notificationId` links the in-app notification, whose channel statuses the webhook keeps current. */
+  delivery: { inApp: 'PENDING' | 'SENT' | 'FAILED'; via?: Partial<Record<'WHATSAPP' | 'EMAIL', DeliveryStatus>>; notificationId?: string };
 }
 
 /** P7b: where a deduction amount came from. */
@@ -458,6 +462,8 @@ export interface Receipt {
   byId?: string;
   at?: ISODateTime;
   remarks?: string;
+  /** G9 (D-119): cancelled the same day by another officer; the mirror entry undid every effect. */
+  cancelled?: { at: ISODateTime; byId: string; byName: string; reason: string; entryNo: string };
 }
 
 export type MembershipDocumentType = 'PHOTO' | 'ID_PROOF' | 'APPOINTMENT_ORDER' | 'SERVICE_CERTIFICATE';
@@ -693,6 +699,9 @@ export interface SocietySettings {
   minAppVersion: string;
   /** G7 (D-117, DPDP): months after which a rejected or withdrawn applicant's personal data is deleted. */
   applicantDataRetentionMonths: number;
+  /** G9 (D-121): office broadcasts (composer) go out only between these hours (IST); outside them they wait for the start hour. Alerts about the member's own money go at once. */
+  messageWindowStartHour: number;
+  messageWindowEndHour: number;
   /** F-13 (D-097): a loan unpaid this many posted cycles in a row may be recovered from its sureties. */
   suretyRecoveryAfterCycles: number;
   /** F-14 (D-093): public holidays the office is closed (YYYY-MM-DD). Sundays and second Saturdays never count. */
@@ -729,8 +738,12 @@ export interface SupportTicket {
 
 export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP';
 
-/** P8a: what a WhatsApp / email / SMS provider did with one message. SIMULATED until F-10 names a provider. */
-export type DeliveryStatus = 'SENT' | 'SIMULATED' | 'FAILED';
+/**
+ * P8a: what a WhatsApp / email provider did with one message. SIMULATED until F-10 names a provider.
+ * G9 (D-121): QUEUED waits in the outbox (or for a retry); SENT the provider took it; DELIVERED / READ
+ * come from the WhatsApp status webhook; FAILED after the last retry or a permanent refusal.
+ */
+export type DeliveryStatus = 'QUEUED' | 'SENT' | 'DELIVERED' | 'READ' | 'SIMULATED' | 'FAILED';
 
 /** ST-63: message text per event. `{name}`-style placeholders are filled when sent (simulated). */
 export interface NotificationTemplate {

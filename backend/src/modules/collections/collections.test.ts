@@ -55,6 +55,9 @@ describe('demand & collections (P7)', () => {
     expect((await call('POST', '/demand/sheets/ds-2026-11-fin/actions/sendToDdo', accountant)).json().code).toBe('INVALID_TRANSITION');
     expect((await call('POST', '/demand/sheets/ds-2026-11-fin/actions/certify', accountant)).json().sheet.status).toBe('CERTIFIED');
     expect((await call('POST', '/demand/sheets/ds-2026-11-fin/actions/sendToDdo', accountant)).json().sheet.status).toBe('SENT_TO_DDO');
+    // G9 (D-121): each member is told the deduction before the salary is cut.
+    const first = sheet.lines.find((l) => l.totalDemand > 0)!;
+    expect((await app.notifications.repo.of(first.memberId))[0]?.title).toBe('Salary deduction for Nov 2026');
   });
 
   let shortMember = '';

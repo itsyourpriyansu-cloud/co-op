@@ -1,6 +1,6 @@
 // API envelope types shared by the mock API and both clients (docs/11-api-contracts.md).
 import type { Channel, Permission, Role } from './roles';
-import type { Address, AppNotification, AuditEntry, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, SuretyRecovery, TransferEvent, FinalSettlement, FinalSettlementStatement } from './entities';
+import type { Address, AppNotification, AuditEntry, DeliveryStatus, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, SuretyRecovery, TransferEvent, FinalSettlement, FinalSettlementStatement } from './entities';
 import type { DemandSheetStatus, DepositStatus, LoanStatus, MemberStatus, MembershipStatus, SuretyStatus } from './status';
 
 export const API_PREFIX = '/api/v1';
@@ -880,6 +880,8 @@ export interface DepositActionInput {
   remarks?: string;
   /** ST-33 step 1. */
   payment?: { mode: 'CASH' | 'TRANSFER' | 'CHEQUE'; date: ISODate; denominations?: Partial<Record<500 | 200 | 100 | 50 | 20 | 10, number>>; reference?: string };
+  /** G9 (D-120): renew a matured FD at today's slab rate; `withInterest` adds the interest to the new principal, otherwise it goes to the bank. */
+  renewal?: { tenureMonths: number; payoutFrequency: 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'ON_MATURITY'; withInterest: boolean };
 }
 
 // ---- M7 Demand & collections (ST-40 … ST-47, MB-10, MB-18) ---------------------------------------
@@ -1020,6 +1022,8 @@ export interface ReceiptRow {
   heads: DemandHead[];
   cycle?: Cycle;
   byName?: string;
+  /** G9 (D-119). */
+  cancelled?: boolean;
 }
 
 export type ReceiptTab = 'ALL' | 'SALARY_RECOVERY' | 'COUNTER' | 'REPORTED';
@@ -1046,6 +1050,9 @@ export interface ReceiptDetail {
   amountInWords: string;
   sheet?: { id: string; cycle: Cycle; departmentName: string };
   report?: PaymentReport;
+  /** G9 (D-119): staff only. True when this user may cancel it now; otherwise why not (absent when it never could be). */
+  canCancel?: boolean;
+  cancelBlockedBy?: string;
 }
 
 /** G1 (D-111): paying a loan off early at the counter, as of today. */
@@ -1298,10 +1305,30 @@ export interface OutboxMessage {
   title: string;
   body: string;
   templateKey?: string;
-  /** G5 (D-115): SENT once a real WhatsApp / email provider took it; DELIVERED_SIMULATED with the simulated senders. */
-  status: 'DELIVERED_SIMULATED' | 'SENT';
+  /**
+   * G5 (D-115): SENT once a real WhatsApp / email provider took it; DELIVERED_SIMULATED with the simulated senders.
+   * G9 (D-121): QUEUED while the outbox still holds some (quiet hours, retries).
+   */
+  status: 'QUEUED' | 'DELIVERED_SIMULATED' | 'SENT';
   /** Recipients the provider refused (each member's notification shows which). */
   failed?: number;
+  /** G9 (D-121): live count of this message's deliveries by status. */
+  progress?: Partial<Record<DeliveryStatus, number>>;
+  /** G9: held for the morning (quiet hours); when it goes out. */
+  scheduledFor?: ISODateTime;
+}
+
+/** G9 (D-121): a WhatsApp / email send that failed after its retries, for the office to check and retry. */
+export interface FailedDelivery {
+  id: string;
+  at: ISODateTime;
+  channel: MessageChannel;
+  /** Masked mobile or email. */
+  to: string;
+  title: string;
+  attempts: number;
+  error: string;
+  member: { id: string; name: string; generalNo: string } | null;
 }
 
 export interface StaffTicketRow extends SupportTicket {

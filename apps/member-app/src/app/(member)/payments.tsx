@@ -141,6 +141,7 @@ export default function Payments() {
                       <Text role="caption" tone="tertiary">
                         {r.receiptNo} · {formatDisplayDate(r.date)}
                         {r.cycle ? ` · ${formatCycle(r.cycle)}` : ''}
+                        {r.cancelled ? ' · Cancelled' : ''}
                       </Text>
                     </View>
                     <Text role="bodyStrong" tone="credit">

@@ -27,8 +27,9 @@ import {
   addSnackbarV2,
 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { amountInWords, formatDisplayDate, formatDisplayDateTime, formatINR, minorMajorityDate } from '@tgs/domain';
+import { amountInWords, fdRateFor, formatDisplayDate, formatDisplayDateTime, formatINR, minorMajorityDate } from '@tgs/domain';
 import type { DepositActionInput, DepositDetail } from '@tgs/types';
+import { Chips } from '@/components/Chips';
 import { DenominationCounter, type Counts } from '@/components/DenominationCounter';
 import { TextField } from '@/components/Form';
 import { Money } from '@/components/Money';
@@ -40,10 +41,12 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Initials } from '@/components/Initials';
 
-const ACTION_LABEL: Record<string, string> = { recordPayment: 'Record payment', accept: 'Accept', reject: 'Reject', cancel: 'Cancel request', refund: 'Refund', payout: 'Pay out', withdraw: 'Withdraw early' };
+const ACTION_LABEL: Record<string, string> = { recordPayment: 'Record payment', accept: 'Accept', reject: 'Reject', cancel: 'Cancel request', refund: 'Refund', payout: 'Pay out', renew: 'Renew', withdraw: 'Withdraw early' };
 const METHOD: Record<string, string> = { RATE_CUT: 'rate cut', SHARE_OF_INTEREST: 'share of interest' };
 const SCHEME: Record<string, string> = { FD: 'Fixed deposit', CRD: 'CRD', SRDS: 'SRDS', SAVINGS: 'Savings' };
 const PAYOUT: Record<string, string> = { MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', HALF_YEARLY: 'Half-yearly', ON_MATURITY: 'On maturity' };
+const PAYOUTS = Object.entries(PAYOUT).map(([value, label]) => ({ value: value as NonNullable<DepositActionInput['renewal']>['payoutFrequency'], label }));
+const MODE: Record<string, string> = { CASH: 'Cash', TRANSFER: 'Bank transfer', CHEQUE: 'Cheque', RENEWAL: 'Renewal' };
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -62,6 +65,11 @@ function ActionDrawer({ d, action, onClose, today }: { d: DepositDetail; action:
   const [reference, setReference] = useState('');
   const [date, setDate] = useState(today);
   const [remarks, setRemarks] = useState('');
+  // G9 (D-120): renewal of a matured FD.
+  const [tenure, setTenure] = useState(String(dep.tenureMonths ?? 12));
+  const [payout, setPayout] = useState(dep.payoutFrequency ?? 'ON_MATURITY');
+  const [withInterest, setWithInterest] = useState(true);
+  const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings.get, staleTime: 5 * 60_000, enabled: action === 'renew' });
   useEffect(() => {
     if (!action) return;
     setMode('CASH');
@@ -86,10 +94,13 @@ function ActionDrawer({ d, action, onClose, today }: { d: DepositDetail; action:
   const fe = isApiError(m.error) ? (m.error.fieldErrors ?? {}) : {};
   const total = Object.entries(counts).reduce((s, [k, v]) => s + Number(k) * 100 * (v ?? 0), 0);
   const needsReason = action === 'reject';
-  const ready = action === 'recordPayment' ? (mode === 'CASH' ? total === dep.principal : Boolean(reference.trim())) && Boolean(date) : action === 'withdraw' ? Boolean(preview.data) : needsReason ? Boolean(remarks.trim()) : true;
+  const renewRate = settings.data ? fdRateFor(Number(tenure), settings.data.settings.fdSlabs) : undefined;
+  const value = Math.max(d.maturity?.value ?? dep.principal ?? 0, dep.principal ?? 0);
+  const ready = action === 'renew' ? Boolean(renewRate) : action === 'recordPayment' ? (mode === 'CASH' ? total === dep.principal : Boolean(reference.trim())) && Boolean(date) : action === 'withdraw' ? Boolean(preview.data) : needsReason ? Boolean(remarks.trim()) : true;
   const input = (): DepositActionInput => ({
     ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
     ...(action === 'recordPayment' ? { payment: { mode, date, ...(mode === 'CASH' ? { denominations: counts } : { reference: reference.trim() }) } } : {}),
+    ...(action === 'renew' ? { renewal: { tenureMonths: Number(tenure), payoutFrequency: payout, withInterest } } : {}),
   });
   const title = action === 'recordPayment' ? 'Receive payment (cash slip)' : action === 'accept' ? (dep.status === 'ACCEPTANCE_PRESIDENT' ? 'Accept deposit (2 of 2)' : 'Accept deposit (1 of 2)') : (ACTION_LABEL[action] ?? action);
   return (
@@ -129,13 +140,42 @@ function ActionDrawer({ d, action, onClose, today }: { d: DepositDetail; action:
         )}
         {action === 'accept' && (
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-card border border-line px-4 py-3">
-            <Field label="Payment">{dep.payment ? `${dep.payment.mode.toLowerCase()} · ${dep.payment.receiptNo}` : '—'}</Field>
+            <Field label="Payment">{dep.payment ? `${MODE[dep.payment.mode]} · ${dep.payment.receiptNo}` : '—'}</Field>
             <Field label="Received on">{dep.payment ? formatDisplayDate(dep.payment.date) : '—'}</Field>
             <Field label="Matures">{d.maturity ? formatDisplayDate(d.maturity.date) : '—'}</Field>
             <Field label="Maturity value">{d.maturity ? <Money value={d.maturity.value} /> : '—'}</Field>
             <Field label="Secretary">{dep.signOffs?.secretary ? `${dep.signOffs.secretary.byName} · ${formatDisplayDateTime(dep.signOffs.secretary.at)}` : 'Pending'}</Field>
             <Field label="President">{dep.status === 'ACCEPTANCE_PRESIDENT' ? 'Your signature issues the FDR' : 'Next'}</Field>
           </dl>
+        )}
+        {action === 'renew' && (
+          <>
+            <p className="text-body text-fg-secondary">The matured FD closes and a new FD opens at today's rate. The Secretary and the President accept it before the new FDR is issued.</p>
+            <TextInputV2 label="New tenure (months)" type="number" value={tenure} onChange={(e) => setTenure(e.target.value)} error={fe.tenureMonths || (settings.data && !renewRate) ? { show: true, message: fe.tenureMonths ?? 'No FD rate slab for this tenure' } : undefined} hintText={renewRate ? `${renewRate}% a year` : undefined} />
+            <Chips label="Interest payable" value={payout} options={PAYOUTS} onChange={setPayout} />
+            <Chips
+              label="Interest earned on the old FD"
+              value={withInterest ? 'ADD' : 'PAY'}
+              options={[
+                { value: 'ADD', label: 'Add to the new FD' },
+                { value: 'PAY', label: 'Pay to the bank' },
+              ]}
+              onChange={(v) => setWithInterest(v === 'ADD')}
+            />
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-card border border-line px-4 py-3">
+              <Field label="Maturity value">
+                <Money value={value} />
+              </Field>
+              <Field label="New FD amount">
+                <Money value={withInterest ? value : (dep.principal ?? 0)} />
+              </Field>
+              {!withInterest && (
+                <Field label="Interest paid to the bank">
+                  <Money value={value - (dep.principal ?? 0)} />
+                </Field>
+              )}
+            </dl>
+          </>
         )}
         {action === 'withdraw' && (
           <>
@@ -229,6 +269,22 @@ export function DepositDetailPage() {
                     </Link>{' '}
                     · {d.member.departmentName}
                   </p>
+                  {dep.renewedFrom && (
+                    <p className="mt-1 text-caption text-fg-secondary">
+                      Renewal of{' '}
+                      <Link to={`/deposits/${dep.renewedFrom.id}`} className="text-link underline underline-offset-2">
+                        {dep.renewedFrom.fdrNo}
+                      </Link>
+                    </p>
+                  )}
+                  {dep.renewedTo && (
+                    <p className="mt-1 text-caption text-fg-secondary">
+                      Renewed as{' '}
+                      <Link to={`/deposits/${dep.renewedTo.id}`} className="text-link underline underline-offset-2">
+                        {dep.renewedTo.accountNo}
+                      </Link>
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -364,7 +420,7 @@ export function DepositDetailPage() {
                 {dep.payment && (
                   <Panel title="Receipt" subtitle={dep.payment.receiptNo}>
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                      <Field label="Mode">{dep.payment.mode === 'CASH' ? 'Cash' : dep.payment.mode === 'TRANSFER' ? 'Bank transfer' : 'Cheque'}</Field>
+                      <Field label="Mode">{MODE[dep.payment.mode]}</Field>
                       <Field label="Date">{formatDisplayDate(dep.payment.date)}</Field>
                       <Field label="Received by">{dep.payment.byName}</Field>
                       <Field label="Reference">{dep.payment.reference ?? '—'}</Field>

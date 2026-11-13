@@ -290,6 +290,9 @@ var appSettings = [
   { name: 'WHATSAPP_PROVIDER', value: empty(whatsappPhoneNumberId) ? 'simulated' : 'meta' }
   { name: 'WHATSAPP_PHONE_NUMBER_ID', value: whatsappPhoneNumberId }
   { name: 'WHATSAPP_TOKEN', value: empty(whatsappPhoneNumberId) ? '' : '${kvRef}WHATSAPP-TOKEN)' }
+  // G9 (D-121): delivery / read receipts. The owner adds both secrets to Key Vault with the token.
+  { name: 'WHATSAPP_APP_SECRET', value: empty(whatsappPhoneNumberId) ? '' : '${kvRef}WHATSAPP-APP-SECRET)' }
+  { name: 'WHATSAPP_WEBHOOK_VERIFY_TOKEN', value: empty(whatsappPhoneNumberId) ? '' : '${kvRef}WHATSAPP-WEBHOOK-VERIFY-TOKEN)' }
   { name: 'PUSH_PROVIDER', value: 'expo' }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
 ]

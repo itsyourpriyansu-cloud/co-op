@@ -1,5 +1,6 @@
 # Runbook: running TGSECCSL in production
 
+> Version 0.2 · 2026-11-13 · G9: failed sends, WhatsApp receipts, wrong counter receipts (D-119, D-121).
 > Version 0.1 · 2026-11-12 · G8 (D-118). For the person on call (Envizon support, then the society's IT contact). Commands assume `bash`, the Azure CLI signed in, and these variables:
 >
 > ```bash
@@ -94,10 +95,12 @@ The console: redeploy the previous commit with **Deploy → Run workflow** on th
 | `database.ok: false` in health | Database blade: state, CPU, storage, connections | Restart the server from the blade; if storage is full, raise `dbStorageGb` in Bicep and redeploy |
 | Members do not get sign-in codes | Log "one-time code not sent", WhatsApp Manager → message status, token expiry, template status | Renew `WHATSAPP-TOKEN`; re-approve a paused template; members can be helped at the office meanwhile |
 | Emails not arriving | Console → Notifications → Sent; ACS → Insights | Check the sender domain; Azure-managed domains have a daily limit, move to the society's domain |
+| Messages stuck at "Sending…" or many "Not delivered" | Console → Notifications → Sent messages (Not delivered list shows the provider's reason); log "message not delivered" / "outbox dispatch failed" | A wrong number or email: correct it on the member, then Send again. Token or template problem: fix as for codes above, then Send again. The outbox retries faults by itself for about 40 minutes |
+| Sent messages never show Delivered / Read | Meta app → WhatsApp → Configuration: callback URL and `messages` subscription; log for 401 on `/webhooks/whatsapp` | Callback must be `https://<api>/api/v1/webhooks/whatsapp`; `WHATSAPP-APP-SECRET` must be the app's current secret |
 | Push not arriving | Log "push not accepted" | Usually a phone setting; Expo access token if `EXPO_ACCESS_TOKEN` is set |
 | A document will not open ("Blob read failed") | Storage firewall, identity role on the account | Re-run the Bicep deployment to restore the role |
 | Trial balance does not balance | Reports → Trial balance | Should never happen (every entry balances); stop postings, export the journals, contact Envizon |
-| Wrong posting by staff | Accounts → the voucher / Ledger → journal | Reverse it (ledger reversal) and post the right one; never edit the database |
+| Wrong posting by staff | Accounts → the voucher / Ledger → journal | Vouchers and manual journals: reverse on the Ledger page and post the right one. A wrong counter receipt: another officer cancels it the same day from the receipt (Cancel receipt), then a new receipt is taken; later than that, a correcting voucher. Business entries cannot be reversed from the Ledger page. Never edit the database |
 | Suspected account misuse | Audit Log filtered by user | Admin → Users → deactivate; reset password and authenticator; rotate `JWT-SECRET` to end every session |
 | Data breach suspected | Contain first (deactivate, rotate secrets) | The society informs the Data Protection Board and affected people as the DPDP rules require; keep the audit export |
 

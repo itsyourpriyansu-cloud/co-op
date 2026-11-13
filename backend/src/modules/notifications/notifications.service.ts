@@ -1,9 +1,10 @@
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { calculateLeftoverService, formatCycle, formatDisplayDate, formatINR, fullMonthsBetween } from '@tgs/domain';
 import type {
   ComposeInput,
   ComposePreview,
   DeliveryStatus,
+  FailedDelivery,
   Member,
   MemberHome,
   MemberPreferences,
@@ -16,13 +17,14 @@ import type {
   SupportCenter,
   SupportTicket,
 } from '@tgs/types';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
 import { businessCycle, businessNow, businessToday } from '../../common/utils/business-date';
 import { createSenders, type MessageSender } from '../../integrations/messaging';
 import { expoPush, simulatedPush, type PushSender } from '../../integrations/push';
-import type { NotificationsRepository, StoredNotification } from './notifications.repository';
+import type { DeliveryRow, NotificationsRepository, StoredNotification } from './notifications.repository';
+import { RealtimeHub } from './notifications.realtime';
 
 type Via = Partial<Record<MessageChannel, DeliveryStatus>>;
 type Vars = Record<string, string | number>;
@@ -51,6 +53,30 @@ const CATEGORIES: NonNullable<SupportTicket['category']>[] = ['LOAN', 'DEPOSIT',
 const fill = (s: string, vars: Vars) => s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`));
 const newId = (prefix: string) => `${prefix}-${randomUUID().slice(0, 8)}`;
 
+// ---- G9 (D-121) outbox ----
+const BATCH = 50;
+const MAX_ATTEMPTS = 5;
+/** Retries after 30 s, 2 min, 8 min, 32 min; then FAILED for the office to see. */
+const BACKOFF_MS = 30_000;
+/** Alerts about the member's own money and sign-in go on WhatsApp whatever the member switched off (MB-14 says so). */
+export const MANDATORY_TEMPLATES = new Set(['receipt.issued', 'receipt.cancelled', 'account.mobileChanged']);
+/** WhatsApp status webhook: a later status never moves a row back (Meta may send them out of order). */
+const RANK: Record<DeliveryStatus, number> = { QUEUED: 0, SIMULATED: 1, SENT: 1, FAILED: 2, DELIVERED: 3, READ: 4 };
+const WA_STATUS: Record<string, DeliveryStatus> = { sent: 'SENT', delivered: 'DELIVERED', read: 'READ', failed: 'FAILED' };
+const maskTo = (to: string) => (to.includes('@') ? to.replace(/^(.).*(@.*)$/, '$1•••$2') : to.replace(/^(.{2}).*(.{2})$/, '$1••••••$2'));
+
+/**
+ * G9 (D-121): when a composed message may go out. Inside the window: now (undefined). Outside: the
+ * next start hour, in IST (UTC+5:30, no daylight saving).
+ */
+export function nextSendTime(nowMs: number, startHour: number, endHour: number): string | undefined {
+  const IST = 330 * 60_000;
+  const ist = new Date(nowMs + IST);
+  const h = ist.getUTCHours();
+  if (h >= startHour && h < endHour) return undefined;
+  return new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + (h >= endHour ? 1 : 0), startHour) - IST).toISOString();
+}
+
 /**
  * P8a (docs/22 §5.7): in-app notifications, delivery on the other channels through
  * integrations/messaging, the ST-03 composer, member questions (MB-13), preferences (MB-14) and
@@ -59,6 +85,11 @@ const newId = (prefix: string) => `${prefix}-${randomUUID().slice(0, 8)}`;
 export class NotificationsService {
   readonly senders: Record<MessageChannel, MessageSender>;
   push: PushSender;
+  readonly hub: RealtimeHub;
+  private running?: Promise<void>;
+  private again = false;
+  private closing = false;
+  private readonly streams = new Set<() => void>();
 
   constructor(
     private readonly app: FastifyInstance,
@@ -66,6 +97,16 @@ export class NotificationsService {
   ) {
     this.senders = createSenders(app.log, app.env);
     this.push = app.env.PUSH_PROVIDER === 'expo' ? expoPush(app.env.EXPO_ACCESS_TOKEN) : simulatedPush(app.log);
+    this.hub = new RealtimeHub(app.dbHandle.pool, app.log);
+    // Open streams would hold the shutdown; the outbox finishes the send in hand first.
+    app.addHook('preClose', async () => {
+      this.closing = true;
+      for (const end of this.streams) end();
+    });
+    app.addHook('onClose', async () => {
+      await this.running;
+      await this.hub.close();
+    });
   }
 
   /** G4 (D-114): the signed-in phone asks for pushes (Expo push token). */
@@ -109,32 +150,149 @@ export class NotificationsService {
     return Boolean(await this.notify(recipientId, templateKey, vars, link));
   }
 
-  async notify(recipientId: string, templateKey: string, vars: Vars, link?: string): Promise<{ id: string; via: Via } | undefined> {
+  /**
+   * G9 (D-121): the sends go through the outbox and are tried at once; a failure is retried by the
+   * dispatcher. `alsoTo` sends the WhatsApp copy to one more number too (the old mobile, after a change).
+   */
+  async notify(recipientId: string, templateKey: string, vars: Vars, link?: string, opts: { alsoTo?: string } = {}): Promise<{ id: string; via: Via } | undefined> {
     const t = (await this.app.masters.templates()).find((x) => x.key === templateKey);
     if (!t) return undefined;
     const n: StoredNotification = { id: newId('ntf'), recipientId, title: fill(t.title, vars), body: fill(t.body, vars), channel: 'IN_APP', createdAt: await businessNow(this.app), read: false, ...(link ? { link } : {}), via: {} };
     await this.repo.insert(n, templateKey);
+    await this.hub.publish({ recipientId, id: n.id, title: n.title });
     await this.pushTo(recipientId, n.title, n.body, link);
     const member = await this.app.members.byId(recipientId);
     if (member) {
-      const on = (await this.preferencesOf(member)).channels;
-      n.via = await this.deliver(member, t.channels.filter((c): c is MessageChannel => (c === 'WHATSAPP' || c === 'EMAIL') && on[c]), n.title, n.body, { notificationId: n.id });
-      if (Object.keys(n.via).length) await this.repo.setVia(n.id, n.via);
+      const on = { ...(await this.preferencesOf(member)).channels, ...(MANDATORY_TEMPLATES.has(templateKey) ? { WHATSAPP: true } : {}) };
+      const channels = t.channels.filter((c): c is MessageChannel => (c === 'WHATSAPP' || c === 'EMAIL') && on[c]);
+      const q = await this.enqueue(member, channels, n.title, n.body, { notificationId: n.id }, undefined, channels.includes('WHATSAPP') ? opts.alsoTo : undefined);
+      n.via = q.via;
+      if (q.ids.length) {
+        await this.repo.setVia(n.id, n.via);
+        for (const d of await this.repo.claim(q.ids.length, q.ids)) {
+          const status = await this.sendOne(d);
+          if (d.notificationId) n.via[d.channel] = status;
+        }
+      }
     }
     return { id: n.id, via: n.via };
   }
 
-  /** Sends one message per channel and records each provider answer; a channel without an address is skipped. */
-  private async deliver(m: Member, channels: MessageChannel[], title: string, body: string, ref: { notificationId?: string; messageId?: string }): Promise<Via> {
+  /** Queues one send per channel; a channel without an address is skipped. */
+  private async enqueue(m: Member, channels: MessageChannel[], title: string, body: string, ref: { notificationId?: string; messageId?: string }, notBefore?: string, alsoTo?: string): Promise<{ via: Via; ids: string[] }> {
     const via: Via = {};
-    for (const channel of channels) {
+    const rows = channels.flatMap((channel) => {
       const to = channel === 'EMAIL' ? m.email : m.mobile;
-      if (!to) continue;
-      const res = await this.senders[channel].send({ channel, to, title, body }).catch((err: Error) => ({ status: 'FAILED' as const, provider: 'unknown', error: err.message }));
-      await this.repo.insertDelivery({ id: newId('dlv'), notificationId: ref.notificationId ?? null, messageId: ref.messageId ?? null, recipientId: m.id, channel, to, status: res.status, provider: res.provider, error: res.error ?? null });
-      via[channel] = res.status;
+      if (!to) return [];
+      via[channel] = 'QUEUED';
+      return [to, ...(channel === 'WHATSAPP' && alsoTo && alsoTo !== to ? [alsoTo] : [])].map((addr) => ({ id: newId('dlv'), notificationId: addr === to ? (ref.notificationId ?? null) : null, messageId: ref.messageId ?? null, recipientId: m.id, channel, to: addr, title, body, status: 'QUEUED' as const, provider: 'outbox', nextAttemptAt: notBefore ?? null }));
+    });
+    await this.repo.enqueue(rows);
+    return { via, ids: rows.map((r) => r.id) };
+  }
+
+  /** One claimed send: the provider's answer, or a retry with backoff, or FAILED after the last try. */
+  private async sendOne(d: DeliveryRow): Promise<DeliveryStatus> {
+    const res = await this.senders[d.channel].send({ channel: d.channel, to: d.to, title: d.title ?? '', body: d.body ?? '' }).catch((err: Error) => ({ status: 'FAILED' as const, provider: 'unknown', error: err.message, retryable: true, providerMessageId: undefined }));
+    const retry = res.status === 'FAILED' && Boolean(res.retryable) && d.attempts < MAX_ATTEMPTS;
+    const status: DeliveryStatus = retry ? 'QUEUED' : res.status;
+    await this.repo.finish(d.id, { status, provider: res.provider, error: res.error ?? null, providerMessageId: res.providerMessageId ?? null, nextAttemptAt: retry ? new Date(Date.now() + BACKOFF_MS * 4 ** (d.attempts - 1)).toISOString() : null });
+    if (d.notificationId) await this.repo.mergeVia(d.notificationId, d.channel, status);
+    if (status === 'FAILED') this.app.log.warn({ delivery: d.id, channel: d.channel, attempts: d.attempts, error: res.error }, 'message not delivered');
+    return status;
+  }
+
+  /** G9 (D-121): sends everything due in the outbox (the job calls it every few seconds; tests call it directly). */
+  async dispatch(): Promise<number> {
+    let done = 0;
+    for (;;) {
+      const batch = await this.repo.claim(BATCH);
+      for (const d of batch) {
+        await this.sendOne(d);
+        done += 1;
+      }
+      if (batch.length < BATCH || this.closing) return done;
     }
-    return via;
+  }
+
+  /** Starts a dispatch in the background, one at a time per server; never throws. */
+  kick(): void {
+    if (this.closing) return;
+    if (this.running) {
+      this.again = true;
+      return;
+    }
+    this.running = (async () => {
+      do {
+        this.again = false;
+        await this.dispatch();
+      } while (this.again && !this.closing);
+    })()
+      .catch((err: Error) => this.app.log.error({ err }, 'outbox dispatch failed'))
+      .finally(() => (this.running = undefined));
+  }
+
+  // ---- G9 (D-121) WhatsApp status webhook ----
+
+  /** Meta proves the callback URL once, with the verify token the society typed in its setup. */
+  whatsappVerify(q: { 'hub.mode'?: string; 'hub.verify_token'?: string; 'hub.challenge'?: string }): string {
+    const token = this.app.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+    if (!token || q['hub.mode'] !== 'subscribe' || !q['hub.challenge'] || !safeEqual(q['hub.verify_token'] ?? '', token)) fail('FORBIDDEN', 'Webhook verification failed.');
+    return q['hub.challenge']!;
+  }
+
+  /** Sent / delivered / read / failed for each message; only a call signed with the app secret is read. */
+  async whatsappStatus(raw: string, signature: string | undefined): Promise<{ updated: number }> {
+    const secret = this.app.env.WHATSAPP_APP_SECRET;
+    if (!secret) fail('FORBIDDEN', 'The WhatsApp webhook is not set up.');
+    if (!safeEqual(signature ?? '', `sha256=${createHmac('sha256', secret).update(raw).digest('hex')}`)) fail('UNAUTHENTICATED', 'Signature does not match.');
+    let body: { entry?: Array<{ changes?: Array<{ value?: { statuses?: Array<{ id?: string; status?: string; errors?: Array<{ code?: number; title?: string }> }> } }> }> };
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      return fail('VALIDATION_ERROR', 'Not JSON.');
+    }
+    let updated = 0;
+    for (const s of (body.entry ?? []).flatMap((e) => e.changes ?? []).flatMap((c) => c.value?.statuses ?? [])) {
+      const status = WA_STATUS[s.status ?? ''];
+      const d = status && s.id ? await this.repo.byProviderId(s.id) : undefined;
+      if (!d || !status || RANK[status] <= RANK[d.status]) continue;
+      const e = s.errors?.[0];
+      await this.repo.finish(d.id, { status, provider: d.provider, error: status === 'FAILED' ? `${e?.code ?? ''} ${e?.title ?? 'Not delivered'}`.trim().slice(0, 300) : d.error, providerMessageId: d.providerMessageId, nextAttemptAt: null });
+      if (d.notificationId) await this.repo.mergeVia(d.notificationId, d.channel, status);
+      updated += 1;
+    }
+    return { updated };
+  }
+
+  // ---- G9 (D-121) live updates ----
+
+  /**
+   * Server-sent events: `notification` each time one arrives for the signed-in user, a comment every
+   * 25 s so proxies keep the line open, and an end after 15 minutes so the browser reconnects with a
+   * fresh access token.
+   */
+  async stream(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const user = sessionOf(request);
+    const recipientId = user.role === 'MEMBER' && user.memberId ? user.memberId : user.id;
+    const raw = reply.raw;
+    const write = (event: string, data: object) => raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    const unsubscribe = await this.hub.subscribe(recipientId, (e) => write('notification', { id: e.id, title: e.title }));
+    reply.hijack();
+    raw.writeHead(200, { ...(reply.getHeaders() as Record<string, string>), 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache, no-transform', connection: 'keep-alive', 'x-accel-buffering': 'no' });
+    raw.write('retry: 5000\n\n');
+    write('ready', { unread: await this.repo.unread(recipientId) });
+    const ping = setInterval(() => raw.write(': ping\n\n'), 25_000);
+    const end = () => {
+      clearInterval(ping);
+      clearTimeout(limit);
+      unsubscribe();
+      this.streams.delete(end);
+      if (!raw.writableEnded) raw.end();
+    };
+    const limit = setTimeout(end, 15 * 60_000);
+    this.streams.add(end);
+    request.raw.on('close', end);
   }
 
   // ---- staff ST-03 ----
@@ -222,7 +380,36 @@ export class NotificationsService {
 
   async messages(user: SessionUser): Promise<OutboxMessage[]> {
     await this.requirePermission(user, 'messages.send', 'Only the Super Admin and the Accountant send messages.');
-    return this.repo.messages();
+    const list = await this.repo.messages();
+    const progress = await this.repo.progress(list.map((m) => m.id));
+    return list.map((m) => {
+      const p = progress.get(m.id);
+      if (!p) return m;
+      const { failed: _f, ...rest } = m;
+      const status = p.QUEUED ? 'QUEUED' : Object.keys(p).every((k) => k === 'SIMULATED') ? 'DELIVERED_SIMULATED' : 'SENT';
+      return { ...rest, status, progress: p, ...(p.FAILED ? { failed: p.FAILED } : {}) };
+    });
+  }
+
+  /** G9 (D-121): sends that failed after their retries, newest first. */
+  async failedDeliveries(user: SessionUser): Promise<FailedDelivery[]> {
+    await this.requirePermission(user, 'messages.send', 'Only the Super Admin and the Accountant see failed messages.');
+    const rows = await this.repo.failed();
+    const members = new Map((await this.app.members.all()).map((m) => [m.id, m]));
+    return rows.map((d) => {
+      const m = members.get(d.recipientId);
+      return { id: d.id, at: d.updatedAt, channel: d.channel, to: maskTo(d.to), title: d.title ?? '', attempts: d.attempts, error: d.error ?? 'Not delivered', member: m ? { id: m.id, name: m.name, generalNo: m.generalNo } : null };
+    });
+  }
+
+  async retryDelivery(request: FastifyRequest, id: string): Promise<{ ok: true }> {
+    const user = sessionOf(request);
+    await this.requirePermission(user, 'messages.send', 'Only the Super Admin and the Accountant retry messages.');
+    const d = (await this.repo.requeue(id)) ?? ((await this.repo.delivery(id)) ? fail('INVALID_TRANSITION', 'Only a failed message can be sent again.') : fail('NOT_FOUND', 'Message not found.'));
+    if (d.notificationId) await this.repo.mergeVia(d.notificationId, d.channel, 'QUEUED');
+    await this.app.audit.record(request, { action: 'retry', entity: 'delivery', entityId: d.id, summary: `Sent a failed ${d.channel === 'EMAIL' ? 'email' : 'WhatsApp'} again (${maskTo(d.to)})` });
+    this.kick();
+    return { ok: true };
   }
 
   async preview(user: SessionUser, input: ComposeInput): Promise<ComposePreview> {
@@ -238,24 +425,20 @@ export class NotificationsService {
     const p = await this.compose(input);
     if (!p.recipients) fail('VALIDATION_ERROR', 'Nobody to send to.', { fieldErrors: { audience: p.skipped ? 'None of these members has an email on file' : 'No members match' } });
     const at = await businessNow(this.app);
-    const msg: OutboxMessage = { id: newId('msg'), at, byId: user.id, byName: user.name, channel: input.channel, audienceLabel: p.audienceLabel, recipients: p.recipients, skipped: p.skipped, title: input.title || 'Message from the society', body: input.body, ...(input.templateKey ? { templateKey: input.templateKey } : {}), status: 'DELIVERED_SIMULATED' };
+    // G9 (D-121): outside the message hours it waits for the morning. Demo and test runs happen at any hour (production forces DEMO_MODE off).
+    const settings = await this.app.masters.settings();
+    const notBefore = this.app.env.DEMO_MODE ? undefined : nextSendTime(Date.now(), settings.messageWindowStartHour ?? 9, settings.messageWindowEndHour ?? 21);
+    const msg: OutboxMessage = { id: newId('msg'), at, byId: user.id, byName: user.name, channel: input.channel, audienceLabel: p.audienceLabel, recipients: p.recipients, skipped: p.skipped, title: input.title || 'Message from the society', body: input.body, ...(input.templateKey ? { templateKey: input.templateKey } : {}), status: 'QUEUED', ...(notBefore ? { scheduledFor: notBefore } : {}) };
     await this.repo.insertMessage(msg);
     const vars = await this.varsFor(p.send);
-    const outcomes: string[] = [];
     for (const m of p.send) {
       const v = vars.get(m.id)!;
       const n: StoredNotification = { id: newId('ntf'), recipientId: m.id, title: fill(msg.title, v), body: fill(input.body, v), channel: 'IN_APP', createdAt: at, read: false, via: {} };
+      n.via = (await this.enqueue(m, [input.channel], n.title, n.body, { notificationId: n.id, messageId: msg.id }, notBefore)).via;
       await this.repo.insert(n, input.templateKey);
-      n.via = await this.deliver(m, [input.channel], n.title, n.body, { notificationId: n.id, messageId: msg.id });
-      await this.repo.setVia(n.id, n.via);
-      outcomes.push(n.via[input.channel] ?? 'FAILED');
     }
-    // G5 (D-115): record what the provider really did.
-    if (!outcomes.includes('SIMULATED')) {
-      const failed = outcomes.filter((o) => o === 'FAILED').length;
-      Object.assign(msg, { status: 'SENT' }, failed ? { failed } : {});
-      await this.repo.updateMessage(msg);
-    }
+    // The outbox sends in the background; GET /messages shows its progress.
+    if (!notBefore) this.kick();
     await this.app.audit.record(request, { action: 'send', entity: 'message', entityId: msg.id, summary: `${input.channel} to ${p.audienceLabel} (${p.recipients})` });
     return msg;
   }
@@ -409,4 +592,10 @@ export class NotificationsService {
       unreadNotifications: unread,
     };
   }
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
 }

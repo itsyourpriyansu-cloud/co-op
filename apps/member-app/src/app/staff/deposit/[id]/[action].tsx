@@ -1,13 +1,13 @@
-// ST-33m payment and acceptance, plus reject, cancel, refund, pay out and early withdrawal.
+// ST-33m payment and acceptance, plus reject, cancel, refund, pay out, renew (G9, D-120) and early withdrawal.
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { amountInWords, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { amountInWords, fdRateFor, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { DepositActionInput, DepositDetail } from '@tgs/types';
 import { ActionAlert, ask, CashStatus, countsTotal, DenominationCounter, DoneAlert, Loaded, useAction, useTodayDate, type Counts } from '@/components/staff';
 import { api } from '@/lib/api';
-import { ACTION_LABEL, METHOD } from '@/lib/staffDeposits';
+import { ACTION_LABEL, METHOD, MODE, PAYOUTS } from '@/lib/staffDeposits';
 import { Alert, Button, Card, DateField, Divider, Header, KeyValue, Screen, Segmented, Text, TextField } from '@/ui';
 import { space } from '@/theme';
 
@@ -31,19 +31,26 @@ function Decision({ d, action }: { d: DepositDetail; action: string }) {
   const [remarks, setRemarks] = useState('');
   const [done, setDone] = useState<{ heading: string; description?: string }>();
   const preview = useQuery({ queryKey: ['deposit-withdrawal', dep.id], queryFn: () => api.deposits.withdrawalPreview(dep.id), enabled: action === 'withdraw', retry: false });
+  const [tenure, setTenure] = useState(String(dep.tenureMonths ?? 12));
+  const [payout, setPayout] = useState(dep.payoutFrequency ?? 'ON_MATURITY');
+  const [withInterest, setWithInterest] = useState(true);
+  const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings.get, staleTime: 5 * 60_000, enabled: action === 'renew' });
+  const renewRate = settings.data ? fdRateFor(Number(tenure), settings.data.settings.fdSlabs) : undefined;
+  const value = Math.max(d.maturity?.value ?? dep.principal ?? 0, dep.principal ?? 0);
 
   const needsReason = action === 'reject';
   const principal = dep.principal ?? 0;
-  const ready = action === 'recordPayment' ? (mode === 'CASH' ? countsTotal(counts) === principal : Boolean(reference.trim())) && Boolean(date) : action === 'withdraw' ? Boolean(preview.data) : needsReason ? Boolean(remarks.trim()) : true;
+  const ready = action === 'renew' ? Boolean(renewRate) : action === 'recordPayment' ? (mode === 'CASH' ? countsTotal(counts) === principal : Boolean(reference.trim())) && Boolean(date) : action === 'withdraw' ? Boolean(preview.data) : needsReason ? Boolean(remarks.trim()) : true;
   const title = action === 'recordPayment' ? 'Receive payment (cash slip)' : action === 'accept' ? (dep.status === 'ACCEPTANCE_PRESIDENT' ? 'Accept deposit (2 of 2)' : 'Accept deposit (1 of 2)') : (ACTION_LABEL[action] ?? action);
   const danger = action === 'reject' || action === 'withdraw';
 
   const submit = async () => {
-    const message = action === 'recordPayment' ? `Receive ${formatINR(principal)} from ${d.member.name}. This posts to the ledger.` : action === 'withdraw' ? `Pay ${formatINR(preview.data?.payable ?? 0)} to ${d.member.name} and close this deposit.` : `${d.member.name} · ${dep.accountNo}. Recorded with your name and time.`;
+    const message = action === 'renew' ? `Close ${dep.fdrNo ?? dep.accountNo} and open a new FD of ${formatINR(withInterest ? value : principal)} for ${tenure} months. It then needs both acceptances.` : action === 'recordPayment' ? `Receive ${formatINR(principal)} from ${d.member.name}. This posts to the ledger.` : action === 'withdraw' ? `Pay ${formatINR(preview.data?.payable ?? 0)} to ${d.member.name} and close this deposit.` : `${d.member.name} · ${dep.accountNo}. Recorded with your name and time.`;
     if (!(await ask(title, message, ACTION_LABEL[action] ?? 'Confirm'))) return;
     const input: DepositActionInput = {
       ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
       ...(action === 'recordPayment' ? { payment: { mode, date: date ?? '', ...(mode === 'CASH' ? { denominations: counts } : { reference: reference.trim() }) } } : {}),
+      ...(action === 'renew' ? { renewal: { tenureMonths: Number(tenure), payoutFrequency: payout, withInterest } } : {}),
     };
     await a.run(async () => {
       const next = await api.deposits.act(dep.id, action, input);
@@ -96,13 +103,29 @@ function Decision({ d, action }: { d: DepositDetail; action: string }) {
 
       {action === 'accept' ? (
         <Card>
-          <KeyValue label="Payment" value={dep.payment ? `${dep.payment.mode === 'CASH' ? 'Cash' : dep.payment.mode === 'TRANSFER' ? 'Bank transfer' : 'Cheque'} · ${dep.payment.receiptNo}` : '—'} />
+          <KeyValue label="Payment" value={dep.payment ? `${MODE[dep.payment.mode]} · ${dep.payment.receiptNo}` : '—'} />
           <KeyValue label="Received on" value={dep.payment ? formatDisplayDate(dep.payment.date) : '—'} />
           <KeyValue label="Matures" value={d.maturity ? formatDisplayDate(d.maturity.date) : '—'} />
           <KeyValue label="Maturity value" value={d.maturity ? formatINR(d.maturity.value) : '—'} />
           <KeyValue label="Secretary" value={dep.signOffs?.secretary ? `${dep.signOffs.secretary.byName} · ${formatDisplayDateTime(dep.signOffs.secretary.at)}` : 'Pending'} />
           <KeyValue label="President" value={dep.status === 'ACCEPTANCE_PRESIDENT' ? 'Your signature issues the FDR' : 'Next'} />
         </Card>
+      ) : null}
+
+      {action === 'renew' ? (
+        <View style={{ gap: space[6] }}>
+          <Text role="body" tone="secondary">
+            The matured FD closes and a new FD opens at today's rate. The Secretary and the President accept it before the new FDR is issued.
+          </Text>
+          <TextField label="New tenure (months)" required keyboardType="number-pad" value={tenure} onChangeText={setTenure} hint={renewRate ? `${renewRate}% a year` : undefined} error={a.fields.tenureMonths ?? (settings.data && !renewRate ? 'No FD rate slab for this tenure' : undefined)} />
+          <Segmented label="Interest payable" value={payout} options={[...PAYOUTS]} onChange={(v) => setPayout(v as typeof payout)} />
+          <Segmented label="Interest earned on the old FD" value={withInterest ? 'ADD' : 'PAY'} options={[{ value: 'ADD', label: 'Add to new FD' }, { value: 'PAY', label: 'Pay to bank' }]} onChange={(v) => setWithInterest(v === 'ADD')} />
+          <Card>
+            <KeyValue label="Maturity value" value={formatINR(value)} />
+            <KeyValue label="New FD amount" value={formatINR(withInterest ? value : principal)} emphasis />
+            {!withInterest ? <KeyValue label="Interest paid to the bank" value={formatINR(value - principal)} /> : null}
+          </Card>
+        </View>
       ) : null}
 
       {action === 'withdraw' && preview.isError ? <Alert type="error" heading="Cannot withdraw" description={preview.error instanceof Error ? preview.error.message : 'Try again.'} /> : null}

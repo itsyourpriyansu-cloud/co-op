@@ -128,13 +128,13 @@ const back = () => router.back();
 
 // ---- ST-60m General ------------------------------------------------------------------------
 
-type GeneralValues = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths'>;
+type GeneralValues = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths' | 'messageWindowStartHour' | 'messageWindowEndHour'>;
 
 function General({ b, title }: { b: SettingsBundle; title: string }) {
   const ro = !b.canEdit;
   const x = b.settings;
   const society = useDraft<SocietyProfile>(b.society);
-  const values = useDraft<GeneralValues>({ shareValue: x.shareValue, admissionFee: x.admissionFee, minShares: x.minShares, maxShares: x.maxShares, retirementAge: x.retirementAge, financialYearStartMonth: x.financialYearStartMonth, maxGuaranteesPerSurety: x.maxGuaranteesPerSurety, emiToNetSalaryMaxPercent: x.emiToNetSalaryMaxPercent, membershipTargetHours: x.membershipTargetHours, loanTargetDays: x.loanTargetDays, holidays: x.holidays, casteCategories: x.casteCategories, minAppVersion: x.minAppVersion, applicantDataRetentionMonths: x.applicantDataRetentionMonths });
+  const values = useDraft<GeneralValues>({ shareValue: x.shareValue, admissionFee: x.admissionFee, minShares: x.minShares, maxShares: x.maxShares, retirementAge: x.retirementAge, financialYearStartMonth: x.financialYearStartMonth, maxGuaranteesPerSurety: x.maxGuaranteesPerSurety, emiToNetSalaryMaxPercent: x.emiToNetSalaryMaxPercent, membershipTargetHours: x.membershipTargetHours, loanTargetDays: x.loanTargetDays, holidays: x.holidays, casteCategories: x.casteCategories, minAppVersion: x.minAppVersion, applicantDataRetentionMonths: x.applicantDataRetentionMonths, messageWindowStartHour: x.messageWindowStartHour, messageWindowEndHour: x.messageWindowEndHour });
   const a = useAction();
   const s = society.draft;
   const v = values.draft;
@@ -191,6 +191,10 @@ function General({ b, title }: { b: SettingsBundle; title: string }) {
       </Block>
       <Block title="Mobile app" description="Raise this when an old version must stop working. People on an older version see an update screen. 0.0.0 lets every version in.">
         <TextField label="Oldest version allowed" value={v.minAppVersion} onChangeText={(minAppVersion) => setV({ minAppVersion: minAppVersion.trim() })} error={e.minAppVersion} placeholder="1.0.0" editable={!ro} />
+      </Block>
+      <Block title="Message hours" description="Composed messages go out only in these hours (IST); outside them they wait for the morning. Receipts, OTPs and money alerts go at once.">
+        <Num label="From" value={v.messageWindowStartHour} onChange={(messageWindowStartHour) => setV({ messageWindowStartHour })} error={e.messageWindowStartHour} unit=":00 hours" disabled={ro} />
+        <Num label="Until" value={v.messageWindowEndHour} onChange={(messageWindowEndHour) => setV({ messageWindowEndHour })} error={e.messageWindowEndHour} unit=":00 hours" disabled={ro} />
       </Block>
       <Block title="Personal data" description="DPDP: a rejected or withdrawn application, its documents and the applicant's sign-in are deleted this long after the last change." tag={ph('applicantDataRetentionMonths')}>
         <Num label="Delete closed applications after" value={v.applicantDataRetentionMonths} onChange={(applicantDataRetentionMonths) => setV({ applicantDataRetentionMonths })} error={e.applicantDataRetentionMonths} unit="months" disabled={ro} />

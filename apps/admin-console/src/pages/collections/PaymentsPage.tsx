@@ -190,8 +190,11 @@ export function PaymentsPage() {
   const columns: ColumnDefinition<Row>[] = [
     { field: 'receiptNo', header: 'Receipt', type: ColumnType.REACT_ELEMENT, isSortable: false, minWidth: '190px', renderCell: (_v, r) => (
       <div>
-        <p className="tabular text-label text-fg">{r.receiptNo}</p>
-        <p className="tabular text-caption text-fg-tertiary">{formatDisplayDate(r.date)}</p>
+        <p className={`tabular text-label ${r.cancelled ? 'text-fg-tertiary line-through' : 'text-fg'}`}>{r.receiptNo}</p>
+        <p className="tabular text-caption text-fg-tertiary">
+          {formatDisplayDate(r.date)}
+          {r.cancelled ? <span className="text-danger-fg"> · Cancelled</span> : null}
+        </p>
       </div>
     ) },
     { field: 'memberName', header: 'Member', type: ColumnType.REACT_ELEMENT, isSortable: false, minWidth: '220px', renderCell: (_v, r) => (

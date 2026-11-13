@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.18 · 2026-11-13 · BR-051 receipt cancellation, BR-052 FD renewal, BR-053 notification delivery (G9, D-119 … D-121).
 > Version 0.17 · 2026-11-12 · BR-050 personal data (G7, D-117). v0.16: BR-049 go-live data import (G6, D-116). v0.15: BR-048 app security and versions (G4, D-114). v0.14: BR-044 office vouchers, BR-045 annual interest, BR-046 dividend, BR-047 year close and lock (G2, D-112). v0.13: BR-040 … BR-043 (G1, D-111).
 > Version 0.12 · 2026-11-06 · BR-039 final settlement (D-098).
 > Version 0.11 · 2026-11-05 · BR-038 surety recovery (D-097).
@@ -330,3 +331,22 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand �
 - **Consent:** a membership application cannot be signed without the Privacy notice and consent agreement (`PN-2026.1`); the version is kept on the signature. A new notice version means a new constant and, for members, a new reading in the app.
 - **Retention:** `applicantDataRetentionMonths` (placeholder 12). A REJECTED or WITHDRAWN application not changed for that long is erased by the daily housekeeping: the application, its files (rows and blobs), the applicant's app sign-in, tokens and notifications. One audit line with the application number remains. Member records are not erased; they are kept as the accounts and the law require.
 
+## G9 rules (D-119 … D-121)
+
+### BR-051 Cancelling a counter receipt [P] (D-119)
+- Only a counter receipt for dues or share capital, not on a demand sheet or a member payment report and without a surety head, can be cancelled.
+- Same business day only; by an officer with `ledger.post` who is not the one who issued it; reason of at least 10 characters; only the member's latest receipt (a later one would have been allocated on top of it).
+- Everything it did is undone: penal collected or carried, demand components, loan principal and schedule rows, a loan it closed (reopens), CRD / SRDS, share capital. One `RECEIPT_CANCEL` journal reverses the `RECEIPT` journal. The receipt keeps its number and is marked cancelled; the member is told.
+- A business journal (anything but MANUAL and VOUCHER) cannot be reversed from the ledger page (`REVERSE_SOURCE`).
+
+### BR-052 Renewing a matured FD [P] (D-120)
+- Only a MATURED FD; the Cashier records it on the member's request. New tenure must be in the FD rate slabs; the rate is today's slab rate.
+- With interest: the new principal is the maturity value. Without: the principal stays and the interest is paid to the bank (voucher).
+- The new FD starts on the renewal date and goes through Secretary then President acceptance (BR on FD acceptance); its FDR names the old one. No auto-renewal.
+
+### BR-053 Message delivery [P] (D-121)
+- Every WhatsApp / email send is queued and retried on a provider fault (timeout, 408, 429, 5xx, Meta rate limits) after 30 s, 2, 8 and 32 minutes; then FAILED. A refusal of the number or the text fails at once.
+- Statuses only move forward: QUEUED → SENT → DELIVERED → READ; FAILED from the provider's webhook.
+- Composed broadcasts go out between `messageWindowStartHour` and `messageWindowEndHour` IST (placeholders 9 and 21); otherwise they wait for the next start hour. Event notices go at once.
+- Receipts issued or cancelled and a change of the sign-in mobile always go on WhatsApp, whatever the member's preferences; the mobile-change alert also goes to the old number.
+- A deceased member is not sent the settlement notice.

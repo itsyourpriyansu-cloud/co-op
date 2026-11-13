@@ -72,6 +72,10 @@ const EnvSchema = z.object({
   WHATSAPP_LANGUAGE: z.string().trim().default('en'),
   /** The society's WhatsApp Business number (F-10). */
   WHATSAPP_FROM: z.string().trim().default(''),
+  /** G9 (D-121): the Meta app secret; the status webhook checks every call's X-Hub-Signature-256 with it. Empty = webhook off. */
+  WHATSAPP_APP_SECRET: z.string().trim().default(''),
+  /** G9 (D-121): any long random text, entered again in Meta's webhook setup so Meta can prove the URL. */
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().trim().default(''),
   // G5 (D-115): `acs` sends through Azure Communication Services with the managed identity.
   EMAIL_PROVIDER: z.enum(['simulated', 'acs']).default('simulated'),
   ACS_ENDPOINT: z.string().trim().default(''),
