@@ -1,5 +1,6 @@
 import type { DeliveryStatus, MemberPreferences, MessageChannel, OutboxMessage, SupportTicket } from '@tgs/types';
-import { boolean, index, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { members } from './members.model';
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'string' });
@@ -23,7 +24,11 @@ export const notifications = pgTable(
   (t) => [index('notifications_recipient_idx').on(t.recipientId, t.createdAt)],
 );
 
-/** Every WhatsApp / email / SMS send, with the provider's answer (integrations/messaging). */
+/**
+ * Every WhatsApp / email send, with the provider's answer (integrations/messaging). G9 (D-121): it is also
+ * the outbox: a QUEUED row is sent by the dispatcher, retried with backoff, then moved on by the
+ * provider's status webhook (SENT → DELIVERED → READ, or FAILED).
+ */
 export const deliveries = pgTable(
   'deliveries',
   {
@@ -36,9 +41,22 @@ export const deliveries = pgTable(
     status: text('status').$type<DeliveryStatus>().notNull(),
     provider: text('provider').notNull(),
     error: text('error'),
+    title: text('title'),
+    body: text('body'),
+    attempts: integer('attempts').notNull().default(0),
+    /** When the dispatcher may (re)try a QUEUED row; also a lease while a send is in flight. */
+    nextAttemptAt: ts('next_attempt_at'),
+    /** The provider's message id, matched by the status webhook. */
+    providerMessageId: text('provider_message_id'),
     createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
   },
-  (t) => [index('deliveries_recipient_idx').on(t.recipientId)],
+  (t) => [
+    index('deliveries_recipient_idx').on(t.recipientId),
+    index('deliveries_due_idx').on(t.nextAttemptAt).where(sql`status = 'QUEUED'`),
+    index('deliveries_message_idx').on(t.messageId),
+    uniqueIndex('deliveries_provider_message_uq').on(t.providerMessageId),
+  ],
 );
 
 /** ST-03 composer log. */

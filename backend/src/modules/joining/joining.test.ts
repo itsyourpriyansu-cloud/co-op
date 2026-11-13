@@ -85,6 +85,9 @@ describe('joining (P4c)', () => {
   it('staff stages run in order; share payment admits the member and posts the receipt', async () => {
     expect((await act(id, 'certify', ddoFin)).json().code).toBe('INVALID_TRANSITION');
     expect((await act(id, 'sendToDdo', accountant, { remarks: 'Documents complete.' })).json().application.status).toBe('DDO_CERTIFICATION');
+    // G9 (D-121): the applicant hears each stage.
+    const stage = (await app.notifications.repo.of((await app.joining.repo.find(id))!.applicantId))[0];
+    expect(stage?.body).toMatch(/certification by your department/);
     expect((await act(id, 'certify', accountant)).statusCode).toBe(403);
     expect((await act(id, 'certify', ddoFin, { mandateAgreed: true })).json().fieldErrors).toHaveProperty('items');
     const items = Object.fromEntries(F1_CERT_ITEMS.map((i) => [i, 'OK']));

@@ -88,6 +88,9 @@ describe('FD state machine', () => {
     expect(nextDepositStatus('ACCEPTANCE_PRESIDENT', 'reject')).toBe('REFUND_PENDING');
     expect(nextDepositStatus('REFUND_PENDING', 'refund')).toBe('CANCELLED');
     expect(nextDepositStatus('MATURED', 'payout')).toBe('CLOSED');
+    // G9 (D-120): renewal closes the matured FD; the new one starts its own acceptance.
+    expect(nextDepositStatus('MATURED', 'renew')).toBe('CLOSED');
+    expect(nextDepositStatus('ACTIVE', 'renew')).toBeUndefined();
     const bad: Array<[DepositStatus, Parameters<typeof nextDepositStatus>[1]]> = [['ACTIVE', 'recordPayment'], ['ACTIVE', 'cancel'], ['REQUESTED', 'accept'], ['REQUESTED', 'reject'], ['ACTIVE', 'refund'], ['ACTIVE', 'payout']];
     for (const [s, a] of bad) expect(nextDepositStatus(s, a), `${s} ${a}`).toBeUndefined();
   });
@@ -96,7 +99,7 @@ describe('FD state machine', () => {
     expect(depositActionsFor('ACCEPTANCE_SECRETARY', { role: 'SECRETARY' })).toEqual(['accept', 'reject']);
     expect(depositActionsFor('ACCEPTANCE_PRESIDENT', { role: 'SECRETARY' })).toEqual([]);
     expect(depositActionsFor('REFUND_PENDING', { role: 'CASHIER' })).toEqual(['refund']);
-    expect(depositActionsFor('MATURED', { role: 'CASHIER' })).toEqual(['payout']);
+    expect(depositActionsFor('MATURED', { role: 'CASHIER' })).toEqual(['payout', 'renew']);
     expect(depositActionsFor('ACTIVE', { role: 'CASHIER' })).toEqual([]);
   });
 });

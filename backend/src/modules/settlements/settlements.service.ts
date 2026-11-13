@@ -127,6 +127,8 @@ export class SettlementsService {
     const user = sessionOf(request);
     await this.requireStaff(user, 'collections.postRecovery');
     const [today, at] = [await businessToday(this.app), await businessNow(this.app)];
+    let result = '';
+    let deceased = false;
     await withTransaction(this.app.db, async (tx) => {
       const s = (await this.load(tx, memberId, true)) ?? fail('NOT_FOUND', 'Mark the member as left first.');
       if (s.status !== 'OPEN') fail('INVALID_TRANSITION', 'This settlement is already posted.');
@@ -195,8 +197,12 @@ export class SettlementsService {
 
       const payeeName = payTo === 'NOMINEE' ? (m.nominee?.name ?? 'Nominee') : m.name;
       await this.save(tx, { ...s, status: 'POSTED', posted: { statement: st, offset, payTo, payeeName, received: required, paid, reference: body.reference!.trim(), byName: user.name, at, ...(entry ? { journalNo: `JE-${String(entry.entryNo).padStart(6, '0')}` } : {}) } });
+      deceased = s.exit.status === 'DECEASED';
+      result = paid ? `${formatINR(paid)} is paid to ${payeeName}.` : required ? `${formatINR(required)} was recovered from the gratuity.` : 'Nothing was due either way.';
       await this.app.audit.record(request, { action: 'member.settle', entity: 'member', entityId: m.id, summary: `Final settlement of ${m.name}: owed ${formatINR(st.totalOwed)}, held ${formatINR(st.totalHeld)}; received ${formatINR(required)}, paid ${formatINR(paid)} to ${payeeName}` }, tx);
     });
+    // G9 (D-121): the member (read-only app use after leaving) hears that the account is closed.
+    if (!deceased) await this.app.notifications.notify(memberId, 'member.settled', { date: formatDisplayDate(today), result }, '/profile');
     return this.view(user, memberId);
   }
 }

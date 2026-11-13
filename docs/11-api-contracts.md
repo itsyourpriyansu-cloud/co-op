@@ -1,6 +1,6 @@
 # 11 · Service / API Contracts
 
-> v0.15 · 2026-11-12 · G5 (D-115): `OutboxMessage.status` SENT / `failed`; `POST /auth/otp/start` may answer RULE_VIOLATION `OTP_NOT_SENT`. v0.14 · G4 (D-114): `GET /app/config`, `POST` / `DELETE /me/push-token`. v0.13 · G2 (D-112): `/accounts/heads`, `/accounts/vouchers`, `/accounts/year-end/*`; 11 accounting reports. v0.12 · G1 (D-111): `Idempotency-Key` on POSTs; `GET/POST /loans/:id/closure`; `GET /audit`, `GET /audit/:id`; `GET/POST /me/documents`, `POST /members/:id/documents`, `GET /files/:id`; `runMaturity` returns `interestPaid`. Backend only (the mock API is the prototype demo, D-100).
+> v0.16 · 2026-11-13 · G9 (D-119 … D-121): receipt cancellation, deposit action `renew`, outbox statuses, failed deliveries and retry, live stream, WhatsApp webhook. v0.15 · 2026-11-12 · G5 (D-115): `OutboxMessage.status` SENT / `failed`; `POST /auth/otp/start` may answer RULE_VIOLATION `OTP_NOT_SENT`. v0.14 · G4 (D-114): `GET /app/config`, `POST` / `DELETE /me/push-token`. v0.13 · G2 (D-112): `/accounts/heads`, `/accounts/vouchers`, `/accounts/year-end/*`; 11 accounting reports. v0.12 · G1 (D-111): `Idempotency-Key` on POSTs; `GET/POST /loans/:id/closure`; `GET /audit`, `GET /audit/:id`; `GET/POST /me/documents`, `POST /members/:id/documents`, `GET /files/:id`; `runMaturity` returns `interestPaid`. Backend only (the mock API is the prototype demo, D-100).
 > Version 0.10 · 2026-10-29 · `GET /health` also answered by the backend (`service: tgseccsl-backend`, plus `database` status, D-073) · Status: **[P] HTTP contracts served by `apps/mock-api` (D-021)** and consumed by both apps through `packages/api-client`.
 > v0.11 · 2026-10-29 · Backend auth endpoints (P1a, D-076): staff login + TOTP, member mobile OTP, refresh/logout, users reset-password/reset-totp, PUT /permissions/:role. Contracts and examples in the backend OpenAPI at `/docs`. `Session` gains optional `refreshToken`, `expiresInSeconds`.
 > v0.12 · 2026-10-30 · Backend P2 (D-079): settings, loan products, society, departments, templates and rates served by the backend with the same shapes; new `GET /settings/versions`, `GET /settings/loan-products/:code/versions`; demo reset resets both servers.
@@ -339,3 +339,19 @@ Served by `apps/mock-api/src/insight.ts` + `reports.ts`, called through `api.das
 - `notifications.send()` → `OutboxMessage.status` is `SENT` when a real provider took the message (`failed` = how many it refused), `DELIVERED_SIMULATED` with the simulated senders.
 - `auth.otpStart()` and every call that sends a signing or mobile-change code answer `RULE_VIOLATION` with `ruleId: OTP_NOT_SENT` when WhatsApp refused the code. `OtpStarted.channel` is `WHATSAPP` with the real sender.
 
+## G9 additions (backend, D-119 … D-121)
+
+| Client call | HTTP | Notes |
+|---|---|---|
+| `receipts.cancel(id, reason)` | POST /receipts/:id/cancel `{ reason }` | `ledger.post`, not the issuer, same day, latest receipt (BR-051). → `ReceiptDetail` with `receipt.cancelled { at, byId, byName, reason, entryNo }`. `ReceiptDetail` adds `canCancel`, `cancelBlockedBy`; `ReceiptRow.cancelled` |
+| `deposits.act(id, 'renew', { renewal })` | POST /deposits/:id/actions/renew `{ renewal: { tenureMonths, payoutFrequency, withInterest } }` | MATURED only (Cashier). The old FD closes with `renewedTo`; the new one is ACCEPTANCE_SECRETARY with `renewedFrom` and `payment.mode` RENEWAL (BR-052) |
+| `notifications.messages()` | GET /messages | `OutboxMessage.status` adds `QUEUED`; `progress` (count per `DeliveryStatus`), `scheduledFor` when held for the message hours |
+| `notifications.failed()` | GET /notifications/deliveries/failed | `messages.send`. `FailedDelivery[]` newest first: masked address, attempts, provider error, member |
+| `notifications.retry(id)` | POST /notifications/deliveries/:id/retry | `messages.send`. FAILED → QUEUED with fresh attempts; anything else 409 |
+| `notifications.stream(onEvent, signal)` | GET /notifications/stream · GET /me/notifications/stream | Server-sent events: `ready { unread }`, then `notification { id, title }`; a comment every 25 s; the server closes after 15 min (the client reconnects with a fresh token). Browsers only |
+| — | GET /webhooks/whatsapp?hub.mode&hub.verify_token&hub.challenge | No session. Answers the challenge as text when the verify token matches, else 403 |
+| — | POST /webhooks/whatsapp | No session; `X-Hub-Signature-256` over the raw body with `WHATSAPP_APP_SECRET`, else 401. Moves each listed message forward to SENT / DELIVERED / READ / FAILED. → `{ updated }` |
+
+- `DeliveryStatus` = `QUEUED | SENT | DELIVERED | READ | SIMULATED | FAILED`. `MemberNotice.delivery.notificationId` links the notification; `GET /members/:id/notices` shows the channels' current status.
+- `POST /ledger/journals/:id/reverse` answers `RULE_VIOLATION` `REVERSE_SOURCE` for anything but MANUAL and VOUCHER journals.
+- `SocietySettings` adds `messageWindowStartHour`, `messageWindowEndHour`.

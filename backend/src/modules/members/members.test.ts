@@ -112,6 +112,11 @@ describe('members (P4a)', () => {
     expect(res.json().member.designation).toBe('Assistant Secretary');
     // One edit can log several events in one transaction (same timestamp), so check presence, not order.
     expect(res.json().serviceEvents).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'DESIGNATION_CHANGED' })]));
+
+    // G9 (D-121): a new mobile sends a security alert to the new and the old number.
+    expect((await send('PUT', `/members/${lakshmi.id}`, accountant, { ...input, departmentId: lakshmi.departmentId, mobile: '9123499977' })).statusCode).toBe(200);
+    const alerts = (await app.db.execute(sql`select d."to" from deliveries d where d.recipient_id = ${lakshmi.id} and d.title = 'Your mobile number was changed'`)).rows.map((r) => r.to);
+    expect(alerts).toEqual(expect.arrayContaining(['9123499977', lakshmi.mobile]));
   });
 
   it('transfers a member: new department, mandate waits for the new DDO, who agrees it', async () => {

@@ -239,6 +239,13 @@
       "when": 1794474737975,
       "tag": "0033_g7_applicant_data_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794555623056,
+      "tag": "0034_g9_notification_outbox",
+      "breakpoints": true
     }
   ]
 }

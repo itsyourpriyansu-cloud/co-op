@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { Linking, StyleSheet, Switch, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { Mail, MessageCircle, MessageSquareText, Smartphone, type LucideIcon } from 'lucide-react-native';
+import {
+  Mail,
+  MessageCircle,
+  MessageSquareText,
+  Smartphone,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import type { MemberPreferences } from '@tgs/types';
 import { consoleUrl } from '@/components/staff';
@@ -14,9 +20,24 @@ import { Alert, Button, Card, Header, KeyValue, Screen, Section, Skeleton, Tag, 
 import { color, radius, space, touchTarget } from '@/theme';
 
 type Channel = keyof MemberPreferences['channels'];
-const CHANNELS: Array<{ key: Channel; icon: LucideIcon; label: string; detail: (p: MemberPreferences) => string }> = [
-  { key: 'WHATSAPP', icon: MessageCircle, label: 'WhatsApp', detail: () => 'To your registered mobile' },
-  { key: 'EMAIL', icon: Mail, label: 'Email', detail: (p) => p.email ?? 'No email on your profile' },
+const CHANNELS: Array<{
+  key: Channel;
+  icon: LucideIcon;
+  label: string;
+  detail: (p: MemberPreferences) => string;
+}> = [
+  {
+    key: 'WHATSAPP',
+    icon: MessageCircle,
+    label: 'WhatsApp',
+    detail: () => 'To your registered mobile',
+  },
+  {
+    key: 'EMAIL',
+    icon: Mail,
+    label: 'Email',
+    detail: (p) => p.email ?? 'No email on your profile',
+  },
 ];
 
 export default function SettingsScreen() {
@@ -29,7 +50,9 @@ export default function SettingsScreen() {
     setSaving(key);
     setError(undefined);
     try {
-      const next = await api.account.savePreferences({ channels: { ...q.data!.channels, [key]: value } });
+      const next = await api.account.savePreferences({
+        channels: { ...q.data!.channels, [key]: value },
+      });
       qc.setQueryData(accountKeys.preferences, next);
       void qc.invalidateQueries({ queryKey: accountKeys.notifications });
     } catch (e) {
@@ -45,10 +68,17 @@ export default function SettingsScreen() {
       {q.isLoading ? (
         <Skeleton height={220} radius={radius.card} />
       ) : q.isError || !q.data ? (
-        <Alert type="error" heading="Couldn't load your settings" action={{ text: 'Try again', onPress: () => void q.refetch() }} />
+        <Alert
+          type="error"
+          heading="Couldn't load your settings"
+          action={{ text: 'Try again', onPress: () => void q.refetch() }}
+        />
       ) : (
         <>
-          <Section title="Where we reach you" description="You always get messages here in the app. Choose where else to receive them.">
+          <Section
+            title="Where we reach you"
+            description="You always get messages here in the app. Choose where else to receive them."
+          >
             <Card padded={false}>
               <View style={styles.row}>
                 <Smartphone size={22} color={color.text.secondary} strokeWidth={1.75} />
@@ -82,9 +112,21 @@ export default function SettingsScreen() {
                 </View>
               ))}
             </Card>
-            {error ? <Alert type="error" heading="Not saved" description={error} action={error.includes('Profile') ? { text: 'Edit profile', onPress: () => router.push('/profile/edit') } : undefined} /> : null}
+            {error ? (
+              <Alert
+                type="error"
+                heading="Not saved"
+                description={error}
+                action={
+                  error.includes('Profile')
+                    ? { text: 'Edit profile', onPress: () => router.push('/profile/edit') }
+                    : undefined
+                }
+              />
+            ) : null}
             <Text role="caption" tone="tertiary">
-              Everything also appears in the Notifications tab, whichever channels are on.
+              Everything also appears in the Notifications tab, whichever channels are on. Receipts
+              and a change of your mobile number always come on WhatsApp too, for your safety.
             </Text>
           </Section>
 
@@ -98,10 +140,19 @@ export default function SettingsScreen() {
           </Section>
 
           <Section title="Account">
-            <Button text="Privacy notice" buttonType="secondary" fullWidth onPress={() => void Linking.openURL(consoleUrl('/privacy'))} />
-            <Button text="Delete my account" buttonType="secondary" fullWidth onPress={() => router.push('/account/delete')} />
+            <Button
+              text="Privacy notice"
+              buttonType="secondary"
+              fullWidth
+              onPress={() => void Linking.openURL(consoleUrl('/privacy'))}
+            />
+            <Button
+              text="Delete my account"
+              buttonType="secondary"
+              fullWidth
+              onPress={() => router.push('/account/delete')}
+            />
           </Section>
-
         </>
       )}
     </Screen>
@@ -109,6 +160,13 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[6], minHeight: touchTarget + 16, paddingHorizontal: space[8], paddingVertical: space[4] },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[6],
+    minHeight: touchTarget + 16,
+    paddingHorizontal: space[8],
+    paddingVertical: space[4],
+  },
   divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
 });

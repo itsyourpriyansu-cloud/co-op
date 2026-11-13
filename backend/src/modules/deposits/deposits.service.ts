@@ -10,6 +10,7 @@ import {
   fdRateFor,
   formatDisplayDate,
   formatINR,
+  minorMajorityDate,
   nextDepositStatus,
   PRIMARY_DEPOSIT_ACTION,
   validateDenominations,
@@ -455,7 +456,11 @@ export class DepositsService {
         await this.app.audit.record(request, { action: 'deposit.mature', entity: 'deposit', entityId: d.id, summary: `FD ${d.fdrNo ?? d.accountNo} matured on ${d.maturityDate}${interest ? ` (interest ${formatINR(interest)} booked)` : ''}`, actor: { id: SYSTEM.id, name: SYSTEM.name, role: 'SYSTEM' as never } }, tx);
         return d;
       });
-      if (saved) changed.push(saved);
+      if (saved) {
+        changed.push(saved);
+        // G9 (D-121): tell the member it matured and what happens next.
+        await notifyMember(this.app, saved.memberId, 'fd.matured', { fdrNo: saved.fdrNo ?? saved.accountNo, amount: formatINR(saved.maturityValue ?? saved.principal ?? 0) }, `/deposit/${saved.id}`);
+      }
     }
     await this.app.db.insert(systemInfo).values({ key: LAST_RUN_KEY, value: { date: today } }).onConflictDoUpdate({ target: systemInfo.key, set: { value: { date: today }, updatedAt: new Date() } });
     return { matured: changed.length, date: today, interestPaid };
@@ -504,6 +509,14 @@ export class DepositsService {
     const due = (await this.repo.list('FD')).filter((d) => d.status === 'ACTIVE' && d.maturityDate && d.maturityDate > today && d.maturityDate <= until);
     let sent = 0;
     for (const d of due) if (await this.app.notifications.notifyOnce(d.memberId, 'fd.maturing', { fdrNo: d.fdrNo ?? d.accountNo, maturityDate: formatDisplayDate(d.maturityDate!) }, `/deposit/${d.id}`)) sent += 1;
+    return sent;
+  }
+
+  /** G9: the guardian member is told once when the minor on an FD turns 18 (from the daily housekeeping). */
+  async remindMinorsOfAge(today: string): Promise<number> {
+    const due = (await this.repo.list('FD')).filter((d) => d.status === 'ACTIVE' && d.minor && minorMajorityDate(d.minor.dob) <= today);
+    let sent = 0;
+    for (const d of due) if (await this.app.notifications.notifyOnce(d.memberId, 'fd.minorMajor', { fdrNo: d.fdrNo ?? d.accountNo, minor: d.minor!.name, date: formatDisplayDate(minorMajorityDate(d.minor!.dob)) }, `/deposit/${d.id}`)) sent += 1;
     return sent;
   }
 
@@ -647,8 +660,63 @@ export class DepositsService {
           lines.push({ accountCode: ACCOUNT.BANK, debit: 0, credit: value });
           await this.voucher(tx, d, 'MATURITY', value, value - principal, today, actor, opts.demo);
           await this.post(tx, `FD ${d.fdrNo ?? d.accountNo} paid out to ${m.name} on maturity`, 'FD_PAYOUT', d.fdrNo ?? d.accountNo, today, actor, lines);
+          note = [m.id, 'fd.paid', { fdrNo: d.fdrNo ?? d.accountNo, amount: formatINR(value) }, `/deposit/${d.id}`];
           d.closedOn = today;
           d.balance = 0;
+          break;
+        }
+        case 'renew': {
+          // G9 (D-120): the matured FD closes and its money opens a new FD at today's slab rate, in one entry.
+          const rn = input.renewal;
+          const rate = rn ? fdRateFor(rn.tenureMonths, (await this.app.masters.settings()).fdSlabs) : undefined;
+          const fieldErrors: Record<string, string> = {};
+          if (!rate) fieldErrors.tenureMonths = 'Choose a tenure from the FD rate slabs';
+          if (!rn || !['MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'ON_MATURITY'].includes(rn.payoutFrequency)) fieldErrors.payoutFrequency = 'Choose how interest is paid';
+          if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Check the renewal.', { fieldErrors });
+          const fdr = d.fdrNo ?? d.accountNo;
+          const principal = d.principal ?? d.balance;
+          const value = Math.max(d.maturityValue ?? principal, principal);
+          const interest = value - principal;
+          const accrued = Math.min(d.maturityInterestAccrued ?? 0, interest);
+          const newPrincipal = rn!.withInterest ? value : principal;
+          const seq = await this.repo.nextNumber(tx, 'REQ');
+          const renewed: DepositAccount = {
+            id: `dep-fdreq-${randomUUID().slice(0, 8)}`,
+            accountNo: `REQ-${String(seq).padStart(4, '0')}`,
+            memberId: d.memberId,
+            scheme: 'FD',
+            status: 'ACCEPTANCE_SECRETARY',
+            openedOn: today,
+            principal: newPrincipal,
+            tenureMonths: rn!.tenureMonths,
+            ratePercent: rate!,
+            payoutFrequency: rn!.payoutFrequency,
+            balance: 0,
+            operationMode: d.operationMode,
+            jointHolders: d.jointHolders,
+            ...(d.holders ? { holders: d.holders } : {}),
+            ...(d.minor ? { minor: d.minor } : {}),
+            nominee: d.nominee,
+            channel: 'COUNTER',
+            requestedAt: at,
+            renewedFrom: { id: d.id, fdrNo: fdr },
+            payment: { mode: 'RENEWAL', amount: newPrincipal, date: today, receiptNo: fdr, byName: actor.name, at },
+            events: [{ at, actorId: actor.id, actorName: actor.name, actorRole: actor.role, action: 'renew', toStatus: 'ACCEPTANCE_SECRETARY', remarks: `Renewal of ${fdr}` }],
+          };
+          const lines: JournalLineInput[] = [{ accountCode: DEPOSIT_ACCOUNT.FD, debit: principal, credit: 0, memberId: m.id, refType: 'DEPOSIT', refId: d.id }];
+          if (accrued > 0) lines.push({ accountCode: FD_INTEREST_PAYABLE, debit: accrued, credit: 0, memberId: m.id, refType: 'DEPOSIT', refId: d.id });
+          if (interest - accrued > 0) lines.push({ accountCode: FD_INTEREST_EXPENSE, debit: interest - accrued, credit: 0 });
+          lines.push({ accountCode: DEPOSIT_ACCOUNT.FD, debit: 0, credit: newPrincipal, memberId: m.id, refType: 'DEPOSIT', refId: renewed.id });
+          if (!rn!.withInterest && interest > 0) {
+            lines.push({ accountCode: ACCOUNT.BANK, debit: 0, credit: interest });
+            await this.voucher(tx, d, 'INTEREST', interest, interest, today, actor, opts.demo);
+          }
+          await this.post(tx, `FD ${fdr} renewed for ${m.name} as ${renewed.accountNo} (${formatINR(newPrincipal)}, ${rn!.tenureMonths} months)`, 'FD_RENEWAL', fdr, today, actor, lines);
+          await this.repo.insert(tx, renewed);
+          d.renewedTo = { id: renewed.id, accountNo: renewed.accountNo };
+          d.closedOn = today;
+          d.balance = 0;
+          note = [m.id, 'fd.renewed', { fdrNo: fdr, amount: formatINR(newPrincipal), tenure: String(rn!.tenureMonths) }, `/deposit/${renewed.id}`];
           break;
         }
         case 'withdraw': {
@@ -661,6 +729,7 @@ export class DepositsService {
           await this.voucher(tx, d, 'PREMATURE', s.payable, s.interestPayable, today, actor, opts.demo);
           await this.post(tx, `FD ${d.fdrNo ?? d.accountNo} withdrawn early by ${m.name} after ${s.monthsHeld} months${s.penalty ? ` (penalty ${formatINR(s.penalty)})` : ''}`, 'FD_PREMATURE', d.fdrNo ?? d.accountNo, today, actor, lines);
           d.prematureWithdrawal = { ...s, date: today, byName: actor.name, at };
+          note = [m.id, 'fd.paid', { fdrNo: d.fdrNo ?? d.accountNo, amount: formatINR(s.payable) }, `/deposit/${d.id}`];
           d.closedOn = today;
           d.balance = 0;
           break;

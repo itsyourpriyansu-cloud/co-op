@@ -557,7 +557,7 @@ export function FdFormPrintPage() {
               <div className="rounded border border-[#999] p-3">
                 <p className="text-label">CASH SLIP</p>
                 <p className="text-caption">
-                  Received {dep.payment?.mode === 'CASH' ? 'cash' : dep.payment ? `by ${dep.payment.mode.toLowerCase()}` : ''} from Sri {d.member.name} towards deposit{dep.payment ? `: ${formatINR(dep.payment.amount)}, receipt ${dep.payment.receiptNo}` : ''}.
+                  Received {dep.payment?.mode === 'CASH' ? 'cash' : dep.payment?.mode === 'RENEWAL' ? `on renewal of ${dep.renewedFrom?.fdrNo ?? dep.payment.receiptNo}` : dep.payment ? `by ${dep.payment.mode.toLowerCase()}` : ''} from Sri {d.member.name} towards deposit{dep.payment ? `: ${formatINR(dep.payment.amount)}, receipt ${dep.payment.receiptNo}` : ''}.
                 </p>
                 <table className="mt-2 w-full text-[12px]">
                   <tbody className="[&_td]:border [&_td]:border-[#bbb] [&_td]:px-2 [&_td]:py-0.5">

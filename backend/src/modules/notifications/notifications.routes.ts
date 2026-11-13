@@ -23,6 +23,10 @@ export const notificationsRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get('/messages', { ...pre, schema: { tags: st, summary: 'Messages sent from the composer', security, response: ok('OutboxMessage[]') } }, c.messages);
   app.post('/messages/preview', { ...pre, schema: { tags: st, summary: 'Who would receive a message, with three filled samples', security, body: anyBody, response: ok('ComposePreview') } }, c.preview);
   app.post('/messages', { ...pre, schema: { tags: st, summary: 'Send a message: in the app and on the chosen channel (simulated until F-10)', security, body: anyBody, response: { 201: passthrough('OutboxMessage') } } }, async (r, reply) => reply.code(201).send(await c.send(r)));
+  // G9 (D-121): failed sends, a retry, and live updates for the console.
+  app.get('/notifications/deliveries/failed', { ...pre, schema: { tags: st, summary: 'WhatsApp / email sends that failed after their retries', security, response: ok('FailedDelivery[]') } }, c.failed);
+  app.post('/notifications/deliveries/:id/retry', { ...pre, schema: { tags: st, summary: 'Send a failed message again', security, params: idParams, body: anyBody, response: ok('{ ok }') } }, c.retry);
+  app.get('/notifications/stream', { ...pre, schema: { tags: st, summary: 'Live updates (server-sent events): `notification` each time one arrives', security } }, c.stream);
   app.get('/support/tickets', { ...pre, schema: { tags: st, summary: 'Member questions, open first', security, response: ok('StaffTicketRow[]') } }, c.tickets);
   app.post('/support/tickets/:id/reply', { ...pre, schema: { tags: st, summary: 'Reply to (or close) a member question', security, params: idParams, body: anyBody, response: ok('SupportTicket') } }, c.reply);
 
@@ -35,5 +39,16 @@ export const notificationsRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post('/me/push-token', { ...pre, schema: { tags: me, summary: 'G4: this phone receives push notifications (members and staff)', security, body: anyBody, response: ok('{ ok }') } }, c.registerPush);
   app.delete('/me/push-token', { ...pre, schema: { tags: me, summary: 'G4: stop push notifications to this phone (sign-out)', security, body: anyBody, response: ok('{ ok }') } }, c.removePush);
   app.get('/me/support', { ...pre, schema: { tags: me, summary: 'Office contact, FAQs and my questions', security, response: ok('SupportCenter') } }, c.support);
+  app.get('/me/notifications/stream', { ...pre, schema: { tags: me, summary: 'Live updates (server-sent events) for the member', security } }, c.stream);
   app.post('/me/support/tickets', { ...pre, schema: { tags: me, summary: 'Ask the society office a question', security, body: anyBody, response: { 201: passthrough('SupportTicket') } } }, async (r, reply) => reply.code(201).send(await c.ask(r)));
+
+  // G9 (D-121): Meta's WhatsApp status callbacks. No session: the GET is proven by the verify token and
+  // every POST by its X-Hub-Signature-256 over the exact bytes sent, so this scope keeps the raw body.
+  await app.register(async (hook) => {
+    hook.removeContentTypeParser('application/json');
+    hook.addContentTypeParser('application/json', { parseAs: 'string', bodyLimit: 1_000_000 }, (_r, body, done) => done(null, body));
+    const wh = ['webhooks'];
+    hook.get('/webhooks/whatsapp', { schema: { tags: wh, summary: "Meta's one-time check of the callback URL", querystring: z.record(z.string(), z.string()) } }, c.whatsappVerify);
+    hook.post('/webhooks/whatsapp', { schema: { tags: wh, summary: 'Delivery and read receipts from WhatsApp (signed by Meta)', response: ok('{ updated }') } }, c.whatsappStatus);
+  });
 };

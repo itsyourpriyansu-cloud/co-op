@@ -1,5 +1,6 @@
 # 10 · Workflows & State Machines
 
+> Version 0.5 · 2026-11-13 · FD renewal (D-120), receipt cancellation (D-119), notices sent at each step (D-121)
 > Version 0.4 · 2026-10-24
 > Reconciles the flow diagrams (D-007) with the paper forms (doc 16): sequential Secretary → President sign-off (D-027), per-product stages (D-030), membership join pipeline (D-026), FD acceptance.
 > All transitions are enforced by the API (`POST /…/transitions`). Each one writes an event {actor, role, action, remarks, at} and triggers notifications per ST-63.
@@ -131,8 +132,9 @@ stateDiagram-v2
   ACCEPTANCE_SECRETARY --> REFUND_PENDING : rejected
   ACCEPTANCE_PRESIDENT --> REFUND_PENDING : rejected
   ACTIVE --> MATURED : maturity date (interest ceases, BR-027)
-  MATURED --> CLOSED : paid out / renewed (rules Q-313)
+  MATURED --> CLOSED : paid out, or renewed (D-120): a new FD request opens at ACCEPTANCE_SECRETARY
 ```
+Renewal (BR-052): the Cashier picks the new tenure (today's slab rate), payout and whether the interest is added; one `FD_RENEWAL` entry moves the money; the new FD needs both acceptances and gets its own FDR. The member is told when the FD matures, is paid and is renewed (D-121).
 Interest starts from the deposit date (payment received) [ASSUMPTION, confirm in Q-313].
 
 ## 4. Demand & recovery cycle (BR-009…011, BR-030)
@@ -151,9 +153,11 @@ flowchart TD
   Q --> Z[RECOVERY_POSTED → Dues / Defaulters / Less Collections]
 ```
 New members with "share by salary deduction" get a SHARE_CAPITAL line on their first sheet [P].
+When the sheet goes to the DDO, each member with a demand is told in the app what will be cut from the salary (D-121).
 
 ## 5. Counter receipt (ST-45)
-Member → mode (Cash: denomination counter must total the amount (BR-029) / Bank transfer: reference) → heads (dues by priority, share capital, FD payment) → post → printable receipt.
+Member → mode (Cash: denomination counter must total the amount (BR-029) / Bank transfer: reference) → heads (dues by priority, share capital, FD payment) → post → printable receipt; the member is told on WhatsApp (always, D-121).
+Cancel (BR-051, D-119): same day, by another officer with `ledger.post`, with a reason, only the member's latest receipt → every allocation undone, `RECEIPT_CANCEL` journal, receipt marked CANCELLED, member told.
 
 ## 6. Department transfer (BR-010, BR-028)
 ST-13 → ServiceEvent(TRANSFERRED, effectiveCycle) → profile shows the new department immediately → demand uses the department effective for the cycle → the recovery mandate goes to `PENDING_NEW_DDO` and appears in the new DDO's queue to **agree** → transfer outside the Secretariat uses an external office from the department master (Q-512).

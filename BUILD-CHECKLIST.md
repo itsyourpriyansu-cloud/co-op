@@ -10,10 +10,10 @@
 
 | | |
 |---|---|
-| **Current step** | F. **Production readiness G1–G8 built (D-111 … D-118).** `docs/24` is the tracker; only owner items are open. Staff mobile UI S0–S9 built earlier (E). Branch `v2`; the user commits by hand |
-| **Next action** | **Owner work, in `docs/go-live-checklist.md` §1:** Azure subscription and first deploy (`infra/README.md`), store accounts and the real-phone check (S10, `docs/23` §6), WhatsApp number and approved templates (F-10), real registers and a staging import rehearsal (F-11), UAT (`docs/uat-script.md`), training, cutover date |
+| **Current step** | F. **Production readiness G1–G9 built (D-111 … D-121).** G9: receipt cancellation, FD renewal, notification outbox with WhatsApp delivery / read receipts, failed-send retry, live console updates. `docs/24` is the tracker; only owner items are open. Staff mobile UI S0–S9 built earlier (E). Branch `v2`; the user commits by hand |
+| **Next action** | **Owner work, in `docs/go-live-checklist.md` §1:** WhatsApp keys into `.env` / Key Vault (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `infra/README.md`), Azure subscription and first deploy (`infra/README.md`), store accounts and the real-phone check (S10, `docs/23` §6), WhatsApp number and approved templates (F-10), real registers and a staging import rehearsal (F-11), UAT (`docs/uat-script.md`), training, cutover date |
 | **Blockers** | Local runs need `backend/.env` (the owner's database password). Member sign-in on production needs F-10. Waiting on the society: F-06, F-09, F-10, F-11, F-13, F-14 |
-| **Last updated** | 2026-11-12 |
+| **Last updated** | 2026-11-13 |
 
 ---
 
@@ -83,6 +83,7 @@ Built by Claude; the owner items under each phase stay open until done by hand.
 - [x] G6 Data migration imports (D-116)
 - [x] G7 Hardening, DPDP, load test (D-117)
 - [x] G8 Go-live papers, key rotation (D-118)
+- [x] G9 Receipt cancellation, FD renewal, notifications outbox / receipts / live updates (D-119 … D-121)
 - [ ] Owner items (`docs/go-live-checklist.md` §1)
 
 ---
@@ -151,3 +152,4 @@ Built by Claude; the owner items under each phase stay open until done by hand.
 | 2026-11-10 | **S1–S9 built** (D-108): every console function on the phone under `src/app/staff/` (45 route files), React Native only, nothing new, nothing committed. Tested on Expo web against the backend on a throw-away PostgreSQL: staff journeys 14/14, staff states 10/10, staff axe + nothing cut off at 360 px 48/48, member phone 41/41, console 154/154 (151 in the full run; the 3 that hit a demo-reset time limit passed after it was raised, 40/40 on those files), backend 143, root 307, typecheck green. All 48 staff screens reviewed by eye at 412 px. Bugs found and fixed: hidden tabs unreachable (`href: null`), guard landing on Home, default dates ignoring the demo clock, duplicate recovery screen, raw date on the demand sheet. Not checked: real phones (S10) | S10 real-phone check |
 | 2026-11-11 | **Staff screens redesigned and audited** (D-109, D-110): register layout with the `interface-design` skill inside the frozen design system; all 63 staff screens captured full length at 412 px and fixed (back arrow on records that fail to load, reports and cash slip compacted, internal rule numbers out of the copy, cut-off text, units on narrow fields). Phone suite 113/113 on Expo web against the backend, typecheck green. Console suite not re-run (console code unchanged). Not seen: the two DDO certify screens with data, wizard steps after the first; not checked: real phones (S10) | S10 real-phone check |
 | 2026-11-12 | **Production readiness G5–G8 built** (D-115 … D-118; G1–G4 earlier, D-111 … D-114): WhatsApp Cloud API and Azure email senders (OTP_NOT_SENT when a code cannot go out), loan / deposit / opening-balance imports with reconciliation, guards moved before validation and a whole-API sign-in sweep, DPDP consent (PN-2026.1) and applicant erasure after the retention setting, load test (60 users, p95 0.52 s, 0 errors), key rotation tool, runbook, UAT script, training guides, go-live checklist. Backend 184/184, root 312/312, e2e 267/267 (259 in the full run; 8 rerun and passing after two test fixes: Divya uploads her own documents (G1 ownership check), the report loop allows 19 reports and the empty state), typecheck green. Not checked: real Azure, real WhatsApp, real phones, Docker build (CI only) | Owner items |
+| 2026-11-13 | **G9 built** (D-119 … D-121): same-day receipt cancellation with a guarded ledger reversal; FD renewal; notification outbox (retries, `SKIP LOCKED`), signed WhatsApp delivery / read webhook, failed sends with Send again (console + phone), message hours (Admin setting), live console notifications over SSE, nine new notices, migration 0034. Backend 193/193, root 312/312, typecheck clean in all workspaces, affected e2e specs 26/26 | Owner: WhatsApp keys, Azure, UAT |

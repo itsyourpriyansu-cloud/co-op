@@ -13,6 +13,7 @@ import {
   suretyRecoveryDue,
   nextDeductionEntryStatus,
   penalDue,
+  reverseLines,
   type DeductionEntryAction,
   buildDemandComponents,
   calculateLoanClosure,
@@ -20,6 +21,7 @@ import {
   demandSheetActionsFor,
   departmentForCycle,
   formatCycle,
+  formatDisplayDate,
   formatINR,
   HEAD_PRIORITY,
   LOAN_PRIORITY,
@@ -77,6 +79,7 @@ import { businessCycle, businessNow, businessToday } from '../../common/utils/bu
 import { notifyMember } from '../../common/utils/notify';
 import { withTransaction, type Tx } from '../../db/transaction';
 import { ACCOUNT, DEPOSIT_ACCOUNT, LOAN_ACCOUNT } from '../ledger/ledger.accounts';
+import { entryNo } from '../ledger/ledger.service';
 import type { CollectionsRepository, SheetHead } from './collections.repository';
 
 const HEAD_LABEL: Record<DemandHead, string> = { RRF: 'RRF', INSURANCE: 'Insurance', CRD: 'CRD', SRDS: 'SRDS', SHARE_CAPITAL: 'Share capital', PENAL: 'Penal interest', INTEREST: 'Interest', PRINCIPAL: 'Principal', SURETY: 'Surety recovery' };
@@ -510,6 +513,8 @@ export class CollectionsService {
         sh.sent = so;
         const ddo = await this.app.departments.ddoLogin(sh.departmentId);
         if (ddo) notes.push([ddo, 'demand.sent', { cycle: formatCycle(sh.cycle), department: dept?.name ?? '', members: sh.lines.length, amount: formatINR(sh.totalDemand) }, `/demand-sheets/${sh.id}`]);
+        // G9 (D-121): each member is told what will be cut from the salary, before it is cut.
+        for (const l of sh.lines) if (l.totalDemand > 0) notes.push([l.memberId, 'demand.memberNotice', { cycle: formatCycle(sh.cycle), amount: formatINR(l.totalDemand) }, '/payments']);
       }
       if (action === 'postRecovery') {
         // R6 approve-and-post: amounts given now, else the saved entry, else the full demand; each
@@ -609,7 +614,7 @@ export class CollectionsService {
       const b = members.get(n.borrowerId);
       const vars: Record<string, string | number> = n.kind === 'DEFAULTER' ? { overdue: formatINR(n.overdue), cycles: n.consecutiveCycles } : { borrower: n.borrowerName, generalNo: b?.generalNo ?? '', loanNo: n.loanNo, overdue: formatINR(n.overdue), cycles: n.consecutiveCycles };
       const sent = await notifyMember(this.app, n.memberId, n.kind === 'DEFAULTER' ? 'defaulter.notice' : 'defaulter.guarantorNotice', vars, '/payments');
-      n.delivery = sent ? { inApp: 'SENT', via: sent.via } : { inApp: 'FAILED' };
+      n.delivery = sent ? { inApp: 'SENT', via: sent.via, notificationId: sent.id } : { inApp: 'FAILED' };
       await this.repo.saveNotice(n);
     }
     const sent = notices.filter((n) => n.delivery.inApp === 'SENT').length;
@@ -622,7 +627,10 @@ export class CollectionsService {
     if (!(await this.app.permissions.has(user.role, 'members.view'))) fail('FORBIDDEN', 'You do not have access to members.');
     const m = (await this.app.members.byId(memberId)) ?? fail('NOT_FOUND', 'Member not found.');
     if (user.role === 'DDO' && m.departmentId !== user.departmentId) fail('NOT_FOUND', 'Member not found.');
-    const [history, notices, settings] = await Promise.all([this.loanHistory(m.id), this.repo.noticesOf(m.id), this.app.masters.settings()]);
+    const [history, stored, settings] = await Promise.all([this.loanHistory(m.id), this.repo.noticesOf(m.id), this.app.masters.settings()]);
+    // G9 (D-121): today's WhatsApp / email status (delivered, read), not the one at sending.
+    const live = await this.app.notifications.repo.viaOf(stored.flatMap((n) => (n.delivery.notificationId ? [n.delivery.notificationId] : [])));
+    const notices = stored.map((n) => (n.delivery.notificationId && live.has(n.delivery.notificationId) ? { ...n, delivery: { ...n.delivery, via: live.get(n.delivery.notificationId) } } : n));
     return { defaulter: { ...loanDefaulter(history.map((h) => ({ cycle: h.cycle, loanUnpaid: loanUnpaid(h.components) })), settings.defaulterCycles), threshold: settings.defaulterCycles }, notices };
   }
 
@@ -769,11 +777,12 @@ export class CollectionsService {
   // ---- receipts (ST-44…46) ----
   private receiptRow(v: View, r: Receipt): ReceiptRow {
     const m = v.members.get(r.memberId);
-    return { id: r.id, receiptNo: r.receiptNo, date: r.date, memberId: r.memberId, memberName: m?.name ?? '', generalNo: m?.generalNo ?? '', departmentName: this.deptName(v, m?.departmentId), source: r.source, ...(r.purpose ? { purpose: r.purpose } : {}), amount: r.amount, heads: [...new Set(r.allocations.map((a) => a.head))], ...(r.cycle ? { cycle: r.cycle } : {}), ...(r.byName ? { byName: r.byName } : {}) };
+    return { id: r.id, receiptNo: r.receiptNo, date: r.date, memberId: r.memberId, memberName: m?.name ?? '', generalNo: m?.generalNo ?? '', departmentName: this.deptName(v, m?.departmentId), source: r.source, ...(r.purpose ? { purpose: r.purpose } : {}), amount: r.amount, heads: [...new Set(r.allocations.map((a) => a.head))], ...(r.cycle ? { cycle: r.cycle } : {}), ...(r.byName ? { byName: r.byName } : {}), ...(r.cancelled ? { cancelled: true } : {}) };
   }
 
-  private async receiptDetail(v: View, r: Receipt): Promise<ReceiptDetail> {
+  private async receiptDetail(v: View, r: Receipt, staff?: SessionUser): Promise<ReceiptDetail> {
     const m = v.members.get(r.memberId);
+    const blocked = staff ? await this.cancelBlock(staff, r, v.today) : undefined;
     const sheet = r.sheetId ? await this.repo.sheet(r.sheetId) : undefined;
     const report = r.paymentReportId ? (await this.repo.reports(undefined, r.memberId)).find((p) => p.id === r.paymentReportId) : undefined;
     return {
@@ -787,6 +796,7 @@ export class CollectionsService {
       amountInWords: amountInWords(r.amount),
       ...(sheet ? { sheet: { id: sheet.id, cycle: sheet.cycle, departmentName: this.deptName(v, sheet.departmentId) } } : {}),
       ...(report ? { report } : {}),
+      ...(staff && !r.cancelled && this.cancellable(r) ? { canCancel: !blocked, ...(blocked ? { cancelBlockedBy: blocked } : {}) } : {}),
     };
   }
 
@@ -811,7 +821,7 @@ export class CollectionsService {
   async receipt(user: SessionUser, id: string): Promise<ReceiptDetail> {
     await this.requireView(user);
     const r = (await this.repo.receipt(id)) ?? fail('NOT_FOUND', 'Receipt not found.');
-    return this.receiptDetail(await this.view(), r);
+    return this.receiptDetail(await this.view(), r, user);
   }
 
   /** Dues payment: arrears oldest first (D-061); share capital: the first-demand shares (D-029). */
@@ -1029,7 +1039,116 @@ export class CollectionsService {
       await this.app.audit.record(request, { action: 'create', entity: 'receipt', entityId: receipt.id, summary: `Receipt ${receipt.receiptNo} · ${m!.name} · ${formatINR(receipt.amount)}` }, tx);
       return receipt;
     });
-    return this.receiptDetail(await this.view(), r);
+    // G9 (D-119): every rupee taken at the counter is confirmed to the member (fraud check).
+    await notifyMember(this.app, r.memberId, 'receipt.issued', { receiptNo: r.receiptNo, amount: formatINR(r.amount), date: formatDisplayDate(r.date) }, '/payments');
+    return this.receiptDetail(await this.view(), r, user);
+  }
+
+  // ---- G9 (D-119): cancelling a counter receipt ----
+  /** Receipts a cancellation can undo exactly: dues or share capital taken at the counter. */
+  private cancellable(r: Receipt): boolean {
+    return r.source !== 'SALARY_RECOVERY' && !r.sheetId && !r.paymentReportId && (r.purpose === 'DUES' || r.purpose === 'SHARE_CAPITAL');
+  }
+
+  /** Why this officer cannot cancel this receipt now, or undefined when they can. */
+  private async cancelBlock(user: SessionUser, r: Receipt, today: string): Promise<string | undefined> {
+    if (r.cancelled) return 'This receipt is already cancelled.';
+    if (!this.cancellable(r)) return 'Only a dues or share-capital receipt taken at the counter can be cancelled.';
+    if (r.allocations.some((a) => a.head === 'SURETY')) return 'It includes a surety recovery, which cannot be undone here. Ask the Accountant to post a correcting journal.';
+    if (!(await this.app.permissions.has(user.role, 'ledger.post'))) return 'Only the Accountant cancels receipts.';
+    if (r.date !== today) return 'A receipt can be cancelled only on the day it was made.';
+    if (r.byId === user.id) return 'The officer who took the money cannot cancel it. Ask another officer.';
+    const latest = (await this.repo.receiptsOfMember(r.memberId)).find((x) => !x.cancelled);
+    if (latest && latest.id !== r.id) return `Receipt ${latest.receiptNo} for this member came later. Cancel that one first.`;
+    return undefined;
+  }
+
+  /**
+   * A wrong counter receipt is cancelled, never edited: same day, by the Accountant, not by the officer
+   * who issued it (maker-checker). It undoes exactly what the receipt did (dues, penal, loan balance,
+   * CRD / SRDS, share capital, a loan it closed) and posts the mirror entry. The receipt stays, stamped.
+   */
+  async cancelReceipt(request: FastifyRequest, id: string, reason?: string): Promise<ReceiptDetail> {
+    const user = sessionOf(request);
+    await this.requireView(user);
+    if (!(await this.app.permissions.has(user.role, 'ledger.post'))) fail('FORBIDDEN', 'Only the Accountant cancels receipts.');
+    const why = (reason ?? '').trim();
+    if (why.length < 10) fail('VALIDATION_ERROR', 'Give the reason (at least 10 characters).', { fieldErrors: { reason: 'At least 10 characters' } });
+    const v = await this.view();
+    const at = await businessNow(this.app);
+    const r = await withTransaction(this.app.db, async (tx) => {
+      const r = (await this.repo.lockReceipt(tx, id)) ?? fail('NOT_FOUND', 'Receipt not found.');
+      const blocked = await this.cancelBlock(user, r, v.today);
+      if (blocked) fail(r.cancelled ? 'INVALID_TRANSITION' : 'RULE_VIOLATION', blocked, { ruleId: 'RECEIPT_CANCEL' });
+      const changed: Changed = { loans: new Map(), deposits: new Map(), shares: new Map() };
+      if (r.purpose === 'SHARE_CAPITAL') await this.unapply(tx, r.memberId, 'SHARE_CAPITAL', undefined, r.amount, changed);
+      const memberLines = r.purpose === 'DUES' ? await this.repo.linesOfMember(r.memberId, tx) : [];
+      for (const cycle of new Set(r.allocations.flatMap((a) => (a.cycle ? [a.cycle] : [])))) {
+        const ref = memberLines.find((x) => x.sheet.cycle === cycle) ?? fail('RULE_VIOLATION', `The ${formatCycle(cycle)} demand of this receipt is missing.`);
+        const sh = (await this.repo.sheet(ref.sheet.id, tx, true))!;
+        const line = sh.lines.find((l) => l.memberId === r.memberId)!;
+        const touched = new Set<string>();
+        for (const a of r.allocations.filter((x) => x.cycle === cycle)) {
+          if (a.head === 'PENAL') {
+            if (line.penal) line.penal = { ...line.penal, collected: (line.penal.collected ?? 0) - a.amount, carried: (line.penal.carried ?? 0) + a.amount };
+            continue;
+          }
+          const c = line.components.find((x) => x.head === a.head && x.loanId === a.loanId && x.allocated >= a.amount) ?? fail('RULE_VIOLATION', `Receipt ${r.receiptNo} no longer matches the ${formatCycle(cycle)} demand. Ask the Accountant to post a correcting journal.`);
+          c.allocated -= a.amount;
+          await this.unapply(tx, r.memberId, c.head, c.loanId, a.amount, changed);
+          if (c.loanId) touched.add(c.loanId);
+        }
+        for (const loanId of touched) {
+          const loan = changed.loans.get(loanId) ?? (await this.app.loans.repo.lock(tx, loanId));
+          if (!loan) continue;
+          const row = loan.schedule.find((x) => x.dueCycle === cycle);
+          const parts = line.components.filter((c) => c.loanId === loanId);
+          const paid = sum(parts.map((c) => c.allocated));
+          if (row) row.paidStatus = paid >= sum(parts.map((c) => c.amount)) ? 'PAID' : paid > 0 ? 'PARTIAL' : 'UNPAID';
+          // The receipt closed this loan today ("Fully repaid"): open it again.
+          if (loan.status === 'CLOSED' && loan.closedOn === r.date && loan.events.at(-1)?.remarks === 'Fully repaid') {
+            loan.status = 'ACTIVE';
+            delete loan.closedOn;
+            loan.events = [...loan.events, { at, actorId: user.id, actorName: user.name, actorRole: user.role, action: 'reopen', fromStatus: 'CLOSED', toStatus: 'ACTIVE', remarks: `Receipt ${r.receiptNo} cancelled` }];
+          }
+          changed.loans.set(loan.id, loan);
+        }
+        line.recovered = sum(line.components.map((c) => c.allocated));
+        await this.repo.saveLine(tx, sh.id, line);
+        sh.totalRecovered = sum(sh.lines.map((l) => l.recovered ?? 0));
+        const { lines: _l, ...head } = sh;
+        await this.repo.saveSheetHead(tx, head);
+      }
+      for (const l of changed.loans.values()) await this.app.loans.repo.save(tx, l);
+      for (const d of changed.deposits.values()) await this.app.deposits.saveInTx(tx, d);
+      for (const x of changed.shares.values()) await this.repo.saveShare(tx, x);
+      const entry = (await this.app.ledger.repo.bySource('RECEIPT', r.receiptNo, tx)) ?? fail('RULE_VIOLATION', `The ledger entry of receipt ${r.receiptNo} is missing.`);
+      const lines = (await this.app.ledger.repo.linesOf(entry.id)).map((l) => ({ accountCode: l.accountCode, debit: l.debit, credit: l.credit, memberId: l.memberId ?? undefined, refType: l.refType ?? undefined, refId: l.refId ?? undefined }));
+      const rev = await this.app.ledger.post({ entryDate: v.today, narration: `Receipt ${r.receiptNo} cancelled: ${why}`, source: 'RECEIPT_CANCEL', sourceRef: r.receiptNo, reversesEntryId: entry.id, lines: reverseLines(lines), postedBy: { id: user.id, name: user.name } }, tx);
+      r.cancelled = { at, byId: user.id, byName: user.name, reason: why, entryNo: entryNo(rev.entryNo) };
+      await this.repo.saveReceipt(tx, r);
+      await this.app.audit.record(request, { action: 'receipt.cancel', entity: 'receipt', entityId: r.id, summary: `Receipt ${r.receiptNo} · ${formatINR(r.amount)} cancelled: ${why}` }, tx);
+      return r;
+    });
+    await notifyMember(this.app, r.memberId, 'receipt.cancelled', { receiptNo: r.receiptNo, amount: formatINR(r.amount), reason: why }, '/payments');
+    return this.receiptDetail(await this.view(), r, user);
+  }
+
+  /** The opposite of one head of `applyAllocation`: the balance the receipt raised or lowered goes back. */
+  private async unapply(tx: Tx, memberId: string, head: DemandHead, loanId: string | undefined, amount: number, changed: Changed): Promise<void> {
+    if (head === 'PRINCIPAL' && loanId) {
+      const loan = changed.loans.get(loanId) ?? (await this.app.loans.repo.lock(tx, loanId));
+      if (loan) changed.loans.set(loan.id, { ...loan, outstandingPrincipal: loan.outstandingPrincipal + amount });
+    }
+    if (head === 'CRD' || head === 'SRDS') {
+      const key = `${memberId}:${head}`;
+      const dep = changed.deposits.get(key) ?? (await this.app.deposits.lockCompulsory(tx, memberId, head));
+      if (dep) changed.deposits.set(key, { ...dep, balance: dep.balance - amount });
+    }
+    if (head === 'SHARE_CAPITAL') {
+      const sh = changed.shares.get(memberId) ?? (await this.repo.lockShare(tx, memberId));
+      if (sh) changed.shares.set(memberId, { ...sh, shareCapital: sh.shareCapital - amount });
+    }
   }
 
   // ---- G1 (D-111, BR-040): paying a loan off early at the counter ----

@@ -19,6 +19,7 @@ export class CollectionsController {
 
   receipts = (r: FastifyRequest<{ Querystring: ReceiptListParams }>) => this.service.receipts(sessionOf(r), r.query);
   receipt = (r: ById) => this.service.receipt(sessionOf(r), r.params.id);
+  cancelReceipt = (r: FastifyRequest<{ Params: { id: string }; Body: { reason?: string } }>) => this.service.cancelReceipt(r, r.params.id, r.body?.reason);
   counterReceipt = (r: FastifyRequest<{ Body: Partial<NewReceiptInput> }>) => this.service.counterReceipt(r, r.body ?? {});
   dues = (r: ById) => this.service.memberDues(sessionOf(r), r.params.id);
   notices = (r: ById) => this.service.memberNotices(sessionOf(r), r.params.id);

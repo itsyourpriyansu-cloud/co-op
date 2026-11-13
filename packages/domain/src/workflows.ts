@@ -115,7 +115,7 @@ export function nextLoanStatus(
 // ---- Fixed deposits: request → acceptance (docs/10 §3) ------------------------------------------
 
 /** `mature` is the daily job (system); `withdraw` is premature withdrawal (P6b, permission deposits.withdraw). */
-export type DepositAction = 'recordPayment' | 'cancel' | 'accept' | 'reject' | 'refund' | 'payout' | 'mature' | 'withdraw';
+export type DepositAction = 'recordPayment' | 'cancel' | 'accept' | 'reject' | 'refund' | 'payout' | 'renew' | 'mature' | 'withdraw';
 
 /** Owner and actions of each FD stage that needs someone (docs/10 §3). */
 const DEPOSIT_STAGES: Partial<Record<DepositStatus, { owner: Role; actions: DepositAction[] }>> = {
@@ -124,7 +124,8 @@ const DEPOSIT_STAGES: Partial<Record<DepositStatus, { owner: Role; actions: Depo
   ACCEPTANCE_SECRETARY: { owner: 'SECRETARY', actions: ['accept', 'reject'] },
   ACCEPTANCE_PRESIDENT: { owner: 'PRESIDENT', actions: ['accept', 'reject'] },
   REFUND_PENDING: { owner: 'CASHIER', actions: ['refund'] },
-  MATURED: { owner: 'CASHIER', actions: ['payout'] },
+  // G9 (D-120): a matured FD is paid out or renewed into a new FD (which then needs both acceptances).
+  MATURED: { owner: 'CASHIER', actions: ['payout', 'renew'] },
 };
 
 export const DEPOSIT_STAGE_OWNER: Partial<Record<DepositStatus, Role>> = Object.fromEntries(Object.entries(DEPOSIT_STAGES).map(([s, v]) => [s, v.owner]));
@@ -156,6 +157,7 @@ export function nextDepositStatus(status: DepositStatus, action: DepositAction):
     case 'refund':
       return status === 'REFUND_PENDING' ? 'CANCELLED' : undefined;
     case 'payout':
+    case 'renew':
       return status === 'MATURED' ? 'CLOSED' : undefined;
     case 'mature':
       return status === 'ACTIVE' ? 'MATURED' : undefined;

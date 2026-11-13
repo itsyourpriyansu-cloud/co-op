@@ -1,5 +1,5 @@
 import type { ComposeInput, MemberPreferences, SupportTicket } from '@tgs/types';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { sessionOf } from '../../common/guards';
 import type { NotificationsService } from './notifications.service';
 
@@ -17,6 +17,11 @@ export class NotificationsController {
   send = (r: FastifyRequest) => this.service.send(r, r.body as ComposeInput);
   tickets = (r: FastifyRequest) => this.service.staffTickets(sessionOf(r));
   reply = (r: ById) => this.service.reply(r, r.params.id, (r.body ?? {}) as { text?: string; close?: boolean });
+  failed = (r: FastifyRequest) => this.service.failedDeliveries(sessionOf(r));
+  retry = (r: ById) => this.service.retryDelivery(r, r.params.id);
+  stream = (r: FastifyRequest, reply: FastifyReply) => this.service.stream(r, reply);
+  whatsappVerify = (r: FastifyRequest, reply: FastifyReply) => reply.type('text/plain').send(this.service.whatsappVerify(r.query as Record<string, string>));
+  whatsappStatus = (r: FastifyRequest) => this.service.whatsappStatus(r.body as string, r.headers['x-hub-signature-256'] as string | undefined);
 
   home = (r: FastifyRequest) => this.service.home(sessionOf(r));
   mine = (r: FastifyRequest) => this.service.myNotifications(sessionOf(r));

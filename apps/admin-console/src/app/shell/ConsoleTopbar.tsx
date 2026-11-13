@@ -1,6 +1,16 @@
 // Topbar content: global search (M10), demo controls, theme, notifications, account menu with persona switch.
 import { useState } from 'react';
-import { Bell, FlaskConical, LogOut, Moon, PenLine, RotateCcw, Sun, UserRoundCog, WifiOff } from 'lucide-react';
+import {
+  Bell,
+  FlaskConical,
+  LogOut,
+  Moon,
+  PenLine,
+  RotateCcw,
+  Sun,
+  UserRoundCog,
+  WifiOff,
+} from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import {
@@ -25,6 +35,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '../auth';
 import { useThemeMode } from '../theme';
 import { GlobalSearch } from './GlobalSearch';
+import { useLiveNotifications } from './useLiveNotifications';
 import { MySignatureDrawer } from './MySignatureDrawer';
 import { Initials } from '@/components/Initials';
 
@@ -36,12 +47,25 @@ export function ConsoleTopbar() {
   const { mode, toggle } = useThemeMode();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const demo = useQuery({ queryKey: ['demo-state'], queryFn: api.demo.state, refetchInterval: 30_000 });
-  const personas = useQuery({ queryKey: ['personas', 'console'], queryFn: () => api.demo.personas('console') });
+  const demo = useQuery({
+    queryKey: ['demo-state'],
+    queryFn: api.demo.state,
+    refetchInterval: 30_000,
+  });
+  const personas = useQuery({
+    queryKey: ['personas', 'console'],
+    queryFn: () => api.demo.personas('console'),
+  });
   const failing = (demo.data?.failureRate ?? 0) > 0;
   // ST-03 bell: unread notifications + open member questions (M9).
-  const notifyCount = useQuery({ queryKey: ['notification-count'], queryFn: api.notifications.count, refetchInterval: 20_000, enabled: Boolean(session) });
+  const notifyCount = useQuery({
+    queryKey: ['notification-count'],
+    queryFn: api.notifications.count,
+    refetchInterval: 20_000,
+    enabled: Boolean(session),
+  });
   const bellCount = (notifyCount.data?.unread ?? 0) + (notifyCount.data?.openQuestions ?? 0);
+  useLiveNotifications(Boolean(session));
 
   const switchTo = async (personaId: string) => {
     await loginAsPersona(personaId);
@@ -53,7 +77,11 @@ export function ConsoleTopbar() {
     if (!window.confirm('Reset all demo data for every user and device?')) return;
     await api.demo.reset();
     await queryClient.invalidateQueries();
-    addSnackbarV2({ header: 'Demo data reset', description: 'Everything is back to the original dataset.', variant: SnackbarV2Variant.SUCCESS });
+    addSnackbarV2({
+      header: 'Demo data reset',
+      description: 'Everything is back to the original dataset.',
+      variant: SnackbarV2Variant.SUCCESS,
+    });
   };
 
   const toggleFailures = async () => {
@@ -70,7 +98,11 @@ export function ConsoleTopbar() {
       <div className="ml-auto flex items-center gap-2">
         <MenuV2
           trigger={
-            <button type="button" className="flex items-center" aria-label={`${demo.data ? `Demo · ${formatDisplayDate(demo.data.today)}` : 'Demo data'}: demo controls`}>
+            <button
+              type="button"
+              className="flex items-center"
+              aria-label={`${demo.data ? `Demo · ${formatDisplayDate(demo.data.today)}` : 'Demo data'}: demo controls`}
+            >
               <TagV2
                 text={demo.data ? `Demo · ${formatDisplayDate(demo.data.today)}` : 'Demo data'}
                 type={TagV2Type.SUBTLE}
@@ -85,8 +117,19 @@ export function ConsoleTopbar() {
             {
               label: 'Demo controls',
               items: [
-                { label: { text: failing ? 'Stop simulating errors' : 'Simulate network errors (10%)', leftSlot: <WifiOff size={16} /> }, onClick: toggleFailures },
-                { label: { text: 'Reset demo data', leftSlot: <RotateCcw size={16} /> }, variant: MenuV2ItemVariant.ACTION, actionType: MenuV2ItemActionType.DANGER, onClick: reset },
+                {
+                  label: {
+                    text: failing ? 'Stop simulating errors' : 'Simulate network errors (10%)',
+                    leftSlot: <WifiOff size={16} />,
+                  },
+                  onClick: toggleFailures,
+                },
+                {
+                  label: { text: 'Reset demo data', leftSlot: <RotateCcw size={16} /> },
+                  variant: MenuV2ItemVariant.ACTION,
+                  actionType: MenuV2ItemActionType.DANGER,
+                  onClick: reset,
+                },
               ],
             },
           ]}
@@ -101,15 +144,33 @@ export function ConsoleTopbar() {
           aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         />
         <div className="relative">
-          <ButtonV2 buttonType={ButtonV2Type.SECONDARY} subType={ButtonV2SubType.ICON_ONLY} size={ButtonV2Size.SMALL} leftSlot={icon(Bell)} aria-label={bellCount ? `Notifications, ${bellCount} new` : 'Notifications'} onClick={() => navigate(notifyCount.data?.unread || !notifyCount.data?.openQuestions ? '/notifications' : '/notifications?tab=questions')} />
+          <ButtonV2
+            buttonType={ButtonV2Type.SECONDARY}
+            subType={ButtonV2SubType.ICON_ONLY}
+            size={ButtonV2Size.SMALL}
+            leftSlot={icon(Bell)}
+            aria-label={bellCount ? `Notifications, ${bellCount} new` : 'Notifications'}
+            onClick={() =>
+              navigate(
+                notifyCount.data?.unread || !notifyCount.data?.openQuestions
+                  ? '/notifications'
+                  : '/notifications?tab=questions',
+              )
+            }
+          />
           {bellCount > 0 && (
-            <span className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-danger-solid px-1 text-[10px] font-semibold leading-none text-on-brand" aria-hidden>
+            <span
+              className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-danger-solid px-1 text-[10px] font-semibold leading-none text-on-brand"
+              aria-hidden
+            >
               {bellCount > 9 ? '9+' : bellCount}
             </span>
           )}
         </div>
 
-        {session && <MySignatureDrawer open={signatureOpen} onClose={() => setSignatureOpen(false)} />}
+        {session && (
+          <MySignatureDrawer open={signatureOpen} onClose={() => setSignatureOpen(false)} />
+        )}
         {session && (
           <MenuV2
             trigger={
@@ -122,7 +183,10 @@ export function ConsoleTopbar() {
               {
                 label: `${session.user.name} · ${ROLE_LABELS[session.user.role]}`,
                 items: [
-                  { label: { text: 'My signature', leftSlot: <PenLine size={16} /> }, onClick: () => setSignatureOpen(true) },
+                  {
+                    label: { text: 'My signature', leftSlot: <PenLine size={16} /> },
+                    onClick: () => setSignatureOpen(true),
+                  },
                   {
                     label: { text: 'Switch demo persona', leftSlot: <UserRoundCog size={16} /> },
                     subMenu: (personas.data ?? []).map((p) => ({

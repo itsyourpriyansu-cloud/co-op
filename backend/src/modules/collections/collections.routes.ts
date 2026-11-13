@@ -26,6 +26,7 @@ export const collectionsRoutes: FastifyPluginAsyncZod = async (app) => {
 
   app.get('/receipts', { ...pre, schema: { tags: st, summary: 'Receipts with tabs, search and totals', security, querystring: z.object({ tab: z.enum(['ALL', 'SALARY_RECOVERY', 'COUNTER']).optional(), q: z.string().optional(), cycle: z.string().optional(), departmentId: z.string().optional(), page: z.coerce.number().optional(), pageSize: z.coerce.number().optional() }), response: ok('ReceiptList') } }, c.receipts);
   app.get('/receipts/:id', { ...pre, schema: { tags: st, summary: 'A receipt by id or number', security, params: idParams, response: ok('ReceiptDetail') } }, c.receipt);
+  app.post('/receipts/:id/cancel', { ...pre, schema: { tags: st, summary: 'G9 (D-119): cancel a counter receipt the same day (Accountant, not its issuer); undoes every effect', security, params: idParams, body: z.object({ reason: z.string().optional() }), response: ok('ReceiptDetail') } }, c.cancelReceipt);
   app.post('/receipts', { ...pre, schema: { tags: st, summary: 'Counter receipt: dues (oldest first, D-061) or share capital', security, body, response: { 201: passthrough('ReceiptDetail') } } }, async (req, reply) => reply.status(201).send(await c.counterReceipt(req as never)));
   app.get('/members/:id/dues', { ...pre, schema: { tags: st, summary: "A member's unpaid dues from posted sheets", security, params: idParams, response: ok('MemberDues') } }, c.dues);
 

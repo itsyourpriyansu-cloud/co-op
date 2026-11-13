@@ -19,7 +19,7 @@ describe('WhatsApp Cloud API sender', () => {
   it('sends a notice with the notice template, and a code with the authentication template', async () => {
     const { f, calls, body } = fakeFetch([json(200, { messages: [{ id: 'wamid.1' }] }), json(200, { messages: [{ id: 'wamid.2' }] })]);
     const s = whatsAppCloud({ ...opts, fetchImpl: f });
-    expect(await s.send({ channel: 'WHATSAPP', to: '98765 43210', title: 'Loan sanctioned', body: 'Line one\nline two' })).toEqual({ status: 'SENT', provider: 'whatsapp-cloud' });
+    expect(await s.send({ channel: 'WHATSAPP', to: '98765 43210', title: 'Loan sanctioned', body: 'Line one\nline two' })).toEqual({ status: 'SENT', provider: 'whatsapp-cloud', providerMessageId: 'wamid.1' });
     expect(calls[0]!.url).toBe('https://graph.facebook.com/v21.0/1234/messages');
     expect((calls[0]!.init.headers as Record<string, string>).authorization).toBe('Bearer tok');
     expect(body(0)).toMatchObject({ messaging_product: 'whatsapp', to: '919876543210', type: 'template', template: { name: 'society_notice', components: [{ parameters: [{ text: 'Loan sanctioned' }, { text: 'Line one line two' }] }] } });
@@ -31,7 +31,7 @@ describe('WhatsApp Cloud API sender', () => {
   it('reports a refusal as FAILED with the reason', async () => {
     const { f } = fakeFetch([json(400, { error: { code: 131026, message: 'Message undeliverable' } })]);
     const r = await whatsAppCloud({ ...opts, fetchImpl: f }).send({ channel: 'WHATSAPP', to: '9876543210', title: 't', body: 'b' });
-    expect(r).toEqual({ status: 'FAILED', provider: 'whatsapp-cloud', error: '400 131026 Message undeliverable' });
+    expect(r).toEqual({ status: 'FAILED', provider: 'whatsapp-cloud', retryable: false, error: '400 131026 Message undeliverable' });
     expect(toWhatsAppNumber('+91 98765-43210')).toBe('919876543210');
   });
 });
@@ -46,7 +46,7 @@ describe('Azure Communication Services email sender', () => {
     expect((calls[1]!.init.headers as Record<string, string>).authorization).toBe('Bearer mi-token');
     expect(body(1)).toMatchObject({ senderAddress: 'DoNotReply@society.in', recipients: { to: [{ address: 'member@example.com' }] }, content: { subject: 'Receipt' } });
 
-    expect(await s.send({ channel: 'EMAIL', to: 'member@example.com', title: 'x', body: 'x' })).toEqual({ status: 'FAILED', provider: 'acs-email', error: '400 InvalidSender bad from' });
+    expect(await s.send({ channel: 'EMAIL', to: 'member@example.com', title: 'x', body: 'x' })).toEqual({ status: 'FAILED', provider: 'acs-email', retryable: false, error: '400 InvalidSender bad from' });
     expect(calls).toHaveLength(3); // the token was reused
   });
 });

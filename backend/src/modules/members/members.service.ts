@@ -256,6 +256,7 @@ export class MembersService {
       await this.app.appAccounts.upsertMember(tx, { id: next.id, generalNo: next.generalNo, employeeId: next.employeeId, name: next.name, mobile: next.mobile, active: keepsAppAccess(next.status) });
       if (changed.length) await this.app.audit.record(request, { action: 'update', entity: 'member', entityId: current.id, summary: `Edited ${next.name}: ${changed.join(', ')}`, before: current, after: next }, tx);
     });
+    if (next.mobile !== current.mobile) await this.mobileChanged(next, current.mobile, today);
     return this.toDetail(user, next);
   }
 
@@ -432,7 +433,13 @@ export class MembersService {
       await this.app.appAccounts.upsertMember(tx, { id: m.id, generalNo: m.generalNo, employeeId: m.employeeId, name: m.name, mobile, active: keepsAppAccess(m.status) });
       await this.app.audit.record(request, { action: 'mobile', entity: 'member', entityId: m.id, summary: m.name + ' changed mobile (OTP verified)' }, tx);
     });
+    if (mobile !== m.mobile) await this.mobileChanged(next, m.mobile, event.date);
     return this.myProfile(user);
+  }
+
+  /** G9 (D-121): a security alert on the new number and the old one, so a take-over does not go unseen. */
+  private async mobileChanged(m: Member, oldMobile: string, date: string): Promise<void> {
+    await this.app.notifications.notify(m.id, 'account.mobileChanged', { mobile: m.mobileMasked, date: formatDisplayDate(date) }, '/profile', { alsoTo: oldMobile });
   }
 
   /** The signed-in member's record (Member App). */

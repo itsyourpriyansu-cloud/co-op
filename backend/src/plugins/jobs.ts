@@ -5,6 +5,8 @@ import { businessToday } from '../common/utils/business-date';
 import { systemInfo } from '../models';
 
 const EVERY_MS = 15 * 60_000;
+/** G9 (D-121): how often the outbox looks for due sends (retries, held broadcasts). */
+const OUTBOX_EVERY_MS = 15_000;
 const HOUSEKEEPING_KEY = 'jobs.housekeeping.lastRunOn';
 
 /**
@@ -30,7 +32,8 @@ export async function runHousekeeping(app: FastifyInstance, today: string) {
   const expired = await app.appAccounts.purgeExpired();
   const idempotencyKeys = await app.purgeIdempotencyKeys(new Date(Date.now() - 24 * 3600_000).toISOString());
   const erasedApplications = await app.joining.eraseClosedApplications();
-  return { reminders, ...expired, idempotencyKeys, erasedApplications };
+  const minorsOfAge = await app.deposits.remindMinorsOfAge(today);
+  return { reminders, ...expired, idempotencyKeys, erasedApplications, minorsOfAge };
 }
 
 /**
@@ -57,11 +60,14 @@ const jobs: FastifyPluginAsync = async (app) => {
   };
   const first = setTimeout(tick, 5_000);
   const timer = setInterval(tick, EVERY_MS);
+  const outbox = setInterval(() => app.notifications.kick(), OUTBOX_EVERY_MS);
   first.unref();
   timer.unref();
-  app.addHook('onClose', async () => {
+  outbox.unref();
+  app.addHook('preClose', async () => {
     clearTimeout(first);
     clearInterval(timer);
+    clearInterval(outbox);
   });
 };
 

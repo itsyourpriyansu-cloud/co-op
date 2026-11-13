@@ -1,10 +1,14 @@
 import type { AppNotification, DeliveryStatus, MemberPreferences, MessageChannel, OutboxMessage, SupportTicket } from '@tgs/types';
-import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
 import { deliveries, memberPreferences, messages, notifications, pushTokens, supportTickets } from '../../models';
 
 type Via = Partial<Record<MessageChannel, DeliveryStatus>>;
 export type StoredNotification = AppNotification & { via: Via };
+export type DeliveryRow = typeof deliveries.$inferSelect;
+
+/** G9 (D-121): a send in flight holds its row this long; a server that dies mid-send frees it for a retry. */
+const LEASE = sql`now() + interval '5 minutes'`;
 
 const toNotification = (r: typeof notifications.$inferSelect): StoredNotification => ({
   id: r.id,
@@ -50,6 +54,68 @@ export class NotificationsRepository {
 
   async insertDelivery(d: typeof deliveries.$inferInsert): Promise<void> {
     await this.db.insert(deliveries).values(d);
+  }
+
+  // ---- G9 (D-121) outbox ----
+  async enqueue(rows: Array<typeof deliveries.$inferInsert>): Promise<void> {
+    // Due now by the database clock, so a claim right after never misses it.
+    if (rows.length) await this.db.insert(deliveries).values(rows.map((r) => ({ ...r, nextAttemptAt: r.nextAttemptAt ?? sql`now()` })));
+  }
+
+  /** Takes up to `limit` due rows (only `ids`, when given) for this server; another server skips them. */
+  async claim(limit: number, ids?: string[]): Promise<DeliveryRow[]> {
+    const due = this.db
+      .select({ id: deliveries.id })
+      .from(deliveries)
+      .where(and(eq(deliveries.status, 'QUEUED'), lte(deliveries.nextAttemptAt, sql`now()`), ids ? inArray(deliveries.id, ids) : undefined))
+      .orderBy(asc(deliveries.nextAttemptAt))
+      .limit(limit)
+      .for('update', { skipLocked: true });
+    return this.db
+      .update(deliveries)
+      .set({ attempts: sql`${deliveries.attempts} + 1`, nextAttemptAt: LEASE, updatedAt: sql`now()` })
+      .where(inArray(deliveries.id, due))
+      .returning();
+  }
+
+  async finish(id: string, set: Pick<DeliveryRow, 'status' | 'provider' | 'error' | 'providerMessageId' | 'nextAttemptAt'>): Promise<void> {
+    await this.db.update(deliveries).set({ ...set, updatedAt: sql`now()` }).where(eq(deliveries.id, id));
+  }
+
+  /** Records one channel's latest status on the in-app notification. */
+  async mergeVia(notificationId: string, channel: MessageChannel, status: DeliveryStatus): Promise<void> {
+    await this.db.update(notifications).set({ via: sql`${notifications.via} || jsonb_build_object(${channel}::text, ${status}::text)` }).where(eq(notifications.id, notificationId));
+  }
+
+  async viaOf(ids: string[]): Promise<Map<string, Via>> {
+    if (!ids.length) return new Map();
+    return new Map((await this.db.select({ id: notifications.id, via: notifications.via }).from(notifications).where(inArray(notifications.id, ids))).map((r) => [r.id, r.via]));
+  }
+
+  async byProviderId(providerMessageId: string): Promise<DeliveryRow | undefined> {
+    return (await this.db.select().from(deliveries).where(eq(deliveries.providerMessageId, providerMessageId)))[0];
+  }
+
+  async delivery(id: string): Promise<DeliveryRow | undefined> {
+    return (await this.db.select().from(deliveries).where(eq(deliveries.id, id)))[0];
+  }
+
+  /** Composer messages: how many of each one's sends are at each status. */
+  async progress(messageIds: string[]): Promise<Map<string, Partial<Record<DeliveryStatus, number>>>> {
+    const out = new Map<string, Partial<Record<DeliveryStatus, number>>>();
+    if (!messageIds.length) return out;
+    const rows = await this.db.select({ messageId: deliveries.messageId, status: deliveries.status, n: count() }).from(deliveries).where(inArray(deliveries.messageId, messageIds)).groupBy(deliveries.messageId, deliveries.status);
+    for (const r of rows) out.set(r.messageId!, { ...out.get(r.messageId!), [r.status]: r.n });
+    return out;
+  }
+
+  async failed(limit = 200): Promise<DeliveryRow[]> {
+    return this.db.select().from(deliveries).where(eq(deliveries.status, 'FAILED')).orderBy(desc(deliveries.updatedAt)).limit(limit);
+  }
+
+  /** A failed send goes back to the outbox with fresh attempts; undefined unless it was FAILED. */
+  async requeue(id: string): Promise<DeliveryRow | undefined> {
+    return (await this.db.update(deliveries).set({ status: 'QUEUED', attempts: 0, error: null, nextAttemptAt: sql`now()`, updatedAt: sql`now()` }).where(and(eq(deliveries.id, id), eq(deliveries.status, 'FAILED'))).returning())[0];
   }
 
   async of(recipientId: string, limit = 100): Promise<StoredNotification[]> {

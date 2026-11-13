@@ -5,7 +5,7 @@ import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, TextFiel
 import { api } from '@/lib/api';
 import { MONTH_ITEMS, isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths'>;
+type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths' | 'messageWindowStartHour' | 'messageWindowEndHour'>;
 const pick = (s: SocietySettings): Values => ({
   shareValue: s.shareValue,
   admissionFee: s.admissionFee,
@@ -21,6 +21,8 @@ const pick = (s: SocietySettings): Values => ({
   casteCategories: s.casteCategories,
   minAppVersion: s.minAppVersion,
   applicantDataRetentionMonths: s.applicantDataRetentionMonths,
+  messageWindowStartHour: s.messageWindowStartHour,
+  messageWindowEndHour: s.messageWindowEndHour,
 });
 
 export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
@@ -82,6 +84,11 @@ export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
 
       <FormSection title="Mobile app" description="Raise this when an old version of the app must stop working (for example after a security fix). People on an older version see an update screen. 0.0.0 lets every version in.">
         <TextField label="Oldest version allowed" name="minAppVersion" value={v.minAppVersion} onChange={(minAppVersion) => setV({ minAppVersion: minAppVersion.trim() })} errors={errors} placeholder="1.0.0" disabled={ro} />
+      </FormSection>
+
+      <FormSection title="Message hours" description="Messages sent from Notifications → Compose go out only in these hours (IST); outside them they wait for the morning. Receipts, OTPs and alerts about a member's own money go at once.">
+        <NumberField label="From" name="messageWindowStartHour" value={v.messageWindowStartHour} onChange={(messageWindowStartHour) => setV({ messageWindowStartHour })} errors={errors} unit=":00 hours" disabled={ro} />
+        <NumberField label="Until" name="messageWindowEndHour" value={v.messageWindowEndHour} onChange={(messageWindowEndHour) => setV({ messageWindowEndHour })} errors={errors} unit=":00 hours" disabled={ro} />
       </FormSection>
 
       <FormSection title="Personal data" description="DPDP Act 2023: a rejected or withdrawn application, its documents and the applicant's app sign-in are deleted this long after the last change. Members' records are kept as the law requires." tag={ph('applicantDataRetentionMonths')}>

@@ -22,7 +22,17 @@ export interface SendResult {
   status: DeliveryStatus;
   provider: string;
   error?: string;
+  /** G9 (D-121): the provider's id for this message; its status webhook names it. */
+  providerMessageId?: string;
+  /** G9: a FAILED send worth trying again (network, timeout, 429, 5xx); a refusal of the number or the text is not. */
+  retryable?: boolean;
 }
+
+/** G9: no provider call may hold a request or the dispatcher for long. */
+export const SEND_TIMEOUT_MS = 10_000;
+
+/** G9: rate limits and provider faults pass; anything else is the message's own fault. */
+export const retryableHttp = (status: number) => status === 408 || status === 429 || status >= 500;
 
 export interface MessageSender {
   send(message: OutgoingMessage): Promise<SendResult>;

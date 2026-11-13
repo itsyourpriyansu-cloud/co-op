@@ -33,7 +33,7 @@ export function validateFdSlabs(slabs: SocietySettings['fdSlabs']): Record<strin
 }
 
 /** ST-60 / ST-66: society-wide numbers. */
-export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 'minShares' | 'maxShares' | 'retirementAge' | 'defaulterCycles' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'insurance' | 'savingsRatePercent' | 'fdMinAmount' | 'admissionFee' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'financialYearStartMonth'> & Partial<Pick<SocietySettings, 'suretyRecoveryAfterCycles' | 'casteCategories' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'demandSendByDays' | 'minTakeHomePay' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent' | 'shareDepositRatePercent' | 'depositInterestBasis' | 'minAppVersion' | 'applicantDataRetentionMonths'>>): Record<string, string> {
+export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 'minShares' | 'maxShares' | 'retirementAge' | 'defaulterCycles' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'insurance' | 'savingsRatePercent' | 'fdMinAmount' | 'admissionFee' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'financialYearStartMonth'> & Partial<Pick<SocietySettings, 'suretyRecoveryAfterCycles' | 'casteCategories' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'demandSendByDays' | 'minTakeHomePay' | 'fdMaturityJobEnabled' | 'fdMaturityRunHour' | 'fdPrematureWithdrawalEnabled' | 'fdPrematurePenaltyMethod' | 'fdPrematurePenaltyPercent' | 'shareDepositRatePercent' | 'depositInterestBasis' | 'minAppVersion' | 'applicantDataRetentionMonths' | 'messageWindowStartHour' | 'messageWindowEndHour'>>): Record<string, string> {
   const e: Record<string, string> = {};
   const money = (k: string, v: number, allowZero = true) => {
     if (!(Number.isInteger(v) && (allowZero ? v >= 0 : v > 0))) e[k] = allowZero ? 'Enter ₹0 or more.' : 'Enter more than ₹0.';
@@ -61,6 +61,11 @@ export function validateSocietySettings(s: Pick<SocietySettings, 'shareValue' | 
   if (s.casteCategories !== undefined && !(Array.isArray(s.casteCategories) && s.casteCategories.length > 0 && s.casteCategories.every((c) => typeof c === 'string' && c.trim().length > 0))) e.casteCategories = 'List at least one category, one per line.';
   if (s.minAppVersion !== undefined && !VERSION.test(s.minAppVersion)) e.minAppVersion = 'Use a version like 1.2.0.';
   if (s.applicantDataRetentionMonths !== undefined && !(Number.isInteger(s.applicantDataRetentionMonths) && s.applicantDataRetentionMonths >= 1 && s.applicantDataRetentionMonths <= 120)) e.applicantDataRetentionMonths = 'Use 1 to 120 months.';
+  // G9 (D-121): broadcast hours; start before end, both whole hours.
+  const hour = (v: number | undefined) => v === undefined || (Number.isInteger(v) && v >= 0 && v <= 23);
+  if (!hour(s.messageWindowStartHour)) e.messageWindowStartHour = 'Use an hour from 0 to 23.';
+  if (!hour(s.messageWindowEndHour)) e.messageWindowEndHour = 'Use an hour from 0 to 23.';
+  else if (s.messageWindowStartHour !== undefined && s.messageWindowEndHour !== undefined && s.messageWindowEndHour <= s.messageWindowStartHour) e.messageWindowEndHour = 'Must be after the start hour.';
   if (s.holidays !== undefined && !(Array.isArray(s.holidays) && s.holidays.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d))))) e.holidays = 'Use dates like 2026-10-02, one per line.';
   if (s.loanTargetDays !== undefined && !(Number.isInteger(s.loanTargetDays) && s.loanTargetDays >= 0 && s.loanTargetDays <= 90)) e.loanTargetDays = 'Use 0 to 90 days.';
   // P7b (D-088): send-by days and the minimum take-home pay (R1).

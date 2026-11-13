@@ -20,6 +20,9 @@ const PUBLIC = new Set([
   'POST /api/v1/auth/persona',
   // The join form's society facts (departments, share limits, agreement texts), read before sign-up.
   'GET /api/v1/joining/reference',
+  // G9 (D-121): WhatsApp status callbacks, proven by the verify token and Meta's signature instead.
+  'GET /api/v1/webhooks/whatsapp',
+  'POST /api/v1/webhooks/whatsapp',
 ]);
 
 describe('route protection (G7)', () => {

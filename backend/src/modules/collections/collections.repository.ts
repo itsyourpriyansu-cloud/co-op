@@ -167,8 +167,9 @@ export class CollectionsRepository {
       .select({
         all: sql<number>`count(*)::int`,
         salary: sql<number>`count(*) filter (where ${receipts.source} = 'SALARY_RECOVERY')::int`,
-        todayAmount: sql<number>`coalesce(sum(${receipts.amount}) filter (where ${receipts.date} = ${today}), 0)::bigint`,
-        monthAmount: sql<number>`coalesce(sum(${receipts.amount}) filter (where ${receipts.date}::text like ${`${today.slice(0, 7)}%`}), 0)::bigint`,
+        // G9 (D-119): a cancelled receipt stays listed but brings in no money.
+        todayAmount: sql<number>`coalesce(sum(${receipts.amount}) filter (where ${receipts.date} = ${today} and ${receipts.data}->'cancelled' is null), 0)::bigint`,
+        monthAmount: sql<number>`coalesce(sum(${receipts.amount}) filter (where ${receipts.date}::text like ${`${today.slice(0, 7)}%`} and ${receipts.data}->'cancelled' is null), 0)::bigint`,
       })
       .from(receipts)
       .innerJoin(members, eq(members.id, receipts.memberId))
@@ -194,6 +195,16 @@ export class CollectionsRepository {
 
   async insertReceipt(tx: Tx, r: Receipt): Promise<void> {
     await tx.insert(receipts).values({ id: r.id, ...receiptColumns(r) });
+  }
+
+  /** G9 (D-119): the receipt row, locked for a cancellation. */
+  async lockReceipt(tx: Tx, idOrNo: string): Promise<Receipt | undefined> {
+    const [r] = await tx.select({ data: receipts.data }).from(receipts).where(or(eq(receipts.id, idOrNo), eq(receipts.receiptNo, idOrNo))).for('update');
+    return r?.data;
+  }
+
+  async saveReceipt(tx: Tx, r: Receipt): Promise<void> {
+    await tx.update(receipts).set(receiptColumns(r)).where(eq(receipts.id, r.id));
   }
 
   // ---- payment reports ----

@@ -18,6 +18,9 @@ export interface PostInput {
 }
 
 export const entryNo = (n: number) => `JE-${String(n).padStart(6, '0')}`;
+
+/** G9 (D-119): only manual journals and office vouchers are reversed by a bare mirror entry. */
+const REVERSIBLE_SOURCES = new Set(['MANUAL', 'VOUCHER']);
 const toNumber = (v: string | number) => Number(v);
 
 function toEntry(e: EntryRow) {
@@ -116,6 +119,9 @@ export class LedgerService {
     const user = sessionOf(request);
     const original = (await this.repo.entry(id)) ?? fail('NOT_FOUND', 'Unknown journal entry.');
     if (original.reversesEntryId) fail('INVALID_TRANSITION', 'This entry is itself a reversal. Post a new entry instead.');
+    // G9 (D-119): an entry made by a receipt, loan, deposit or demand also changed that record's balances,
+    // which a bare mirror entry would leave behind. Those are corrected from their own record.
+    if (!REVERSIBLE_SOURCES.has(original.source)) fail('RULE_VIOLATION', 'This entry was made by a receipt, loan, deposit or demand. Correct it from that record (for a receipt: Cancel receipt), so the member\'s balances change too.', { ruleId: 'REVERSE_SOURCE' });
     if (await this.repo.reversalOf(id)) fail('INVALID_TRANSITION', 'This entry has already been reversed.');
     const lines = (await this.repo.linesOf(id)).map((l) => ({ accountCode: l.accountCode, debit: l.debit, credit: l.credit, memberId: l.memberId ?? undefined, refType: l.refType ?? undefined, refId: l.refId ?? undefined }));
     const entry = await withTransaction(this.app.db, async (tx) => {

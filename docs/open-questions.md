@@ -1,5 +1,6 @@
 # Open Questions
 
+> Version 0.6 · 2026-11-13 · Q-004, Q-112, Q-116, Q-405, Q-408, Q-513 closed by the build (D-117 … D-121)
 > Version 0.5 · 2026-11-05 · F-01…F-14 answered (D-093)
 > Version 0.4 · 2026-10-29 · Society answers recorded (D-067, `docs/21-society-answers-impact.md`)
 > Asked in logical batches. **Batch 1 blocks the build.** Batches 2–4 block only the features listed in "Blocks". Until they are answered, the prototype uses the configurable placeholders in `09`/`13`.
@@ -13,7 +14,7 @@
 | Q-001 | Which scope: **Lean** (23 pages), **MVP** (51 pages + 8 reports), or **Full** (53 pages + 22 reports)? | Sizes the whole plan | Recommend MVP (D-017) | E | all | **Answered: MVP → D-023, recounted in D-036 (63 screens)** |
 | Q-002 | Member app: responsive mobile-first web inside the same app, or a separate native/mobile codebase? | Doubles effort if separate | Recommend responsive web (D-004) | E/F | M0, M8 | **Answered: separate app, Expo RN, Android APK → D-019, D-020, D-022** |
 | Q-003 | Tech stack approval (or a mandated stack from Fusil?) | Foundation | D-008 | E/F | M0 | **Answered: React + Vite + shadcn → D-008** |
-| Q-004 | Reports depth: 8 fully designed + catalogue, or all 22? | Effort in M9 | Recommend 8 (D-013) | E | M9 | Open |
+| Q-004 | Reports depth: 8 fully designed + catalogue, or all 22? | Effort in M9 | Recommend 8 (D-013) | E | M9 | **Closed by the build:** the 8 designed reports (D-091) plus the statements and registers of G2 (D-112); 19 in all on the Reports page |
 | Q-005 | Who builds the production backend? Does Fusil already have an ERP product with its own data model/API that this UI must match? | If yes, `08`/`11` must align to it before M1 | — | F | M1 | **Answered → D-069:** Fusil has no backend; Envizon builds it (`docs/22`) |
 | Q-006 | Can you share agreement pages 1 and 6–10? | May contain timelines, tech environment, acceptance terms | — | E | — | Open |
 | Q-007 | What does the society use today (registers, Excel, software)? Samples of a demand sheet, a loan application form, a sanction letter and a DDO recovery statement? | Realism of mock data, report layouts, import format | — | S | M7, M9 | **Asked again 2026-10-29** (F-11). Samples not received yet |
@@ -37,10 +38,10 @@
 | Q-109 | Why does the FD List lead to Loan Sanction (Approver) and Loan Disbursement (Disbursement)? Does FD opening/closure need approval, or does this represent Deposit loans? | Treat as Deposit/Share Capital loans | E | M6 | **Answered by F4:** FD acceptance needs Secretary + President sign-off (D-027) |
 | Q-110 | Top-up allowed only for Ordinary loans, or also Salary/Education? Minimum repaid instalments before a top-up? | Ordinary only | S | M5 | **Answered → D-059** |
 | Q-111 | Which events send Email/WhatsApp/SMS, to whom, and with what content? | Event list in ST-63 | S | M5, M9 | **Partly answered [S] → D-067:** WhatsApp and email (no SMS). Event list still open (F-09) |
-| Q-112 | Can the Super Admin perform or override any stage? | No (view only) | S | M5 | Open |
+| Q-112 | Can the Super Admin perform or override any stage? | No (view only) | S | M5 | **Closed as built (2026-11-13):** stage actions belong to each stage's owner role (workflows in `packages/domain`); the Super Admin views them and runs settings, users and permissions (segregation of duties). Acting for another stage exists only as a demo control (`DEMO_MODE`, off in production) |
 | Q-113 | Who performs "Loan Assessment" (after DDO validation)? | Accountant | S | M5 | **Answered → D-059** |
 | Q-114 | Can the Accountant return or reject? Can a rejected member re-apply immediately? | Return + Reject allowed. Re-apply allowed | S | M5 | **Answered → D-059** |
-| Q-116 | What is "Preference Signup" in the Member and DDO diagrams? | Not built until defined | E | — | Open |
+| Q-116 | What is "Preference Signup" in the Member and DDO diagrams? | Not built until defined | E | — | **Closed (2026-11-13):** read as the member's message preferences, built as MB-14 (WhatsApp / email on or off, D-089); money and sign-in alerts always on WhatsApp (D-121) |
 | Q-115 | Can a member hold multiple active loans (same type / different types)? | One per type (BR-018) | S | M4 | **Answered [S] → D-067:** multiple loans of one type allowed; suggest a top-up first |
 
 ## Batch 3: Business rules (blocks correctness of numbers, not the UI)
@@ -72,10 +73,10 @@
 | Q-402 | "Other relevant profile details": Employee ID, email, photo, Aadhaar, PAN, bank account, basic pay? | As listed in `08` [P] | S | Open |
 | Q-403 | List of mandatory registration documents | 4 placeholder types | S | **Answered [S] → D-067:** Aadhaar, PAN, service particulars |
 | Q-404 | Which events make up "service history" (transfers, promotions, deputation, leave)? | Event list in `08` | S | Open |
-| Q-405 | Report formats (PDF/Excel), letterhead, signatures, any statutory formats? | CSV + print-PDF | S | Open · built as CSV + browser print on the letterhead (D-063) |
+| Q-405 | Report formats (PDF/Excel), letterhead, signatures, any statutory formats? | CSV + print-PDF | S | **Closed as built:** CSV + browser print on the letterhead (D-063); no statutory format was named by the society |
 | Q-406 | Why is Caste captured, which categories, and who may see it? | Restricted to Admin/Accountant | S | **Answered [S] → D-067:** mandatory, visible to everyone. Privacy follow-up F-07 (C-3) |
 | Q-407 | Real volumes: members, departments, loans per year, staff users | `13` §1 | S | **Answered [S] → D-067:** ~900 members + ~1,200 ex-employees |
-| Q-408 | Data retention and audit requirements (co-op audit, DPDP) | Hand over to backend | S/F | Open |
+| Q-408 | Data retention and audit requirements (co-op audit, DPDP) | Hand over to backend | S/F | **Built (D-117):** append-only audit log and ledger; closed applications erased after `applicantDataRetentionMonths` (12 [P]). The society confirms the co-op audit retention period |
 ## Batch 5: From the paper forms (2026-10-24)
 
 | ID | Question | Placeholder / proposal | Owner | Blocks | Status |
@@ -92,7 +93,7 @@
 | Q-510 | If share capital is paid by salary deduction, does membership become active at approval or after the first recovery? | Active at approval, share dues on the next demand | S | M8 | **Answered [S] → D-067:** member from approval |
 | Q-511 | Is membership approved by Secretary then President (like loans), or by a managing-committee resolution? | Secretary → President | S | M3 | **Answered [S] → D-067:** Accountant reviews → Secretary **or** President. **CONFLICT C-2** with form F1 |
 | Q-512 | Deputation / transfer outside the Secretariat: how are recoveries handled (external pay officer)? | Department master supports "External office" with an address. Demand letter printed | S | M7 | **Answered [S] → D-067:** members generally do not transfer |
-| Q-513 | Retirement/death: should the system generate the gratuity recovery request to the department? | P2 printable letter | S | P2 | Open |
+| Q-513 | Retirement/death: should the system generate the gratuity recovery request to the department? | P2 printable letter | S | P2 | **Built (D-098):** the final settlement prints as a letter to the pay office asking it to recover the balance from the gratuity (console, and from the phone's settlement screen); the member is told when it is posted (D-121) |
 | Q-514 | Current baselines: average days from loan application to disbursement, and membership application to approval, on paper | Needed for UX targets (`12` §9) | S | M10 | **Answered [S] → D-067:** membership ≤ 48 h, loan ≤ 4–5 days |
 ## Batch 6: From the Member sitemap review (doc 17)
 
