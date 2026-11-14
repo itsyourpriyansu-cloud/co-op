@@ -5,12 +5,12 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Trash2, X } from 'lucide-react-native';
-import { amountInWords, formatDisplayDate, formatINR } from '@tgs/domain';
+import { amountInWords, formatDisplayDate, formatINR, instalmentChoices } from '@tgs/domain';
 import type { LoanApplicationForm, LoanDetail, LoanProductCode, LoanRequestInput, MemberPick } from '@tgs/types';
 import { ActionAlert, MemberPicker, MoneyField, RuleChecks, useAction, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { formFor } from '@/lib/staffLoans';
-import { Button, Card, ChoiceCard, Divider, Header, KeyValue, Screen, Section, Skeleton, Text, TextField, WizardProgress } from '@/ui';
+import { Button, Card, ChoiceCard, Divider, Header, KeyValue, MonthPicker, Screen, Section, Skeleton, Text, TextField, WizardProgress } from '@/ui';
 import { space } from '@/theme';
 
 export default function NewLoan() {
@@ -29,6 +29,14 @@ export default function NewLoan() {
   const ctx = useQuery({ queryKey: ['loan-context', member?.id], queryFn: () => api.loans.context(member!.id), enabled: !!member });
   const c = ctx.data;
   const prod = c?.products.find((p) => p.code === product);
+  // D-123: only the periods the society offers; those beyond the member's remaining service are shown switched off (BR-002).
+  const choices = useMemo(() => (prod && c ? instalmentChoices(prod.instalmentOptions, c.member.leftoverMonths) : []), [prod, c]);
+  useEffect(() => {
+    if (!c) return;
+    if (!prod && c.products[0]) setProduct(c.products[0].code);
+    const open = choices.filter((x) => x.allowed);
+    if (open.length && !open.some((x) => x.months === instalments)) setInstalments(open[0]!.months);
+  }, [c, prod, choices, instalments]);
 
   // Start the pay sections from the member's DDO-certified pay profile.
   useEffect(() => {
@@ -114,11 +122,10 @@ export default function NewLoan() {
             <ChoiceCard
               key={p.code}
               title={`${p.name} · ${p.ratePercent}%`}
-              description={`Up to ${formatINR(p.maxAmount)} · ${p.maxInstalments} months · form ${formFor(p.code)}${p.suretiesRequired ? ` · ${p.suretiesRequired} sureties` : ''}`}
+              description={`Up to ${formatINR(p.maxAmount)} · ${p.instalmentOptions.join(' / ')} months · form ${formFor(p.code)}${p.suretiesRequired ? ` · ${p.suretiesRequired} sureties` : ''}`}
               selected={product === p.code}
               onPress={() => {
                 setProduct(p.code);
-                setInstalments(Math.min(instalments, p.maxInstalments));
                 setSureties([]);
                 setTopupOf('');
               }}
@@ -181,7 +188,7 @@ export default function NewLoan() {
       {name === 'Loan' && c ? (
         <View style={{ gap: space[8] }}>
           <MoneyField label="7a · Amount required" required value={amount} onChange={setAmount} error={fe.amount} hint={amount > 0 ? amountInWords(amount) : prod ? `Up to ${formatINR(prod.maxAmount)}` : undefined} />
-          <TextField label="11 · Monthly instalments" required keyboardType="number-pad" suffix={<Text role="caption" tone="tertiary">months</Text>} value={Number.isFinite(instalments) ? String(instalments) : ''} onChangeText={(t) => setInstalments(t === '' ? Number.NaN : Number(t.replace(/\D/g, '')))} error={fe.instalments} hint={res ? `At most ${res.preview.maxInstalments} for this member` : undefined} />
+          <MonthPicker label="11 · Monthly instalments" value={instalments} choices={choices} onChange={setInstalments} error={fe.instalments} />
           <TextField label="7b · Purpose" required value={purpose} onChangeText={setPurpose} placeholder="e.g. House repair" error={fe.purpose} />
           {product === 'EDUCATION' ? (
             <>

@@ -48,7 +48,8 @@ export const societySettingsSchema = z.object({
   placeholders: z.array(z.string()),
 });
 
-export const loanProductCode = z.enum(['ORDINARY', 'EDUCATION', 'SALARY', 'DEPOSIT']);
+/** The four built-in codes, or the code generated for a product the Admin added (D-123). */
+export const loanProductCode = z.string().regex(/^[A-Z0-9_]{2,40}$/);
 
 export const loanProductSchema = z.object({
   code: loanProductCode,
@@ -57,6 +58,8 @@ export const loanProductSchema = z.object({
   minAmount: paise,
   maxAmount: paise,
   maxInstalments: z.number().int(),
+  instalmentOptions: z.array(z.number().int()),
+  enabled: z.boolean(),
   maxConcurrent: z.number().int(),
   depositMarginPercent: z.number(),
   penalRatePercent: z.number(),
@@ -96,7 +99,10 @@ export const settingsInput = societySettingsSchema
   .partial()
   .extend({ insurance: societySettingsSchema.shape.insurance.partial().optional(), shareValue: paise.optional() })
   .extend({ emiToNetSalaryMaxPercent: percent.optional() });
-export const loanProductInput = loanProductSchema.omit({ code: true, placeholder: true }).partial();
+// maxInstalments is not sent: it is the largest of instalmentOptions.
+export const loanProductInput = loanProductSchema.omit({ code: true, placeholder: true, maxInstalments: true }).partial();
+/** D-123: a new product needs every field (the name is its identity). */
+export const newLoanProductInput = loanProductSchema.omit({ code: true, placeholder: true, maxInstalments: true, enabled: true });
 export const productParams = z.object({ code: loanProductCode });
 
 // ---- templates ----
@@ -114,7 +120,7 @@ export const templateParams = z.object({ key: z.string().min(1) });
 // ---- MB-16 ----
 export const ratesSchema = z.object({
   loanProducts: z.array(
-    loanProductSchema.pick({ code: true, name: true, ratePercent: true, minAmount: true, maxAmount: true, maxInstalments: true, emiMethod: true, suretiesRequired: true, shareDepositPercent: true, placeholder: true }),
+    loanProductSchema.pick({ code: true, name: true, ratePercent: true, minAmount: true, maxAmount: true, maxInstalments: true, instalmentOptions: true, emiMethod: true, suretiesRequired: true, shareDepositPercent: true, placeholder: true }),
   ),
   fdSlabs: z.array(fdSlabSchema),
   savingsRatePercent: z.number(),

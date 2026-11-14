@@ -8,7 +8,7 @@ import { sessionOf } from '../../common/guards';
 import { businessNow, businessToday } from '../../common/utils/business-date';
 import { withTransaction, type Tx } from '../../db/transaction';
 import { finalSettlements } from '../../models';
-import { ACCOUNT, DEPOSIT_ACCOUNT, LOAN_ACCOUNT } from '../ledger/ledger.accounts';
+import { ACCOUNT, DEPOSIT_ACCOUNT, loanAccount } from '../ledger/ledger.accounts';
 import type { JournalLineInput } from '@tgs/domain';
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
@@ -147,7 +147,7 @@ export class SettlementsService {
       const lines: JournalLineInput[] = [];
       const changed = { loans: new Map<string, Loan>(), deposits: new Map<string, DepositAccount>(), shares: new Map() };
       for (const o of st.owes) {
-        if (o.part === 'PRINCIPAL') lines.push({ accountCode: LOAN_ACCOUNT[o.product!], debit: 0, credit: o.amount, memberId: m.id, refType: 'LOAN', refId: o.loanId! });
+        if (o.part === 'PRINCIPAL') lines.push({ accountCode: loanAccount(o.product!), debit: 0, credit: o.amount, memberId: m.id, refType: 'LOAN', refId: o.loanId! });
         else if (o.part === 'INTEREST') lines.push({ accountCode: '4100', debit: 0, credit: o.amount });
         else if (o.key === 'penal') lines.push({ accountCode: '4200', debit: 0, credit: o.amount });
         else if (o.head) lines.push({ accountCode: HEAD_ACCOUNT[o.head]!, debit: 0, credit: o.amount, ...(MEMBER_LEVEL.has(o.head) ? { memberId: m.id, refType: o.head === 'SHARE_CAPITAL' ? 'SHARE' : 'DEPOSIT', refId: m.id } : {}) });

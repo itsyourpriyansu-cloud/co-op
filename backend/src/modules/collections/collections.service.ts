@@ -24,7 +24,7 @@ import {
   formatDisplayDate,
   formatINR,
   HEAD_PRIORITY,
-  LOAN_PRIORITY,
+  loanPriority,
   nextDemandSheetStatus,
   validateDenominations,
   type DemandSheetAction,
@@ -78,7 +78,7 @@ import { sessionOf } from '../../common/guards';
 import { businessCycle, businessNow, businessToday } from '../../common/utils/business-date';
 import { notifyMember } from '../../common/utils/notify';
 import { withTransaction, type Tx } from '../../db/transaction';
-import { ACCOUNT, DEPOSIT_ACCOUNT, LOAN_ACCOUNT } from '../ledger/ledger.accounts';
+import { ACCOUNT, DEPOSIT_ACCOUNT, loanAccount } from '../ledger/ledger.accounts';
 import { entryNo } from '../ledger/ledger.service';
 import type { CollectionsRepository, SheetHead } from './collections.repository';
 
@@ -101,7 +101,7 @@ const lastDayOf = (c: Cycle) => {
   const [y, m] = c.split('-').map(Number) as [number, number];
   return `${c}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`;
 };
-const rank = (c: DemandComponent) => HEAD_PRIORITY[c.head] * 10 + (c.loanProduct ? LOAN_PRIORITY[c.loanProduct] : 0);
+const rank = (c: DemandComponent) => HEAD_PRIORITY[c.head] * 10 + (c.loanProduct ? loanPriority(c.loanProduct) : 0);
 /** Display order = recovery order (BR-011). */
 function inPriority<T extends DemandComponent>(cs: T[]): T[] {
   return cs.map((c, i) => ({ c, i })).sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i).map((x) => x.c);
@@ -651,7 +651,7 @@ export class CollectionsService {
         lines.push(...(await this.collectFromSurety(tx, memberId, c.loanId, delta, today, changed, { via, cycle })));
         continue;
       }
-      const account = c.head === 'PRINCIPAL' ? LOAN_ACCOUNT[(c.loanProduct ?? 'ORDINARY') as keyof typeof LOAN_ACCOUNT] : HEAD_ACCOUNT[c.head];
+      const account = c.head === 'PRINCIPAL' ? loanAccount(c.loanProduct ?? 'ORDINARY') : HEAD_ACCOUNT[c.head];
       if (account) lines.push({ accountCode: account, debit: 0, credit: delta, ...(MEMBER_HEADS.has(c.head) ? { memberId, refType: c.head === 'PRINCIPAL' ? 'LOAN' : c.head === 'SHARE_CAPITAL' ? 'SHARE' : 'DEPOSIT', refId: c.loanId ?? memberId } : {}) });
       if (c.head === 'PRINCIPAL' && c.loanId) {
         const loan = await loanOf(c.loanId);
@@ -1236,7 +1236,7 @@ export class CollectionsService {
           postedBy: { id: user.id, name: user.name },
           lines: [
             { accountCode: input.mode === 'CASH' ? ACCOUNT.CASH : ACCOUNT.BANK, debit: q.total, credit: 0 },
-            ...(q.principal ? [{ accountCode: LOAN_ACCOUNT[loan.product], debit: 0, credit: q.principal, memberId: q.memberId, refType: 'LOAN' as const, refId: loanId }] : []),
+            ...(q.principal ? [{ accountCode: loanAccount(loan.product), debit: 0, credit: q.principal, memberId: q.memberId, refType: 'LOAN' as const, refId: loanId }] : []),
             ...(q.interest ? [{ accountCode: HEAD_ACCOUNT.INTEREST!, debit: 0, credit: q.interest }] : []),
           ],
         },

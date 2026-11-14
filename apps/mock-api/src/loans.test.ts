@@ -89,11 +89,11 @@ describe('ST-21 on behalf, salary loan, scoping', () => {
   it('Accountant enters a Salary loan from the paper form: no sureties, straight to review', async () => {
     const acc = await login('stf-accountant');
     const salary = { substantivePay: 4_000_000, compulsoryDeductions: [{ label: 'GPF', amount: 400_000 }], netPayEarnedToDate: 2_500_000 };
-    const tooMuch = await call('POST', '/loans', { memberId: 'mem-1104', product: 'SALARY', amount: 3_000_000, instalments: 10, purpose: 'Medical', sureties: [], form: { salary }, submit: true }, acc);
+    const tooMuch = await call('POST', '/loans', { memberId: 'mem-1104', product: 'SALARY', amount: 3_000_000, instalments: 12, purpose: 'Medical', sureties: [], form: { salary }, submit: true }, acc);
     expect(tooMuch.status).toBe(422);
     expect(tooMuch.body.ruleId).toBe('BR-023');
     expect(store.db.loans.some((l) => l.memberId === 'mem-1104' && l.product === 'SALARY' && l.status === 'DRAFT')).toBe(false);
-    const ok = await call<LoanDetail>('POST', '/loans', { memberId: 'mem-1104', product: 'SALARY', amount: 2_000_000, instalments: 10, purpose: 'Medical', sureties: [], form: { salary }, submit: true }, acc);
+    const ok = await call<LoanDetail>('POST', '/loans', { memberId: 'mem-1104', product: 'SALARY', amount: 2_000_000, instalments: 12, purpose: 'Medical', sureties: [], form: { salary }, submit: true }, acc);
     expect(ok.status).toBe(201);
     expect(ok.body.loan).toMatchObject({ status: 'ACCOUNTANT_REVIEW', channel: 'COUNTER', createdByName: 'Suresh Goud' });
     expect(ok.body.stages.map((s) => s.key)).toEqual(['submitted', 'accountant', 'assessment', 'sanction', 'disbursement']);

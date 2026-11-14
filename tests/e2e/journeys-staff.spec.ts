@@ -186,7 +186,8 @@ test.describe('staff journeys', () => {
     await page.getByLabel(/9 · Net pay earned to date/).fill('40000');
     await tap(page, 'Continue');
     await page.getByLabel(/7a · Amount required/).fill('10000');
-    await page.getByLabel(/11 · Monthly instalments/).fill('10');
+    // D-123: the tenure is one of the periods the Admin offers (Salary: 6, 12, 18, 24).
+    await page.getByRole('radio', { name: /^12 months/ }).click();
     await page.getByLabel(/7b · Purpose/).fill('Medical');
     await tap(page, 'Continue');
     await expect(page.getByText('Eligibility')).toBeVisible();

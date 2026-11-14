@@ -1,4 +1,4 @@
-import type { LoanProduct, LoanProductCode, NotificationTemplate, SocietyProfile } from '@tgs/types';
+import type { LoanProduct, LoanProductCode, NewLoanProduct, NotificationTemplate, SocietyProfile } from '@tgs/types';
 import type { FastifyRequest } from 'fastify';
 import { sessionOf } from '../../common/guards';
 import type { MastersService, SettingsPatch } from './masters.service';
@@ -11,6 +11,7 @@ export class MastersController {
   bundle = (r: FastifyRequest) => this.service.bundle(sessionOf(r));
   updateSociety = (r: Req<Partial<SocietyProfile>>) => this.service.updateSociety(r, r.body);
   updateSettings = (r: Req<SettingsPatch>) => this.service.updateSettings(r, r.body);
+  createProduct = (r: Req<NewLoanProduct>) => this.service.createLoanProduct(r, r.body);
   updateProduct = (r: Req<Partial<LoanProduct>, { code: LoanProductCode }>) => this.service.updateLoanProduct(r, r.params.code, r.body);
   settingsVersions = () => this.service.settingsVersions();
   productVersions = (r: Req<unknown, { code: LoanProductCode }>) => this.service.productVersions(r.params.code);

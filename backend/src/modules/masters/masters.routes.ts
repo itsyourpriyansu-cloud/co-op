@@ -3,6 +3,7 @@ import { requireAuth, requirePermission } from '../../common/guards';
 import { MastersController } from './masters.controller';
 import {
   loanProductInput,
+  newLoanProductInput,
   productParams,
   productVersionsSchema,
   ratesSchema,
@@ -27,6 +28,7 @@ export const mastersRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get('/settings', { onRequest: view, schema: { tags, summary: 'Society profile, settings, loan products and recent changes', security, response: { 200: settingsBundleSchema } } }, controller.bundle);
   app.put('/settings/society', { onRequest: edit, schema: { tags, summary: 'Update the society profile', security, body: societyInput, response: { 200: settingsBundleSchema } } }, controller.updateSociety);
   app.put('/settings/values', { onRequest: edit, schema: { tags, summary: 'Change settings (creates a new active version)', security, body: settingsInput, response: { 200: settingsBundleSchema } } }, controller.updateSettings);
+  app.post('/settings/loan-products', { onRequest: edit, schema: { tags, summary: 'Add a loan product (a new product that behaves like an Ordinary loan)', security, body: newLoanProductInput, response: { 201: settingsBundleSchema } } }, async (r, reply) => reply.code(201).send(await controller.createProduct(r)));
   app.put('/settings/loan-products/:code', { onRequest: edit, schema: { tags, summary: 'Change a loan product (creates a new active version)', security, params: productParams, body: loanProductInput, response: { 200: settingsBundleSchema } } }, controller.updateProduct);
   app.get('/settings/versions', { onRequest: view, schema: { tags, summary: 'Every settings version, newest first', security, response: { 200: settingsVersionsSchema } } }, controller.settingsVersions);
   app.get('/settings/loan-products/:code/versions', { onRequest: view, schema: { tags, summary: 'Every version of a loan product, newest first', security, params: productParams, response: { 200: productVersionsSchema } } }, controller.productVersions);

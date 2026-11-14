@@ -4,9 +4,9 @@ import type { LoanProduct } from '@tgs/types';
 import { assessLoanApplication, checkConcurrentLoans, checkDepositLoanLimit, checkProductLimits, checkSuretyEligibility, toPaise } from './index';
 
 const R = toPaise;
-const ORDINARY: LoanProduct = { code: 'ORDINARY', name: 'Ordinary Loan', ratePercent: 11, minAmount: R(10000), maxAmount: R(500000), maxInstalments: 100, maxConcurrent: 1, depositMarginPercent: 0, penalRatePercent: 0, suretiesRequired: 2, ddoCertificationRequired: true, shareDepositPercent: 10, topupAllowed: true, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true };
-const SALARY: LoanProduct = { ...ORDINARY, code: 'SALARY', name: 'Salary Loan', ratePercent: 12, minAmount: R(5000), maxAmount: R(100000), maxInstalments: 24, suretiesRequired: 0, ddoCertificationRequired: false, shareDepositPercent: 0, topupAllowed: false };
-const DEPOSIT: LoanProduct = { ...SALARY, code: 'DEPOSIT', name: 'Loan against Deposit', maxAmount: R(450000), maxInstalments: 36, maxConcurrent: 2, depositMarginPercent: 90 };
+const ORDINARY: LoanProduct = { code: 'ORDINARY', name: 'Ordinary Loan', ratePercent: 11, minAmount: R(10000), maxAmount: R(500000), maxInstalments: 100, instalmentOptions: [12, 24, 36, 60, 100], enabled: true, maxConcurrent: 1, depositMarginPercent: 0, penalRatePercent: 0, suretiesRequired: 2, ddoCertificationRequired: true, shareDepositPercent: 10, topupAllowed: true, emiMethod: 'EQUAL_PRINCIPAL', placeholder: true };
+const SALARY: LoanProduct = { ...ORDINARY, code: 'SALARY', name: 'Salary Loan', ratePercent: 12, minAmount: R(5000), maxAmount: R(100000), maxInstalments: 24, instalmentOptions: [2, 6, 12, 24], suretiesRequired: 0, ddoCertificationRequired: false, shareDepositPercent: 0, topupAllowed: false };
+const DEPOSIT: LoanProduct = { ...SALARY, code: 'DEPOSIT', name: 'Loan against Deposit', maxAmount: R(450000), maxInstalments: 36, instalmentOptions: [12, 36], maxConcurrent: 2, depositMarginPercent: 90 };
 
 const base = { leftoverMonths: 200, activeProducts: [], grossSalary: R(80000), govtLoanDeductions: R(5000), otherLoanDeductions: R(3000), existingShareDeposit: 0, emiToNetSalaryMaxPercent: 50 };
 
@@ -18,7 +18,14 @@ describe('BR-016 product limits', () => {
   });
   it('tenure bounds', () => {
     expect(checkProductLimits(R(50000), 0, SALARY)[1]?.pass).toBe(false);
-    expect(checkProductLimits(R(50000), 30, SALARY)[1]?.message).toContain('at most 24');
+    expect(checkProductLimits(R(50000), 30, SALARY)[1]?.message).toContain('2, 6, 12, 24');
+  });
+  it('the tenure must be one of the periods the Admin offers (D-123)', () => {
+    expect(checkProductLimits(R(50000), 12, SALARY)[1]?.pass).toBe(true);
+    // 18 is under the maximum of 24 but not offered.
+    const c = checkProductLimits(R(50000), 18, SALARY)[1];
+    expect(c?.pass).toBe(false);
+    expect(c?.message).toContain('Choose one of these');
   });
 });
 

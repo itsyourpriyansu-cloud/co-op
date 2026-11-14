@@ -14,6 +14,7 @@ export const CHART_OF_ACCOUNTS: Array<{ code: string; name: string; type: Ledger
   { code: '1310', name: 'Education loans', type: 'ASSET', memberLevel: true },
   { code: '1320', name: 'Salary loans', type: 'ASSET', memberLevel: true },
   { code: '1330', name: 'Loans against deposits', type: 'ASSET', memberLevel: true },
+  { code: '1340', name: 'Other loans', type: 'ASSET', memberLevel: true },
   { code: '1400', name: 'Interest receivable on loans', type: 'ASSET', memberLevel: true },
   { code: '1500', name: 'Recoveries receivable from departments', type: 'ASSET', memberLevel: false, description: 'Demand sent to DDOs, not yet received' },
   { code: '2100', name: 'Share deposit', type: 'LIABILITY', memberLevel: true, description: '10% of Ordinary loans (BR-004)' },
@@ -48,7 +49,13 @@ export const CHART_OF_ACCOUNTS: Array<{ code: string; name: string; type: Ledger
 ];
 
 /** Where each loan product's principal sits (P5 posts disbursements and recoveries here). */
-export const LOAN_ACCOUNT: Record<LoanProductCode, string> = { ORDINARY: '1300', EDUCATION: '1310', SALARY: '1320', DEPOSIT: '1330' };
+const BUILT_IN_LOAN_ACCOUNT: Record<string, string> = { ORDINARY: '1300', EDUCATION: '1310', SALARY: '1320', DEPOSIT: '1330' };
+
+/** D-123: loan products the Admin adds share one head until the society asks for separate ones (Q-D123). */
+export const OTHER_LOAN_ACCOUNT = '1340';
+
+/** The head a product's principal sits in: its own for the four built-ins, "Other loans" for any other. */
+export const loanAccount = (code: LoanProductCode): string => BUILT_IN_LOAN_ACCOUNT[code] ?? OTHER_LOAN_ACCOUNT;
 
 /** Where each deposit scheme's balance sits (P6 / P7). */
 export const DEPOSIT_ACCOUNT: Record<DepositScheme, string> = { FD: '2200', CRD: '2300', SRDS: '2310', SAVINGS: '2330' };

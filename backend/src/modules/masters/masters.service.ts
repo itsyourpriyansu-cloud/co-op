@@ -1,6 +1,6 @@
-import { validateFdSlabs, validateLoanProduct, validateSocietySettings } from '@tgs/domain';
+import { sortInstalmentOptions, validateFdSlabs, validateLoanProduct, validateSocietySettings } from '@tgs/domain';
 import { NOTIFICATION_TEMPLATES } from '@tgs/mock-data';
-import type { AuditEntry, LoanProduct, LoanProductCode, NotificationTemplate, RatesReference, SessionUser, SettingsBundle, SocietyProfile, SocietySettings } from '@tgs/types';
+import type { AuditEntry, LoanProduct, LoanProductCode, NewLoanProduct, NotificationTemplate, RatesReference, SessionUser, SettingsBundle, SocietyProfile, SocietySettings } from '@tgs/types';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
@@ -19,7 +19,7 @@ const SETTINGS_KEYS: Array<keyof SocietySettings> = [
 ];
 
 const PRODUCT_FIELDS: Array<keyof LoanProduct> = [
-  'name', 'ratePercent', 'minAmount', 'maxAmount', 'maxInstalments', 'maxConcurrent', 'depositMarginPercent', 'penalRatePercent',
+  'name', 'ratePercent', 'minAmount', 'maxAmount', 'instalmentOptions', 'enabled', 'maxConcurrent', 'depositMarginPercent', 'penalRatePercent',
   'suretiesRequired', 'ddoCertificationRequired', 'shareDepositPercent', 'topupAllowed', 'emiMethod',
 ];
 
@@ -32,14 +32,26 @@ const keysOf = (o: object, prefix = ''): string[] =>
 
 export function toLoanProduct(r: ProductRow): LoanProduct {
   return {
-    code: r.code, name: r.name, ratePercent: r.ratePercent, minAmount: r.minAmount, maxAmount: r.maxAmount, maxInstalments: r.maxInstalments,
+    code: r.code, name: r.name, ratePercent: r.ratePercent, minAmount: r.minAmount, maxAmount: r.maxAmount, maxInstalments: r.maxInstalments, instalmentOptions: r.instalmentOptions, enabled: r.enabled,
     maxConcurrent: r.maxConcurrent, depositMarginPercent: r.depositMarginPercent, penalRatePercent: r.penalRatePercent, suretiesRequired: r.suretiesRequired,
     ddoCertificationRequired: r.ddoCertificationRequired, shareDepositPercent: r.shareDepositPercent, topupAllowed: r.topupAllowed, emiMethod: r.emiMethod, placeholder: r.placeholder,
   };
 }
 
+/** The four built-in products come first, in this order; products the Admin added follow by name (D-123). */
 const PRODUCT_ORDER: LoanProductCode[] = ['ORDINARY', 'EDUCATION', 'SALARY', 'DEPOSIT'];
-const byProductOrder = (a: LoanProduct, b: LoanProduct) => PRODUCT_ORDER.indexOf(a.code) - PRODUCT_ORDER.indexOf(b.code);
+const rank = (code: LoanProductCode) => (PRODUCT_ORDER.includes(code) ? PRODUCT_ORDER.indexOf(code) : PRODUCT_ORDER.length);
+const byProductOrder = (a: LoanProduct, b: LoanProduct) => rank(a.code) - rank(b.code) || a.name.localeCompare(b.name);
+
+/** A product code from its name, e.g. "Festival Advance" → FESTIVAL_ADVANCE; a number is added if it is taken. */
+function newProductCode(name: string, taken: string[]): string {
+  const base = name.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 30) || 'LOAN';
+  let code = base;
+  for (let n = 2; taken.includes(code); n++) code = `${base}_${n}`;
+  return code;
+}
+
+const sameValue = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 const toTemplate = (t: TemplateRow): NotificationTemplate => ({ key: t.key, event: t.event, title: t.title, body: t.body, channels: t.channels, audience: t.audience });
 
@@ -120,12 +132,39 @@ export class MastersService {
     const next: LoanProduct = { ...current, ...rest, code, placeholder: false };
     const fieldErrors = validateLoanProduct(next);
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
-    const changed = (Object.keys(rest) as Array<keyof LoanProduct>).filter((k) => rest[k] !== current[k]);
+    next.instalmentOptions = sortInstalmentOptions(next.instalmentOptions);
+    next.maxInstalments = Math.max(...next.instalmentOptions);
+    if (rest.instalmentOptions) rest.instalmentOptions = next.instalmentOptions;
+    const changed = (Object.keys(rest) as Array<keyof LoanProduct>).filter((k) => !sameValue(rest[k], current[k]));
     const rateNote = rest.ratePercent !== undefined && rest.ratePercent !== current.ratePercent ? ` (rate ${current.ratePercent}% → ${rest.ratePercent}%)` : '';
     const summary = `${current.name}: ${changed.length ? changed.join(', ') : 'confirmed'}${rateNote}`;
     await withTransaction(this.app.db, async (tx) => {
       const row = await this.repo.addProductVersion(tx, { ...next, summary, createdBy: user.id });
       await this.app.audit.record(request, { action: 'update', entity: 'loanProduct', entityId: code, summary: `${summary} (version ${row.version})`, before: current, after: next }, tx);
+    });
+    return this.bundle(user);
+  }
+
+  /**
+   * D-123: a new loan product. It behaves like an Ordinary loan (sureties, form F2, one running loan
+   * limit of its own); only the four built-in products have special rules. Its code comes from the name.
+   */
+  async createLoanProduct(request: FastifyRequest, body: NewLoanProduct): Promise<SettingsBundle> {
+    const user = sessionOf(request);
+    const name = body.name?.trim() ?? '';
+    const existing = await this.loanProducts();
+    const fieldErrors: Record<string, string> = {};
+    if (name.length < 3) fieldErrors.name = 'Enter a name of at least 3 letters.';
+    else if (existing.some((p) => p.name.toLowerCase() === name.toLowerCase())) fieldErrors.name = 'A loan product with this name already exists.';
+    const options = sortInstalmentOptions(body.instalmentOptions ?? []);
+    const draft: LoanProduct = { ...body, name, code: 'NEW', instalmentOptions: options, maxInstalments: Math.max(0, ...options), enabled: true, placeholder: false, depositMarginPercent: 0 };
+    Object.assign(fieldErrors, validateLoanProduct(draft));
+    if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
+    const summary = `${name}: added (${options.join(', ')} months)`;
+    await withTransaction(this.app.db, async (tx) => {
+      const code = newProductCode(name, await this.repo.productCodes(tx));
+      const row = await this.repo.addProductVersion(tx, { ...draft, code, summary, createdBy: user.id });
+      await this.app.audit.record(request, { action: 'create', entity: 'loanProduct', entityId: code, summary: `${summary} (version ${row.version})`, after: { ...draft, code } }, tx);
     });
     return this.bundle(user);
   }
@@ -172,8 +211,8 @@ export class MastersService {
   async rates(): Promise<RatesReference> {
     const [settings, products, [last]] = await Promise.all([this.settings(), this.loanProducts(), this.repo.recentChanges(['settings', 'loanProduct'], 1)]);
     return {
-      loanProducts: products.map(({ code, name, ratePercent, minAmount, maxAmount, maxInstalments, emiMethod, suretiesRequired, shareDepositPercent, placeholder }) => ({
-        code, name, ratePercent, minAmount, maxAmount, maxInstalments, emiMethod, suretiesRequired, shareDepositPercent, placeholder,
+      loanProducts: products.filter((p) => p.enabled).map(({ code, name, ratePercent, minAmount, maxAmount, maxInstalments, instalmentOptions, emiMethod, suretiesRequired, shareDepositPercent, placeholder }) => ({
+        code, name, ratePercent, minAmount, maxAmount, maxInstalments, instalmentOptions, emiMethod, suretiesRequired, shareDepositPercent, placeholder,
       })),
       fdSlabs: settings.fdSlabs,
       savingsRatePercent: settings.savingsRatePercent,

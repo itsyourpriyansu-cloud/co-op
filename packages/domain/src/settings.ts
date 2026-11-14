@@ -4,13 +4,24 @@ import type { LoanProduct, SocietySettings } from '@tgs/types';
 
 const MAX_RATE = 30;
 
+/** D-123: the repayment periods an Admin offers: at least one, whole months from 1 to 240, no repeats. */
+export function validateInstalmentOptions(options: number[] | undefined): Record<string, string> {
+  if (!Array.isArray(options) || !options.length) return { instalmentOptions: 'Add at least one repayment period.' };
+  if (!options.every((o) => Number.isInteger(o) && o >= 1 && o <= 240)) return { instalmentOptions: 'Each period must be a whole number of months from 1 to 240.' };
+  if (new Set(options).size !== options.length) return { instalmentOptions: 'Each period can be added only once.' };
+  return {};
+}
+
+/** The options in ascending order (what is stored and shown). */
+export const sortInstalmentOptions = (options: number[]): number[] => [...options].sort((a, b) => a - b);
+
 /** ST-64: a loan product's limits and switches. */
-export function validateLoanProduct(p: Pick<LoanProduct, 'ratePercent' | 'minAmount' | 'maxAmount' | 'maxInstalments' | 'suretiesRequired' | 'shareDepositPercent' | 'maxConcurrent' | 'depositMarginPercent' | 'code'>): Record<string, string> {
+export function validateLoanProduct(p: Pick<LoanProduct, 'ratePercent' | 'minAmount' | 'maxAmount' | 'instalmentOptions' | 'suretiesRequired' | 'shareDepositPercent' | 'maxConcurrent' | 'depositMarginPercent' | 'code'>): Record<string, string> {
   const e: Record<string, string> = {};
   if (!(p.ratePercent > 0 && p.ratePercent <= MAX_RATE)) e.ratePercent = `Rate must be above 0% and at most ${MAX_RATE}%.`;
   if (!(p.minAmount > 0)) e.minAmount = 'Minimum amount must be more than ₹0.';
   if (!(p.maxAmount >= p.minAmount)) e.maxAmount = 'Maximum amount must be at least the minimum.';
-  if (!(Number.isInteger(p.maxInstalments) && p.maxInstalments >= 1 && p.maxInstalments <= 240)) e.maxInstalments = 'Instalments must be a whole number from 1 to 240.';
+  Object.assign(e, validateInstalmentOptions(p.instalmentOptions));
   if (!(Number.isInteger(p.suretiesRequired) && p.suretiesRequired >= 0 && p.suretiesRequired <= 4)) e.suretiesRequired = 'Sureties must be 0 to 4.';
   if (!(p.shareDepositPercent >= 0 && p.shareDepositPercent <= 50)) e.shareDepositPercent = 'Share deposit must be 0% to 50%.';
   if (!(Number.isInteger(p.maxConcurrent) && p.maxConcurrent >= 1 && p.maxConcurrent <= 5)) e.maxConcurrent = 'Running loans allowed must be 1 to 5.';

@@ -1,7 +1,8 @@
 // Form building blocks for console screens (docs/12 §5): labelled Blend inputs that convert
 // rupees ↔ paise and show server field errors inline, plus a sticky save bar for edit forms.
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ButtonV2, ButtonV2Type, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, TextInputV2, TooltipV2 } from '@juspay/blend-design-system';
+import { Plus, X } from 'lucide-react';
+import { ButtonV2, ButtonV2Size, ButtonV2Type, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, TextInputV2, TooltipV2 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
 import type { Paise } from '@tgs/types';
 
@@ -57,6 +58,38 @@ export function NumberField({ label, value, onChange, errors, name, unit, hint, 
     />
   );
 }
+
+/**
+ * D-123: the repayment periods (whole months) an Admin offers. One input per period, an X to remove
+ * one, and "+ Add another period" for more. A row left empty is ignored when saving (see withoutBlank).
+ */
+export function MonthOptionsField({ label, value, onChange, errors, name, hint }: { label: string; value: number[]; onChange: (v: number[]) => void; errors?: FieldErrors; name: string; hint?: string }) {
+  const rows = value.length ? value : [Number.NaN];
+  const error = errors?.[name];
+  return (
+    <fieldset className="flex flex-col gap-3">
+      <legend className="text-label text-fg">{label}</legend>
+      {hint && <p className="text-caption text-fg-tertiary">{hint}</p>}
+      {rows.map((months, i) => (
+        <div key={i} className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <NumberField label={`Period ${i + 1}`} name={`${name}.${i}`} value={months} unit="months" onChange={(v) => onChange(rows.map((x, j) => (j === i ? v : x)))} />
+          </div>
+          <button type="button" aria-label={`Remove period ${i + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, j) => j !== i))} className="mb-1 inline-flex size-9 shrink-0 items-center justify-center rounded-control border border-line text-fg-secondary hover:bg-surface-muted disabled:opacity-40">
+            <X size={16} aria-hidden />
+          </button>
+        </div>
+      ))}
+      <div>
+        <ButtonV2 text="Add another period" size={ButtonV2Size.SMALL} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Plus size={14} /> }} onClick={() => onChange([...rows, Number.NaN])} />
+      </div>
+      {error && <p role="alert" className="text-caption text-danger-fg">{error}</p>}
+    </fieldset>
+  );
+}
+
+/** The periods that were actually typed in (empty rows dropped). */
+export const withoutBlank = (months: number[]): number[] => months.filter((m) => Number.isFinite(m));
 
 export function TextField({ label, value, onChange, errors, name, hint, disabled, placeholder, required }: { label: string; value: string; onChange: (v: string) => void; errors?: FieldErrors; name: string; hint?: string; disabled?: boolean; placeholder?: string; required?: boolean }) {
   return <TextInputV2 label={label} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} required={required} placeholder={placeholder} error={err(errors, name)} {...(hint ? { hintText: hint } : {})} />;

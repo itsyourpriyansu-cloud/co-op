@@ -1,7 +1,7 @@
 import { checkJournal, type JournalLineInput } from '@tgs/domain';
 import { sql } from 'drizzle-orm';
 import { financialYears, journalEntries, journalLines, ledgerAccounts, officeVouchers } from '../../models';
-import { ACCOUNT, CHART_OF_ACCOUNTS, DEPOSIT_ACCOUNT, LOAN_ACCOUNT } from '../../modules/ledger/ledger.accounts';
+import { ACCOUNT, CHART_OF_ACCOUNTS, DEPOSIT_ACCOUNT, loanAccount } from '../../modules/ledger/ledger.accounts';
 import { demoDataset } from './dataset';
 import type { Seeder } from '.';
 
@@ -34,7 +34,7 @@ const opening: Seeder = {
       add(s.memberId, { accountCode: ACCOUNT.SHARE_DEPOSIT, debit: 0, credit: s.shareDepositBalance, refType: 'SHARE', refId: s.memberId });
     }
     for (const l of data.loans.filter((x) => x.status === 'ACTIVE')) {
-      add(l.memberId, { accountCode: LOAN_ACCOUNT[l.product], debit: l.outstandingPrincipal, credit: 0, refType: 'LOAN', refId: l.id });
+      add(l.memberId, { accountCode: loanAccount(l.product), debit: l.outstandingPrincipal, credit: 0, refType: 'LOAN', refId: l.id });
     }
     for (const d of data.deposits.filter((x) => x.status === 'ACTIVE' || x.status === 'MATURED')) {
       add(d.memberId, { accountCode: DEPOSIT_ACCOUNT[d.scheme], debit: 0, credit: d.balance, refType: 'DEPOSIT', refId: d.id });

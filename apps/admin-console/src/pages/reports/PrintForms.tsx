@@ -357,7 +357,7 @@ function F2({ d, m }: { d: LoanDetail; m?: MemberDetail }) {
   return (
     <PrintSheet>
       <Letterhead />
-      <FormTitle form="F2" title={`APPLICATION FOR ${l.product === 'EDUCATION' ? 'EDUCATION' : 'ORDINARY'} LOAN`} subtitle={`Application ${l.applicationNo}${l.loanNo ? ` · Loan ${l.loanNo}` : ''}`} />
+      <FormTitle form="F2" title={`APPLICATION FOR ${l.product === 'EDUCATION' ? 'EDUCATION LOAN' : l.product === 'ORDINARY' ? 'ORDINARY LOAN' : d.product.name.toUpperCase()}`} subtitle={`Application ${l.applicationNo}${l.loanNo ? ` · Loan ${l.loanNo}` : ''}`} />
       <div className="mt-4">
         <Line no="1" label="Name (block letters), address & mobile" value={`${upper(d.member.name)} · ${m ? addr(m.member.presentAddress) : ''} · ${d.member.mobileMasked}`} />
         <Line label="Genl. No." value={d.member.generalNo} />

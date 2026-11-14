@@ -17,9 +17,10 @@ import {
   addSnackbarV2,
 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { amountInWords, formatDisplayDate, formatINR } from '@tgs/domain';
+import { amountInWords, formatDisplayDate, formatINR, instalmentChoices } from '@tgs/domain';
 import type { LoanApplicationForm, LoanProductCode, LoanRequestInput, MemberPick } from '@tgs/types';
-import { FormSection, MoneyField, NumberField, TextField, fieldErrorsOf } from '@/components/Form';
+import { Chips } from '@/components/Chips';
+import { FormSection, MoneyField, TextField, fieldErrorsOf } from '@/components/Form';
 import { Money } from '@/components/Money';
 import { PageHeader } from '@/components/PageHeader';
 import { Panel } from '@/components/Panel';
@@ -55,6 +56,12 @@ export function LoanFormPage() {
   const ctx = useQuery({ queryKey: ['loan-context', member?.id], queryFn: () => api.loans.context(member!.id), enabled: Boolean(member) });
   const c = ctx.data;
   const prod = c?.products.find((p) => p.code === product);
+  // D-123: only the periods the Admin offers; those beyond the member's remaining service are shown switched off (BR-002).
+  const choices = useMemo(() => (prod && c ? instalmentChoices(prod.instalmentOptions, c.member.leftoverMonths) : []), [prod, c]);
+  useEffect(() => {
+    const open = choices.filter((x) => x.allowed);
+    if (open.length && !open.some((x) => x.months === instalments)) setInstalments(open[0]!.months);
+  }, [choices, instalments]);
 
   // When a member is chosen, start the pay sections from their DDO-certified pay profile.
   useEffect(() => {
@@ -156,7 +163,6 @@ export function LoanFormPage() {
                       aria-checked={product === p.code}
                       onClick={() => {
                         setProduct(p.code);
-                        setInstalments(Math.min(instalments, p.maxInstalments));
                         setSureties([]);
                         setTopupOf('');
                       }}
@@ -167,7 +173,7 @@ export function LoanFormPage() {
                         <span className="text-label text-brand-text">{p.ratePercent}%</span>
                       </span>
                       <span className="mt-1 block text-caption text-fg-tertiary">
-                        Up to {formatINR(p.maxAmount)} · {p.maxInstalments} months · form {formFor(p.code)}
+                        Up to {formatINR(p.maxAmount)} · {p.instalmentOptions.join(' / ')} months · form {formFor(p.code)}
                         {p.suretiesRequired ? ` · ${p.suretiesRequired} sureties` : ''}
                       </span>
                     </button>
@@ -224,7 +230,15 @@ export function LoanFormPage() {
                 <div className="sm:col-span-2">
                   <MoneyField label="7a · Amount required" name="amount" value={amount} onChange={setAmount} errors={fe} hint={amount > 0 ? amountInWords(amount) : prod ? `Up to ${formatINR(prod.maxAmount)}` : undefined} />
                 </div>
-                <NumberField label="11 · Monthly instalments" name="instalments" value={instalments} onChange={setInstalments} errors={fe} unit="months" hint={a ? `At most ${a.preview.maxInstalments} for this member (BR-002 / BR-022)` : undefined} />
+                <div className="flex flex-col gap-1.5">
+                  <Chips
+                    label="11 · Monthly instalments"
+                    value={String(instalments)}
+                    options={choices.map((x) => ({ value: String(x.months), label: `${x.months} months`, disabled: !x.allowed, ...(x.reason ? { hint: x.reason } : {}) }))}
+                    onChange={(v) => setInstalments(Number(v))}
+                  />
+                  {fe.instalments && <p role="alert" className="text-caption text-danger-fg">{fe.instalments}</p>}
+                </div>
                 <TextField label="7b · Purpose" name="purpose" value={purpose} onChange={setPurpose} errors={fe} placeholder="e.g. House repair" />
                 {product === 'EDUCATION' && (
                   <>

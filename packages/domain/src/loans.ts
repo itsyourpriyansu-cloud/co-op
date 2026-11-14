@@ -25,6 +25,16 @@ export function checkTenureEligibility(
   return { ...pass('BR-002', `Remaining service ${leftoverMonths} months exceeds the tenure of ${instalments} months.`), maxAllowed, binding };
 }
 
+/**
+ * D-123: the product's repayment periods, each marked allowed or not for this member. BR-002: the
+ * remaining service must exceed the tenure, so a period of `leftoverMonths` or more is not allowed.
+ */
+export function instalmentChoices(options: number[], leftoverMonths: number): Array<{ months: number; allowed: boolean; reason?: string }> {
+  return [...options]
+    .sort((a, b) => a - b)
+    .map((months) => (months >= leftoverMonths ? { months, allowed: false, reason: `Beyond your remaining service (${leftoverMonths} months)` } : { months, allowed: true }));
+}
+
 const cycleOf = (iso: ISODate): Cycle => iso.slice(0, 7);
 
 /** BR-006: repayment schedule. Components are rounded to rupees; the last row absorbs rounding. */

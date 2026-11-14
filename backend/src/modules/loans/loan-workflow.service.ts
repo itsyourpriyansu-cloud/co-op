@@ -24,7 +24,7 @@ import { sessionOf } from '../../common/guards';
 import { businessNow } from '../../common/utils/business-date';
 import { notifyMember } from '../../common/utils/notify';
 import { withTransaction, type Tx } from '../../db/transaction';
-import { ACCOUNT, LOAN_ACCOUNT } from '../ledger/ledger.accounts';
+import { ACCOUNT, loanAccount } from '../ledger/ledger.accounts';
 import { inputOf, type LoansService, type World } from './loans.service';
 
 const SURETY_DECLARATION =
@@ -98,7 +98,9 @@ export class LoanWorkflowService {
         ...(suretyRecoveries ? { suretyRecoveries } : {}),
       },
     });
-    return { sheet, maxInstalments, fieldErrors: validateSanctionAdjustment(amt, inst, { amount: l.appliedAmount, instalments: l.appliedInstalments }, maxInstalments) };
+    // D-123: the periods offered now, kept to what was applied for and what this member's service allows (reduce only).
+    const instalmentOptions = [...new Set([...product.instalmentOptions, l.appliedInstalments])].filter((o) => o <= l.appliedInstalments && o <= maxInstalments).sort((a, b) => a - b);
+    return { sheet, maxInstalments, instalmentOptions, fieldErrors: validateSanctionAdjustment(amt, inst, { amount: l.appliedAmount, instalments: l.appliedInstalments }, maxInstalments, product.instalmentOptions) };
   }
 
   async preview(user: SessionUser, id: string, amount?: number, instalments?: number): Promise<SanctionPreview> {
@@ -271,7 +273,7 @@ export class LoanWorkflowService {
           if (l.shareDepositDeduction) shareDeposit = await this.app.collections.creditShareDeposit(tx, m.id, l.shareDepositDeduction);
           // J-07: a top-up closes the loan it settles.
           const parent = l.parentLoanId ? await this.repo.lock(tx, l.parentLoanId) : undefined;
-          const settled = parent?.status === 'ACTIVE' ? { principal: parent.outstandingPrincipal, interest: l.sanctionSheet?.topup?.accruedInterest ?? 0, account: LOAN_ACCOUNT[parent.product] } : undefined;
+          const settled = parent?.status === 'ACTIVE' ? { principal: parent.outstandingPrincipal, interest: l.sanctionSheet?.topup?.accruedInterest ?? 0, account: loanAccount(parent.product) } : undefined;
           if (parent && settled) {
             parent.events = [...parent.events, { at, actorId: actor.id, actorName: actor.name, actorRole: actor.role, action: 'closedByTopup', fromStatus: 'ACTIVE', toStatus: 'CLOSED_BY_TOPUP', remarks: `Settled by top-up ${l.loanNo}` }];
             Object.assign(parent, { status: 'CLOSED_BY_TOPUP', outstandingPrincipal: 0, closedOn: d!.date });
@@ -304,7 +306,7 @@ export class LoanWorkflowService {
    */
   private async postDisbursement(tx: Tx, l: Loan, m: Member, actor: Actor, amount: number, settled?: { principal: number; interest: number; account: string }) {
     const lines: JournalLineInput[] = [
-      { accountCode: LOAN_ACCOUNT[l.product], debit: amount, credit: 0, memberId: m.id, refType: 'LOAN', refId: l.id },
+      { accountCode: loanAccount(l.product), debit: amount, credit: 0, memberId: m.id, refType: 'LOAN', refId: l.id },
       { accountCode: ACCOUNT.BANK, debit: 0, credit: l.disbursement!.amount },
     ];
     if (l.shareDepositDeduction) lines.push({ accountCode: ACCOUNT.SHARE_DEPOSIT, debit: 0, credit: l.shareDepositDeduction, memberId: m.id, refType: 'SHARE', refId: m.id });

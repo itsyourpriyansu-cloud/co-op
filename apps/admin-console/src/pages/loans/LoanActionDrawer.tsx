@@ -8,7 +8,8 @@ import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Type, Checkbox,
 import { isApiError } from '@tgs/api-client';
 import { amountInWords, formatCycle, formatDisplayDate, formatDisplayDateTime } from '@tgs/domain';
 import type { LoanActionInput, LoanDetail, SanctionSheet } from '@tgs/types';
-import { MoneyField, NumberField, TextField } from '@/components/Form';
+import { Chips } from '@/components/Chips';
+import { MoneyField, TextField } from '@/components/Form';
 import { Money } from '@/components/Money';
 import { RuleCheckList } from '@/components/RuleCheckList';
 import { SideDrawer } from '@/components/SideDrawer';
@@ -259,7 +260,19 @@ export function LoanActionDrawer({ detail, action, onClose, today }: { detail: L
           <Section title="Sanction">
             <div className="grid gap-4 sm:grid-cols-2">
               <MoneyField label="Amount to sanction" name="amount" value={amount} onChange={setAmount} errors={preview.data?.fieldErrors ?? fe} hint={`Applied ${amountInWords(l.appliedAmount)}`} />
-              <NumberField label="Instalments" name="instalments" value={instalments} onChange={setInstalments} errors={preview.data?.fieldErrors ?? fe} unit="months" hint={preview.data ? `At most ${Math.min(preview.data.maxInstalments, l.appliedInstalments)}` : undefined} />
+              <div className="flex flex-col gap-1.5">
+                <Chips
+                  label="Instalments (reduce only)"
+                  value={String(instalments)}
+                  options={(preview.data?.instalmentOptions ?? [l.appliedInstalments]).map((months) => ({ value: String(months), label: `${months} months` }))}
+                  onChange={(v) => setInstalments(Number(v))}
+                />
+                {(preview.data?.fieldErrors ?? fe).instalments && (
+                  <p role="alert" className="text-caption text-danger-fg">
+                    {(preview.data?.fieldErrors ?? fe).instalments}
+                  </p>
+                )}
+              </div>
             </div>
           </Section>
         )}

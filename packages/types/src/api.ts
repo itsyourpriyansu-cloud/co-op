@@ -340,7 +340,7 @@ export interface PermissionMatrix {
 
 /** What members see in MB-16 and the calculators. */
 export interface RatesReference {
-  loanProducts: Array<Pick<LoanProduct, 'code' | 'name' | 'ratePercent' | 'minAmount' | 'maxAmount' | 'maxInstalments' | 'emiMethod' | 'suretiesRequired' | 'shareDepositPercent' | 'placeholder'>>;
+  loanProducts: Array<Pick<LoanProduct, 'code' | 'name' | 'ratePercent' | 'minAmount' | 'maxAmount' | 'maxInstalments' | 'instalmentOptions' | 'emiMethod' | 'suretiesRequired' | 'shareDepositPercent' | 'placeholder'>>;
   fdSlabs: SocietySettings['fdSlabs'];
   savingsRatePercent: number;
   crdRatePercent: number;
@@ -726,6 +726,8 @@ export interface SanctionPreview {
   sheet: SanctionSheet;
   fieldErrors: Record<string, string>;
   maxInstalments: number;
+  /** D-123: the periods the sanctioning officer may pick: the product's, not above what was applied for or this member's service allows. */
+  instalmentOptions: number[];
 }
 
 /** ST-02 Work Queue item: anything waiting on the signed-in user. */

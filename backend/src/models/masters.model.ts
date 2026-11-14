@@ -25,6 +25,10 @@ export const loanProductVersions = pgTable(
     minAmount: money('min_amount').notNull(),
     maxAmount: money('max_amount').notNull(),
     maxInstalments: integer('max_instalments').notNull(),
+    /** D-123: the repayment periods offered, in months, ascending. maxInstalments is the largest. */
+    instalmentOptions: integer('instalment_options').array().notNull().default(sql`'{}'::integer[]`),
+    /** D-123: false = no new applications; running loans keep the product. */
+    enabled: boolean('enabled').notNull().default(true),
     maxConcurrent: integer('max_concurrent').notNull(),
     depositMarginPercent: rate('deposit_margin_percent').notNull(),
     penalRatePercent: rate('penal_rate_percent').notNull(),

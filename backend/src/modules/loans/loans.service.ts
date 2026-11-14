@@ -135,6 +135,13 @@ export class LoansService {
     return w.products.find((p) => p.code === code) ?? fail('VALIDATION_ERROR', 'Unknown loan type.', { fieldErrors: { product: 'Choose a loan type' } });
   }
 
+  /** D-123: a product that is switched off still serves its running loans, but takes no new applications. */
+  offeredProductOf(w: World, code: LoanProductCode): LoanProduct {
+    const product = this.productOf(w, code);
+    if (!product.enabled) fail('VALIDATION_ERROR', `${product.name} is not open for new applications.`, { fieldErrors: { product: 'Choose another loan type' } });
+    return product;
+  }
+
   /** A member's deposits (P6) and share account (P7). */
   async holdings(memberId: string): Promise<Holdings> {
     const [deposits, shares] = await Promise.all([this.app.deposits.forMember(memberId), this.app.collections.share(memberId)]);
@@ -152,7 +159,7 @@ export class LoansService {
     const s = holdings.shares;
     return {
       member: { id: m.id, name: m.name, generalNo: m.generalNo, departmentName: w.depts.get(m.departmentId)?.name ?? m.departmentId, designation: m.designation, dob: m.dob, dor: m.dor, doj: m.doj, leftoverMonths: leftover.months, leftoverLabel: leftover.label, status: m.status, ...(mandate ? { mandateStatus: mandate.status } : {}) },
-      products: w.products,
+      products: w.products.filter((p) => p.enabled),
       activeProducts: own.filter((l) => OPEN.includes(l.status)).map((l) => l.product),
       pay: m.payProfile,
       shares: { numberOfShares: s?.numberOfShares ?? m.numberOfShares, shareCapital: s?.shareCapital ?? 0, shareDepositBalance: s?.shareDepositBalance ?? 0 },
@@ -206,7 +213,10 @@ export class LoansService {
   async assess(w: World, m: Member, input: LoanRequestInput, loanId?: string) {
     const mine = await this.repo.forMember(m.id);
     const ctx = await this.context(w, m, mine);
-    const product = this.productOf(w, input.product);
+    const listed = this.productOf(w, input.product);
+    // D-123: a loan already submitted keeps the tenure it was applied for, even if the Admin has since removed that period.
+    const own = loanId ? mine.find((l) => l.id === loanId && l.status !== 'DRAFT') : undefined;
+    const product = own ? { ...listed, instalmentOptions: [...new Set([...listed.instalmentOptions, own.appliedInstalments, ...(own.sanctionedInstalments ? [own.sanctionedInstalments] : [])])] } : listed;
     const pay = input.form.pay ?? m.payProfile;
     const holdings = input.pledgedDepositId ? await this.holdings(m.id) : undefined;
     const pledged = holdings?.deposits.find((d) => d.id === input.pledgedDepositId);
@@ -551,6 +561,7 @@ export class LoansService {
     const m = await this.member(memberId);
     const input = cleanInput(body);
     const w = await this.world();
+    this.offeredProductOf(w, input.product);
     const a = await this.assess(w, m, input, body.loanId);
     return { checks: a.checks, eligible: a.eligible, preview: a.preview, sureties: a.cards, fieldErrors: validateLoanRequest(input, a.product, m.id) };
   }
@@ -583,7 +594,7 @@ export class LoansService {
 
   // ---- writes ----
   private async newDraft(tx: Tx, w: World, m: Member, input: LoanRequestInput, channel: 'APP' | 'COUNTER', byName: string): Promise<Loan> {
-    const product = this.productOf(w, input.product);
+    const product = this.offeredProductOf(w, input.product);
     const draft: Loan = {
       id: `loan-${randomUUID().slice(0, 8)}`,
       applicationNo: await this.repo.nextNumber(tx, 'application', w.today.slice(0, 4)),
@@ -637,6 +648,7 @@ export class LoansService {
     const product = this.productOf(w, l.product);
     const fieldErrors = validateLoanRequest(input, product, m.id);
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Some details are missing.', { fieldErrors });
+    this.offeredProductOf(w, input.product);
     const block = (await this.assess(w, m, input, l.id)).checks.find((c) => !c.pass && c.severity === 'block');
     if (block) fail('RULE_VIOLATION', block.message, { ruleId: block.ruleId });
     return suretyProgress(l.sureties, product.suretiesRequired).allAccepted;

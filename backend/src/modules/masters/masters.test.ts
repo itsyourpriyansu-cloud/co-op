@@ -71,7 +71,41 @@ describe('settings & master files (P2, REQ-130)', () => {
     expect(rates.updatedAt).toBeTruthy();
 
     expect((await put('/settings/loan-products/ORDINARY', admin, { ratePercent: -1 })).statusCode).toBe(400);
-    expect((await put('/settings/loan-products/GOLD', admin, { ratePercent: 9 })).statusCode).toBe(400);
+    expect((await put('/settings/loan-products/GOLD', admin, { ratePercent: 9 })).statusCode).toBe(404);
+  });
+
+  it('the Admin sets the repayment periods; they are sorted and the largest becomes the maximum (D-123)', async () => {
+    const res = await put('/settings/loan-products/SALARY', admin, { instalmentOptions: [18, 6, 12] });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().loanProducts.find((p: { code: string }) => p.code === 'SALARY')).toMatchObject({ instalmentOptions: [6, 12, 18], maxInstalments: 18 });
+    const history = (await get('/settings/loan-products/SALARY/versions', admin)).json();
+    expect(history[0].summary).toContain('instalmentOptions');
+    // A change that leaves the periods as they are does not list them as changed.
+    const same = await put('/settings/loan-products/SALARY', admin, { instalmentOptions: [6, 12, 18], ratePercent: 14 });
+    expect(same.statusCode).toBe(200);
+    expect((await get('/settings/loan-products/SALARY/versions', admin)).json()[0].summary).not.toContain('instalmentOptions');
+    for (const bad of [[], [0], [241], [12, 12], [1.5]]) expect((await put('/settings/loan-products/SALARY', admin, { instalmentOptions: bad })).statusCode).toBe(400);
+    const rates = (await get('/reference/rates', member)).json();
+    expect(rates.loanProducts.find((p: { code: string }) => p.code === 'SALARY').instalmentOptions).toEqual([6, 12, 18]);
+  });
+
+  it('the Admin adds a loan product; it gets a code from its name, lists after the built-ins, and can be switched off (D-123)', async () => {
+    const body = { name: 'Festival Advance', ratePercent: 8, minAmount: 500000, maxAmount: 5000000, instalmentOptions: [10, 5], maxConcurrent: 1, penalRatePercent: 0, suretiesRequired: 1, ddoCertificationRequired: false, shareDepositPercent: 0, topupAllowed: false, emiMethod: 'EQUAL_PRINCIPAL', depositMarginPercent: 0 };
+    const created = await app.inject({ method: 'POST', url: '/api/v1/settings/loan-products', headers: bearer(admin), payload: body });
+    expect(created.statusCode).toBe(201);
+    const list = created.json().loanProducts as Array<{ code: string; name: string; instalmentOptions: number[]; enabled: boolean; maxInstalments: number }>;
+    expect(list.map((p) => p.code)).toEqual(['ORDINARY', 'EDUCATION', 'SALARY', 'DEPOSIT', 'FESTIVAL_ADVANCE']);
+    expect(list[4]).toMatchObject({ name: 'Festival Advance', instalmentOptions: [5, 10], maxInstalments: 10, enabled: true });
+    // The same name (any case) is refused; so are bad values and a non-Admin.
+    expect((await app.inject({ method: 'POST', url: '/api/v1/settings/loan-products', headers: bearer(admin), payload: { ...body, name: 'festival advance' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/api/v1/settings/loan-products', headers: bearer(admin), payload: { ...body, name: 'Other', instalmentOptions: [] } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/api/v1/settings/loan-products', headers: bearer(accountant), payload: { ...body, name: 'Other' } })).statusCode).toBe(403);
+    // Switched off: still in Settings, gone from the rate card members see.
+    expect((await put('/settings/loan-products/FESTIVAL_ADVANCE', admin, { enabled: false })).statusCode).toBe(200);
+    expect(((await get('/settings', admin)).json().loanProducts as Array<{ code: string; enabled: boolean }>).find((p) => p.code === 'FESTIVAL_ADVANCE')?.enabled).toBe(false);
+    expect(((await get('/reference/rates', member)).json().loanProducts as Array<{ code: string }>).map((p) => p.code)).not.toContain('FESTIVAL_ADVANCE');
+    const audit = (await get('/settings/loan-products/FESTIVAL_ADVANCE/versions', admin)).json();
+    expect(audit).toHaveLength(2);
   });
 
   it('edits the society profile and message templates with the same checks as the mock', async () => {

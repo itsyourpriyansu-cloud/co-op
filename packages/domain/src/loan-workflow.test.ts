@@ -40,13 +40,21 @@ describe('buildSanctionSheet (ST-26)', () => {
   });
 });
 
+const OPTIONS = [12, 24, 36, 48];
+
 describe('validateSanctionAdjustment and suretyProgress', () => {
   it('only reduces, within the tenure limit', () => {
     const applied = { amount: 10_000_000, instalments: 48 };
-    expect(validateSanctionAdjustment(8_000_000, 36, applied, 40)).toEqual({});
-    expect(validateSanctionAdjustment(0, 0, applied, 40)).toEqual({ amount: expect.any(String), instalments: expect.any(String) });
-    expect(validateSanctionAdjustment(12_000_000, 60, applied, 40)).toEqual({ amount: expect.stringMatching(/more than/), instalments: expect.stringMatching(/more than/) });
-    expect(validateSanctionAdjustment(1, 45, applied, 40).instalments).toMatch(/At most 40/);
+    expect(validateSanctionAdjustment(8_000_000, 36, applied, 40, OPTIONS)).toEqual({});
+    expect(validateSanctionAdjustment(0, 0, applied, 40, OPTIONS)).toEqual({ amount: expect.any(String), instalments: expect.any(String) });
+    expect(validateSanctionAdjustment(12_000_000, 60, applied, 40, OPTIONS)).toEqual({ amount: expect.stringMatching(/more than/), instalments: expect.stringMatching(/more than/) });
+    expect(validateSanctionAdjustment(1, 45, applied, 40, OPTIONS).instalments).toMatch(/At most 40/);
+  });
+  it('the reduced tenure is one of the product periods (D-123)', () => {
+    const applied = { amount: 10_000_000, instalments: 48 };
+    expect(validateSanctionAdjustment(8_000_000, 30, applied, 40, OPTIONS).instalments).toMatch(/Choose one of: 12, 24, 36, 48/);
+    // Keeping the applied period is always fine, even if the Admin removed it since.
+    expect(validateSanctionAdjustment(8_000_000, 48, applied, 60, [12, 24]).instalments).toBeUndefined();
   });
   it('counts current sureties only', () => {
     expect(suretyProgress([{ status: 'ACCEPTED' }, { status: 'ACCEPTED' }], 2).allAccepted).toBe(true);

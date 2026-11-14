@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.19 · 2026-11-14 · BR-016 / BR-022 tenure is one of the Admin's periods (D-123).
 > Version 0.18 · 2026-11-13 · BR-051 receipt cancellation, BR-052 FD renewal, BR-053 notification delivery (G9, D-119 … D-121).
 > Version 0.17 · 2026-11-12 · BR-050 personal data (G7, D-117). v0.16: BR-049 go-live data import (G6, D-116). v0.15: BR-048 app security and versions (G4, D-114). v0.14: BR-044 office vouchers, BR-045 annual interest, BR-046 dividend, BR-047 year close and lock (G2, D-112). v0.13: BR-040 … BR-043 (G1, D-111).
 > Version 0.12 · 2026-11-06 · BR-039 final settlement (D-098).
@@ -158,7 +159,7 @@ Placeholders (Q-104): 2 sureties for Ordinary/Salary/Education, 0 for Deposit lo
 Loan amount ≤ `depositMarginPercent × pledged deposit balance`. Margin UNKNOWN (Q-311). Placeholder 90%.
 
 ## BR-016 Product limits [UNKNOWN]
-Max amount and max tenure per product come from settings (Q-311). Placeholder values live in `13-mock-data-spec.md` §3 and are marked "placeholder".
+Max amount per product comes from settings (Q-311). **Tenure (D-123):** each product lists the repayment periods in months the Admin offers (`instalmentOptions`); the chosen tenure must be one of them. A loan already submitted keeps the tenure it was applied for. At sanction the Accountant may reduce the tenure to another offered period, never raise it. Placeholder values live in `13-mock-data-spec.md` §3 and are marked "placeholder".
 
 ## BR-017 FD maturity
 Rate picked from the slab matching the tenure [F]. Compounding UNKNOWN (Q-313). Placeholder: quarterly compounding `A = P(1 + r/400)^(4·years)`.
@@ -197,7 +198,7 @@ The agreement says service period is used for insurance eligibility, but gives n
 | BR-032 | Share capital on joining = shares × share value; shares 10–100 | **[P] D-053/D-054** (Q-506) | `membershipShareAmount` | `settings.shareValue`, min/max shares |
 
 ### BR-022 Maximum instalments [PF F2 item 11]
-`tenureMonths ≤ min(100, product.maxTenure, leftoverMonths − 1)`. The "−1" comes from BR-002 (remaining service must *exceed* tenure). The UI shows which limit is binding.
+`tenureMonths ≤ min(100, product.maxTenure, leftoverMonths − 1)` (`maxTenure` is the largest of the product's offered periods, D-123; a period of `leftoverMonths` or more is shown switched off). The "−1" comes from BR-002 (remaining service must *exceed* tenure). The UI shows which limit is binding.
 
 ### BR-023 Salary loan net pay [PF F3 item 8]
 `netSubstantivePay = substantivePay − Σ compulsoryDeductions − ordinaryLoanDuesThisMonth` (Col 5 − Col 6 − Col 7). Ordinary-loan dues come from the active schedule. **Limit UNKNOWN (Q-502)**. Placeholder: `amount ≤ netPayEarnedToDate`, recovered in full in the next cycle.

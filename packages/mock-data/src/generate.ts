@@ -428,7 +428,7 @@ export function generateData(seed: number): GeneratedData {
       status,
       appliedAmount: amount,
       appliedInstalments: instalments,
-      purpose: rng.pick(LOAN_PURPOSES[code]),
+      purpose: rng.pick(LOAN_PURPOSES[code as keyof typeof LOAN_PURPOSES]),
       ratePercent: p.ratePercent,
       ...(sanctioned ? { sanctionedAmount: amount, emi: schedule[0]?.emi ?? 0 } : {}),
       ...(share ? { shareDepositDeduction: share.deduction } : {}),

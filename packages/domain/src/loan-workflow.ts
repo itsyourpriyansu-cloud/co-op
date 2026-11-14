@@ -70,14 +70,15 @@ export function buildSanctionSheet(input: SanctionSheetInput): SanctionSheet {
   };
 }
 
-/** ST-26: the Accountant may reduce the amount or tenure, never raise them (re-validated). */
-export function validateSanctionAdjustment(amount: Paise, instalments: number, applied: { amount: Paise; instalments: number }, maxInstalments: number): Record<string, string> {
+/** ST-26: the Accountant may reduce the amount or tenure, never raise them (re-validated). The tenure is one of the product's periods (D-123). */
+export function validateSanctionAdjustment(amount: Paise, instalments: number, applied: { amount: Paise; instalments: number }, maxInstalments: number, options: number[]): Record<string, string> {
   const e: Record<string, string> = {};
   if (!(amount > 0)) e.amount = 'Enter the amount to sanction';
   else if (amount > applied.amount) e.amount = 'Cannot be more than the amount applied for';
   if (!Number.isInteger(instalments) || instalments < 1) e.instalments = 'Enter the number of instalments';
   else if (instalments > applied.instalments) e.instalments = 'Cannot be more than the instalments applied for';
   else if (instalments > maxInstalments) e.instalments = `At most ${maxInstalments} for this member (BR-002 / BR-022)`;
+  else if (instalments !== applied.instalments && !options.includes(instalments)) e.instalments = `Choose one of: ${options.join(', ')} months`;
   return e;
 }
 

@@ -3,7 +3,7 @@ import type { DepositAccount, Loan, LoanProductCode } from '@tgs/types';
 import type { FastifyInstance } from 'fastify';
 import { parseCsv } from '../../common/utils/csv';
 import { withTransaction } from '../../db/transaction';
-import { ACCOUNT, LOAN_ACCOUNT } from '../ledger/ledger.accounts';
+import { ACCOUNT, loanAccount } from '../ledger/ledger.accounts';
 import { isDate, RESERVED_NUMBER, rupees, type ImportResult } from '../members/register-import';
 
 // G6 (D-116, F-11): the society's running loans at go-live. One CSV row per loan (template:
@@ -116,7 +116,7 @@ export async function importLoanRegister(app: FastifyInstance, csv: string, opts
       await app.loans.repo.insert(tx, l);
       if (pledge) await app.deposits.repo.save(tx, { ...pledge, pledgedToLoanId: l.id });
       const lines: JournalLineInput[] = [
-        { accountCode: LOAN_ACCOUNT[l.product], debit: l.outstandingPrincipal, credit: 0, memberId: l.memberId, refType: 'LOAN', refId: l.id },
+        { accountCode: loanAccount(l.product), debit: l.outstandingPrincipal, credit: 0, memberId: l.memberId, refType: 'LOAN', refId: l.id },
         { accountCode: ACCOUNT.OPENING_DIFFERENCE, debit: 0, credit: l.outstandingPrincipal },
       ];
       await app.ledger.post({ entryDate: opts.asOn, narration: `Opening balance brought forward: loan ${l.loanNo}`, source: 'OPENING', sourceRef: l.id, lines, postedBy: opts.actor }, tx);

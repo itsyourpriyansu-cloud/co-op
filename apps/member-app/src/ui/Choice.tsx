@@ -100,6 +100,50 @@ export function Segmented<T extends string>({ label, value, options, onChange, e
   );
 }
 
+/**
+ * D-123: pick one of the repayment periods the society offers (loan tenure). A period the member's
+ * remaining service cannot cover stays visible but switched off, with the reason underneath.
+ */
+export function MonthPicker({ label, value, choices, onChange, error }: { label: string; value?: number; choices: Array<{ months: number; allowed: boolean; reason?: string }>; onChange: (months: number) => void; error?: string }) {
+  const blocked = choices.find((c) => !c.allowed && c.reason);
+  return (
+    <View style={{ gap: space[3] }}>
+      <Text role="label">{label}</Text>
+      <View style={styles.monthRow} accessibilityRole="radiogroup">
+        {choices.map((c) => {
+          const on = value === c.months;
+          return (
+            <Pressable
+              key={c.months}
+              accessibilityRole="radio"
+              accessibilityLabel={`${c.months} months${c.allowed ? '' : `, not available. ${c.reason ?? ''}`}`}
+              accessibilityState={{ checked: on, disabled: !c.allowed }}
+              aria-checked={on}
+              disabled={!c.allowed}
+              onPress={() => onChange(c.months)}
+              style={[styles.monthBtn, on && styles.ynOn, !c.allowed && { opacity: 0.4 }, !!error && !on && { borderColor: color.status.danger.solid }]}
+            >
+              <Text role="label" style={{ color: on ? color.brand.text : color.text.primary }}>
+                {c.months} months
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {blocked ? (
+        <Text role="caption" tone="tertiary">
+          {blocked.reason}
+        </Text>
+      ) : null}
+      {error ? (
+        <Text role="caption" tone="danger">
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 /** − value + counter with bounds (shares). */
 export function NumberStepper({ value, min, max, step = 1, onChange, accessibilityLabel }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void; accessibilityLabel: string }) {
   const btn = (label: string, next: number, disabled: boolean) => (
@@ -132,6 +176,8 @@ const styles = StyleSheet.create({
   yn: { gap: space[4], padding: space[8], borderRadius: radius.card, borderWidth: 1, borderColor: color.border.default, backgroundColor: color.bg.surface },
   ynRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space[4], marginTop: space[2] },
   ynBtn: { flex: 1, height: touchTarget, borderRadius: radius.control, borderWidth: 1, borderColor: color.border.strong, alignItems: 'center', justifyContent: 'center' },
+  monthRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3] },
+  monthBtn: { minWidth: 104, height: touchTarget, paddingHorizontal: space[5], borderRadius: radius.control, borderWidth: 1, borderColor: color.border.strong, alignItems: 'center', justifyContent: 'center' },
   ynOn: { borderColor: color.brand.solid, borderWidth: 2, backgroundColor: color.brand.subtle },
   cb: { flexDirection: 'row', gap: space[6], alignItems: 'flex-start', minHeight: touchTarget, paddingVertical: space[4] },
   box: { width: 24, height: 24, borderRadius: radius.sm, borderWidth: 2, borderColor: color.border.strong, alignItems: 'center', justifyContent: 'center', marginTop: 1 },

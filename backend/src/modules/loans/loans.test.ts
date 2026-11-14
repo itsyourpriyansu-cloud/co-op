@@ -62,6 +62,28 @@ describe('loans (P5)', () => {
   });
 
   let loanId = '';
+  it('the tenure must be one of the periods the Admin offers; a product switched off takes no new application (D-123)', async () => {
+    const admin = await signInAs(app, 'stf-admin');
+    const checks = async (instalments: number) => ((await call('POST', '/loans/assess', sravani, { ...request([]), instalments })).json().checks as Array<{ ruleId: string; pass: boolean; message: string }>).find((c) => c.ruleId === 'BR-016' && /month|Choose one/.test(c.message));
+    // 60 is offered; 61 is under the maximum of 100 but is not one of the periods.
+    expect((await checks(60))?.pass).toBe(true);
+    const notOffered = await checks(61);
+    expect(notOffered?.pass).toBe(false);
+    expect(notOffered?.message).toContain('Choose one of these');
+    const ctx = (await call('GET', '/me/loans/context', sravani)).json();
+    expect(ctx.products.find((p: { code: string }) => p.code === 'ORDINARY').instalmentOptions).toEqual(expect.arrayContaining([12, 60, 100]));
+
+    expect((await call('PUT', '/settings/loan-products/ORDINARY', admin, { enabled: false })).statusCode).toBe(200);
+    try {
+      expect((await call('POST', '/loans/assess', sravani, request([]))).statusCode).toBe(400);
+      expect((await call('POST', '/me/loans', sravani, request([]))).statusCode).toBe(400);
+      const afterOff = (await call('GET', '/me/loans/context', sravani)).json();
+      expect(afterOff.products.map((p: { code: string }) => p.code)).not.toContain('ORDINARY');
+    } finally {
+      expect((await call('PUT', '/settings/loan-products/ORDINARY', admin, { enabled: true })).statusCode).toBe(200);
+    }
+  });
+
   it('a member drafts, signs and submits; each surety signs with their own code', async () => {
     // Two members who can stand surety (no failing block check).
     const candidates = data.members.filter((m) => m.status === 'ACTIVE' && m.id !== sravaniRec.id && m.dor > '2040-01-01').slice(0, 15).map((m) => m.id);

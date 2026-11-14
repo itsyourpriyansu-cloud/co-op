@@ -11,7 +11,7 @@ import { ActionAlert, ask, DoneAlert, Loaded, MoneyField, RuleChecks, useAction,
 import { StaffSanctionSheet } from '@/components/StaffSanctionSheet';
 import { api } from '@/lib/api';
 import { ACTION_LABEL, NEEDS_REASON, TITLES } from '@/lib/staffLoans';
-import { Alert, Button, Card, Checkbox, DateField, Header, KeyValue, Screen, Section, Segmented, Text, TextField } from '@/ui';
+import { Alert, Button, Card, Checkbox, DateField, Header, KeyValue, MonthPicker, Screen, Section, Segmented, Text, TextField } from '@/ui';
 import { color, space } from '@/theme';
 
 const CONFIRM = new Set(['reject', 'secretarySign', 'presidentSign', 'disburse', 'sendForSanction']);
@@ -153,7 +153,8 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
         <Section title="Sanction">
           <View style={{ gap: space[8] }}>
             <MoneyField label="Amount to sanction" value={amount} onChange={setAmount} error={fe.amount} hint={`Applied ${amountInWords(l.appliedAmount)}`} />
-            <TextField label="Instalments" keyboardType="number-pad" suffix={<Text role="caption" tone="tertiary">months</Text>} value={Number.isFinite(instalments) ? String(instalments) : ''} onChangeText={(t) => setInstalments(t === '' ? Number.NaN : Number(t.replace(/\D/g, '')))} error={fe.instalments} hint={preview.data ? `At most ${Math.min(preview.data.maxInstalments, l.appliedInstalments)}` : undefined} />
+            {/* D-123: reduce only, and only to a period the society offers (the server repeats the check). */}
+            <MonthPicker label="Instalments (reduce only)" value={instalments} choices={(preview.data?.instalmentOptions ?? [l.appliedInstalments]).map((months) => ({ months, allowed: true }))} onChange={setInstalments} error={fe.instalments} />
           </View>
         </Section>
       ) : null}

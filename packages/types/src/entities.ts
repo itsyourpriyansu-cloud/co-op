@@ -122,7 +122,10 @@ export interface ApplicantSummary {
   mobileMasked: string;
 }
 
-export type LoanProductCode = 'ORDINARY' | 'EDUCATION' | 'SALARY' | 'DEPOSIT';
+/** The four built-in products, which carry special rules (D-123). */
+export type BuiltInLoanProductCode = 'ORDINARY' | 'EDUCATION' | 'SALARY' | 'DEPOSIT';
+/** A built-in code, or the code of a product the Admin added in Settings (it behaves like an Ordinary loan). */
+export type LoanProductCode = string;
 export type EmiMethod = 'AMORTIZED' | 'EQUAL_PRINCIPAL';
 
 export interface LoanProduct {
@@ -132,7 +135,12 @@ export interface LoanProduct {
   /** BR-016 [P]: smallest amount accepted. */
   minAmount: Paise;
   maxAmount: Paise;
+  /** Largest of `instalmentOptions`; kept so every older check and loan keeps working. */
   maxInstalments: number;
+  /** D-123: the repayment periods in months the Admin offers, ascending. Members and staff choose only from these. */
+  instalmentOptions: number[];
+  /** D-123: false = no new applications; running loans keep the product. */
+  enabled: boolean;
   /** BR-018 [P]: active loans of this product a member may hold at once (more → top-up). */
   maxConcurrent: number;
   /** BR-015 [P]: Deposit loan may be at most this % of the pledged FD principal. */
@@ -147,6 +155,9 @@ export interface LoanProduct {
   /** Values the society has not confirmed yet (docs/09). Shown as "placeholder" in Settings. */
   placeholder: boolean;
 }
+
+/** D-123: what the Admin fills in to add a loan product (the code and the maximum are worked out by the server). */
+export type NewLoanProduct = Omit<LoanProduct, 'code' | 'placeholder' | 'maxInstalments' | 'enabled'>;
 
 export interface ScheduleRow {
   installmentNo: number;

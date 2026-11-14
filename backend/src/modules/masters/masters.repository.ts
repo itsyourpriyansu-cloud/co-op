@@ -44,6 +44,11 @@ export class MastersRepository {
     return row;
   }
 
+  /** Every product code ever used, active or not: a new product must not reuse one. */
+  async productCodes(tx?: Tx): Promise<string[]> {
+    return (await (tx ?? this.db).selectDistinct({ code: loanProductVersions.code }).from(loanProductVersions)).map((r) => r.code);
+  }
+
   productHistory(code: LoanProductCode): Promise<ProductRow[]> {
     return this.db.select().from(loanProductVersions).where(eq(loanProductVersions.code, code)).orderBy(desc(loanProductVersions.version));
   }

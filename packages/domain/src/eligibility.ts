@@ -6,7 +6,7 @@ import { calculateEmi, calculateNetSalary, calculateShareDeduction, checkSuretyR
 import { fail, pass, roundToRupee, type RuleCheck } from './rules';
 
 /** BR-016 [P]: amount within the product's min–max, tenure within its max. */
-export function checkProductLimits(amount: Paise, instalments: number, product: Pick<LoanProduct, 'name' | 'minAmount' | 'maxAmount' | 'maxInstalments'>): RuleCheck[] {
+export function checkProductLimits(amount: Paise, instalments: number, product: Pick<LoanProduct, 'name' | 'minAmount' | 'maxAmount' | 'maxInstalments' | 'instalmentOptions'>): RuleCheck[] {
   return [
     amount < product.minAmount
       ? fail('BR-016', `${product.name} starts at ${formatINR(product.minAmount)}.`)
@@ -15,9 +15,9 @@ export function checkProductLimits(amount: Paise, instalments: number, product: 
         : pass('BR-016', `Amount is within the ${product.name} limit of ${formatINR(product.maxAmount)}.`),
     instalments < 1
       ? fail('BR-016', 'Choose at least 1 instalment.')
-      : instalments > product.maxInstalments
-        ? fail('BR-016', `${product.name} allows at most ${product.maxInstalments} instalments.`)
-        : pass('BR-016', `${instalments} instalments is within the product maximum of ${product.maxInstalments}.`),
+      : !product.instalmentOptions.includes(instalments)
+        ? fail('BR-016', `${product.name} is repaid over ${product.instalmentOptions.join(', ')} months. Choose one of these.`)
+        : pass('BR-016', `${instalments} months is one of the repayment periods offered.`),
   ];
 }
 

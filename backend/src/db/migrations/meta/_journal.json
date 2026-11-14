@@ -246,6 +246,13 @@
       "when": 1794555623056,
       "tag": "0034_g9_notification_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794650649920,
+      "tag": "0035_d123_loan_tenure_options",
+      "breakpoints": true
     }
   ]
 }

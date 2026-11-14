@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { calculateEmi, formatDisplayDate, formatINR, toPaise } from '@tgs/domain';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Alert, Card, Divider, Header, KeyValue, NumberStepper, Screen, Section, SelectField, Skeleton, Tag, Text, TextField } from '@/ui';
+import { Alert, Card, Divider, Header, KeyValue, MonthPicker, Screen, Section, SelectField, Skeleton, Tag, Text, TextField } from '@/ui';
 import { color, radius, space } from '@/theme';
 
 export default function Rates() {
@@ -46,7 +46,7 @@ export default function Rates() {
                   <View style={{ flex: 1, gap: space[1] }}>
                     <Text role="label">{p.name}</Text>
                     <Text role="caption" tone="secondary">
-                      Up to {formatINR(p.maxAmount)} · {p.maxInstalments} months{p.suretiesRequired ? ` · ${p.suretiesRequired} ${p.suretiesRequired === 1 ? 'surety' : 'sureties'}` : ''}
+                      Up to {formatINR(p.maxAmount)} · {p.instalmentOptions.join(' / ')} months{p.suretiesRequired ? ` · ${p.suretiesRequired} ${p.suretiesRequired === 1 ? 'surety' : 'sureties'}` : ''}
                     </Text>
                   </View>
                   <Text role="cardTitle">{p.ratePercent}%</Text>
@@ -87,8 +87,10 @@ function EmiEstimate({ products }: { products: Product[] }) {
   const [code, setCode] = useState(products[0]?.code ?? '');
   const [amount, setAmount] = useState('100000');
   const product = products.find((p) => p.code === code) ?? products[0];
-  const [months, setMonths] = useState(Math.min(60, product?.maxInstalments ?? 60));
-  const tenure = Math.min(months, product?.maxInstalments ?? months);
+  // D-123: only the periods the society offers (this is the public rate card, so none is switched off).
+  const choices = useMemo(() => (product?.instalmentOptions ?? []).map((m) => ({ months: m, allowed: true })), [product]);
+  const [months, setMonths] = useState(0);
+  const tenure = choices.some((c) => c.months === months) ? months : (choices[0]?.months ?? 0);
   const rupees = Number(amount.replace(/[^0-9]/g, '')) || 0;
 
   const result = useMemo(() => {
@@ -110,10 +112,7 @@ function EmiEstimate({ products }: { products: Product[] }) {
         </View>
         <SelectField label="Loan" value={code} options={products.map((p) => ({ value: p.code, label: p.name, hint: `${p.ratePercent}%` }))} onChange={setCode} />
         <TextField label="Amount" prefix="₹" keyboardType="number-pad" value={amount} onChangeText={setAmount} error={overMax ? `The most for this loan is ${formatINR(product.maxAmount)}.` : undefined} />
-        <View style={{ gap: space[3] }}>
-          <Text role="label">Months</Text>
-          <NumberStepper value={tenure} min={1} max={product.maxInstalments} step={tenure >= 12 ? 6 : 1} onChange={setMonths} accessibilityLabel="Number of months" />
-        </View>
+        <MonthPicker label="Months" value={tenure} choices={choices} onChange={setMonths} />
         <Divider />
         {result ? (
           <View style={{ gap: space[2] }}>

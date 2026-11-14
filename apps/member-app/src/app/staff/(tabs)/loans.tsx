@@ -26,6 +26,10 @@ export default function Loans() {
     getNextPageParam: (last, pages) => (pages.reduce((n, p) => n + p.items.length, 0) < last.total ? pages.length + 1 : undefined),
     refetchInterval: 20_000,
   });
+  // D-123: a filter entry for each loan product the Admin added, before "Top-ups".
+  const rates = useQuery({ queryKey: ['rates'], queryFn: api.reference.rates, staleTime: 60_000 });
+  const extra = (rates.data?.loanProducts ?? []).filter((p) => !PRODUCT_TABS.some((t) => t.value === p.code)).map((p) => ({ value: p.code, label: p.name }));
+  const tabs = [...PRODUCT_TABS.slice(0, -1), ...extra, ...PRODUCT_TABS.slice(-1)];
   const depts = useQuery({ queryKey: ['departments'], queryFn: api.settings.departments, staleTime: 5 * 60_000 });
   const first = list.data?.pages[0];
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
@@ -43,7 +47,7 @@ export default function Loans() {
         {first?.canCreate ? <Button text="New" size="sm" leftSlot={Plus} onPress={() => router.push('/staff/loan/new')} /> : null}
       </View>
       <FilterBar search={<TextField compact label="Search" value={text} onChangeText={setText} placeholder="Member, General No. or loan no." autoCorrect={false} />}>
-        <SelectField compact label="Loan type" value={product} options={PRODUCT_TABS.map((t) => ({ value: t.value, label: t.value === 'ALL' ? 'All loan types' : t.label }))} onChange={(v) => setProduct(v as typeof product)} />
+        <SelectField compact label="Loan type" value={product} options={tabs.map((t) => ({ value: t.value, label: t.value === 'ALL' ? 'All loan types' : t.label }))} onChange={(v) => setProduct(v as typeof product)} />
         <SelectField compact label="Status" value={group} options={GROUP_ITEMS.map((g) => ({ value: g.value, label: `${g.label}${g.value && first ? ` (${first.counts.byGroup[g.value] ?? 0})` : ''}` }))} onChange={(v) => setGroup(v as typeof group)} />
         {!first?.scope.departmentId ? <SelectField compact label="Department" searchable value={dept} options={[{ value: '', label: 'All departments' }, ...(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))]} onChange={setDept} /> : null}
       </FilterBar>

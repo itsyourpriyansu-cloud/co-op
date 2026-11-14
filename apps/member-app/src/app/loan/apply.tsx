@@ -9,11 +9,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, CircleX, PenLine, Plus, Search, TriangleAlert, X } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
-import { amountInWords, formatDisplayDate, formatINR, validateLoanRequest } from '@tgs/domain';
+import { amountInWords, formatDisplayDate, formatINR, instalmentChoices, validateLoanRequest } from '@tgs/domain';
 import type { LoanApplicationForm, LoanContext, LoanProductCode, LoanRequestInput, MemberPick } from '@tgs/types';
 import { api } from '@/lib/api';
 import { loanKeys, useAssessment, useLoanContext, useMemberSearch } from '@/lib/loans';
-import { Alert, Button, Card, ChoiceCard, Divider, Header, KeyValue, NumberStepper, OtpInput, Screen, Section, Skeleton, Text, TextField, WizardProgress } from '@/ui';
+import { Alert, Button, Card, ChoiceCard, Divider, Header, KeyValue, MonthPicker, OtpInput, Screen, Section, Skeleton, Text, TextField, WizardProgress } from '@/ui';
 import { color, radius, space } from '@/theme';
 
 type StepKey = 'type' | 'pay' | 'loan' | 'sureties' | 'review';
@@ -101,6 +101,15 @@ export default function ApplyLoan() {
   }, [ctx, ready, params.draft]);
 
   const prod = ctx?.products.find((p) => p.code === product);
+  // D-123: only the periods the society offers; those beyond the member's remaining service are shown switched off (BR-002).
+  const choices = useMemo(() => (prod && ctx ? instalmentChoices(prod.instalmentOptions, ctx.member.leftoverMonths) : []), [prod, ctx]);
+  useEffect(() => {
+    if (!ready || !ctx) return;
+    // The loan type that was switched off (or never offered) gives way to the first one on offer.
+    if (!prod && ctx.products[0]) setProduct(ctx.products[0].code);
+    const open = choices.filter((c) => c.allowed);
+    if (open.length && !open.some((c) => c.months === instalments)) setInstalments(open[0]!.months);
+  }, [ready, ctx, prod, choices, instalments]);
   const steps: StepKey[] = useMemo(() => ['type', 'pay', 'loan', ...(prod && prod.suretiesRequired > 0 ? (['sureties'] as const) : []), 'review'], [prod]);
   const key = steps[step] ?? 'type';
 
@@ -271,12 +280,11 @@ export default function ApplyLoan() {
             <ChoiceCard
               key={p.code}
               title={`${p.name} · ${p.ratePercent}%`}
-              description={full ? `You already have a running ${p.name}. Ask for a top-up instead.` : `Up to ${formatINR(p.maxAmount)} · ${p.maxInstalments} months${p.suretiesRequired ? ` · ${p.suretiesRequired} sureties` : p.code === 'DEPOSIT' ? ' · against your FD' : ' · no sureties'}`}
+              description={full ? `You already have a running ${p.name}. Ask for a top-up instead.` : `Up to ${formatINR(p.maxAmount)} · ${p.instalmentOptions.join(' / ')} months${p.suretiesRequired ? ` · ${p.suretiesRequired} sureties` : p.code === 'DEPOSIT' ? ' · against your FD' : ' · no sureties'}`}
               selected={product === p.code}
               onPress={() => {
                 if (full) return;
                 setProduct(p.code);
-                setInstalments(Math.min(instalments, p.maxInstalments));
                 if (!p.suretiesRequired) setSureties([]);
               }}
             />
@@ -334,8 +342,7 @@ export default function ApplyLoan() {
             <View style={{ gap: space[8] }}>
               <TextField label="Amount you need" prefix="₹" keyboardType="number-pad" value={rupees(amount)} onChangeText={(v) => setAmount(paise(v))} error={err('amount')} hint={amount > 0 ? amountInWords(amount) : prod ? `Up to ${formatINR(prod.maxAmount)}` : undefined} required />
               <View style={{ gap: space[3] }}>
-                <Text role="label">Monthly instalments</Text>
-                <NumberStepper value={instalments} min={1} max={prod?.maxInstalments ?? 100} step={instalments >= 12 ? 6 : 1} onChange={setInstalments} accessibilityLabel="Number of monthly instalments" />
+                <MonthPicker label="Monthly instalments" value={instalments} choices={choices} onChange={setInstalments} error={err('instalments')} />
               </View>
               <TextField label="What is it for?" value={purpose} onChangeText={setPurpose} placeholder="e.g. House repair, marriage, medical" error={err('purpose')} required />
               {product === 'EDUCATION' ? (

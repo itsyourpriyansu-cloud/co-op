@@ -35,6 +35,10 @@ type Row = LoanRow & Record<string, unknown>;
 export function LoansPage() {
   const navigate = useNavigate();
   const [product, setProduct] = useState<LoanProductCode | 'ALL' | 'TOPUP'>('ALL');
+  // D-123: a tab for each loan product the Admin added, before "Top-ups".
+  const rates = useQuery({ queryKey: ['rates'], queryFn: api.reference.rates, staleTime: 60_000 });
+  const extra = (rates.data?.loanProducts ?? []).filter((p) => !PRODUCT_TABS.some((t) => t.value === p.code)).map((p) => ({ value: p.code, label: p.name }));
+  const tabs = [...PRODUCT_TABS.slice(0, -1), ...extra, ...PRODUCT_TABS.slice(-1)];
   const [group, setGroup] = useState<LoanStatusGroup | ''>('IN_PROCESS');
   const [dept, setDept] = useState('');
   const [q, setQ] = useState('');
@@ -151,7 +155,7 @@ export function LoansPage() {
       <div className="mb-4 overflow-x-auto">
         <TabsV2 value={product} onValueChange={(v) => reset(() => setProduct(v as typeof product))}>
           <TabsV2List variant={TabsV2Variant.UNDERLINE}>
-            {PRODUCT_TABS.map((t) => (
+            {tabs.map((t) => (
               <TabsV2Trigger key={t.value} value={t.value} variant={TabsV2Variant.UNDERLINE} rightSlot={<span className="tabular rounded-pill bg-surface-muted px-1.5 text-caption-strong text-fg-secondary">{data?.counts.byProduct[t.value] ?? 0}</span>}>
                 {t.label}
               </TabsV2Trigger>

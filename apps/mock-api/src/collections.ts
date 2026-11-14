@@ -12,7 +12,7 @@ import {
   formatCycle,
   formatINR,
   HEAD_PRIORITY,
-  LOAN_PRIORITY,
+  loanPriority,
   nextDemandSheetStatus,
   validateDenominations,
   type DemandSheetAction,
@@ -88,7 +88,7 @@ function labelOf(db: Db, c: DemandComponent): { label: string; loanNo?: string }
 }
 
 /** Display order = recovery order (BR-011): heads by priority, loans Education → Salary → Ordinary → Deposit. */
-const rank = (c: DemandComponent) => HEAD_PRIORITY[c.head] * 10 + (c.loanProduct ? LOAN_PRIORITY[c.loanProduct] : 0);
+const rank = (c: DemandComponent) => HEAD_PRIORITY[c.head] * 10 + (c.loanProduct ? loanPriority(c.loanProduct) : 0);
 function inPriority<T extends DemandComponent>(cs: T[]): T[] {
   return cs.map((c, i) => ({ c, i })).sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i).map((x) => x.c);
 }

@@ -21,10 +21,12 @@ export const HEAD_PRIORITY: Record<DemandHead, number> = {
   SURETY: 7,
 };
 
-export const LOAN_PRIORITY: Record<LoanProductCode, number> = { EDUCATION: 1, SALARY: 2, ORDINARY: 3, DEPOSIT: 4 };
+const LOAN_PRIORITY: Record<string, number> = { EDUCATION: 1, SALARY: 2, ORDINARY: 3, DEPOSIT: 4 };
+/** Recovery order of a loan product; one the Admin added ranks like an Ordinary loan (D-123). */
+export const loanPriority = (code: LoanProductCode): number => LOAN_PRIORITY[code] ?? 3;
 
 function rank(c: DemandComponent): number {
-  return HEAD_PRIORITY[c.head] * 10 + (c.loanProduct ? LOAN_PRIORITY[c.loanProduct] : 0);
+  return HEAD_PRIORITY[c.head] * 10 + (c.loanProduct ? loanPriority(c.loanProduct) : 0);
 }
 
 /** Splits a recovered amount across demand components in priority order. Input is not mutated. */

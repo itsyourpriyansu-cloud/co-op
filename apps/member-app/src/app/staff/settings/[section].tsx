@@ -1,12 +1,12 @@
 // ST-60m … ST-68m one settings section. The server validates and versions every save; this only edits.
 import { useEffect, useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Lock, Minus, Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { Check, Lock, Minus, Pencil, Plus, Trash2, X } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import { calculateEmi, calculateFdMaturity, formatDisplayDateTime, formatINR, HEAD_PRIORITY, toPaise } from '@tgs/domain';
-import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type DemandHead, type Department, type LoanProduct, type NotificationTemplate, type SettingsBundle, type SocietyProfile, type SocietySettings, type StaffUser } from '@tgs/types';
+import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type DemandHead, type Department, type LoanProduct, type NewLoanProduct, type NotificationTemplate, type SettingsBundle, type SocietyProfile, type SocietySettings, type StaffUser } from '@tgs/types';
 import { ActionAlert, ask, Loaded, MoneyField, RecordCard, Stack2, useAction, plain } from '@/components/staff';
 import { api } from '@/lib/api';
 import { AUDIENCE, CHANNELS, ENTITY, fill, isPlaceholder, MONTHS, RECOVERY_LABEL, ROLE_HINT, SECTIONS, vars } from '@/lib/staffSettings';
@@ -40,6 +40,65 @@ function Num({ label, value, onChange, unit, hint, error, decimals, disabled }: 
     />
   );
 }
+
+/**
+ * D-123: the repayment periods (whole months) the society offers. One input per period, an X to
+ * remove one, "Add another period" for more. A row left empty is ignored when saving.
+ */
+function MonthOptions({ value, onChange, error }: { value: number[]; onChange: (v: number[]) => void; error?: string | undefined }) {
+  const rows = value.length ? value : [Number.NaN];
+  return (
+    <View style={{ gap: space[4] }}>
+      <Text role="label">Repayment periods</Text>
+      <Text role="caption" tone="tertiary">
+        Members and staff can choose only these. A member whose remaining service is shorter sees the longer ones switched off.
+      </Text>
+      {rows.map((months, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space[3] }}>
+          <View style={{ flex: 1 }}>
+            <Num label={`Period ${i + 1}`} value={months} onChange={(n) => onChange(rows.map((x, j) => (j === i ? n : x)))} unit="months" />
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Remove period ${i + 1}`} disabled={rows.length === 1} onPress={() => onChange(rows.filter((_, j) => j !== i))} hitSlop={8} style={{ height: 52, width: 44, alignItems: 'center', justifyContent: 'center', opacity: rows.length === 1 ? 0.4 : 1 }}>
+            <X size={20} color={color.text.secondary} />
+          </Pressable>
+        </View>
+      ))}
+      <Button text="Add another period" buttonType="secondary" size="sm" leftSlot={Plus} onPress={() => onChange([...rows, Number.NaN])} />
+      {error ? (
+        <Text role="caption" tone="danger">
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** What a new product starts as in the Add screen. Every value can be changed before saving. */
+const BLANK_PRODUCT: LoanProduct = {
+  code: '',
+  name: '',
+  ratePercent: 10,
+  minAmount: toPaise(10000),
+  maxAmount: toPaise(100000),
+  maxInstalments: 24,
+  instalmentOptions: [12, 24],
+  enabled: true,
+  maxConcurrent: 1,
+  depositMarginPercent: 0,
+  penalRatePercent: 0,
+  suretiesRequired: 2,
+  ddoCertificationRequired: true,
+  shareDepositPercent: 0,
+  topupAllowed: false,
+  emiMethod: 'EQUAL_PRINCIPAL',
+  placeholder: false,
+};
+
+/** The period used for the sample instalment: the one offered nearest to 24 months. */
+const previewMonths = (options: number[]): number => {
+  const typed = options.filter(Number.isFinite);
+  return typed.reduce((best, o) => (Math.abs(o - 24) < Math.abs(best - 24) ? o : best), typed[0] ?? 24);
+};
 
 /** One value per line. Keeps its own text so a new line isn't removed as soon as it's typed. */
 function Lines({ label, value, onChange, split, placeholder, error, disabled }: { label: string; value: string[]; onChange: (v: string[]) => void; split: RegExp; placeholder: string; error?: string | undefined; disabled?: boolean }) {
@@ -205,29 +264,33 @@ function General({ b, title }: { b: SettingsBundle; title: string }) {
 
 // ---- ST-64m Loan products ------------------------------------------------------------------
 
-function ProductEdit({ product, onClose }: { product: LoanProduct; onClose: () => void }) {
+function ProductEdit({ product, mode, onClose }: { product: LoanProduct; mode: 'edit' | 'add'; onClose: () => void }) {
+  const adding = mode === 'add';
   const [p, setP] = useState(product);
   const a = useAction();
   const e = a.fields;
   const set = (patch: Partial<LoanProduct>) => setP({ ...p, ...patch });
-  const months = Math.min(24, Number.isFinite(p.maxInstalments) ? p.maxInstalments : 24);
-  const before = calculateEmi(LAKH, product.ratePercent, months, product.emiMethod);
+  const months = previewMonths(p.instalmentOptions);
+  const before = adding ? undefined : calculateEmi(LAKH, product.ratePercent, previewMonths(product.instalmentOptions), product.emiMethod);
   const after = Number.isFinite(p.ratePercent) && p.ratePercent > 0 && months > 0 ? calculateEmi(LAKH, p.ratePercent, months, p.emiMethod) : undefined;
   const save = async () => {
-    const ok = await a.run(() => api.settings.updateLoanProduct(p.code, p));
+    // Only the typed periods are sent; the server works the maximum out from them (D-123).
+    const body = { ...p, instalmentOptions: p.instalmentOptions.filter(Number.isFinite) };
+    const ok = await a.run(() => (adding ? api.settings.createLoanProduct(body as NewLoanProduct) : api.settings.updateLoanProduct(p.code, body)));
     if (ok) onClose();
     return ok;
   };
   return (
-    <Editor title={`Edit ${p.name}`} onBack={onClose} canEdit dirty={JSON.stringify(p) !== JSON.stringify(product)} a={a} onSave={save} onDiscard={() => setP(product)} saveText="Save product">
+    <Editor title={adding ? 'Add loan product' : `Edit ${p.name}`} onBack={onClose} canEdit dirty={JSON.stringify(p) !== JSON.stringify(product)} a={a} onSave={save} onDiscard={() => setP(product)} saveText={adding ? 'Add product' : 'Save product'}>
       <Text role="body" tone="secondary">
-        Applies to new applications and calculators. Running loans keep the rate they were sanctioned at.
+        {adding ? 'A new product works like an Ordinary loan: sureties, form F2, its own rate and limits. It is open for applications as soon as you save it.' : 'Applies to new applications and calculators. Running loans keep the rate they were sanctioned at.'}
       </Text>
+      {adding ? <TextField label="Loan name" required value={p.name} onChangeText={(name) => set({ name })} placeholder="e.g. Festival Advance" error={e.name} /> : null}
       {after ? (
-        <Alert type="primary" heading={`Preview · ₹1,00,000 over ${months} months`} description={`First instalment ${formatINR(before.firstInstalment)} → ${formatINR(after.firstInstalment)} · Interest ${formatINR(before.totalInterest)} → ${formatINR(after.totalInterest)}`} />
+        <Alert type="primary" heading={`Preview · ₹1,00,000 over ${months} months`} description={before ? `First instalment ${formatINR(before.firstInstalment)} → ${formatINR(after.firstInstalment)} · Interest ${formatINR(before.totalInterest)} → ${formatINR(after.totalInterest)}` : `First instalment ${formatINR(after.firstInstalment)} · Interest ${formatINR(after.totalInterest)}`} />
       ) : null}
       <Num label="Interest rate" value={p.ratePercent} onChange={(ratePercent) => set({ ratePercent })} error={e.ratePercent} unit="% a year" decimals />
-      <Num label="Maximum instalments" value={p.maxInstalments} onChange={(maxInstalments) => set({ maxInstalments })} error={e.maxInstalments} unit="months" />
+      <MonthOptions value={p.instalmentOptions} onChange={(instalmentOptions) => set({ instalmentOptions })} error={e.instalmentOptions} />
       <MoneyField label="Minimum amount" value={p.minAmount} onChange={(minAmount) => set({ minAmount })} error={e.minAmount} />
       <MoneyField label="Maximum amount" value={p.maxAmount} onChange={(maxAmount) => set({ maxAmount })} error={e.maxAmount} />
       <Num label="Penal interest" value={p.penalRatePercent} onChange={(penalRatePercent) => set({ penalRatePercent })} error={e.penalRatePercent} unit="% a year" hint="On unpaid instalments. 0 until the society confirms" decimals />
@@ -238,6 +301,7 @@ function ProductEdit({ product, onClose }: { product: LoanProduct; onClose: () =
         <Num label="Sureties required" value={p.suretiesRequired} onChange={(suretiesRequired) => set({ suretiesRequired })} error={e.suretiesRequired} unit="members" hint="0 skips the surety stage" />
         <Checkbox checked={p.ddoCertificationRequired} onChange={(ddoCertificationRequired) => set({ ddoCertificationRequired })} label="Department DDO certifies the application" />
         <Checkbox checked={p.topupAllowed} onChange={(topupAllowed) => set({ topupAllowed })} label="Members may ask for a top-up" />
+        {adding ? null : <Checkbox checked={p.enabled} onChange={(enabled) => set({ enabled })} label="Open for new applications (running loans are not affected)" />}
         <Segmented label="Instalment method" value={p.emiMethod} options={[{ value: 'EQUAL_PRINCIPAL', label: 'Equal principal' }, { value: 'AMORTIZED', label: 'Equal EMI' }]} onChange={(v) => set({ emiMethod: v as LoanProduct['emiMethod'] })} />
         <Text role="caption" tone="tertiary">
           {p.emiMethod === 'EQUAL_PRINCIPAL' ? 'Principal fixed, interest on the balance (falls every month).' : 'Same amount every month.'}
@@ -261,11 +325,15 @@ function Flag({ on, label }: { on: boolean; label: string }) {
 
 function LoanProducts({ b, title }: { b: SettingsBundle; title: string }) {
   const [editing, setEditing] = useState<LoanProduct>();
-  if (editing) return <ProductEdit product={editing} onClose={() => setEditing(undefined)} />;
+  const [adding, setAdding] = useState(false);
+  if (editing) return <ProductEdit product={editing} mode="edit" onClose={() => setEditing(undefined)} />;
+  if (adding) return <ProductEdit product={BLANK_PRODUCT} mode="add" onClose={() => setAdding(false)} />;
   return (
     <Screen header={<Header title={title} onBack={back} />}>
+      {b.canEdit ? <Button text="Add loan product" leftSlot={Plus} onPress={() => setAdding(true)} /> : null}
       {b.loanProducts.map((p) => {
-        const preview = calculateEmi(LAKH, p.ratePercent, Math.min(24, p.maxInstalments), p.emiMethod);
+        const months = previewMonths(p.instalmentOptions);
+        const preview = calculateEmi(LAKH, p.ratePercent, months, p.emiMethod);
         return (
           <Card key={p.code}>
             <View style={{ gap: space[3] }}>
@@ -274,13 +342,14 @@ function LoanProducts({ b, title }: { b: SettingsBundle; title: string }) {
                   {p.name} · {p.ratePercent}%
                 </Text>
                 {p.placeholder ? <Placeholder /> : null}
+                {p.enabled ? null : <Tag text="Not offered" color="neutral" size="xs" />}
                 {b.canEdit ? <Button text="Edit" size="sm" buttonType="secondary" leftSlot={Pencil} accessibilityLabel={`Edit ${p.name}`} onPress={() => setEditing(p)} /> : null}
               </View>
               <Text role="caption" tone="tertiary">
                 {p.emiMethod === 'EQUAL_PRINCIPAL' ? 'Equal principal, interest on balance' : 'Equal monthly instalment'}
               </Text>
               <KeyValue label="Amount" value={`${formatINR(p.minAmount)} – ${formatINR(p.maxAmount)}`} />
-              <KeyValue label="Instalments" value={`up to ${p.maxInstalments}`} />
+              <KeyValue label="Repayment periods" value={`${p.instalmentOptions.join(', ')} months`} />
               <KeyValue label="Share deposit" value={`${p.shareDepositPercent}%`} />
               <KeyValue label="Running loans allowed" value={String(p.maxConcurrent)} />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[4] }}>
@@ -290,7 +359,7 @@ function LoanProducts({ b, title }: { b: SettingsBundle; title: string }) {
                 {p.code === 'DEPOSIT' ? <Flag on label={`Up to ${p.depositMarginPercent}% of FD`} /> : null}
               </View>
               <Text role="caption" tone="secondary">
-                ₹1,00,000 over {Math.min(24, p.maxInstalments)} months → first instalment {formatINR(preview.firstInstalment)}, interest {formatINR(preview.totalInterest)}
+                ₹1,00,000 over {months} months → first instalment {formatINR(preview.firstInstalment)}, interest {formatINR(preview.totalInterest)}
               </Text>
             </View>
           </Card>

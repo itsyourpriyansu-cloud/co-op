@@ -42,7 +42,7 @@ export function ratesReference(store: Store): RatesReference {
   const db = store.db;
   const last = db.auditLog.find((a) => a.entity === 'settings' || a.entity === 'loanProduct');
   return {
-    loanProducts: db.loanProducts.map(({ code, name, ratePercent, minAmount, maxAmount, maxInstalments, emiMethod, suretiesRequired, shareDepositPercent, placeholder }) => ({ code, name, ratePercent, minAmount, maxAmount, maxInstalments, emiMethod, suretiesRequired, shareDepositPercent, placeholder })),
+    loanProducts: db.loanProducts.map(({ code, name, ratePercent, minAmount, maxAmount, maxInstalments, instalmentOptions, emiMethod, suretiesRequired, shareDepositPercent, placeholder }) => ({ code, name, ratePercent, minAmount, maxAmount, maxInstalments, instalmentOptions, emiMethod, suretiesRequired, shareDepositPercent, placeholder })),
     fdSlabs: db.settings.fdSlabs,
     savingsRatePercent: db.settings.savingsRatePercent,
     crdRatePercent: db.settings.crdRatePercent,

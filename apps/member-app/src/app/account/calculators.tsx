@@ -7,11 +7,11 @@ import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, CircleCheck, TriangleAlert } from 'lucide-react-native';
-import { calculateEmi, calculateFdMaturity, calculateNetSalary, calculateShareDeduction, checkTenureEligibility, fdRateFor, formatDisplayDate, formatINR, toPaise } from '@tgs/domain';
+import { calculateEmi, calculateFdMaturity, calculateNetSalary, calculateShareDeduction, fdRateFor, formatDisplayDate, formatINR, instalmentChoices, toPaise } from '@tgs/domain';
 import type { LoanContext, PayoutFrequency, RatesReference } from '@tgs/types';
 import { api } from '@/lib/api';
 import { useLoanContext } from '@/lib/loans';
-import { Alert, Button, Card, Divider, Header, KeyValue, NumberStepper, Screen, Segmented, SelectField, Skeleton, Tag, Text, TextField } from '@/ui';
+import { Alert, Button, Card, Divider, Header, KeyValue, MonthPicker, NumberStepper, Screen, Segmented, SelectField, Skeleton, Tag, Text, TextField } from '@/ui';
 import { color, radius, space, onBrandMuted } from '@/theme';
 
 const rupees = (t: string) => Number(t.replace(/[^0-9]/g, '')) || 0;
@@ -46,10 +46,10 @@ function LoanCalc({ ctx }: { ctx: LoanContext }) {
   const [code, setCode] = useState(products[0]?.code ?? 'ORDINARY');
   const product = products.find((p) => p.code === code) ?? products[0]!;
   const [amountText, setAmountText] = useState('100000');
-  const tenure = checkTenureEligibility(ctx.member.leftoverMonths, 1, product.maxInstalments);
-  const maxMonths = Math.max(1, tenure.maxAllowed);
-  const [monthsWanted, setMonths] = useState(Math.min(60, maxMonths));
-  const months = Math.min(monthsWanted, maxMonths);
+  // D-123: the periods the society offers, those beyond the member's remaining service shown switched off (BR-002).
+  const choices = useMemo(() => instalmentChoices(product.instalmentOptions, ctx.member.leftoverMonths), [product, ctx.member.leftoverMonths]);
+  const [monthsWanted, setMonths] = useState(0);
+  const months = choices.some((c) => c.allowed && c.months === monthsWanted) ? monthsWanted : (choices.find((c) => c.allowed)?.months ?? 1);
   const amount = toPaise(rupees(amountText));
 
   const r = useMemo(() => {
@@ -64,7 +64,7 @@ function LoanCalc({ ctx }: { ctx: LoanContext }) {
   const tooMuch = amount > product.maxAmount;
   const tooLittle = amount > 0 && amount < product.minAmount;
   const running = ctx.activeProducts.includes(product.code);
-  const noRoom = tenure.maxAllowed < 1;
+  const noRoom = !choices.some((c) => c.allowed);
 
   return (
     <>
@@ -80,13 +80,7 @@ function LoanCalc({ ctx }: { ctx: LoanContext }) {
             error={tooMuch ? `The most for ${product.name} is ${formatINR(product.maxAmount)}.` : tooLittle ? `The least is ${formatINR(product.minAmount)}.` : undefined}
             hint={`${formatINR(product.minAmount)} to ${formatINR(product.maxAmount)}`}
           />
-          <View style={{ gap: space[3] }}>
-            <Text role="label">Months to repay</Text>
-            <NumberStepper value={months} min={1} max={maxMonths} step={months >= 12 ? 6 : 1} onChange={setMonths} accessibilityLabel="Months to repay" />
-            <Text role="caption" tone="tertiary">
-              Up to {maxMonths} months for you{tenure.binding === 'retirement' ? ` (you retire in ${ctx.member.leftoverLabel})` : ` (${product.name} limit)`}.
-            </Text>
-          </View>
+          <MonthPicker label="Months to repay" value={months} choices={choices} onChange={setMonths} />
         </View>
       </Card>
 
