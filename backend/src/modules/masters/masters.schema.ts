@@ -30,6 +30,8 @@ export const societySettingsSchema = z.object({
   penalGraceDays: z.number().int(),
   financialYearStartMonth: z.number().int(),
   fdMaturityJobEnabled: z.boolean(),
+  earlyInterestEnabled: z.boolean(),
+  lateJoinerOwesMissedMonth: z.boolean(),
   fdMaturityRunHour: z.number().int(),
   fdPrematureWithdrawalEnabled: z.boolean(),
   fdPrematurePenaltyMethod: z.enum(['RATE_CUT', 'SHARE_OF_INTEREST']),

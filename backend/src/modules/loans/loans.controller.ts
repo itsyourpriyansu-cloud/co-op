@@ -20,7 +20,8 @@ export class LoansController {
   get = (r: ById) => this.loans.getForStaff(sessionOf(r), r.params.id);
   memberContext = (r: ById) => this.loans.contextForStaff(sessionOf(r), r.params.id);
   createCounter = (r: FastifyRequest<{ Body: Partial<LoanRequestInput> & { memberId?: string; submit?: boolean } }>) => this.loans.createCounter(r, r.body ?? {});
-  sanctionPreview = (r: FastifyRequest<{ Params: { id: string }; Querystring: { amount?: number; instalments?: number } }>) => this.flow.preview(sessionOf(r), r.params.id, r.query.amount, r.query.instalments);
+  sanctionPreview = (r: FastifyRequest<{ Params: { id: string }; Querystring: { amount?: number; instalments?: number; firstDueCycle?: string } }>) => this.flow.preview(sessionOf(r), r.params.id, r.query.amount, r.query.instalments, r.query.firstDueCycle);
+  changeFirstDue = (r: FastifyRequest<{ Params: { id: string }; Body: { firstDueCycle: string } }>) => this.flow.changeFirstDue(r, r.params.id, r.body.firstDueCycle);
   act = (r: FastifyRequest<{ Params: { id: string; action: LoanAction }; Body: LoanActionInput }>) => this.flow.act(r, r.params.id, r.params.action, r.body ?? {});
   demoAct = (r: ById) => this.flow.demoAct(r, r.params.id);
 

@@ -32,6 +32,7 @@ export const ACTION_LABEL: Record<string, string> = {
   presidentSign: 'Sign sanction (2 of 2)',
   sendBack: 'Send back to assessment',
   disburse: 'Disburse',
+  changeFirstDue: 'Change first deduction month',
 };
 
 export const SECONDARY = new Set(['returnToMember', 'reject', 'sendBack']);
@@ -44,6 +45,7 @@ export const TITLES: Record<string, { title: string; description: string }> = {
   sendForSanction: { title: 'Assessment · For Office Use', description: 'The sanction sheet is computed from the rules. You may reduce the amount or tenure.' },
   secretarySign: { title: 'Sanction (1 of 2)', description: 'Your signature sends the loan to the President.' },
   presidentSign: { title: 'Sanction (2 of 2)', description: 'Final sanction. The sanction letter is generated and the member is told.' },
+  changeFirstDue: { title: 'First deduction month', description: 'Move the month the first instalment is taken from salary. Only months whose demand sheet is still open are offered. Amount, tenure and signatures do not change.' },
   disburse: { title: 'Disburse', description: 'Record the payment. The loan becomes active and the repayment schedule starts.' },
   returnToMember: { title: 'Return to the member', description: 'The member sees your reason in the app, corrects the application and signs again.' },
   reject: { title: 'Reject application', description: 'This ends the application. The member sees your reason.' },

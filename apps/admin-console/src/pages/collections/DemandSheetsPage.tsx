@@ -83,13 +83,13 @@ export function DemandSheetsPage() {
                   )}
                   {rows.map((r) => (
                     <tr
-                      key={r.departmentId}
+                      key={r.id ?? r.departmentId}
                       className={cn('text-body', r.id ? 'cursor-pointer hover:bg-surface-subtle' : 'text-fg-tertiary')}
                       onClick={() => r.id && navigate(`/demand-sheets/${r.id}`)}
                       {...(r.id ? { role: 'link', tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => e.key === 'Enter' && navigate(`/demand-sheets/${r.id}`) } : {})}
                     >
                       <td className="px-5 py-3">
-                        <p className="text-label text-fg">{r.departmentName}</p>
+                        <p className="text-label text-fg">{r.departmentName}{r.supplementNo ? ` · Supplement ${r.supplementNo}` : ''}</p>
                         <p className="text-caption text-fg-tertiary">DDO {r.ddoName}</p>
                       </td>
                       <td className="px-3 py-3">

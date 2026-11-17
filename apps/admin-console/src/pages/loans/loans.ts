@@ -33,4 +33,5 @@ export const ACTION_LABEL: Record<string, string> = {
   presidentSign: 'Sign sanction (2 of 2)',
   sendBack: 'Send back to assessment',
   disburse: 'Disburse',
+  changeFirstDue: 'First deduction month changed',
 };

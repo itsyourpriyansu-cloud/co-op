@@ -3,6 +3,8 @@ import {
   buildSanctionSheet,
   calculateLeftoverService,
   checkTenureEligibility,
+  earlyInterestFor,
+  firstDeductionOptions,
   formatCycle,
   formatINR,
   generateSchedule,
@@ -17,7 +19,7 @@ import {
   type JournalLineInput,
   type LoanAction,
 } from '@tgs/domain';
-import type { ConsoleRole, Loan, ShareAccount, LoanActionInput, LoanDetail, Member, OtpChallenge, Role, SanctionPreview, SessionUser, StaffSignOff, SuretyRequest, SuretyRequests } from '@tgs/types';
+import type { ConsoleRole, Cycle, DemandSheetStatus, Loan, ShareAccount, LoanActionInput, LoanDetail, Member, OtpChallenge, Role, SanctionPreview, SessionUser, StaffSignOff, SuretyRequest, SuretyRequests } from '@tgs/types';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
@@ -70,8 +72,18 @@ export class LoanWorkflowService {
     return this.loans.repo;
   }
 
-  /** ST-26 sheet for an amount / tenure (defaults: what was applied). */
-  async sanctionPreview(w: World, l: Loan, amount?: number, instalments?: number): Promise<SanctionPreview> {
+  /**
+   * D-124: the months a new instalment of this member can still start in: the department's sheet for
+   * that month is not yet certified, and its cut-off (send-by date) has not passed.
+   */
+  async firstDueOptions(w: World, m: Member): Promise<Cycle[]> {
+    const status = new Map<Cycle, DemandSheetStatus>();
+    for (const h of await this.app.collections.repo.allSheetHeads()) if (h.departmentId === m.departmentId && !h.supplementNo) status.set(h.cycle, h.status);
+    return firstDeductionOptions({ today: w.today, sendByDays: w.settings.demandSendByDays, sheetStatus: (c) => status.get(c) });
+  }
+
+  /** ST-26 sheet for an amount / tenure (defaults: what was applied). `firstDue` is the officer's choice of first deduction month. */
+  async sanctionPreview(w: World, l: Loan, amount?: number, instalments?: number, firstDue?: Cycle): Promise<SanctionPreview> {
     const m = await this.loans.member(l.memberId);
     const product = this.loans.productOf(w, l.product);
     const [own, holdings, dues] = await Promise.all([this.repo.forMember(m.id), this.loans.holdings(m.id), this.app.collections.duesOf([m.id])]);
@@ -82,11 +94,15 @@ export class LoanWorkflowService {
     const parent = l.parentLoanId ? await this.repo.find(l.parentLoanId) : undefined;
     const ordinary = own.filter((x) => x.status === 'ACTIVE' && x.product === 'ORDINARY' && x.id !== parent?.id);
     const salary = own.filter((x) => x.status === 'ACTIVE' && x.product === 'SALARY');
-    const sheet = buildSanctionSheet({
+    const firstDueOptions = await this.firstDueOptions(w, m);
+    const stored = l.sanctionSheet?.firstDueCycle;
+    const chosen = firstDue ?? (stored && firstDueOptions.includes(stored) ? stored : firstDueOptions[0]!);
+    const built = buildSanctionSheet({
       amount: amt,
       instalments: Math.max(1, inst),
       product,
-      firstDueCycle: (await this.loans.context(w, m, own)).firstDueCycle,
+      firstDueCycle: chosen,
+      earlyInterestEnabled: w.settings.earlyInterestEnabled,
       existingShareDeposit: holdings.shares?.shareDepositBalance ?? 0,
       today: w.today,
       ...(parent ? { topup: { loanId: parent.id, loanNo: parent.loanNo ?? parent.applicationNo, outstandingPrincipal: parent.outstandingPrincipal, ratePercent: parent.ratePercent, lastInterestChargedOn: lastInterestChargedOn(parent, w.today) } } : {}),
@@ -98,14 +114,45 @@ export class LoanWorkflowService {
         ...(suretyRecoveries ? { suretyRecoveries } : {}),
       },
     });
+    const sheet = { ...built, firstDueChosen: true };
     // D-123: the periods offered now, kept to what was applied for and what this member's service allows (reduce only).
     const instalmentOptions = [...new Set([...product.instalmentOptions, l.appliedInstalments])].filter((o) => o <= l.appliedInstalments && o <= maxInstalments).sort((a, b) => a - b);
-    return { sheet, maxInstalments, instalmentOptions, fieldErrors: validateSanctionAdjustment(amt, inst, { amount: l.appliedAmount, instalments: l.appliedInstalments }, maxInstalments, product.instalmentOptions) };
+    const fieldErrors = validateSanctionAdjustment(amt, inst, { amount: l.appliedAmount, instalments: l.appliedInstalments }, maxInstalments, product.instalmentOptions);
+    if (!firstDueOptions.includes(chosen)) fieldErrors.firstDueCycle = `Choose ${firstDueOptions.map(formatCycle).join(' or ')}. The other months are closed for this department.`;
+    return { sheet, maxInstalments, instalmentOptions, firstDueOptions, fieldErrors };
   }
 
-  async preview(user: SessionUser, id: string, amount?: number, instalments?: number): Promise<SanctionPreview> {
+  async preview(user: SessionUser, id: string, amount?: number, instalments?: number, firstDue?: Cycle): Promise<SanctionPreview> {
     const l = await this.loans.staffLoan(user, id);
-    return this.sanctionPreview(await this.loans.world(), l, amount, instalments);
+    return this.sanctionPreview(await this.loans.world(), l, amount, instalments, firstDue);
+  }
+
+  /**
+   * D-124: the Accountant moves a sanctioned loan's first deduction month, e.g. when the chosen month's
+   * sheet went to the DDO before payment. Amount, tenure and the settlement are not worked out again,
+   * so nothing already signed changes except the month and the days of early interest.
+   */
+  async changeFirstDue(request: FastifyRequest, id: string, firstDueCycle: Cycle): Promise<LoanDetail> {
+    const user = sessionOf(request);
+    if (user.role !== 'ACCOUNTANT') fail('FORBIDDEN', 'Only the Accountant changes the first deduction month.');
+    await this.loans.staffLoan(user, id);
+    const w = await this.loans.world();
+    const at = await businessNow(this.app);
+    const saved = await withTransaction(this.app.db, async (tx) => {
+      const l = (await this.repo.lock(tx, id)) ?? fail('NOT_FOUND', 'Loan not found.');
+      const sheet = l.sanctionSheet;
+      if (l.status !== 'SANCTIONED' || !sheet) return fail('INVALID_TRANSITION', 'The first deduction month can be changed only on a sanctioned loan that is not paid yet.');
+      const open = await this.firstDueOptions(w, await this.loans.member(l.memberId));
+      if (!open.includes(firstDueCycle)) fail('VALIDATION_ERROR', `Choose ${open.map(formatCycle).join(' or ')}. The other months are closed for this department.`, { fieldErrors: { firstDueCycle: 'Closed for this department' } });
+      const early = w.settings.earlyInterestEnabled ? earlyInterestFor(sheet.amount, sheet.ratePercent, w.today, firstDueCycle) : 0;
+      const { earlyInterest: oldEarly = 0, earlyInterest: _e, earlyInterestFrom: _f, ...rest } = sheet;
+      l.sanctionSheet = { ...rest, firstDueCycle, firstDueChosen: true, totalInterest: sheet.totalInterest - oldEarly + early, ...(early > 0 ? { earlyInterest: early, earlyInterestFrom: w.today } : {}) };
+      l.events = [...l.events, { at, actorId: user.id, actorName: user.name, actorRole: user.role, action: 'changeFirstDue', fromStatus: l.status, toStatus: l.status, remarks: `First deduction month changed from ${formatCycle(sheet.firstDueCycle)} to ${formatCycle(firstDueCycle)}` }];
+      await this.repo.save(tx, l);
+      await this.app.audit.record(request, { action: 'loan.changeFirstDue', entity: 'loan', entityId: l.id, summary: `${user.name}: first deduction month of ${l.loanNo ?? l.applicationNo} is now ${formatCycle(firstDueCycle)}` }, tx);
+      return l;
+    });
+    return this.loans.detail(w, saved, user);
   }
 
   async act(request: FastifyRequest, id: string, action: LoanAction, input: LoanActionInput): Promise<LoanDetail> {
@@ -212,7 +259,7 @@ export class LoanWorkflowService {
           break;
         }
         case 'sendForSanction': {
-          const p = await this.sanctionPreview(w, l, input.amount, input.instalments);
+          const p = await this.sanctionPreview(w, l, input.amount, input.instalments, input.firstDueCycle);
           if (Object.keys(p.fieldErrors).length) fail('VALIDATION_ERROR', 'Check the amount and instalments.', { fieldErrors: p.fieldErrors });
           if (p.sheet.netDisbursable <= 0) fail('RULE_VIOLATION', 'Nothing would be paid out: the deductions exceed the amount.', { ruleId: 'BR-007' });
           Object.assign(l, {
@@ -261,10 +308,20 @@ export class LoanWorkflowService {
           if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Check the payment details.', { fieldErrors });
           const amount = l.sanctionedAmount ?? l.appliedAmount;
           const instalments = l.sanctionedInstalments ?? l.appliedInstalments;
-          const firstDue = toCycle(addMonths(`${toCycle(d!.date)}-01`, 1));
+          // D-124: the month the Accountant chose at assessment. It is checked again now; the sheet may have been sent since.
+          let firstDue = (l.sanctionSheet?.firstDueChosen && l.sanctionSheet.firstDueCycle) || toCycle(addMonths(`${toCycle(d!.date)}-01`, 1));
+          if (l.sanctionSheet?.firstDueChosen) {
+            const open = await this.firstDueOptions(w, m);
+            if (!open.includes(firstDue)) {
+              if (!opts.demo) fail('RULE_VIOLATION', `${formatCycle(firstDue)} is closed: that month's demand sheet has gone to the DDO or its cut-off has passed. The Accountant must change the first deduction month to ${open.map(formatCycle).join(' or ')} before this is paid.`, { ruleId: 'D-124' });
+              firstDue = open[0]!;
+            }
+          }
+          // The days before that month are charged only if the sanction was made with the setting on.
+          const early = l.sanctionSheet?.earlyInterestFrom ? earlyInterestFor(amount, l.ratePercent, d!.date, firstDue) : 0;
           l.loanNo = await this.repo.nextNumber(tx, 'loan', d!.date.slice(0, 4));
           l.disbursedOn = d!.date;
-          l.schedule = generateSchedule(amount, l.ratePercent, instalments, product.emiMethod, firstDue);
+          l.schedule = generateSchedule(amount, l.ratePercent, instalments, product.emiMethod, firstDue, early);
           l.emi = l.schedule[0]?.emi ?? l.emi;
           l.outstandingPrincipal = amount;
           const cashierSignature = actor.role === 'CASHIER' ? await this.app.signatures.signOff(actor.id, opts.demo) : undefined;

@@ -57,7 +57,7 @@ export function LoanBondPrintPage() {
               <span className="text-right">Posted in Folio No. {l.loanNo ?? '—'} · Vol. No. {(l.disbursedOn ?? l.appliedOn).slice(0, 4)}</span>
               {!salary && <span>L. No. {l.loanNo ?? l.applicationNo}</span>}
             </div>
-            <h2 className="mt-5 text-center text-card-title tracking-wide">{salary ? 'SALARY LOAN BOND' : 'ORDINARY LOAN / EDUCATION LOAN BOND'}</h2>
+            <h2 className="mt-5 text-center text-card-title tracking-wide">{salary ? 'SALARY LOAN BOND' : l.product === 'ORDINARY' || l.product === 'EDUCATION' ? 'ORDINARY LOAN / EDUCATION LOAN BOND' : `${d.product.name.toUpperCase()} BOND`}</h2>
             <p className="mt-4 text-body leading-relaxed">
               ON DEMAND {salary ? 'I promise' : 'we jointly and severally promise'} to pay the Telangana Secretariat Employees Cooperative Credit Society Ltd., Hyderabad, or order the sum of <strong>{formatINR(amount)}</strong> (Rupees {amountInWords(amount)} only) for value received in cash with interest {salary ? 'thereon ' : ''}from the date hereof until payment in full at the rate of <strong>{l.ratePercent}%</strong> per annum calculated at monthly rates.
             </p>

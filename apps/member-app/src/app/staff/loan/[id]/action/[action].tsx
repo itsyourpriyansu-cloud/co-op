@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { CircleCheck } from 'lucide-react-native';
-import { amountInWords, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { amountInWords, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { LoanActionInput, LoanDetail } from '@tgs/types';
 import { ActionAlert, ask, DoneAlert, Loaded, MoneyField, RuleChecks, useAction, useDebounced, useTodayDate } from '@/components/staff';
 import { StaffSanctionSheet } from '@/components/StaffSanctionSheet';
@@ -14,7 +14,7 @@ import { ACTION_LABEL, NEEDS_REASON, TITLES } from '@/lib/staffLoans';
 import { Alert, Button, Card, Checkbox, DateField, Header, KeyValue, MonthPicker, Screen, Section, Segmented, Text, TextField } from '@/ui';
 import { color, space } from '@/theme';
 
-const CONFIRM = new Set(['reject', 'secretarySign', 'presidentSign', 'disburse', 'sendForSanction']);
+const CONFIRM = new Set(['reject', 'secretarySign', 'presidentSign', 'disburse', 'sendForSanction', 'changeFirstDue']);
 
 export default function LoanAction() {
   const { id, action } = useLocalSearchParams<{ id: string; action: string }>();
@@ -41,10 +41,13 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
   const [reference, setReference] = useState('');
   const [payee, setPayee] = useState('');
   const [done, setDone] = useState<{ heading: string; description: string }>();
+  // D-124: the month the first instalment is taken from salary ('' = the earliest open one).
+  const [firstDue, setFirstDue] = useState(l.sanctionSheet?.firstDueChosen ? l.sanctionSheet.firstDueCycle : '');
 
   const dAmount = useDebounced(amount);
   const dInstalments = useDebounced(instalments);
-  const preview = useQuery({ queryKey: ['sanction-preview', l.id, dAmount, dInstalments], queryFn: () => api.loans.sanctionPreview(l.id, dAmount, dInstalments), enabled: action === 'sendForSanction' && dAmount > 0 && dInstalments > 0, placeholderData: (p) => p });
+  const preview = useQuery({ queryKey: ['sanction-preview', l.id, dAmount, dInstalments, firstDue], queryFn: () => api.loans.sanctionPreview(l.id, dAmount, dInstalments, firstDue || undefined), enabled: (action === 'sendForSanction' || action === 'changeFirstDue') && dAmount > 0 && dInstalments > 0, placeholderData: (p) => p });
+  const chosenDue = firstDue || preview.data?.sheet.firstDueCycle || '';
 
   const meta = TITLES[action] ?? { title: ACTION_LABEL[action] ?? action, description: '' };
   const fe = { ...(preview.data?.fieldErrors ?? {}), ...a.fields };
@@ -56,6 +59,7 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
     : action === 'ddoCertify' ? feasible
     : action === 'ddoRecordManual' ? Boolean(manual.ddoName.trim() && manual.designation.trim() && date && manual.reference.trim())
     : action === 'sendForSanction' ? Boolean(preview.data && !Object.keys(preview.data.fieldErrors).length && preview.data.sheet.netDisbursable > 0)
+    : action === 'changeFirstDue' ? Boolean(preview.data && !preview.data.fieldErrors.firstDueCycle && chosenDue && chosenDue !== l.sanctionSheet?.firstDueCycle)
     : action === 'disburse' ? Boolean(reference.trim() && date)
     : needsReason ? Boolean(remarks.trim())
     : true;
@@ -70,7 +74,9 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
       case 'ddoRecordManual':
         return { ...base, manual: { ...manual, date: date ?? '' } };
       case 'sendForSanction':
-        return { ...base, amount, instalments };
+        return { ...base, amount, instalments, ...(chosenDue ? { firstDueCycle: chosenDue } : {}) };
+      case 'changeFirstDue':
+        return { firstDueCycle: chosenDue };
       case 'disburse':
         return { ...base, disbursement: { mode, reference: reference.trim(), date: date ?? '', ...(payee.trim() ? { payee: payee.trim() } : {}) } };
       default:
@@ -84,7 +90,7 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
       if (!(await ask(meta.title, message, ACTION_LABEL[action] ?? 'Confirm'))) return;
     }
     await a.run(async () => {
-      const next = await api.loans.act(l.id, action, input());
+      const next = action === 'changeFirstDue' ? await api.loans.changeFirstDue(l.id, chosenDue) : await api.loans.act(l.id, action, input());
       setDone({ heading: `${ACTION_LABEL[action] ?? action} · done`, description: `${next.loan.loanNo ?? next.loan.applicationNo} is now ${next.waitingOn ? `with ${next.waitingOn}` : next.loan.status.toLowerCase().replace(/_/g, ' ')}` });
     });
   };
@@ -159,7 +165,29 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
         </Section>
       ) : null}
 
-      {sheet && ['sendForSanction', 'secretarySign', 'presidentSign', 'disburse', 'sendBack'].includes(action) ? (
+      {action === 'sendForSanction' || action === 'changeFirstDue' ? (
+        <Section title="First deduction from salary">
+          <View style={{ gap: space[4] }}>
+            <Segmented label="Month of the first instalment" value={chosenDue} options={(preview.data?.firstDueOptions ?? (chosenDue ? [chosenDue] : [])).map((c) => ({ value: c, label: formatCycle(c) }))} onChange={setFirstDue} />
+            <Text role="caption" tone="tertiary">
+              Only months whose demand sheet has not gone to the DDO are offered. The days from payment to the 1st of that month are charged as interest on the first deduction.
+            </Text>
+            {fe.firstDueCycle ? (
+              <Text role="caption" tone="danger">
+                {fe.firstDueCycle}
+              </Text>
+            ) : null}
+            {action === 'changeFirstDue' && l.sanctionSheet ? (
+              <Text role="body">
+                Now: {formatCycle(l.sanctionSheet.firstDueCycle)}
+                {preview.data?.sheet.earlyInterest ? ` · interest for the days before it about ${formatINR(preview.data.sheet.earlyInterest)} (worked out again when paid)` : ''}
+              </Text>
+            ) : null}
+          </View>
+        </Section>
+      ) : null}
+
+      {sheet && action !== 'changeFirstDue' && ['sendForSanction', 'secretarySign', 'presidentSign', 'disburse', 'sendBack'].includes(action) ? (
         <Section title="For office use · sanction sheet">
           <StaffSanctionSheet sheet={sheet} />
         </Section>
@@ -189,6 +217,11 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
             <Card>
               <KeyValue label={`Pay to ${d.member.name}${l.parentLoanId ? ' (after settling the old loan)' : ''}`} value={formatINR(l.netDisbursable ?? d.preview.netDisbursable)} emphasis />
             </Card>
+            {l.sanctionSheet?.firstDueChosen ? (
+              <Text role="caption" tone="tertiary">
+                First deduction from {formatCycle(l.sanctionSheet.firstDueCycle)}. If that month's sheet has gone to the DDO, the Accountant must move it first.
+              </Text>
+            ) : null}
           </View>
         </Section>
       ) : null}

@@ -10,6 +10,7 @@ import './index.css';
 import { AuthProvider } from './app/auth';
 import { router } from './app/router';
 import { AppThemeProvider } from './app/theme';
+import { FileViewerHost } from './components/FileViewer';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,7 @@ createRoot(root).render(
       <AuthProvider>
         <AppThemeProvider>
           <RouterProvider router={router} />
+          <FileViewerHost />
         </AppThemeProvider>
       </AuthProvider>
     </QueryClientProvider>

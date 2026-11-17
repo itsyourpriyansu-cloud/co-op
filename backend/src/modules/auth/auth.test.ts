@@ -4,6 +4,11 @@ import { generate } from 'otplib';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { bearer, reseed, signInAs, STAFF_PASSWORD } from '../../../tests/helpers/auth';
 import { buildTestApp } from '../../../tests/helpers/test-app';
+import { loadEnv } from '../../config/env';
+
+// The password-only path still exists for a role outside TOTP_ROLES; these tests keep the earlier
+// signer-only list to cover it. D-127 makes every staff role use an authenticator by default (tested below).
+const SIGNERS_ONLY = { TOTP_ROLES: 'SUPER_ADMIN,SECRETARY,PRESIDENT' };
 
 const staffLogin = (app: FastifyInstance, username: string, password = STAFF_PASSWORD) =>
   app.inject({ method: 'POST', url: '/api/v1/auth/staff/login', payload: { username, password } });
@@ -11,7 +16,7 @@ const staffLogin = (app: FastifyInstance, username: string, password = STAFF_PAS
 describe('staff sign-in (P1a)', () => {
   let app: FastifyInstance;
   beforeAll(async () => {
-    app = await buildTestApp();
+    app = await buildTestApp(SIGNERS_ONLY);
   });
   beforeEach(() => reseed(app));
   afterAll(() => app.close());
@@ -84,10 +89,31 @@ describe('staff sign-in (P1a)', () => {
   });
 });
 
+describe('authenticator for every staff role (D-127)', () => {
+  it('is the default for all six staff roles, and members are never asked', () => {
+    const { TOTP_ROLES: _ignored, ...env } = process.env;
+    expect(loadEnv(env).TOTP_ROLES.sort()).toEqual(['ACCOUNTANT', 'CASHIER', 'DDO', 'PRESIDENT', 'SECRETARY', 'SUPER_ADMIN']);
+  });
+
+  it('asks the Accountant, the Cashier and a DDO to set up an authenticator', async () => {
+    const app = await buildTestApp({ TOTP_ROLES: 'SUPER_ADMIN,ACCOUNTANT,SECRETARY,PRESIDENT,CASHIER,DDO' });
+    try {
+      await reseed(app);
+      for (const user of ['accounts', 'cashier', 'ddo.fin']) {
+        const r = (await staffLogin(app, user)).json();
+        expect(r.status).toBe('TOTP_SETUP_REQUIRED');
+        expect(r.session).toBeUndefined();
+      }
+    } finally {
+      await app.close();
+    }
+  });
+});
+
 describe('tokens (P1a)', () => {
   let app: FastifyInstance;
   beforeAll(async () => {
-    app = await buildTestApp();
+    app = await buildTestApp(SIGNERS_ONLY);
     await reseed(app);
   });
   afterAll(() => app.close());

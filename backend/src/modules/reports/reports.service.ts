@@ -207,7 +207,7 @@ export class ReportsService {
         ];
         const heads = (await this.app.collections.repo.allSheetHeads()).filter((s) => s.cycle === cycle && (!departmentId || s.departmentId === departmentId));
         const rows = heads
-          .map((s) => ({ department: dept(s.departmentId), members: lines.filter((l) => l.sheetId === s.id).length, demand: s.totalDemand, recovered: s.totalRecovered, unpaid: s.totalDemand - s.totalRecovered, rate: s.totalDemand ? s.totalRecovered / s.totalDemand : 0 }) as Row)
+          .map((s) => ({ department: `${dept(s.departmentId)}${s.supplementNo ? ` (supplement ${s.supplementNo})` : ''}`, members: lines.filter((l) => l.sheetId === s.id).length, demand: s.totalDemand, recovered: s.totalRecovered, unpaid: s.totalDemand - s.totalRecovered, rate: s.totalDemand ? s.totalRecovered / s.totalDemand : 0 }) as Row)
           .sort((a, b) => Number(b.unpaid) - Number(a.unpaid));
         groups = [{ label: '', rows, subtotal: totalsOf(rows, columns) }];
         break;

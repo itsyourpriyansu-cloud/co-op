@@ -8,7 +8,7 @@ type SheetRow = typeof demandSheets.$inferSelect;
 type LineRow = typeof demandLines.$inferSelect;
 export type SheetHead = Omit<DemandSheet, 'lines'>;
 
-const toSheet = (r: SheetRow): SheetHead => ({ ...r.data, status: r.status, totalDemand: r.totalDemand, totalRecovered: r.totalRecovered });
+const toSheet = (r: SheetRow): SheetHead => ({ ...r.data, status: r.status, totalDemand: r.totalDemand, totalRecovered: r.totalRecovered, ...(r.supplementNo ? { supplementNo: r.supplementNo } : {}) });
 const toLine = (l: LineRow): DemandLine => ({ memberId: l.memberId, components: l.components, totalDemand: l.totalDemand, ...(l.recovered !== null ? { recovered: l.recovered } : {}), ...(l.entry ?? {}) });
 /** The line's P7b entry fields, or null when nothing was entered. */
 const entryOf = (l: DemandLine) => (l.deducted !== undefined || l.note || l.penal ? { ...(l.deducted !== undefined ? { deducted: l.deducted } : {}), ...(l.entrySource ? { entrySource: l.entrySource } : {}), ...(l.enteredByName ? { enteredByName: l.enteredByName } : {}), ...(l.enteredAt ? { enteredAt: l.enteredAt } : {}), ...(l.note ? { note: l.note } : {}), ...(l.penal ? { penal: l.penal } : {}) } : null);
@@ -70,8 +70,20 @@ export class CollectionsRepository {
 
   async insertSheet(tx: Tx, s: DemandSheet): Promise<void> {
     const { lines, ...head } = s;
-    await tx.insert(demandSheets).values({ id: s.id, cycle: s.cycle, departmentId: s.departmentId, status: s.status, totalDemand: s.totalDemand, totalRecovered: s.totalRecovered, data: head });
+    await tx.insert(demandSheets).values({ id: s.id, cycle: s.cycle, departmentId: s.departmentId, status: s.status, totalDemand: s.totalDemand, totalRecovered: s.totalRecovered, supplementNo: s.supplementNo ?? 0, data: head });
     for (let i = 0; i < lines.length; i += 500) await tx.insert(demandLines).values(lines.slice(i, i + 500).map((l) => ({ sheetId: s.id, memberId: l.memberId, cycle: s.cycle, components: l.components, totalDemand: l.totalDemand, recovered: l.recovered ?? null })));
+  }
+
+  /** D-124: every member already on a sheet of this cycle (optionally leaving one sheet out). */
+  async memberIdsOnCycle(cycle: string, exceptSheetId?: string): Promise<Set<string>> {
+    const rows = await this.db.select({ memberId: demandLines.memberId }).from(demandLines).where(and(eq(demandLines.cycle, cycle), exceptSheetId ? ne(demandLines.sheetId, exceptSheetId) : undefined));
+    return new Set(rows.map((r) => r.memberId));
+  }
+
+  /** D-124 Regenerate: the sheet's member lines are rebuilt (only while nothing is recorded on them). */
+  async replaceLines(tx: Tx, sheetId: string, cycle: string, lines: DemandLine[]): Promise<void> {
+    await tx.delete(demandLines).where(eq(demandLines.sheetId, sheetId));
+    for (let i = 0; i < lines.length; i += 500) await tx.insert(demandLines).values(lines.slice(i, i + 500).map((l) => ({ sheetId, memberId: l.memberId, cycle, components: l.components, totalDemand: l.totalDemand, recovered: null })));
   }
 
   async saveSheetHead(tx: Tx, s: SheetHead): Promise<void> {

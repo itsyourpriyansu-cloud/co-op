@@ -69,8 +69,20 @@ export async function prepareSignature(file: File): Promise<string> {
   throw new Error('This picture is too detailed. Crop it to just your signature on plain white paper and try again.');
 }
 
-/** G1 (D-111): opens an uploaded document in a new tab (a blob URL; browsers block data: URLs there). */
+let showFile: ((fileId: string) => void) | undefined;
+
+/** The page-level viewer (components/FileViewer.tsx) registers here; returns the unregister. */
+export function onOpenFile(show: (fileId: string) => void): () => void {
+  showFile = show;
+  return () => {
+    if (showFile === show) showFile = undefined;
+  };
+}
+
+/** G1 (D-111, D-129): shows an uploaded document in a panel on the same page. */
 export async function openFile(fileId: string): Promise<void> {
+  if (showFile) return showFile(fileId);
+  // No viewer mounted (should not happen): fall back to the old new-tab behaviour.
   const tab = window.open('', '_blank');
   const f = await api.documents.file(fileId);
   const url = URL.createObjectURL(await (await fetch(f.dataUrl)).blob());

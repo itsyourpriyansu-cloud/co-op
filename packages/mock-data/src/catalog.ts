@@ -99,13 +99,16 @@ export const SETTINGS: SocietySettings = {
   demandSendByDays: 4,
   // R1 [P]: 0 until the society sets a minimum take-home pay (D-088).
   minTakeHomePay: 0,
+  // D-124 [P]: first deduction also pays interest for the days before its month; a late joiner does not owe the missed month.
+  earlyInterestEnabled: true,
+  lateJoinerOwesMissedMonth: false,
   fdMaturityJobEnabled: true,
   fdMaturityRunHour: 1,
   fdPrematureWithdrawalEnabled: true,
   fdPrematurePenaltyMethod: 'RATE_CUT',
   // F-06 placeholder (D-093): the Admin sets the real rate.
   fdPrematurePenaltyPercent: 1,
-  placeholders: ['fdPrematurePenaltyPercent', 'holidays', 'shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'shareDepositRatePercent', 'depositInterestBasis', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'demandSendByDays', 'minTakeHomePay', 'loanProducts', 'applicantDataRetentionMonths'],
+  placeholders: ['fdPrematurePenaltyPercent', 'holidays', 'shareValue', 'insurance.collectionMonth', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'retirementAge', 'fdSlabs', 'savingsRatePercent', 'fdMinAmount', 'crdRatePercent', 'srdsRatePercent', 'shareDepositRatePercent', 'depositInterestBasis', 'minShares', 'maxShares', 'admissionFee', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent', 'demandSendByDays', 'minTakeHomePay', 'loanProducts', 'applicantDataRetentionMonths', 'earlyInterestEnabled', 'lateJoinerOwesMissedMonth'],
 };
 
 export const LOAN_PURPOSES = {

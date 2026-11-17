@@ -32,10 +32,12 @@ export const demandSheets = pgTable(
     status: text('status').$type<DemandSheetStatus>().notNull(),
     totalDemand: money('total_demand').notNull(),
     totalRecovered: money('total_recovered').notNull(),
+    /** D-124: 0 = the month's own sheet; 1, 2 … = supplementary sheets for members it missed. */
+    supplementNo: integer('supplement_no').notNull().default(0),
     data: jsonb('data').$type<Omit<DemandSheet, 'lines'>>().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('demand_sheets_cycle_dept_idx').on(t.cycle, t.departmentId), index('demand_sheets_status_idx').on(t.status)],
+  (t) => [uniqueIndex('demand_sheets_cycle_dept_idx').on(t.cycle, t.departmentId, t.supplementNo), index('demand_sheets_status_idx').on(t.status)],
 );
 
 export const demandLines = pgTable(

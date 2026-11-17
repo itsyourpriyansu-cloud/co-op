@@ -93,7 +93,7 @@ Legend: **F** full · **V** view · **A** stage action · **—** none · *own* 
 | Topic | Rule in the production backend |
 |---|---|
 | Staff sign-in | User ID + password (argon2id). 5 wrong tries lock the account for 15 minutes |
-| Authenticator (TOTP) | Required for Super Admin, Secretary and President (`TOTP_ROLES`). First sign-in enrols by QR code; the Super Admin can reset it |
+| Authenticator (TOTP) | Required for every staff role: Super Admin, Accountant, Secretary, President, Cashier and DDO (`TOTP_ROLES`, D-127). First sign-in enrols by QR code; the Super Admin can reset it. Members sign in with mobile + OTP |
 | Member / applicant sign-in | Mobile number + one-time code (D-067). New mobiles sign up as applicants |
 | Permission matrix | Stored in `role_permissions`, editable by the Super Admin (`PUT /permissions/:role`). The Super Admin always keeps settings.view, settings.edit and users.manage |
 | Sessions | Ended at once when a user is deactivated, changes role, or has their password or authenticator reset |

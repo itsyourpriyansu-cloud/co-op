@@ -1,5 +1,6 @@
 # 10 · Workflows & State Machines
 
+> Version 0.6 · 2026-11-16 · first deduction month and early interest (§1), Regenerate and supplementary sheets (§4), D-124
 > Version 0.5 · 2026-11-13 · FD renewal (D-120), receipt cancellation (D-119), notices sent at each step (D-121)
 > Version 0.4 · 2026-10-24
 > Reconciles the flow diagrams (D-007) with the paper forms (doc 16): sequential Secretary → President sign-off (D-027), per-product stages (D-030), membership join pipeline (D-026), FD acceptance.
@@ -63,6 +64,8 @@ stateDiagram-v2
 | ACTIVE | `close` | CLOSED | system / R2 | — | P |
 | ACTIVE | top-up disbursed | CLOSED_BY_TOPUP | system | — | A §3.3 |
 | SURETY_PENDING, ACCOUNTANT_REVIEW, RETURNED | `withdraw` | WITHDRAWN | Applicant | reason | P |
+
+**First deduction month (D-124):** `sendForSanction` carries `firstDueCycle`, one of the two earliest open months (`SanctionPreview.firstDueOptions`). `disburse` checks it again and refuses a closed month; the Accountant then uses `POST /loans/:id/first-deduction` (only at SANCTIONED, no new signatures). The schedule starts in that month and instalment 1 carries the early interest (BR-006).
 
 Side effects on `disburse`: assign Loan No. → generate schedule (BR-006) → credit share deposit (BR-004) → close the parent loan for a top-up (BR-007) → notify member and sureties.
 
@@ -153,6 +156,20 @@ flowchart TD
   Q --> Z[RECOVERY_POSTED → Dues / Defaulters / Less Collections]
 ```
 New members with "share by salary deduction" get a SHARE_CAPITAL line on their first sheet [P].
+
+**Members the sheet missed (D-124):**
+```mermaid
+flowchart TD
+  G[GENERATED] --> Q{Anyone missing?}
+  Q -->|yes, not certified| R[Regenerate: rebuild the lines, audited]
+  R --> G
+  Q -->|no| C[Certify]
+  C --> L{Member added or changed later?}
+  L -->|yes| S[Supplementary sheet Supp-n: only members on no sheet of the cycle]
+  S --> C2[Same steps: Certify → Send → DDO entry → Post]
+  L -->|no| N[Next month's sheet]
+```
+Regenerate is refused once any payment or deduction is recorded on the sheet. One unsent supplement at a time.
 When the sheet goes to the DDO, each member with a demand is told in the app what will be cut from the salary (D-121).
 
 ## 5. Counter receipt (ST-45)

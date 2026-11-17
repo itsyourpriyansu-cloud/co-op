@@ -48,10 +48,10 @@ const EnvSchema = z.object({
   /** G4 (D-114): staff sign-ins (console and staff screens) end after this many days without use. */
   STAFF_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).default(7),
   OTP_TTL_SECONDS: z.coerce.number().int().min(60).default(300),
-  /** Console roles that must use an authenticator code (Super Admin and the signers, D-068). */
+  /** Console roles that must use an authenticator code: every staff role (D-127; was Super Admin and the signers, D-068). */
   TOTP_ROLES: z
     .string()
-    .default('SUPER_ADMIN,SECRETARY,PRESIDENT')
+    .default('SUPER_ADMIN,ACCOUNTANT,SECRETARY,PRESIDENT,CASHIER,DDO')
     .transform((v) => v.split(',').map((r) => r.trim()).filter(Boolean)),
   /** Demo sign-in (persona list, fixed OTP 123456). Always off in production. */
   DEMO_MODE: z

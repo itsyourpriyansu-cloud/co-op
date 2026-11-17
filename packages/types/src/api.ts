@@ -718,6 +718,8 @@ export interface LoanActionInput {
   /** ST-26 assessment: may only reduce. */
   amount?: Paise;
   instalments?: number;
+  /** D-124 ST-26: the month the first instalment is deducted from salary (one of `SanctionPreview.firstDueOptions`). */
+  firstDueCycle?: Cycle;
   /** ST-28 disbursement. */
   disbursement?: { mode: 'NEFT' | 'CHEQUE' | 'TRANSFER'; reference: string; date: ISODate; /** F7 (D-099): pay someone else, on the borrower's authorisation. */ payee?: string };
 }
@@ -728,6 +730,8 @@ export interface SanctionPreview {
   maxInstalments: number;
   /** D-123: the periods the sanctioning officer may pick: the product's, not above what was applied for or this member's service allows. */
   instalmentOptions: number[];
+  /** D-124: the first-deduction months still open for this member's department (sheet not yet sent, before the cut-off), earliest first. */
+  firstDueOptions: Cycle[];
 }
 
 /** ST-02 Work Queue item: anything waiting on the signed-in user. */
@@ -895,6 +899,8 @@ export interface DemandSheetRow {
   departmentId: string;
   departmentName: string;
   ddoName: string;
+  /** D-124: 1, 2 … for a supplementary sheet row; missing for the month's own sheet. */
+  supplementNo?: number;
   status: DemandSheetStatus;
   members: number;
   demand: Paise;
@@ -930,6 +936,19 @@ export interface DemandPreviewRow {
   total: Paise;
   alreadyGenerated: boolean;
   warnings: string[];
+}
+
+/** D-124: what Regenerate (before Certify) or a supplementary sheet would change, shown before it is done. */
+export interface DemandTopUpPreview {
+  cycle: Cycle;
+  departmentId: string;
+  /** Members that would be added; for Regenerate also `removed` (left the department / society). */
+  added: Array<{ memberId: string; generalNo: string; name: string; demand: Paise }>;
+  removed: Array<{ memberId: string; generalNo: string; name: string }>;
+  oldTotal: Paise;
+  newTotal: Paise;
+  /** Why it cannot be done now, if so. */
+  blocked?: string;
 }
 
 export interface DemandPreview {

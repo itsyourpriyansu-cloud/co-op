@@ -16,6 +16,7 @@ export function StaffSanctionSheet({ sheet }: { sheet: SanctionSheet }) {
         {amountInWords(sheet.amount)}
       </Text>
       <KeyValue label="Instalments" value={`${sheet.instalments} × from ${formatCycle(sheet.firstDueCycle)} at ${sheet.ratePercent}%`} />
+      {sheet.earlyInterest ? <KeyValue label="Interest for the days before the first month" value={formatINR(sheet.earlyInterest)} /> : null}
       <KeyValue label="EMI (first → last)" value={sheet.lastEmi !== sheet.emi ? `${formatINR(sheet.emi)} → ${formatINR(sheet.lastEmi)}` : formatINR(sheet.emi)} />
       <KeyValue label="Total interest" value={formatINR(sheet.totalInterest)} />
       <Divider />

@@ -1,5 +1,6 @@
 # 11 · Service / API Contracts
 
+> v0.17 · 2026-11-16 · D-124: `GET /loans/:id/sanction-preview` takes `firstDueCycle` and returns `firstDueOptions`; `POST /loans/:id/first-deduction`; `GET /demand/sheets/:id/regenerate-preview`, `POST /demand/sheets/:id/regenerate`, `GET /demand/supplementary-preview`, `POST /demand/supplementary`; `LoanActionInput.firstDueCycle`; `DemandSheetRow.supplementNo`; settings `earlyInterestEnabled`, `lateJoinerOwesMissedMonth`.
 > v0.16 · 2026-11-13 · G9 (D-119 … D-121): receipt cancellation, deposit action `renew`, outbox statuses, failed deliveries and retry, live stream, WhatsApp webhook. v0.15 · 2026-11-12 · G5 (D-115): `OutboxMessage.status` SENT / `failed`; `POST /auth/otp/start` may answer RULE_VIOLATION `OTP_NOT_SENT`. v0.14 · G4 (D-114): `GET /app/config`, `POST` / `DELETE /me/push-token`. v0.13 · G2 (D-112): `/accounts/heads`, `/accounts/vouchers`, `/accounts/year-end/*`; 11 accounting reports. v0.12 · G1 (D-111): `Idempotency-Key` on POSTs; `GET/POST /loans/:id/closure`; `GET /audit`, `GET /audit/:id`; `GET/POST /me/documents`, `POST /members/:id/documents`, `GET /files/:id`; `runMaturity` returns `interestPaid`. Backend only (the mock API is the prototype demo, D-100).
 > Version 0.10 · 2026-10-29 · `GET /health` also answered by the backend (`service: tgseccsl-backend`, plus `database` status, D-073) · Status: **[P] HTTP contracts served by `apps/mock-api` (D-021)** and consumed by both apps through `packages/api-client`.
 > v0.11 · 2026-10-29 · Backend auth endpoints (P1a, D-076): staff login + TOTP, member mobile OTP, refresh/logout, users reset-password/reset-totp, PUT /permissions/:role. Contracts and examples in the backend OpenAPI at `/docs`. `Session` gains optional `refreshToken`, `expiresInSeconds`.
@@ -245,7 +246,8 @@ Hosting: the API reads `PORT`, `HOST`, `MOCK_*` and `CORS_ORIGIN` (see `apps/moc
 | Endpoint | Who | Notes |
 |---|---|---|
 | `GET /work-queue` | staff | `WorkQueue`: loans, joining, change requests, DDO mandates waiting on the user |
-| `GET /loans/:id/sanction-preview?amount&instalments` | staff | `SanctionPreview` (ST-26) |
+| `GET /loans/:id/sanction-preview?amount&instalments&firstDueCycle` | staff | `SanctionPreview` (ST-26), now with `firstDueOptions` (D-124) |
+| `POST /loans/:id/first-deduction` `{ firstDueCycle }` | Accountant | `LoanDetail`. Only while SANCTIONED; the month must be open (D-124) |
 | `POST /loans/:id/actions/:action` `LoanActionInput` | stage owner (`loanActionsFor`) | forward · returnToMember · reject · ddoCertify · ddoRecordManual · sendForSanction · secretarySign · presidentSign · sendBack · disburse |
 | `POST /loans/:id/demo-act` | staff with `demo.control` | Completes the stage as its owner (incl. all pending sureties) |
 | `GET /me/surety-requests` | member | `SuretyRequests` (requests, guaranteeing) |
@@ -261,6 +263,8 @@ Served by `apps/mock-api/src/collections.ts`, called through `api.demand.*`, `ap
 |---|---|---|
 | `demand.overview(cycle?)` | GET /demand | One row per department (status incl. NOT_GENERATED), totals, `canGenerate`, DDO scoped |
 | `demand.preview(cycle, ids)` / `generate` | GET /demand/preview · POST /demand/generate | Current or next cycle only; Accountant only |
+| `demand.regeneratePreview(id)` / `regenerate(id)` | GET /demand/sheets/:id/regenerate-preview · POST …/regenerate | Accountant only; a sheet not certified, with nothing recorded on it (D-124) |
+| `demand.supplementaryPreview(cycle, departmentId)` / `createSupplementary` | GET /demand/supplementary-preview · POST /demand/supplementary | Accountant only; after Certify, members on no sheet of the cycle (D-124) |
 | `demand.sheet(id)` / `act` / `demoAct` | GET /demand/sheets/:id · POST …/actions/:action · POST …/demo-act | certify → sendToDdo → postRecovery `{ recovered: {memberId: paise} }` (missing = full; more than demand = 400) |
 | `receipts.list/get/create` | GET/POST /receipts · GET /receipts/:id | Tabs ALL · SALARY_RECOVERY · COUNTER, search, paging; create = DUES (arrears) or SHARE_CAPITAL; CASH needs matching denominations (BR-029) |
 | `receipts.dues(memberId)` | GET /members/:id/dues | Unpaid by month and head (priority order) + first-demand shares |

@@ -98,7 +98,7 @@ export default function StaffLogin() {
     const isSetup = step.kind === 'setup';
     return (
       <Screen header={<Header onBack={restart} />} footer={<Button text={isSetup ? 'Confirm and sign in' : 'Verify and sign in'} size="lg" fullWidth loading={busy === 'code'} disabled={code.length !== 6 || busy !== null} onPress={() => submitCode()} />}>
-        <Hero icon={ShieldCheck} title={isSetup ? 'Set up an authenticator app' : 'Enter your authenticator code'} subtitle={isSetup ? 'Your role signs approvals, so the society asks for a second step. Use Google Authenticator, Microsoft Authenticator or any TOTP app.' : 'Open the authenticator app and type the 6-digit code shown for TGSECCSL.'} />
+        <Hero icon={ShieldCheck} title={isSetup ? 'Set up an authenticator app' : 'Enter your authenticator code'} subtitle={isSetup ? "Staff accounts handle members' money, so the society asks for a second step. Use Google Authenticator, Microsoft Authenticator or any TOTP app." : 'Open the authenticator app and type the 6-digit code shown for TGSECCSL.'} />
         {step.kind === 'setup' ? (
           <Card>
             <View style={{ gap: space[6] }}>

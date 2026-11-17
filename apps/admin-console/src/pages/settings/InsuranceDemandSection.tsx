@@ -8,7 +8,9 @@ import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, useEdita
 import { api } from '@/lib/api';
 import { MONTH_ITEMS, isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'insurance' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'defaulterCycles' | 'suretyRecoveryAfterCycles' | 'penalGraceDays' | 'demandSendByDays' | 'minTakeHomePay'>;
+type Values = Pick<SocietySettings, 'insurance' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'defaulterCycles' | 'suretyRecoveryAfterCycles' | 'penalGraceDays' | 'demandSendByDays' | 'minTakeHomePay' | 'earlyInterestEnabled' | 'lateJoinerOwesMissedMonth'>;
+
+const ON_OFF = [{ items: [{ label: 'On', value: 'on' }, { label: 'Off', value: 'off' }] }];
 
 const HEAD_LABEL: Record<DemandHead, string> = {
   RRF: 'RRF',
@@ -25,7 +27,7 @@ const HEAD_LABEL: Record<DemandHead, string> = {
 export function InsuranceDemandSection({ bundle }: { bundle: SettingsBundle }) {
   const ro = !bundle.canEdit;
   const s = bundle.settings;
-  const form = useEditable<Values>({ insurance: s.insurance, rrfMonthly: s.rrfMonthly, crdMonthly: s.crdMonthly, srdsMonthly: s.srdsMonthly, defaulterCycles: s.defaulterCycles, suretyRecoveryAfterCycles: s.suretyRecoveryAfterCycles, penalGraceDays: s.penalGraceDays, demandSendByDays: s.demandSendByDays, minTakeHomePay: s.minTakeHomePay });
+  const form = useEditable<Values>({ insurance: s.insurance, rrfMonthly: s.rrfMonthly, crdMonthly: s.crdMonthly, srdsMonthly: s.srdsMonthly, defaulterCycles: s.defaulterCycles, suretyRecoveryAfterCycles: s.suretyRecoveryAfterCycles, penalGraceDays: s.penalGraceDays, demandSendByDays: s.demandSendByDays, minTakeHomePay: s.minTakeHomePay, earlyInterestEnabled: s.earlyInterestEnabled, lateJoinerOwesMissedMonth: s.lateJoinerOwesMissedMonth });
   const save = useSettingsSave(api.settings.updateValues, 'Demand rules saved');
   const v = form.draft!;
   const set = (patch: Partial<Values>) => form.setDraft({ ...v, ...patch });
@@ -55,6 +57,11 @@ export function InsuranceDemandSection({ bundle }: { bundle: SettingsBundle }) {
       <FormSection title="Sending and deductions" description="The sheet must reach the DDO this many days before the 1st (society: 3–5). A deduction may never leave the member less than the minimum take-home pay (R1)." tag={ph('demandSendByDays') ?? ph('minTakeHomePay')} columns={3}>
         <NumberField label="Send to the DDO" name="demandSendByDays" value={v.demandSendByDays} onChange={(demandSendByDays) => set({ demandSendByDays })} errors={errors} unit="days before the 1st" disabled={ro} />
         <MoneyField label="Minimum take-home pay" name="minTakeHomePay" value={v.minTakeHomePay} onChange={(minTakeHomePay) => set({ minTakeHomePay })} errors={errors} disabled={ro} hint="₹0 = only the salary limit applies" />
+      </FormSection>
+
+      <FormSection title="Late loans and late joiners" description="D-124. Interest for the days between payment and the 1st of a new loan's first deduction month is added to that first deduction. A member who joined after the month's sheet was made is added on a supplementary sheet; with the second switch off they do not owe that month's RRF, CRD or insurance." tag={ph('earlyInterestEnabled') ?? ph('lateJoinerOwesMissedMonth')}>
+        <SingleSelectV2 label="Interest for the days before the first month" placeholder="Choose" items={ON_OFF} selected={v.earlyInterestEnabled ? 'on' : 'off'} onSelect={(x) => set({ earlyInterestEnabled: x === 'on' })} disabled={ro} />
+        <SingleSelectV2 label="Late joiner owes the missed month" placeholder="Choose" items={ON_OFF} selected={v.lateJoinerOwesMissedMonth ? 'on' : 'off'} onSelect={(x) => set({ lateJoinerOwesMissedMonth: x === 'on' })} disabled={ro} />
       </FormSection>
 
       <FormSection title="Penal interest" description="BR-012 (F-06): simple interest per day on the unpaid loan instalment only, from the cycle's last day plus these grace days, until paid. The rate is set per loan product (Loan products)." tag={ph('penalGraceDays')}>

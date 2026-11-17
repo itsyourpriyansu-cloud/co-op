@@ -37,8 +37,11 @@ export function instalmentChoices(options: number[], leftoverMonths: number): Ar
 
 const cycleOf = (iso: ISODate): Cycle => iso.slice(0, 7);
 
-/** BR-006: repayment schedule. Components are rounded to rupees; the last row absorbs rounding. */
-export function generateSchedule(principal: Paise, annualRatePercent: number, instalments: number, method: EmiMethod, firstDueCycle: Cycle): ScheduleRow[] {
+/**
+ * BR-006: repayment schedule. Components are rounded to rupees; the last row absorbs rounding.
+ * D-124: `earlyInterest` (days before the first deduction month) is added to instalment 1 only.
+ */
+export function generateSchedule(principal: Paise, annualRatePercent: number, instalments: number, method: EmiMethod, firstDueCycle: Cycle, earlyInterest: Paise = 0): ScheduleRow[] {
   if (principal <= 0 || instalments <= 0) return [];
   const r = annualRatePercent / 1200;
   const amortizedEmi = r === 0 ? principal / instalments : (principal * r * (1 + r) ** instalments) / ((1 + r) ** instalments - 1);
@@ -53,15 +56,17 @@ export function generateSchedule(principal: Paise, annualRatePercent: number, in
     let principalPart = method === 'AMORTIZED' ? emiRounded - interest : fixedPrincipal;
     if (isLast || principalPart > opening) principalPart = opening;
     const closing = opening - principalPart;
+    const early = i === 1 && earlyInterest > 0 ? earlyInterest : 0;
     rows.push({
       installmentNo: i,
       dueCycle: cycleOf(addMonths(start, i - 1)),
       opening,
-      interest,
+      interest: interest + early,
       principal: principalPart,
-      emi: interest + principalPart,
+      emi: interest + early + principalPart,
       closing,
       paidStatus: 'UNPAID',
+      ...(early ? { earlyInterest: early } : {}),
     });
     opening = closing;
   }

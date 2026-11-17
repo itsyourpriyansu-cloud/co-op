@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.20 · 2026-11-16 · BR-006 first deduction month and early interest, BR-030 Regenerate and supplementary sheets (D-124).
 > Version 0.19 · 2026-11-14 · BR-016 / BR-022 tenure is one of the Admin's periods (D-123).
 > Version 0.18 · 2026-11-13 · BR-051 receipt cancellation, BR-052 FD renewal, BR-053 notification delivery (G9, D-119 … D-121).
 > Version 0.17 · 2026-11-12 · BR-050 personal data (G7, D-117). v0.16: BR-049 go-live data import (G6, D-116). v0.15: BR-048 app security and versions (G4, D-114). v0.14: BR-044 office vouchers, BR-045 annual interest, BR-046 dividend, BR-047 year close and lock (G2, D-112). v0.13: BR-040 … BR-043 (G1, D-111).
@@ -80,6 +81,7 @@ The agreement says "Reducing Balance (Reducing Principal) method". Two common in
 
 - The engine implements both. Default placeholder = `EQUAL_PRINCIPAL` (closest to the literal "Reducing Principal" wording) until Q-302 is answered.
 - Rounding [P]: instalment components rounded to the nearest rupee. The final instalment absorbs the rounding difference.
+- **First deduction month and early interest (D-124).** The Accountant chooses at Assessment which month the first instalment is taken from salary: one of the two earliest months whose department sheet is not yet certified and whose cut-off (the send-by date, `demandSendByDays` before the 1st) has not passed. It is checked again at payment. `earlyInterest = round(sanctioned × rate × days ÷ 36500)`, with `days` from the payment date to the 1st of that month (0 if that date has passed), added to instalment 1 only; switch `earlyInterestEnabled` (on, [P]). Example: ₹1,00,000 at 11% paid 28 Nov: first deduction Dec → 3 days = ₹90; first deduction Jan → 34 days = ₹1,025. The net payout, the old loan's settlement in a top-up (BR-007) and the share deposit (BR-004) do not change. Loans sanctioned before D-124 keep "the month after payment" and no early interest.
 
 ## BR-007 Renewal / Top-up settlement [A]
 > "Outstanding interest will be calculated up to the current date before settlement of the existing loan."
@@ -229,7 +231,8 @@ Eligible if **all** hold: (1) employed in a Telangana Secretariat department; (2
 `Σ(denomination × count) = amount`. Default denominations 500/200/100/50/20/10 (configurable). Coins are not listed on the form [P: add "coins" row].
 
 ### BR-030 Demand certification [PF F6]
-A sheet must be `CERTIFIED` (officer name + time) before `SENT_TO_DDO`. Certified sheets are immutable (corrections via a supplementary sheet [P]).
+A sheet must be `CERTIFIED` (officer name + time) before `SENT_TO_DDO`. Certified sheets are immutable.
+**D-124 members the sheet missed:** before Certify the Accountant may **Regenerate** the sheet (rebuild its lines; refused once any payment or deduction is recorded on it). After Certify a **supplementary sheet** (numbered) carries only the members no sheet of that cycle has, through the same steps; the month's own sheet is never edited and a member is never on two sheets of a month. A member who joined after the month's sheet was made owes only share capital, loans and surety dues on it, unless `lateJoinerOwesMissedMonth` is on ([P], default off). After a top-up closes a loan, Regenerate the open sheet so the closed loan's instalment drops off it.
 
 ### BR-031 Sequential sign-off [PF + D-027]
 Steps come from config (default SECRETARY → PRESIDENT). Each step needs a user with that title. The same user cannot sign two steps. A rejection at any step is terminal for loans and memberships, and triggers a refund for FDs.

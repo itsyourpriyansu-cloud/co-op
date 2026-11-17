@@ -8,7 +8,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, HandCoins, Undo2 } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import { formatDisplayDate, formatINR } from '@tgs/domain';
+import { DocumentActions } from '@/components/DocumentActions';
 import { Logo } from '@/components/Logo';
+import { DEFAULT_SOCIETY, documentFileName, fdrHtml, localDate } from '@/lib/documents';
+import { useJoiningReference } from '@/lib/joining';
 import { api } from '@/lib/api';
 import { PAYOUT_LABEL, SCHEME_LABEL, depositKeys, useDepositContext, useMyDeposit } from '@/lib/deposits';
 import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, Skeleton, StageTracker, StatusTag, Text } from '@/ui';
@@ -21,6 +24,7 @@ export default function DepositDetails() {
   const qc = useQueryClient();
   const q = useMyDeposit(id);
   const ctx = useDepositContext();
+  const society = useJoiningReference().data?.society ?? DEFAULT_SOCIETY;
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -132,6 +136,7 @@ export default function DepositDetails() {
                   Show this receipt at the counter when the deposit matures. The office can print the full FDR.
                 </Text>
               </View>
+              <DocumentActions title={`FDR ${dep.fdrNo}`} fileName={documentFileName('FDR', dep.fdrNo)} html={() => fdrHtml(d, { society, ...(dep.payoutFrequency ? { payout: PAYOUT_LABEL[dep.payoutFrequency] } : {}), generatedOn: localDate() })} />
             </Section>
           ) : null}
 

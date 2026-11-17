@@ -139,7 +139,7 @@ export class InsightService {
         const review = sh.entry?.status === 'SUBMITTED' || sh.entry?.status === 'UNDER_REVIEW';
         const since = (sh.entry?.submitted?.at ?? sh.sent?.at ?? sh.certified?.at ?? sh.generated?.at ?? `${sh.cycle}-01`).slice(0, 10);
         const todo = acts.includes('submitEntry') ? 'enter the deductions' : sh.status === 'GENERATED' ? 'certify the sheet' : sh.status === 'CERTIFIED' ? 'send to the DDO' : review ? 'review the DDO\'s deductions' : 'enter the recovery';
-        items.push({ kind: 'demandSheet', id: sh.id, ref: `${formatCycle(sh.cycle)} demand`, title: dept(sh.departmentId), subtitle: `${lines.get(sh.id) ?? 0} members · ${todo}`, stage: 'demand', stageLabel: STAGE_LABEL.demand!, status: sh.status, departmentName: dept(sh.departmentId), amount: sh.totalDemand, since, days: daysBetween(since, today), actionLabel: acts.includes('submitEntry') ? 'Enter deductions' : review ? 'Review and post' : ACTION_TEXT[acts[0]!] ?? acts[0]!, link: `/demand-sheets/${sh.id}` });
+        items.push({ kind: 'demandSheet', id: sh.id, ref: `${formatCycle(sh.cycle)} demand${sh.supplementNo ? ` (supplement ${sh.supplementNo})` : ''}`, title: dept(sh.departmentId), subtitle: `${lines.get(sh.id) ?? 0} members · ${todo}`, stage: 'demand', stageLabel: STAGE_LABEL.demand!, status: sh.status, departmentName: dept(sh.departmentId), amount: sh.totalDemand, since, days: daysBetween(since, today), actionLabel: acts.includes('submitEntry') ? 'Enter deductions' : review ? 'Review and post' : ACTION_TEXT[acts[0]!] ?? acts[0]!, link: `/demand-sheets/${sh.id}` });
       }
       if (user.role === 'CASHIER' || user.role === 'ACCOUNTANT') {
         for (const r of w.reports) {

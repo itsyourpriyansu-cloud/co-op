@@ -57,7 +57,7 @@ export function SanctionLetterPage() {
             <h2 className="mt-6 text-card-title underline">Sub: Sanction of {d.product.name} — application {l.applicationNo}</h2>
             <p className="mt-4 text-body leading-relaxed">
               With reference to your application dated {formatDisplayDate(l.appliedOn)}, the society has sanctioned a {d.product.name} of <strong>{formatINR(sheet.amount)}</strong> ({amountInWords(sheet.amount)}) at {sheet.ratePercent}% a year, repayable in <strong>{sheet.instalments} monthly instalments</strong>{' '}
-              from {formatCycle(sheet.firstDueCycle)}, recovered from your salary by your Drawing & Disbursing Officer.
+              from {formatCycle(sheet.firstDueCycle)}, recovered from your salary by your Drawing & Disbursing Officer.{sheet.earlyInterest ? ` The first deduction also includes ${formatINR(sheet.earlyInterest)} interest for the days between payment and 1 ${formatCycle(sheet.firstDueCycle)}.` : ''}
             </p>
             <table className="mt-5 w-full text-body">
               <tbody className="[&_td]:border [&_td]:border-[#999] [&_td]:px-3 [&_td]:py-1.5">

@@ -74,6 +74,7 @@ import {
   type FdSettlement,
   type DemandCycleOverview,
   type DemandPreview,
+  type DemandTopUpPreview,
   type DemandSheetDetail,
   type MemberDues,
   type MemberNotices,
@@ -458,7 +459,9 @@ export function createApiClient(options: ApiClientOptions) {
       /** F-13 (D-097): recover an overdue loan from its sureties. */
       suretyRecovery: (id: string) => request<SuretyRecoveryPanel>('GET', `/loans/${id}/surety-recovery`),
       raiseSuretyRecovery: (id: string) => request<SuretyRecoveryPanel>('POST', `/loans/${id}/surety-recovery`, {}),
-      sanctionPreview: (id: string, amount?: number, instalments?: number) => request<SanctionPreview>('GET', `/loans/${id}/sanction-preview${toQuery({ amount, instalments })}`),
+      sanctionPreview: (id: string, amount?: number, instalments?: number, firstDueCycle?: string) => request<SanctionPreview>('GET', `/loans/${id}/sanction-preview${toQuery({ amount, instalments, firstDueCycle })}`),
+      /** D-124: the Accountant moves the first deduction month of a sanctioned loan. */
+      changeFirstDue: (id: string, firstDueCycle: string) => request<LoanDetail>('POST', `/loans/${id}/first-deduction`, { firstDueCycle }),
     },
     /** Staff: deposits (ST-30 … ST-33). */
     deposits: {
@@ -480,6 +483,11 @@ export function createApiClient(options: ApiClientOptions) {
       sheet: (id: string) => request<DemandSheetDetail>('GET', `/demand/sheets/${id}`),
       act: (id: string, action: 'certify' | 'sendToDdo' | 'postRecovery', input: Partial<RecoveryInput> = {}) => request<DemandSheetDetail>('POST', `/demand/sheets/${id}/actions/${action}`, input),
       demoAct: (id: string) => request<DemandSheetDetail>('POST', `/demand/sheets/${id}/demo-act`),
+      /** D-124: rebuild a sheet that is not certified yet, or add a supplementary sheet for members it missed. */
+      regeneratePreview: (id: string) => request<DemandTopUpPreview>('GET', `/demand/sheets/${id}/regenerate-preview`),
+      regenerate: (id: string) => request<{ id: string }>('POST', `/demand/sheets/${id}/regenerate`, {}),
+      supplementaryPreview: (cycle: string, departmentId: string) => request<DemandTopUpPreview>('GET', `/demand/supplementary-preview${toQuery({ cycle, departmentId })}`),
+      createSupplementary: (cycle: string, departmentId: string) => request<{ id: string }>('POST', '/demand/supplementary', { cycle, departmentId }),
       /** P7b (D-088): save, submit or send back the deduction entry. */
       entry: (id: string, action: 'saveEntry' | 'submitEntry' | 'rejectEntry', body: Partial<DeductionEntryInput> & { reason?: string } = {}) => request<DemandSheetDetail>('POST', `/demand/sheets/${id}/entry/${action}`, body),
     },

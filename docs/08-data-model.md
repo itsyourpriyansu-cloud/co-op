@@ -1,5 +1,6 @@
 # 08 · Data Model
 
+> Version 0.12 · 2026-11-16 · D-124: `DemandSheet.supplementNo` (table `demand_sheets.supplement_no`, unique with cycle + department), `ScheduleRow.earlyInterest`, `SanctionSheet.{firstDueChosen, earlyInterest, earlyInterestFrom}`, settings `earlyInterestEnabled`, `lateJoinerOwesMissedMonth`.
 > Version 0.11 · 2026-11-12 · G7 (D-117): `declarations.privacyConsent`, `SignatureRecord.privacyVersion`, setting `applicantDataRetentionMonths`. v0.10 · G4 (D-114): `push_tokens`, setting `minAppVersion`. v0.9 · G2 (D-112): `ledger_accounts.parent_code`, `office_vouchers`, `financial_years`, new heads. v0.8 · G1 (D-111): `idempotency_keys`; `files` holds documents (`purpose` DOCUMENT, `doc_type`, `file_name`, `uploaded_by`); `profile_change_requests.document_file_id`; `Receipt.purpose` LOAN_CLOSURE and `coins`; `DepositAccount.interestPayouts`.
 > Version 0.7 · 2026-10-30 · Production tables: see `docs/22` §5.1 (P1 auth), §5.2 (P2 masters: versioned settings and loan products, REQ-130) and §5.3 (P3 ledger: chart, journal entries and lines, REQ-131)
 > Version 0.5 · 2026-10-24

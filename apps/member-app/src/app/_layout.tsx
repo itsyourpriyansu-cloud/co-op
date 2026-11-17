@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { isApiError } from '@tgs/api-client';
 import { PushTaps, UpdateGate } from '@/components/AppGate';
+import { LaunchPoster } from '@/components/LaunchPoster';
 import { AuthProvider } from '@/lib/auth';
 import { color } from '@/theme';
 
@@ -38,6 +39,7 @@ export default function RootLayout() {
             <PushTaps />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg.canvas }, animation: 'slide_from_right' }} />
           </UpdateGate>
+          <LaunchPoster />
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

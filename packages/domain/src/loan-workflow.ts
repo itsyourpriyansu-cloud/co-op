@@ -2,6 +2,7 @@
 // eligibility and settlement (BR-007 + BR-004), surety progress (J-02) and assessment limits.
 import type { Cycle, ISODate, LoanProduct, LoanStatus, LoanSurety, Paise, SanctionSheet, ScheduleRow } from '@tgs/types';
 import { daysInMonth, parseISODate } from './dates';
+import { earlyInterestFor } from './first-deduction';
 import { calculateEmi, calculateShareDeduction, calculateTopupSettlement } from './loans';
 import { fail, pass, type RuleCheck } from './rules';
 
@@ -29,6 +30,8 @@ export interface SanctionSheetInput {
   instalments: number;
   product: Pick<LoanProduct, 'ratePercent' | 'emiMethod' | 'shareDepositPercent'>;
   firstDueCycle: Cycle;
+  /** D-124: charge interest for the days before the first deduction month (Admin setting). */
+  earlyInterestEnabled?: boolean;
   existingShareDeposit: Paise;
   today: ISODate;
   topup?: { loanId: string; loanNo: string; outstandingPrincipal: Paise; ratePercent: number; lastInterestChargedOn: ISODate };
@@ -55,14 +58,17 @@ export function buildSanctionSheet(input: SanctionSheetInput): SanctionSheet {
     topup = { loanId: input.topup.loanId, loanNo: input.topup.loanNo, outstandingPrincipal: input.topup.outstandingPrincipal, accruedInterest: t.accruedInterest, settlement: t.settlement };
     netDisbursable = t.netDisbursable;
   }
+  // D-124: worked from today at assessment; worked again from the real payment date at disbursement.
+  const early = input.earlyInterestEnabled ? earlyInterestFor(input.amount, input.product.ratePercent, input.today, input.firstDueCycle) : 0;
   return {
     amount: input.amount,
     instalments: input.instalments,
     ratePercent: input.product.ratePercent,
     emi: emi.firstInstalment,
     lastEmi: emi.lastInstalment,
-    totalInterest: emi.totalInterest,
+    totalInterest: emi.totalInterest + early,
     firstDueCycle: input.firstDueCycle,
+    ...(early > 0 ? { earlyInterest: early, earlyInterestFrom: input.today } : {}),
     shareDeduction,
     ...(topup ? { topup } : {}),
     netDisbursable,

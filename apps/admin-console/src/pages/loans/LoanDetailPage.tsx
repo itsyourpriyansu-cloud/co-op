@@ -36,6 +36,7 @@ import {
 import { isApiError } from '@tgs/api-client';
 import { amountInWords, daysBetweenDates, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import { ROLE_LABELS, type LoanDetail, type Role } from '@tgs/types';
+import { useAuth } from '@/app/auth';
 import { Money } from '@/components/Money';
 import { Panel } from '@/components/Panel';
 import { RuleCheckList } from '@/components/RuleCheckList';
@@ -253,6 +254,7 @@ export function LoanDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const [tab, setTab] = useState('application');
+  const { session } = useAuth();
   const [drawer, setDrawer] = useState<string | null>(null);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['loan', id], queryFn: () => api.loans.get(id), refetchInterval: drawer ? false : 5000, retry: (n, e) => !(isApiError(e) && e.status === 404) && n < 2 });
@@ -313,6 +315,7 @@ export function LoanDetailPage() {
                 {d.actions.filter((a) => SECONDARY.has(a)).map((a) => (
                   <ButtonV2 key={a} text={ACTION_LABEL[a] ?? a} buttonType={ButtonV2Type.SECONDARY} onClick={() => setDrawer(a)} />
                 ))}
+                {l.status === 'SANCTIONED' && l.sanctionSheet?.firstDueChosen && session?.user.role === 'ACCOUNTANT' && <ButtonV2 text="First deduction month" buttonType={ButtonV2Type.SECONDARY} onClick={() => setDrawer('changeFirstDue')} />}
                 {d.actions.filter((a) => !SECONDARY.has(a)).map((a) => (
                   <ButtonV2 key={a} text={ACTION_LABEL[a] ?? a} buttonType={ButtonV2Type.PRIMARY} onClick={() => setDrawer(a)} />
                 ))}

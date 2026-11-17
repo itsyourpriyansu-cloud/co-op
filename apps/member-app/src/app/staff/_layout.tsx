@@ -1,13 +1,16 @@
 // Staff area guard (D-101, D-106): console roles only, with the same page permissions as the console router.
 import { useEffect, useState } from 'react';
 import { Redirect, Stack, usePathname, type ErrorBoundaryProps } from 'expo-router';
-import { LockKeyhole, TriangleAlert } from 'lucide-react-native';
+import { useQuery } from '@tanstack/react-query';
+import { LockKeyhole, PenLine, TriangleAlert } from 'lucide-react-native';
 import { channelForRole, type Permission } from '@tgs/types';
+import { SignatureCard, signatureKey } from '@/components/SignatureCard';
 import { MUST_CHANGE_KEY } from '@/components/staff';
+import { api } from '@/lib/api';
 import { useStaffLock } from '@/lib/appLock';
 import { useAuth } from '@/lib/auth';
 import * as storage from '@/lib/storage';
-import { Button, EmptyState, Screen } from '@/ui';
+import { Button, EmptyState, Hero, Screen } from '@/ui';
 import NoAccess from './no-access';
 import { color } from '@/theme';
 
@@ -36,6 +39,8 @@ export default function StaffLayout() {
   useEffect(() => {
     void storage.getItem(MUST_CHANGE_KEY).then((v) => setMustChange(!!v));
   }, [session?.user.id]);
+  // F-01 (D-126): every staff member has a signature on file before using the staff screens.
+  const signature = useQuery({ queryKey: signatureKey, queryFn: api.signatures.mine, enabled: ready && staffSession && !mustChange });
 
   // Wait for the stored token, or the first requests go out signed-out.
   if (!ready) return null;
@@ -43,6 +48,8 @@ export default function StaffLayout() {
   if (mustChange) return <Redirect href="/staff-login?change=1" />;
   // G4 (D-114): after time away the phone's own fingerprint, face or PIN is asked first.
   if (lock.locked) return <Locked unlock={lock.unlock} signOut={() => void logout()} />;
+  if (signature.isPending && !signature.isError) return null;
+  if (signature.data === null) return <AddSignature signOut={() => void logout()} />;
   // Hold the Stack until the permissions are in: taking a mounted Stack away resets the route to Home.
   if (meLoading) return null;
   const needed = ROUTE_PERMISSION.find(([re]) => re.test(pathname))?.[1];
@@ -59,6 +66,16 @@ function Locked({ unlock, signOut }: { unlock: () => Promise<boolean>; signOut: 
   return (
     <Screen footer={<Button text="Sign out instead" buttonType="secondary" fullWidth onPress={signOut} />}>
       <EmptyState icon={LockKeyhole} title="Staff screens locked" description="Unlock with your fingerprint, face or phone PIN. Locked after 5 minutes away." action={{ text: 'Unlock', onPress: () => void unlock() }} />
+    </Screen>
+  );
+}
+
+/** AU-01m last sign-in step (D-126): shown until a signature is on file, then never again. */
+function AddSignature({ signOut }: { signOut: () => void }) {
+  return (
+    <Screen footer={<Button text="Sign out" buttonType="secondary" fullWidth onPress={signOut} />}>
+      <Hero icon={PenLine} title="Add your signature" subtitle="One last step. Your signature is printed on what you approve, certify or pay out. You can change it later in My account." />
+      <SignatureCard />
     </Screen>
   );
 }

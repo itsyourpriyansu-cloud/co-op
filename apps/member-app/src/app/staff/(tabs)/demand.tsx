@@ -52,8 +52,8 @@ export default function Demand() {
                 <Stack2>
                   {rows.map((r) => (
                     <RecordCard
-                      key={r.departmentId}
-                      title={r.departmentName}
+                      key={r.id ?? r.departmentId}
+                      title={`${r.departmentName}${r.supplementNo ? ` · Supplement ${r.supplementNo}` : ''}`}
                       subtitle={`DDO ${r.ddoName}`}
                       amount={r.demand ? formatINR(r.demand) : '—'}
                       tag={<StatusTag entity="demandSheet" status={r.status} audience="staff" size="xs" />}

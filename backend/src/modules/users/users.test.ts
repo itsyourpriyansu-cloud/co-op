@@ -10,7 +10,8 @@ describe('staff users, permissions and audit (P1a)', () => {
   let admin: Session;
   let accountant: Session;
   beforeAll(async () => {
-    app = await buildTestApp();
+    // The temporary-password path for a role outside TOTP_ROLES (the authenticator path is in auth.test.ts, D-127).
+    app = await buildTestApp({ TOTP_ROLES: 'SUPER_ADMIN,SECRETARY,PRESIDENT' });
     await reseed(app);
     admin = await signInAs(app, 'stf-admin');
     accountant = await signInAs(app, 'stf-accountant');

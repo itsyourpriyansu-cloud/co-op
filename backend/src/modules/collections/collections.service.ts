@@ -44,6 +44,7 @@ import type {
   DemandSheet,
   DemandSheetDetail,
   DemandSheetRow,
+  DemandTopUpPreview,
   Department,
   DepositAccount,
   Loan,
@@ -246,12 +247,19 @@ export class CollectionsService {
     const sheets = await this.repo.sheetsForCycle(cycle);
     const depts = [...v.depts.values()].filter((d) => user.role !== 'DDO' || d.id === user.departmentId);
     const rows: DemandSheetRow[] = [];
-    for (const d of depts) {
-      const sh = sheets.find((s) => s.departmentId === d.id);
+    // D-124: a supplementary sheet is its own row under the department's, with its own steps.
+    const sheetRows = depts.flatMap((d) => {
+      const own = sheets.filter((s) => s.departmentId === d.id);
+      const main = own.find((s) => !s.supplementNo);
+      const extra = own.filter((s) => s.supplementNo).sort((a, b) => a.supplementNo! - b.supplementNo!);
+      return [{ d, sh: main as SheetHead | undefined }, ...extra.map((sh) => ({ d, sh: sh as SheetHead | undefined }))];
+    });
+    for (const { d, sh } of sheetRows) {
       const full = sh?.status === 'RECOVERY_POSTED' ? await this.repo.sheet(sh.id) : undefined;
       const actions = sh ? await this.actionsFor(sh, user) : [];
       rows.push({
         ...(sh ? { id: sh.id } : {}),
+        ...(sh?.supplementNo ? { supplementNo: sh.supplementNo } : {}),
         cycle,
         departmentId: d.id,
         departmentName: d.name,
@@ -273,7 +281,7 @@ export class CollectionsService {
       cycles: [...new Set([...sheetCycles, ...gen])].sort().reverse(),
       currentCycle: v.cycle,
       rows,
-      totals: { demand: sum(rows.map((r) => r.demand)), recovered: sum(rows.map((r) => r.recovered)), short: sum(rows.map((r) => r.short)), generated: rows.filter((r) => r.status !== 'NOT_GENERATED').length, notGenerated: rows.filter((r) => r.status === 'NOT_GENERATED').length, posted: rows.filter((r) => r.status === 'RECOVERY_POSTED').length },
+      totals: { demand: sum(rows.map((r) => r.demand)), recovered: sum(rows.map((r) => r.recovered)), short: sum(rows.map((r) => r.short)), generated: rows.filter((r) => !r.supplementNo && r.status !== 'NOT_GENERATED').length, notGenerated: rows.filter((r) => r.status === 'NOT_GENERATED').length, posted: rows.filter((r) => !r.supplementNo && r.status === 'RECOVERY_POSTED').length },
       canGenerate: user.role === 'ACCOUNTANT' && gen.includes(cycle),
       scope: own ? { departmentName: own.name } : {},
     };
@@ -332,7 +340,7 @@ export class CollectionsService {
     const settings = await this.app.masters.settings();
     const rows = [];
     for (const d of [...v.depts.values()].filter((x) => !ids.length || ids.includes(x.id))) {
-      const sh = existing.find((s) => s.departmentId === d.id);
+      const sh = existing.find((s) => s.departmentId === d.id && !s.supplementNo);
       const lines = sh ? ((await this.repo.sheet(sh.id))?.lines ?? []) : (built.get(d.id) ?? []);
       const warnings: string[] = [];
       if (sh) warnings.push(`Already generated (${sh.status === 'GENERATED' ? 'not certified yet' : 'certified'}). It will be skipped.`);
@@ -352,7 +360,7 @@ export class CollectionsService {
     if (!(await this.generatableCycles()).includes(cycle)) fail('VALIDATION_ERROR', 'Choose the current or the next cycle.', { fieldErrors: { cycle: 'Choose the current or the next cycle' } });
     const [depts, existing, built, at] = await Promise.all([this.app.departments.all(), this.repo.sheetsForCycle(cycle), this.buildLines(cycle), businessNow(this.app)]);
     const ids = body.departmentIds ?? [];
-    const targets = depts.filter((d) => (!ids.length || ids.includes(d.id)) && !existing.some((s) => s.departmentId === d.id));
+    const targets = depts.filter((d) => (!ids.length || ids.includes(d.id)) && !existing.some((s) => s.departmentId === d.id && !s.supplementNo));
     if (!targets.length) fail('VALIDATION_ERROR', 'Every chosen department already has a sheet for this cycle.', { fieldErrors: { departmentIds: 'Nothing left to generate' } });
     const sheets: DemandSheet[] = targets.map((d) => {
       const lines = built.get(d.id) ?? [];
@@ -367,6 +375,137 @@ export class CollectionsService {
       await this.app.audit.record(request, { action: 'generate', entity: 'demandSheet', entityId: cycle, summary: `Generated ${formatCycle(cycle)} demand for ${targets.length} department${targets.length === 1 ? '' : 's'}` }, tx);
     });
     return { generated: sheets.map((s) => s.id) };
+  }
+
+  // ---- D-124: Regenerate (before Certify) and supplementary sheets (after) ----
+
+  /** The monthly society heads a late joiner does not owe for the month already generated (unless the Admin says so). */
+  private static readonly MONTHLY_HEADS = new Set<DemandHead>(['RRF', 'INSURANCE', 'CRD', 'SRDS']);
+
+  /**
+   * The lines a sheet should hold now. The month's own sheet holds everyone in the department;
+   * a supplementary sheet holds only members no other sheet of the cycle has, and a member who
+   * joined after the month's sheet was made owes the monthly heads only if the Admin set it so.
+   */
+  private async wantedLines(cycle: Cycle, departmentId: string, supplement: boolean, selfId?: string): Promise<DemandLine[]> {
+    const [built, v, settings] = await Promise.all([this.buildLines(cycle), this.view(), this.app.masters.settings()]);
+    const lines = built.get(departmentId) ?? [];
+    if (!supplement) return lines;
+    const [on, sheets] = await Promise.all([this.repo.memberIdsOnCycle(cycle, selfId), this.repo.sheetsForCycle(cycle)]);
+    const made = sheets.find((s) => s.departmentId === departmentId && !s.supplementNo)?.generated?.at.slice(0, 10);
+    return lines
+      .filter((l) => !on.has(l.memberId))
+      .map((l) => {
+        const joined = v.members.get(l.memberId)?.joinedSocietyOn;
+        if (settings.lateJoinerOwesMissedMonth || !made || !joined || joined <= made) return l;
+        const components = l.components.filter((c) => !CollectionsService.MONTHLY_HEADS.has(c.head));
+        return { ...l, components, totalDemand: sum(components.map((c) => c.amount)) };
+      })
+      .filter((l) => l.components.length > 0 && l.totalDemand > 0);
+  }
+
+  private describe(v: View, lines: DemandLine[]) {
+    return lines.map((l) => ({ memberId: l.memberId, generalNo: v.members.get(l.memberId)?.generalNo ?? '', name: v.members.get(l.memberId)?.name ?? l.memberId, demand: l.totalDemand }));
+  }
+
+  private regenerateBlock(sh: DemandSheet): string | undefined {
+    if (sh.status !== 'GENERATED') return 'This sheet is already certified. A certified sheet is never changed: make a supplementary sheet for the members it missed.';
+    if (sh.entry || sh.lines.some((l) => l.recovered !== undefined || l.deducted !== undefined || l.components.some((c) => c.allocated > 0))) return 'Payments or deductions are already recorded on this sheet, so it cannot be rebuilt.';
+    return undefined;
+  }
+
+  private async requireAccountant(user: SessionUser, what: string): Promise<void> {
+    await this.requireView(user);
+    if (user.role !== 'ACCOUNTANT') fail('FORBIDDEN', `Only the Accountant ${what}.`);
+  }
+
+  /** What Regenerate would change on a sheet that is not certified yet. */
+  async regeneratePreview(user: SessionUser, id: string): Promise<DemandTopUpPreview> {
+    await this.requireAccountant(user, 'regenerates a demand sheet');
+    const sh = await this.loadSheet(user, id);
+    const [lines, v] = await Promise.all([this.wantedLines(sh.cycle, sh.departmentId, Boolean(sh.supplementNo), sh.id), this.view()]);
+    const had = new Set(sh.lines.map((l) => l.memberId));
+    const now = new Set(lines.map((l) => l.memberId));
+    const blocked = this.regenerateBlock(sh);
+    return {
+      cycle: sh.cycle,
+      departmentId: sh.departmentId,
+      added: this.describe(v, lines.filter((l) => !had.has(l.memberId))),
+      removed: sh.lines.filter((l) => !now.has(l.memberId)).map((l) => ({ memberId: l.memberId, generalNo: v.members.get(l.memberId)?.generalNo ?? '', name: v.members.get(l.memberId)?.name ?? l.memberId })),
+      oldTotal: sh.totalDemand,
+      newTotal: sum(lines.map((l) => l.totalDemand)),
+      ...(blocked ? { blocked } : {}),
+    };
+  }
+
+  async regenerate(request: FastifyRequest, id: string): Promise<{ id: string }> {
+    const user = sessionOf(request);
+    await this.requireAccountant(user, 'regenerates a demand sheet');
+    const at = await businessNow(this.app);
+    await withTransaction(this.app.db, async (tx) => {
+      const sh = await this.loadSheet(user, id, tx, true);
+      const blocked = this.regenerateBlock(sh);
+      if (blocked) fail('INVALID_TRANSITION', blocked);
+      const lines = await this.wantedLines(sh.cycle, sh.departmentId, Boolean(sh.supplementNo), sh.id);
+      const had = new Set(sh.lines.map((l) => l.memberId));
+      const now = new Set(lines.map((l) => l.memberId));
+      const added = lines.filter((l) => !had.has(l.memberId)).length;
+      const removed = sh.lines.filter((l) => !now.has(l.memberId)).length;
+      const { lines: _old, ...head } = sh;
+      head.totalDemand = sum(lines.map((l) => l.totalDemand));
+      head.events = [...(sh.events ?? []), { at, actorId: user.id, actorName: user.name, actorRole: user.role, action: 'regenerate', fromStatus: 'GENERATED', toStatus: 'GENERATED', remarks: `Rebuilt: ${added} added, ${removed} removed` }];
+      await this.repo.replaceLines(tx, sh.id, sh.cycle, lines);
+      await this.repo.saveSheetHead(tx, head);
+      const carried = new Set(lines.flatMap((l) => l.components.filter((c) => c.head === 'SURETY').map((c) => `${l.memberId}:${c.loanId}`)));
+      for (const r of await this.repo.openRecoveries(undefined, tx)) if (!r.demandedCycle && carried.has(`${r.suretyId}:${r.loanId}`)) await this.repo.saveRecovery(tx, { ...r, demandedCycle: sh.cycle });
+      await this.app.audit.record(request, { action: 'regenerate', entity: 'demandSheet', entityId: sh.id, summary: `Regenerated ${formatCycle(sh.cycle)} demand sheet (${added} added, ${removed} removed)` }, tx);
+    });
+    return { id };
+  }
+
+  private async supplementContext(cycle: Cycle, departmentId: string) {
+    if (!(await this.generatableCycles()).includes(cycle)) fail('VALIDATION_ERROR', 'Choose the current or the next cycle.', { fieldErrors: { cycle: 'Choose the current or the next cycle' } });
+    const sheets = (await this.repo.sheetsForCycle(cycle)).filter((s) => s.departmentId === departmentId);
+    const main = sheets.find((s) => !s.supplementNo);
+    const supplements = sheets.filter((s) => s.supplementNo).sort((a, b) => a.supplementNo! - b.supplementNo!);
+    let blocked: string | undefined;
+    if (!main) blocked = "Generate this month's sheet for the department first.";
+    else if (main.status === 'GENERATED') blocked = 'The sheet is not certified yet. Use Regenerate on it: that adds the missing members.';
+    else {
+      const open = supplements.find((s) => s.status === 'GENERATED' || s.status === 'CERTIFIED');
+      if (open) blocked = `Supplement ${open.supplementNo} is not sent yet. Send it, or use Regenerate on it, first.`;
+    }
+    return { main, supplements, blocked };
+  }
+
+  /** Who a supplementary sheet for this department and month would add. */
+  async supplementaryPreview(user: SessionUser, cycle: Cycle, departmentId: string): Promise<DemandTopUpPreview> {
+    await this.requireAccountant(user, 'makes a supplementary sheet');
+    const ctx = await this.supplementContext(cycle, departmentId);
+    const [lines, v] = await Promise.all([ctx.blocked ? Promise.resolve([] as DemandLine[]) : this.wantedLines(cycle, departmentId, true), this.view()]);
+    const blocked = ctx.blocked ?? (lines.length ? undefined : "Nobody is missing from this month's sheets.");
+    return { cycle, departmentId, added: this.describe(v, lines), removed: [], oldTotal: 0, newTotal: sum(lines.map((l) => l.totalDemand)), ...(blocked ? { blocked } : {}) };
+  }
+
+  async createSupplementary(request: FastifyRequest, body: { cycle: Cycle; departmentId: string }): Promise<{ id: string }> {
+    const user = sessionOf(request);
+    await this.requireAccountant(user, 'makes a supplementary sheet');
+    const at = await businessNow(this.app);
+    const dept = (await this.app.departments.all()).find((d) => d.id === body.departmentId) ?? fail('NOT_FOUND', 'Department not found.');
+    const sheet = await withTransaction(this.app.db, async (tx) => {
+      const ctx = await this.supplementContext(body.cycle, body.departmentId);
+      if (ctx.blocked) fail('INVALID_TRANSITION', ctx.blocked);
+      const lines = await this.wantedLines(body.cycle, body.departmentId, true);
+      if (!lines.length) fail('VALIDATION_ERROR', "Nobody is missing from this month's sheets.");
+      const n = Math.max(0, ...ctx.supplements.map((s) => s.supplementNo ?? 0)) + 1;
+      const s: DemandSheet = { id: `${ctx.main!.id}-s${n}`, cycle: body.cycle, departmentId: body.departmentId, supplementNo: n, status: 'GENERATED', lines, totalDemand: sum(lines.map((l) => l.totalDemand)), totalRecovered: 0, generated: signOff(user, at, `Supplementary sheet ${n}`), events: [{ at, actorId: user.id, actorName: user.name, actorRole: user.role, action: 'generate', toStatus: 'GENERATED', remarks: `Supplementary sheet ${n}: ${lines.length} member${lines.length === 1 ? '' : 's'} the month's sheet missed` }] };
+      await this.repo.insertSheet(tx, s);
+      const carried = new Set(lines.flatMap((l) => l.components.filter((c) => c.head === 'SURETY').map((c) => `${l.memberId}:${c.loanId}`)));
+      for (const r of await this.repo.openRecoveries(undefined, tx)) if (!r.demandedCycle && carried.has(`${r.suretyId}:${r.loanId}`)) await this.repo.saveRecovery(tx, { ...r, demandedCycle: body.cycle });
+      await this.app.audit.record(request, { action: 'generate', entity: 'demandSheet', entityId: s.id, summary: `Supplementary sheet ${n} for ${formatCycle(body.cycle)}, ${dept.name} (${lines.length} members)` }, tx);
+      return s;
+    });
+    return { id: sheet.id };
   }
 
   // ---- ST-42 / ST-43 ----

@@ -47,12 +47,12 @@ function Line({ no, label, value, wide }: { no?: string; label: string; value?: 
   );
 }
 
-function Signatures({ items }: { items: Array<{ label: string; name?: string; at?: string; fileId?: string }> }) {
+function Signatures({ items }: { items: Array<{ label: string; name?: string; at?: string; fileId?: string; /** Written on the line instead of a signature (a date, a department). */ value?: string }> }) {
   return (
     <div className={`mt-10 grid gap-6 text-center text-caption ${items.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
       {items.map((s) => (
         <div key={s.label}>
-          <div className="flex min-h-[2.5rem] items-end justify-center border-b border-[#555] pb-1 text-body italic">{s.fileId && s.name ? <SignatureMark fileId={s.fileId} name={s.name} /> : s.name ? `Signed: ${s.name}` : ''}</div>
+          <div className="flex min-h-[2.5rem] items-end justify-center border-b border-[#555] pb-1 text-body italic">{s.fileId && s.name ? <SignatureMark fileId={s.fileId} name={s.name} /> : s.value ? <span className="not-italic">{s.value}</span> : s.name ? `Signed: ${s.name}` : ''}</div>
           <p className="mt-1 font-medium">{s.label}</p>
           {s.at && <p className="text-[#555]">{s.at}</p>}
         </div>
@@ -200,7 +200,7 @@ export function DefaulterNoticePrintPage() {
 
 // ---- F1 Membership application -----------------------------------------------------------------
 
-type F1 = { applicationNo?: string; generalNo?: string; name: string; fatherName: string; dob?: string; present: string; permanent: string; mobile: string; designation: string; office: string; appointment?: string; probation?: string; shares?: number; nominee: string; signedAt?: string; signatureFileId?: string; ddo?: { name: string; at: string; designation?: string; fileId?: string }; secretary?: string; president?: string; secretaryFileId?: string; presidentFileId?: string };
+type F1 = { applicationNo?: string; generalNo?: string; name: string; fatherName: string; dob?: string; present: string; permanent: string; mobile: string; designation: string; office: string; appointment?: string; probation?: string; shares?: number; nominee: string; signedAt?: string; signedOn?: string; signatureFileId?: string; ddo?: { name: string; at: string; designation?: string; fileId?: string }; secretary?: string; president?: string; secretaryFileId?: string; presidentFileId?: string };
 
 function fromApplication(d: MembershipDetail): F1 {
   const a = d.application;
@@ -220,7 +220,7 @@ function fromApplication(d: MembershipDetail): F1 {
     ...(f.employment?.employmentType === 'APPROVED_PROBATIONER' ? { probation: `${f.employment.probationServiceMonths ?? 0} months` } : {}),
     shares: a.sharesProposed,
     nominee: f.nominee?.name ? `${f.nominee.name} (${f.nominee.relation ?? ''})${f.nominee.address ? `, ${f.nominee.address}` : ''}` : '',
-    ...(a.signature ? { signedAt: formatDisplayDateTime(a.signature.signedAt), ...(a.signature.fileId ? { signatureFileId: a.signature.fileId } : {}) } : {}),
+    ...(a.signature ? { signedAt: formatDisplayDateTime(a.signature.signedAt), signedOn: formatDisplayDate(a.signature.signedAt.slice(0, 10)), ...(a.signature.fileId ? { signatureFileId: a.signature.fileId } : {}) } : {}),
     ...(a.ddoCertification ? { ddo: { name: a.ddoCertification.byName, at: formatDisplayDateTime(a.ddoCertification.at), designation: a.ddoCertification.designation, ...(a.ddoCertification.signatureFileId ? { fileId: a.ddoCertification.signatureFileId } : {}) } } : {}),
     ...(a.secretaryApproval ? { secretary: a.secretaryApproval.byName, ...(a.secretaryApproval.signatureFileId ? { secretaryFileId: a.secretaryApproval.signatureFileId } : {}) } : {}),
     ...(a.presidentApproval ? { president: a.presidentApproval.byName, ...(a.presidentApproval.signatureFileId ? { presidentFileId: a.presidentApproval.signatureFileId } : {}) } : {}),
@@ -244,6 +244,7 @@ function fromMember(d: MemberDetail): F1 {
     shares: m.numberOfShares,
     nominee: `${m.nominee.name} (${m.nominee.relation})${m.nominee.address ? `, ${m.nominee.address}` : ''}`,
     signedAt: `Member since ${formatDisplayDate(m.joinedSocietyOn)}`,
+    signedOn: formatDisplayDate(m.joinedSocietyOn),
     ...(d.mandate?.agreedByName ? { ddo: { name: d.mandate.agreedByName, at: d.mandate.agreedOn ? formatDisplayDate(d.mandate.agreedOn) : '' } } : {}),
   };
 }
@@ -297,11 +298,11 @@ export function MembershipFormPrintPage() {
             <div className="mt-4 text-body leading-relaxed">
               <p>I declare that (a) I accept the Bye-laws of the society as binding upon me; (b) I am not a member of any other co-operative credit society and no dues are payable by me to any such society.</p>
             </div>
-            <Signatures items={[{ label: 'Signature of the applicant', ...(f.signedAt ? { name: f.name, at: f.signedAt, ...(f.signatureFileId ? { fileId: f.signatureFileId } : {}) } : {}) }, { label: 'Date', name: f.signedAt ? ' ' : '' }]} />
+            <Signatures items={[{ label: 'Signature of the applicant', ...(f.signedAt ? { name: f.name, at: f.signedAt, ...(f.signatureFileId ? { fileId: f.signatureFileId } : {}) } : {}) }, { label: 'Date', ...(f.signedOn ? { value: f.signedOn } : {}) }]} />
             <div className="mt-8 rounded border border-[#999] px-4 py-3 text-body">
               <p className="font-medium">CERTIFICATE</p>
               <p>Certified that the information against items 1 to 7 is correct.</p>
-              <Signatures items={[{ label: `Asst. Secretary to Government${f.ddo?.designation ? ` · ${f.ddo.designation}` : ''}`, ...(f.ddo ? { name: f.ddo.name, at: f.ddo.at, ...(f.ddo.fileId ? { fileId: f.ddo.fileId } : {}) } : {}) }, { label: `Department: ${f.office}` }]} />
+              <Signatures items={[{ label: f.ddo?.designation || 'Asst. Secretary to Government', ...(f.ddo ? { name: f.ddo.name, at: f.ddo.at, ...(f.ddo.fileId ? { fileId: f.ddo.fileId } : {}) } : {}) }, { label: 'Department', ...(f.office ? { value: f.office } : {}) }]} />
             </div>
             {(f.secretary || f.president) && <Signatures items={[{ label: 'Secretary', ...(f.secretary ? { name: f.secretary, ...(f.secretaryFileId ? { fileId: f.secretaryFileId } : {}) } : {}) }, { label: 'President', ...(f.president ? { name: f.president, ...(f.presidentFileId ? { fileId: f.presidentFileId } : {}) } : {}) }]} />}
             <p className="mt-6 text-[10px] text-[#777]">Digital twin of the society's white membership form. Signatures are recorded as Sign with OTP (D-031) and printed from the signature on file (D-096).</p>
@@ -425,7 +426,7 @@ function F2({ d, m }: { d: LoanDetail; m?: MemberDetail }) {
       <div className="mt-8 rounded border border-[#999] px-4 py-3 text-body">
         <p className="font-medium">CERTIFICATE</p>
         <p>Certified that the particulars from item 1 to 5 are true and correct.</p>
-        <Signatures items={[{ label: ddo?.manual ? `${ddo.manual.designation} (paper certificate ${ddo.manual.reference})` : 'Asst. Secretary (DDO) / Section Officer (Claims)', ...(ddo ? { name: ddo.manual?.ddoName ?? ddo.byName, at: ddo.manual ? formatDisplayDate(ddo.manual.date) : formatDisplayDateTime(ddo.at), ...(ddo.signatureFileId ? { fileId: ddo.signatureFileId } : {}) } : {}) }, { label: `Department: ${d.member.departmentName}` }]} />
+        <Signatures items={[{ label: ddo?.manual ? `${ddo.manual.designation} (paper certificate ${ddo.manual.reference})` : 'Asst. Secretary (DDO) / Section Officer (Claims)', ...(ddo ? { name: ddo.manual?.ddoName ?? ddo.byName, at: ddo.manual ? formatDisplayDate(ddo.manual.date) : formatDisplayDateTime(ddo.at), ...(ddo.signatureFileId ? { fileId: ddo.signatureFileId } : {}) } : {}) }, { label: 'Department', value: d.member.departmentName }]} />
       </div>
       <OfficeUse d={d} />
     </PrintSheet>
@@ -456,7 +457,7 @@ function F3({ d, m }: { d: LoanDetail; m?: MemberDetail }) {
         <Line no="11" label="Purpose (mention clearly)" value={l.purpose} />
       </div>
       <p className="mt-4 text-body">I hereby authorise the Pay Disbursing Officer to have the above loan recovered from my salary.</p>
-      <Signatures items={[{ label: 'Signature of the applicant', ...(l.signature ? { name: d.member.name, at: formatDisplayDateTime(l.signature.signedAt), ...(l.signature.fileId ? { fileId: l.signature.fileId } : {}) } : {}) }, { label: 'Date' }]} />
+      <Signatures items={[{ label: 'Signature of the applicant', ...(l.signature ? { name: d.member.name, at: formatDisplayDateTime(l.signature.signedAt), ...(l.signature.fileId ? { fileId: l.signature.fileId } : {}) } : {}) }, { label: 'Date', ...(l.signature ? { value: formatDisplayDate(l.signature.signedAt.slice(0, 10)) } : {}) }]} />
       <OfficeUse d={d} salary />
     </PrintSheet>
   );
@@ -478,6 +479,7 @@ function OfficeUse({ d, salary }: { d: LoanDetail; salary?: boolean }) {
           <Line label="Surety recoveries" value={sh.balances.suretyRecoveries ? formatINR(sh.balances.suretyRecoveries) : 'Nil'} />
           <Line label="Sanctioned" value={`${formatINR(sh.amount)} · ${sh.instalments} months @ ${sh.ratePercent}%`} />
           <Line label="EMI / first due" value={`${formatINR(sh.emi)} from ${formatCycle(sh.firstDueCycle)}`} />
+          {sh.earlyInterest ? <Line label="Interest before first due" value={formatINR(sh.earlyInterest)} /> : null}
           {!salary && <Line label="Share deposit kept" value={formatINR(sh.shareDeduction)} />}
           <Line label="Net payable" value={formatINR(sh.netDisbursable)} />
         </div>
@@ -546,7 +548,7 @@ export function FdFormPrintPage() {
               <li>Renewal in the name of either or survivor, or any one, has the same effect.</li>
             </ol>
             <p className="mt-2 text-body">I/We agree to abide by the rules relating to fixed deposits.</p>
-            <Signatures items={[{ label: 'Signature of depositor(s)', ...(dep.signature ? { name: d.member.name, at: formatDisplayDateTime(dep.signature.signedAt), ...(dep.signature.fileId ? { fileId: dep.signature.fileId } : {}) } : {}) }, { label: 'Date' }]} />
+            <Signatures items={[{ label: 'Signature of depositor(s)', ...(dep.signature ? { name: d.member.name, at: formatDisplayDateTime(dep.signature.signedAt), ...(dep.signature.fileId ? { fileId: dep.signature.fileId } : {}) } : {}) }, { label: 'Date', ...(dep.signature ? { value: formatDisplayDate(dep.signature.signedAt.slice(0, 10)) } : {}) }]} />
             <div className="mt-6 grid grid-cols-2 gap-6 border-t-2 border-dashed border-[#999] pt-4">
               <div>
                 <p className="text-label">FOR OFFICE USE</p>

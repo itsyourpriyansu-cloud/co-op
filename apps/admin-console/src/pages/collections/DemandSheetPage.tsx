@@ -4,11 +4,12 @@
 import { Fragment, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BadgeCheck, ChevronDown, ChevronRight, Download, FileSearch, FlaskConical, Printer, Send } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, ChevronDown, ChevronRight, Download, FilePlus2, FileSearch, FlaskConical, Printer, RefreshCw, Send } from 'lucide-react';
 import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type, SnackbarV2Variant, StepperV2, StepperV2StepStatus, TextAreaV2, addSnackbarV2 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
 import { formatDisplayDateTime, formatINR, formatDisplayDate } from '@tgs/domain';
 import type { DemandSheetDetail } from '@tgs/types';
+import { useAuth } from '@/app/auth';
 import { Letterhead } from '@/components/Letterhead';
 import { Money } from '@/components/Money';
 import { SideDrawer } from '@/components/SideDrawer';
@@ -17,6 +18,7 @@ import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { ENTRY_LABEL, HEAD_COLUMNS, cycleLabel, downloadCsv } from './collections';
+import { SheetTopUpDrawer } from './SheetTopUpDrawer';
 
 type Drawer = 'certify' | 'sendToDdo' | null;
 
@@ -36,7 +38,10 @@ export function DemandSheetPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['demand-sheet', id], queryFn: () => api.demand.sheet(id) });
+  const { session } = useAuth();
   const [drawer, setDrawer] = useState<Drawer>(null);
+  // D-124: rebuild a sheet not certified yet, or add a supplementary sheet for members it missed.
+  const [topUp, setTopUp] = useState<'regenerate' | 'supplement' | null>(null);
   const [remarks, setRemarks] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const done = (next: DemandSheetDetail, header: string) => {
@@ -75,7 +80,7 @@ export function DemandSheetPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-page-title text-fg">
-                    {d.department?.name} · {cycleLabel(sh.cycle)}
+                    {d.department?.name} · {cycleLabel(sh.cycle)}{sh.supplementNo ? ` · Supplement ${sh.supplementNo}` : ''}
                   </h1>
                   <StatusTag entity="demandSheet" status={sh.status} />
                 </div>
@@ -86,6 +91,8 @@ export function DemandSheetPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <ButtonV2 text="Export" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Download size={16} /> }} onClick={() => exportCsv(d)} />
                 <ButtonV2 text="Print" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => window.print()} />
+                {session?.user.role === 'ACCOUNTANT' && sh.status === 'GENERATED' && <ButtonV2 text="Regenerate" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <RefreshCw size={16} /> }} onClick={() => setTopUp('regenerate')} />}
+                {session?.user.role === 'ACCOUNTANT' && sh.status !== 'GENERATED' && <ButtonV2 text="Add missing members" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FilePlus2 size={16} /> }} onClick={() => setTopUp('supplement')} />}
                 {d.actions.includes('certify') && <ButtonV2 text="Certify" leftSlot={{ slot: <BadgeCheck size={16} /> }} onClick={() => setDrawer('certify')} />}
                 {d.actions.includes('sendToDdo') && <ButtonV2 text="Send to DDO" leftSlot={{ slot: <Send size={16} /> }} onClick={() => setDrawer('sendToDdo')} />}
                 {d.actions.includes('postRecovery') && <ButtonV2 text={sh.entry?.status === 'SUBMITTED' || sh.entry?.status === 'UNDER_REVIEW' ? 'Review and post' : 'Enter recovery'} onClick={() => navigate(`/demand-sheets/${id}/recovery`)} />}
@@ -112,7 +119,7 @@ export function DemandSheetPage() {
               <div className="hidden px-5 pt-5 print:block">
                 <Letterhead />
                 <h2 className="mt-4 text-center text-card-title tracking-wide">
-                  DEMAND · {d.department?.name.toUpperCase()} · {cycleLabel(sh.cycle).toUpperCase()}
+                  DEMAND · {d.department?.name.toUpperCase()} · {cycleLabel(sh.cycle).toUpperCase()}{sh.supplementNo ? ` · SUPPLEMENT ${sh.supplementNo}` : ''}
                 </h2>
               </div>
               <div className="overflow-x-auto">
@@ -219,6 +226,21 @@ export function DemandSheetPage() {
                 </p>
               )}
             </section>
+
+            <SheetTopUpDrawer
+              mode={topUp ?? 'regenerate'}
+              sheetId={id}
+              cycle={sh.cycle}
+              departmentId={sh.departmentId}
+              departmentName={d.department?.name ?? ''}
+              open={topUp !== null}
+              onClose={() => setTopUp(null)}
+              onDone={(next) => {
+                const mode = topUp;
+                setTopUp(null);
+                if (mode === 'supplement') navigate(`/demand-sheets/${next}`);
+              }}
+            />
 
             <SideDrawer
               open={drawer !== null}

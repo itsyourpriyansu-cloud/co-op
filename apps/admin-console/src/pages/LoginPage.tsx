@@ -233,7 +233,7 @@ export function LoginPage() {
             <StepCard
               icon={<ShieldCheck size={22} aria-hidden />}
               title="Set up an authenticator app"
-              lead="Your role signs approvals, so the society asks for a second step. Use Google Authenticator, Microsoft Authenticator or any TOTP app."
+              lead="Staff accounts handle members' money, so the society asks for a second step. Use Google Authenticator, Microsoft Authenticator or any TOTP app."
               onBack={restart}
             >
               <ol className="mb-4 flex list-decimal flex-col gap-1 pl-5 text-body text-fg-secondary">

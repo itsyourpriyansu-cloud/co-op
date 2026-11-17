@@ -1,5 +1,6 @@
 # Open Questions
 
+> Version 0.7 · 2026-11-16 · Q-D124 (first deduction month, early interest, supplementary sheets)
 > Version 0.6 · 2026-11-13 · Q-004, Q-112, Q-116, Q-405, Q-408, Q-513 closed by the build (D-117 … D-121)
 > Version 0.5 · 2026-11-05 · F-01…F-14 answered (D-093)
 > Version 0.4 · 2026-10-29 · Society answers recorded (D-067, `docs/21-society-answers-impact.md`)
@@ -128,3 +129,4 @@ Details and context: `docs/21-society-answers-impact.md` §3–4.
 | C-1 | EMI flat (society) vs reducing balance (agreement): which one? | Both in the engine; product setting | S/E | **Resolved → D-071:** all methods built, society picks per product; default reducing balance |
 | C-2 | Membership: one signature (society) vs two (form F1) | Setting `membershipApprovals` | S/E | **Resolved → D-070:** two signatures (Secretary → President) as in the prototype; 1 is optional |
 | Q-D123 | Loan products the Admin adds (D-123): one shared ledger head, or a separate head per product? | One shared head 1340 "Other loans", built in D-123 | S | Open: confirm with the society's accountant before go-live |
+| Q-D124 | First deduction month, interest for the days before it, and sheets that missed members (D-124): does the society (a) accept interest by actual days ÷ 365 from payment to the 1st of the first deduction month, added to the first instalment, (b) want the cut-off to stay the send-by date, (c) want a member who joined after the month's sheet to owe that month's RRF / CRD / insurance? | Loans, demand sheets | S | **Placeholders built:** (a) yes, switch `earlyInterestEnabled` on, (b) yes, (c) no (`lateJoinerOwesMissedMonth` off). Confirm with the society's accountant before go-live. |

@@ -7,7 +7,10 @@ import { ChevronDown, ChevronUp, PenLine, Repeat2, Search, Trash2, TrendingUp, U
 import { isApiError } from '@tgs/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatCycle, formatDisplayDate, formatINR } from '@tgs/domain';
+import { DocumentActions } from '@/components/DocumentActions';
 import { api } from '@/lib/api';
+import { DEFAULT_SOCIETY, documentFileName, localDate, sanctionLetterHtml, scheduleHtml } from '@/lib/documents';
+import { useJoiningReference } from '@/lib/joining';
 import { loanKeys, useMemberSearch, useMyLoan } from '@/lib/loans';
 import { Alert, Button, Card, Divider, Header, KeyValue, OtpInput, Screen, Section, Skeleton, StageTracker, StatusTag, Text, TextField } from '@/ui';
 import { color, radius, space } from '@/theme';
@@ -21,6 +24,7 @@ export default function LoanDetails() {
   const [replacing, setReplacing] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const search = useMemberSearch(q);
+  const society = useJoiningReference().data?.society ?? DEFAULT_SOCIETY;
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const [actionError, setActionError] = useState<string>();
   const [receipt, setReceipt] = useState<{ otpRef: string; demoOtp?: string } | null>(null);
@@ -199,6 +203,12 @@ export default function LoanDetails() {
             </Section>
           ) : null}
 
+          {l.sanctionLetterNo && l.sanctionSheet ? (
+            <Section title="Sanction letter" description={`Ref. ${l.sanctionLetterNo}`}>
+              <DocumentActions title={`Sanction letter ${l.sanctionLetterNo}`} fileName={documentFileName('Sanction-letter', l.sanctionLetterNo)} html={() => sanctionLetterHtml(d, { society, generatedOn: localDate() })} />
+            </Section>
+          ) : null}
+
           {l.schedule.length ? (
             <Section title="Repayment schedule">
               <Card>
@@ -212,6 +222,11 @@ export default function LoanDetails() {
                       {r.paidStatus ? <StatusTag entity="schedule" status={r.paidStatus} size="xs" /> : null}
                     </View>
                   ))}
+                  {l.schedule[0]?.earlyInterest ? (
+                    <Text role="caption" tone="tertiary">
+                      The first instalment includes {formatINR(l.schedule[0].earlyInterest)} interest for the days between the loan being paid and the 1st of {formatCycle(l.schedule[0].dueCycle)}.
+                    </Text>
+                  ) : null}
                   {l.schedule.length > 6 ? (
                     <>
                       <Divider />
@@ -220,6 +235,7 @@ export default function LoanDetails() {
                   ) : null}
                 </View>
               </Card>
+              <DocumentActions title={`Repayment schedule ${l.loanNo ?? l.applicationNo}`} fileName={documentFileName('Repayment-schedule', l.loanNo ?? l.applicationNo)} html={() => scheduleHtml(d, { society, generatedOn: localDate() })} />
             </Section>
           ) : null}
 

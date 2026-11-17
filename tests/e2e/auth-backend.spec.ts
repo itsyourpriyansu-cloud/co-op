@@ -2,7 +2,7 @@
 // set-up by QR key, a temporary password replaced at first sign-in, and silent token renewal.
 // Skipped when E2E_API_URL points at the mock API (the mock has no password sign-in).
 import { generate } from 'otplib';
-import { API, API_URL, apiCall, apiToken, CONSOLE_URL, expect, test } from './support';
+import { API_URL, apiCall, apiToken, CONSOLE_URL, expect, test } from './support';
 
 test.describe('staff sign-in · backend', () => {
   test.beforeAll(async ({ request }) => {
@@ -64,8 +64,8 @@ test.describe('staff sign-in · backend', () => {
   });
 
   test('an expired access token is renewed without signing out', async ({ page, request }) => {
-    const r = await request.post(`${API}/auth/staff/login`, { data: { username: 'accounts', password: 'Society@2026' } });
-    const { session } = await r.json();
+    // D-127: the Accountant now has an authenticator too; the demo sign-in gives the same kind of session.
+    const session = await apiToken(request, 'stf-accountant', 'console');
     await page.goto(`${CONSOLE_URL}/login`);
     await page.evaluate((s) => localStorage.setItem('tgs.console.session', JSON.stringify({ ...s, token: 'expired.access.token' })), session);
     await page.goto(`${CONSOLE_URL}/queue`);

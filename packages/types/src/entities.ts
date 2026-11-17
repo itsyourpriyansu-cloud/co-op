@@ -168,6 +168,8 @@ export interface ScheduleRow {
   emi: Paise;
   closing: Paise;
   paidStatus: SchedulePaidStatus;
+  /** D-124: interest for the days between disbursement and the first deduction month, already inside `interest` and `emi` of instalment 1. */
+  earlyInterest?: Paise;
 }
 
 export interface LoanSurety {
@@ -255,6 +257,11 @@ export interface SanctionSheet {
   lastEmi: Paise;
   totalInterest: Paise;
   firstDueCycle: Cycle;
+  /** D-124: true when the officer's choice of first deduction month was recorded (loans sanctioned before this keep the old rule: the month after payment). */
+  firstDueChosen?: boolean;
+  /** D-124: interest for the days before the first deduction month, added to instalment 1 (0 / missing when switched off or none). */
+  earlyInterest?: Paise;
+  earlyInterestFrom?: ISODate;
   shareDeduction: Paise;
   /** Top-up only: what closes the old loan (BR-007). */
   topup?: { loanId: string; loanNo: string; outstandingPrincipal: Paise; accruedInterest: Paise; settlement: Paise };
@@ -437,6 +444,8 @@ export interface DemandSheet {
   lines: DemandLine[];
   totalDemand: Paise;
   totalRecovered: Paise;
+  /** D-124: 0 / missing = the month's own sheet; 1, 2 … = a supplementary sheet for members the first one missed. */
+  supplementNo?: number;
   certifiedBy?: string;
   /** M7 sign-offs (ST-41 generate, BR-030 certify, send to DDO, ST-43 post). */
   generated?: StaffSignOff;
@@ -732,6 +741,10 @@ export interface SocietySettings {
   shareDepositRatePercent: number;
   /** G2 (D-112) [P]: balance the annual interest is worked on: the year-end balance or the average of the 12 month-ends. */
   depositInterestBasis: 'YEAR_END' | 'AVERAGE_MONTH_END';
+  /** D-124 [P]: a new loan's first deduction also pays interest for the days from disbursement to the first deduction month. */
+  earlyInterestEnabled: boolean;
+  /** D-124 [P]: a member who joined after the month's sheet was made owes that month's RRF / CRD / insurance on a supplementary sheet. */
+  lateJoinerOwesMissedMonth: boolean;
   placeholders: string[];
 }
 

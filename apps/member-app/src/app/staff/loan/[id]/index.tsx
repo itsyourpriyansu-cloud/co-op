@@ -88,6 +88,7 @@ function Closure({ loanId }: { loanId: string }) {
 
 function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; refetch: () => void }) {
   const today = useToday();
+  const { session } = useAuth();
   const l = d.loan;
   const f = l.form ?? {};
   const pay = f.pay;
@@ -97,6 +98,8 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
   const primary = d.actions.filter((a) => !SECONDARY.has(a));
   const secondary = d.actions.filter((a) => SECONDARY.has(a));
   const open = (a: string) => router.push(`/staff/loan/${l.id}/action/${a}`);
+  // D-124: the Accountant can move the first deduction month of a sanctioned loan until it is paid.
+  const canMoveFirstDue = l.status === 'SANCTIONED' && Boolean(l.sanctionSheet?.firstDueChosen) && session?.user.role === 'ACCOUNTANT';
   const signOffs: Array<[string, { byName: string; at: string } | undefined]> = [
     ['Review', l.signOffs?.review],
     [l.signOffs?.ddo?.manual ? `DDO (paper, ${l.signOffs.ddo.manual.reference})` : 'DDO certificate', l.signOffs?.ddo],
@@ -110,10 +113,11 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
       header={<Header title="Loan" onBack={() => router.back()} />}
       refreshing={refetching}
       onRefresh={refetch}
-      {...(d.actions.length
+      {...(d.actions.length || canMoveFirstDue
         ? {
             footer: (
               <View style={{ gap: space[3] }}>
+                {canMoveFirstDue ? <Button text="First deduction month" buttonType="secondary" fullWidth onPress={() => open('changeFirstDue')} /> : null}
                 {primary.map((a) => (
                   <Button key={a} text={ACTION_LABEL[a] ?? a} size="lg" fullWidth onPress={() => open(a)} />
                 ))}

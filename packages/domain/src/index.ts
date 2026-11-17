@@ -21,3 +21,4 @@ export * from './joining-reference';
 export * from './service-targets';
 export * from './settlement';
 export * from './accounts';
+export * from './first-deduction';

@@ -7,6 +7,7 @@ import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from
 import type { DemandSheetDetail } from '@tgs/types';
 import { Expand, Loaded, plain, PrintButton, ShareCsvButton, Stack2 } from '@/components/staff';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { ENTRY_LABEL, HEAD_COLUMNS } from '@/lib/staffCollections';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Text, TextField } from '@/ui';
 import { space } from '@/theme';
@@ -29,6 +30,8 @@ export default function DemandSheet() {
 
 function Body({ d, refetching, refetch }: { d: DemandSheetDetail; refetching: boolean; refetch: () => void }) {
   const sh = d.sheet;
+  const { session } = useAuth();
+  const accountant = session?.user.role === 'ACCOUNTANT';
   const [q, setQ] = useState('');
   const posted = sh.status === 'RECOVERY_POSTED';
   const heads = HEAD_COLUMNS.filter((h) => d.totals.heads[h.head]);
@@ -37,6 +40,9 @@ function Body({ d, refetching, refetch }: { d: DemandSheetDetail; refetching: bo
   const entryOpen = sh.entry?.status === 'SUBMITTED' || sh.entry?.status === 'UNDER_REVIEW';
   const go = (a: string) => router.push(`/staff/demand/${sh.id}/${a}`);
   const buttons: Array<{ text: string; onPress: () => void }> = [
+    // D-124: rebuild a sheet not certified yet, or add a supplementary sheet for members it missed.
+    ...(accountant && sh.status === 'GENERATED' ? [{ text: 'Regenerate', onPress: () => router.push(`/staff/demand/${sh.id}/topup?mode=regenerate`) }] : []),
+    ...(accountant && sh.status !== 'GENERATED' ? [{ text: 'Add missing members', onPress: () => router.push(`/staff/demand/${sh.id}/topup?mode=supplement`) }] : []),
     ...(d.actions.includes('certify') ? [{ text: 'Certify', onPress: () => go('certify') }] : []),
     ...(d.actions.includes('sendToDdo') ? [{ text: 'Send to DDO', onPress: () => go('sendToDdo') }] : []),
     ...(d.actions.includes('postRecovery') ? [{ text: entryOpen ? 'Review and post' : 'Enter recovery', onPress: () => go('recovery') }] : !d.actions.includes('postRecovery') && d.actions.includes('saveEntry') ? [{ text: 'Enter deductions', onPress: () => go('recovery') }] : []),
@@ -61,7 +67,7 @@ function Body({ d, refetching, refetch }: { d: DemandSheetDetail; refetching: bo
     >
       <View style={{ gap: space[2] }}>
         <Text role="pageTitle">
-          {d.department?.name} · {formatCycle(sh.cycle)}
+          {d.department?.name} · {formatCycle(sh.cycle)}{sh.supplementNo ? ` · Supplement ${sh.supplementNo}` : ''}
         </Text>
         <Text role="caption" tone="secondary">
           DDO {d.department?.ddoName}, {d.department?.ddoDesignation} · {d.lines.length} members

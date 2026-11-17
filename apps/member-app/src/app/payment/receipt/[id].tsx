@@ -2,7 +2,10 @@
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { formatCycle, formatDisplayDate, formatINR } from '@tgs/domain';
+import { DocumentActions } from '@/components/DocumentActions';
 import { Logo } from '@/components/Logo';
+import { DEFAULT_SOCIETY, documentFileName, localDate, receiptHtml } from '@/lib/documents';
+import { useJoiningReference } from '@/lib/joining';
 import { SOURCE_LABEL, useMyReceipt } from '@/lib/payments';
 import { Alert, Card, Divider, Header, KeyValue, Screen, Section, Skeleton, Text } from '@/ui';
 import { radius, space } from '@/theme';
@@ -12,6 +15,7 @@ export default function ReceiptView() {
   const q = useMyReceipt(id);
   const d = q.data;
   const r = d?.receipt;
+  const society = useJoiningReference().data?.society ?? DEFAULT_SOCIETY;
   return (
     <Screen header={<Header title="Receipt" onBack={() => router.back()} />}>
       {q.isLoading ? (
@@ -60,6 +64,7 @@ export default function ReceiptView() {
               </Card>
             </Section>
           ) : null}
+          <DocumentActions title={`Receipt ${r.receiptNo}`} fileName={documentFileName('Receipt', r.receiptNo)} html={() => receiptHtml(d, { society, paidBy: SOURCE_LABEL[r.source], generatedOn: localDate() })} />
         </>
       )}
     </Screen>

@@ -451,12 +451,12 @@ function Deposits({ b, title }: { b: SettingsBundle; title: string }) {
 
 // ---- ST-66m Insurance & demand -------------------------------------------------------------
 
-type DemandValues = Pick<SocietySettings, 'insurance' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'defaulterCycles' | 'suretyRecoveryAfterCycles' | 'penalGraceDays' | 'demandSendByDays' | 'minTakeHomePay'>;
+type DemandValues = Pick<SocietySettings, 'insurance' | 'rrfMonthly' | 'crdMonthly' | 'srdsMonthly' | 'defaulterCycles' | 'suretyRecoveryAfterCycles' | 'penalGraceDays' | 'demandSendByDays' | 'minTakeHomePay' | 'earlyInterestEnabled' | 'lateJoinerOwesMissedMonth'>;
 
 function InsuranceDemand({ b, title }: { b: SettingsBundle; title: string }) {
   const ro = !b.canEdit;
   const s = b.settings;
-  const form = useDraft<DemandValues>({ insurance: s.insurance, rrfMonthly: s.rrfMonthly, crdMonthly: s.crdMonthly, srdsMonthly: s.srdsMonthly, defaulterCycles: s.defaulterCycles, suretyRecoveryAfterCycles: s.suretyRecoveryAfterCycles, penalGraceDays: s.penalGraceDays, demandSendByDays: s.demandSendByDays, minTakeHomePay: s.minTakeHomePay });
+  const form = useDraft<DemandValues>({ insurance: s.insurance, rrfMonthly: s.rrfMonthly, crdMonthly: s.crdMonthly, srdsMonthly: s.srdsMonthly, defaulterCycles: s.defaulterCycles, suretyRecoveryAfterCycles: s.suretyRecoveryAfterCycles, penalGraceDays: s.penalGraceDays, demandSendByDays: s.demandSendByDays, minTakeHomePay: s.minTakeHomePay, earlyInterestEnabled: s.earlyInterestEnabled, lateJoinerOwesMissedMonth: s.lateJoinerOwesMissedMonth });
   const a = useAction();
   const v = form.draft;
   const e = a.fields;
@@ -483,6 +483,10 @@ function InsuranceDemand({ b, title }: { b: SettingsBundle; title: string }) {
       <Block title="Sending and deductions" description="The sheet must reach the DDO this many days before the 1st (society: 3–5). A deduction may never leave the member less than the minimum take-home pay." tag={ph('demandSendByDays') || ph('minTakeHomePay')}>
         <Num label="Send to the DDO before the 1st" value={v.demandSendByDays} onChange={(demandSendByDays) => set({ demandSendByDays })} error={e.demandSendByDays} unit="days" disabled={ro} />
         <MoneyField label="Minimum take-home pay" value={v.minTakeHomePay} onChange={(minTakeHomePay) => set({ minTakeHomePay })} error={e.minTakeHomePay} disabled={ro} hint="₹0 = only the salary limit applies" />
+      </Block>
+      <Block title="Late loans and late joiners" description="Interest for the days between payment and the 1st of a new loan's first deduction month is added to that first deduction. A member who joined after the month's sheet was made is added on a supplementary sheet; with the second switch off they do not owe that month's RRF, CRD or insurance." tag={ph('earlyInterestEnabled') || ph('lateJoinerOwesMissedMonth')}>
+        <Toggle label="Interest for the days before the first month" checked={v.earlyInterestEnabled} onChange={(earlyInterestEnabled) => set({ earlyInterestEnabled })} disabled={ro} />
+        <Toggle label="Late joiner owes the missed month" checked={v.lateJoinerOwesMissedMonth} onChange={(lateJoinerOwesMissedMonth) => set({ lateJoinerOwesMissedMonth })} disabled={ro} />
       </Block>
       <Block title="Penal interest" description="Simple interest per day on the unpaid loan instalment only, from the cycle's last day plus these grace days, until paid. The rate is set per loan product." tag={ph('penalGraceDays')}>
         <Num label="Grace days" value={v.penalGraceDays} onChange={(penalGraceDays) => set({ penalGraceDays })} error={e.penalGraceDays} unit="days" disabled={ro} />

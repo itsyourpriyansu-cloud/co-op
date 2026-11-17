@@ -13,6 +13,10 @@ export class CollectionsController {
   preview = (r: FastifyRequest<{ Querystring: { cycle?: string; departmentIds?: string } }>) => this.service.preview(sessionOf(r), r.query.cycle, r.query.departmentIds);
   generate = (r: FastifyRequest<{ Body: { cycle?: string; departmentIds?: string[] } }>) => this.service.generate(r, r.body ?? {});
   sheet = (r: ById) => this.service.sheetDetail(sessionOf(r), r.params.id);
+  regeneratePreview = (r: ById) => this.service.regeneratePreview(sessionOf(r), r.params.id);
+  regenerate = (r: ById) => this.service.regenerate(r, r.params.id);
+  supplementaryPreview = (r: FastifyRequest<{ Querystring: { cycle: string; departmentId: string } }>) => this.service.supplementaryPreview(sessionOf(r), r.query.cycle, r.query.departmentId);
+  createSupplementary = (r: FastifyRequest<{ Body: { cycle: string; departmentId: string } }>) => this.service.createSupplementary(r, r.body);
   act = (r: FastifyRequest<{ Params: { id: string; action: DemandSheetAction }; Body: RecoveryInput }>) => this.service.act(r, r.params.id, r.params.action, r.body);
   demoAct = (r: ById) => this.service.demoAct(r, r.params.id);
   entry = (r: FastifyRequest<{ Params: { id: string; action: DeductionEntryAction }; Body: Partial<DeductionEntryInput> & { reason?: string } }>) => this.service.entryAction(r, r.params.id, r.params.action, r.body ?? {});

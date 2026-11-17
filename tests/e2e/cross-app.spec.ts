@@ -75,6 +75,23 @@ test.describe('cross-app (AC-X01)', () => {
     await phone.context.close();
   });
 
+  test('D-129: an applicant document opens on the same page, not in a new tab', async ({ page, request }) => {
+    await divyaApplies(request);
+    const admin = (await apiToken(request, 'stf-admin', 'console')).token;
+    const app = (await apiCall<{ rows: Array<{ id: string; name: string }> }>(request, 'GET', '/membership/applications', admin)).rows.find((r) => r.name === 'Divya S')!;
+    await consoleAs(page, request, 'stf-accountant', `/joining/${app.id}`);
+    await page.getByRole('tab', { name: 'Documents' }).click();
+    const url = page.url();
+    await page.getByRole('button', { name: 'View' }).first().click();
+    const viewer = page.getByRole('dialog');
+    await expect(viewer.getByRole('img')).toBeVisible();
+    await expect(viewer.getByRole('button', { name: 'Download' })).toBeVisible();
+    expect(page.context().pages()).toHaveLength(1);
+    expect(page.url()).toBe(url);
+    await viewer.getByRole('button', { name: 'Close' }).first().click();
+    await expect(viewer).toHaveCount(0);
+  });
+
   test('loan: Sravani applies → Lakshmi and Mahesh sign on their phones → console to disbursement → Active on her phone', async ({ page, browser, request, errors }) => {
     const sravani = (await apiToken(request, 'mem-1103', 'app')).token;
     const pay = { scaleOfPay: '24280-72850', grossSalary: 5_200_000, govtLoanDeductions: 300_000, otherLoanDeductions: 0 };

@@ -103,8 +103,8 @@ export function sanctionPreview(db: Db, l: Loan, amount?: number, instalments?: 
       ...(salary[0]?.disbursedOn ? { salaryTakenOn: salary[0].disbursedOn } : {}),
     },
   });
-  // D-123 keeps the same shape here; the prototype does not restrict the tenure to the product's periods.
-  return { sheet, maxInstalments, instalmentOptions: [l.appliedInstalments], fieldErrors: validateSanctionAdjustment(amt, inst, { amount: l.appliedAmount, instalments: l.appliedInstalments }, maxInstalments, [inst]) };
+  // D-123 / D-124 keep the same shape here; the prototype does not restrict the tenure or the first deduction month.
+  return { sheet, maxInstalments, instalmentOptions: [l.appliedInstalments], firstDueOptions: [sheet.firstDueCycle], fieldErrors: validateSanctionAdjustment(amt, inst, { amount: l.appliedAmount, instalments: l.appliedInstalments }, maxInstalments, [inst]) };
 }
 
 /** One transition with its side effects. `demo` lets a demo user act as the stage owner. */
