@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search, UserRound } from 'lucide-react';
 import { TextInputV2 } from '@juspay/blend-design-system';
 import type { MemberPick } from '@tgs/types';
+import { isSearchable } from '@tgs/domain';
 import { api } from '@/lib/api';
 
 export function useDebounced<T>(value: T, ms = 350): T {
@@ -20,12 +21,12 @@ export function useDebounced<T>(value: T, ms = 350): T {
 export function MemberSearch({ placeholder, onPick, exclude = [] }: { placeholder: string; onPick: (m: MemberPick) => void; exclude?: string[] }) {
   const [q, setQ] = useState('');
   const dq = useDebounced(q.trim());
-  const res = useQuery({ queryKey: ['member-search', dq], queryFn: () => api.loans.searchMembers(dq), enabled: dq.length >= 2 });
+  const res = useQuery({ queryKey: ['member-search', dq], queryFn: () => api.loans.searchMembers(dq), enabled: isSearchable(dq) });
   const rows = (res.data ?? []).filter((m) => !exclude.includes(m.id));
   return (
     <div className="flex flex-col gap-2">
       <TextInputV2 value={q} placeholder={placeholder} leftSlot={{ slot: <Search size={16} className="text-fg-tertiary" /> }} onChange={(e) => setQ(e.target.value)} />
-      {dq.length >= 2 && (
+      {isSearchable(dq) && (
         <ul className="max-h-60 divide-y divide-line-subtle overflow-y-auto rounded-control border border-line">
           {res.isLoading && <li className="px-3 py-3 text-caption text-fg-tertiary">Searching…</li>}
           {!res.isLoading && !rows.length && <li className="px-3 py-3 text-caption text-fg-tertiary">No active member matches “{dq}”.</li>}

@@ -484,11 +484,11 @@ function OfficeUse({ d, salary }: { d: LoanDetail; salary?: boolean }) {
           <Line label="Net payable" value={formatINR(sh.netDisbursable)} />
         </div>
       ) : (
-        <p className="mt-2 text-caption text-[#555]">Not assessed yet.</p>
+        <p className="mt-2 text-caption text-[#555]">{['SANCTION_SECRETARY', 'SANCTION_PRESIDENT', 'SANCTIONED', 'ACTIVE', 'CLOSED', 'CLOSED_BY_TOPUP'].includes(l.status) ? 'Assessed before this system was used: the office-use details are in the society register.' : 'Not assessed yet.'}</p>
       )}
       <Signatures
         items={[
-          { label: 'Accountant (assessed)', ...(so?.assessment ? { name: so.assessment.byName, at: formatDisplayDateTime(so.assessment.at) } : {}) },
+          { label: 'Accountant (assessed)', ...(so?.assessment ? { name: so.assessment.byName, at: formatDisplayDateTime(so.assessment.at), ...(so.assessment.signatureFileId ? { fileId: so.assessment.signatureFileId } : {}) } : {}) },
           { label: 'Secretary (sanctioned)', ...(so?.secretary ? { name: so.secretary.byName, at: formatDisplayDateTime(so.secretary.at), ...(so.secretary.signatureFileId ? { fileId: so.secretary.signatureFileId } : {}) } : {}) },
           { label: 'President (sanctioned)', ...(so?.president ? { name: so.president.byName, at: formatDisplayDateTime(so.president.at), ...(so.president.signatureFileId ? { fileId: so.president.signatureFileId } : {}) } : {}) },
         ]}

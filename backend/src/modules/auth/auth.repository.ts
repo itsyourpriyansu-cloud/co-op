@@ -8,6 +8,8 @@ export type AppAccountRow = typeof appAccounts.$inferSelect;
 export type OtpRow = typeof otpChallenges.$inferSelect;
 export type RefreshRow = typeof refreshTokens.$inferSelect;
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export class AuthRepository {
   constructor(private readonly db: Database) {}
 
@@ -79,6 +81,8 @@ export class AuthRepository {
   }
 
   async otpById(id: string): Promise<OtpRow | undefined> {
+    // A missing or malformed reference is simply "no such code" (the column is a uuid; Postgres would reject it).
+    if (!UUID.test(id)) return undefined;
     const [row] = await this.db.select().from(otpChallenges).where(eq(otpChallenges.id, id));
     return row;
   }

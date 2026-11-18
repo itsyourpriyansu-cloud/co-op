@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FileText, HandCoins, PiggyBank, ReceiptIndianRupee, Search, UserPlus, Users, type LucideIcon } from 'lucide-react';
 import { SearchInputV2 } from '@juspay/blend-design-system';
 import type { SearchHit } from '@tgs/types';
+import { isSearchable } from '@tgs/domain';
 import { useDebounced } from '@/components/MemberSearch';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -26,7 +27,7 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const dq = useDebounced(q.trim(), 250);
-  const res = useQuery({ queryKey: ['global-search', dq], queryFn: () => api.search(dq), enabled: dq.length >= 2 });
+  const res = useQuery({ queryKey: ['global-search', dq], queryFn: () => api.search(dq), enabled: isSearchable(dq) });
   const hits = useMemo(() => res.data ?? [], [res.data]);
   const wrap = useRef<HTMLDivElement>(null);
   const listId = useId();
@@ -58,7 +59,7 @@ export function GlobalSearch() {
   };
 
   const groups = (Object.keys(KIND) as SearchHit['kind'][]).map((k) => ({ k, items: hits.filter((h) => h.kind === k) })).filter((g) => g.items.length);
-  const show = open && dq.length >= 2;
+  const show = open && isSearchable(dq);
 
   return (
     <div

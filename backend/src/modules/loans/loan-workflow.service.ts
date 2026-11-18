@@ -271,6 +271,11 @@ export class LoanWorkflowService {
             netDisbursable: p.sheet.netDisbursable,
             ...(p.sheet.topup ? { topupSettlement: p.sheet.topup.settlement } : {}),
           });
+          // The Accountant's signature is printed on the office-use block of F2 / F3, like the signers' (D-096, D-130).
+          if (actor.role === 'ACCOUNTANT') {
+            const fileId = await this.app.signatures.signOff(actor.id, opts.demo);
+            if (fileId) signOff.signatureFileId = fileId;
+          }
           l.signOffs.assessment = signOff;
           delete l.signOffs.secretary;
           delete l.signOffs.president;

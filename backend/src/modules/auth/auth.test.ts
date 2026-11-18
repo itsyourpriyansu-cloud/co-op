@@ -173,6 +173,9 @@ describe('member mobile + OTP (P1a, D-067)', () => {
     expect((await start('9999999990')).statusCode).toBe(400);
     const ref = (await start(lakshmi.mobile)).json().otpRef;
     expect((await verify({ otpRef: ref, otp: '000000' })).statusCode).toBe(400);
+    // A missing or malformed code reference is a plain "expired" answer, never a server error.
+    expect((await verify({ otpRef: '', otp: '123456' })).statusCode).toBe(400);
+    expect((await verify({ otpRef: 'not-a-uuid', otp: '123456' })).statusCode).toBe(400);
     expect((await verify({ otpRef: ref, otp: '123456' })).statusCode).toBe(200);
     expect((await verify({ otpRef: ref, otp: '123456' })).json().fieldErrors.otp).toBe('Expired');
   });

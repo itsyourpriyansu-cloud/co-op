@@ -14,6 +14,7 @@ import {
   checkSuretyEligibility,
   firstDueCycle,
   formatINR,
+  isSearchable,
   lastInstalmentCycle,
   loanActionsFor,
   loanStages,
@@ -402,12 +403,12 @@ export function registerLoans(api: Api, store: Store, requireSession: Guard) {
     const user = c.get('session');
     if (user.role !== 'MEMBER') staffView(user);
     const q = (c.req.query('q') ?? '').trim().toLowerCase();
-    if (q.length < 2) return c.json<MemberPick[]>([]);
+    if (!isSearchable(q)) return c.json<MemberPick[]>([]);
     const rows = db()
       .members.filter((m) => m.status === 'ACTIVE' && m.id !== user.memberId && (m.name.toLowerCase().includes(q) || m.generalNo.startsWith(q)) && (user.role !== 'DDO' || m.departmentId === user.departmentId))
       .map((m) => ({ id: m.id, name: m.name, generalNo: m.generalNo, departmentName: deptName(db(), m.departmentId), designation: m.designation, leftoverLabel: calculateLeftoverService(m.dor, db().demo.today).label, activeGuarantees: openGuarantees(db(), m.id).length }))
       // Members who can still stand surety come first (BR-014), then by name.
-      .sort((a, b) => Number(a.activeGuarantees >= db().settings.maxGuaranteesPerSurety) - Number(b.activeGuarantees >= db().settings.maxGuaranteesPerSurety) || a.name.localeCompare(b.name))
+      .sort((a, b) => Number(b.generalNo === q) - Number(a.generalNo === q) || Number(a.activeGuarantees >= db().settings.maxGuaranteesPerSurety) - Number(b.activeGuarantees >= db().settings.maxGuaranteesPerSurety) || a.name.localeCompare(b.name))
       .slice(0, 12);
     return c.json<MemberPick[]>(rows);
   });

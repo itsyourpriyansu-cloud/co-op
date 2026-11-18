@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { SearchX } from 'lucide-react-native';
 import type { SearchHit } from '@tgs/types';
+import { isSearchable } from '@tgs/domain';
 import { Loaded, Row, staffHref, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { Card, EmptyState, Header, Screen, Section, Text, TextField } from '@/ui';
@@ -15,13 +16,13 @@ const KIND: Record<SearchHit['kind'], string> = { member: 'Members', loan: 'Loan
 export default function Search() {
   const [text, setText] = useState('');
   const dq = useDebounced(text.trim());
-  const q = useQuery({ queryKey: ['global-search', dq], queryFn: () => api.search(dq), enabled: dq.length >= 2 });
+  const q = useQuery({ queryKey: ['global-search', dq], queryFn: () => api.search(dq), enabled: isSearchable(dq) });
   return (
     <Screen header={<Header title="Search" onBack={() => router.back()} />}>
       <TextField compact label="Search" value={text} onChangeText={setText} placeholder="Members, loans, FDs, receipts" autoFocus autoCorrect={false} />
-      {dq.length < 2 ? (
+      {!isSearchable(dq) ? (
         <Text role="caption" tone="tertiary">
-          Type at least two letters of a name, General No., Employee ID, loan or FDR number.
+          Type a General No., or at least two letters of a name, Employee ID, loan or FDR number.
         </Text>
       ) : (
         <Loaded q={q} what="search results" height={68}>

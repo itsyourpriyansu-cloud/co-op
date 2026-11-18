@@ -5,7 +5,7 @@ import { router, type Href } from 'expo-router';
 import { ChevronDown, ChevronRight, CircleCheck, CircleX, Printer, Share2, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { isApiError } from '@tgs/api-client';
-import { checkPassword, DENOMINATIONS, denominationsFor, formatINR, type Denomination } from '@tgs/domain';
+import { checkPassword, isSearchable, DENOMINATIONS, denominationsFor, formatINR, type Denomination } from '@tgs/domain';
 import type { MemberPick, Permission, Role, StaffTicketRow } from '@tgs/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -432,7 +432,7 @@ export { useDebounced };
 export function MemberPicker({ label = 'Member', value, onPick, error, exclude = [] }: { label?: string; value?: MemberPick | undefined; onPick: (m: MemberPick | undefined) => void; error?: string | undefined; exclude?: string[] }) {
   const [q, setQ] = useState('');
   const dq = useDebounced(q.trim());
-  const found = useQuery({ queryKey: ['member-search', dq], queryFn: () => api.loans.searchMembers(dq), enabled: dq.length >= 2 });
+  const found = useQuery({ queryKey: ['member-search', dq], queryFn: () => api.loans.searchMembers(dq), enabled: isSearchable(dq) });
   const res = { isLoading: found.isLoading, data: found.data?.filter((m) => !exclude.includes(m.id)) };
   if (value)
     return (
@@ -452,8 +452,8 @@ export function MemberPicker({ label = 'Member', value, onPick, error, exclude =
   return (
     <View style={{ gap: space[4] }}>
       <TextField label={label} value={q} onChangeText={setQ} placeholder="Name or General No." autoCorrect={false} error={error} />
-      {dq.length >= 2 && res.isLoading ? <Skeleton height={68} radius={radius.card} /> : null}
-      {dq.length >= 2 && res.data?.length === 0 ? (
+      {isSearchable(dq) && res.isLoading ? <Skeleton height={68} radius={radius.card} /> : null}
+      {isSearchable(dq) && res.data?.length === 0 ? (
         <Text role="caption" tone="tertiary">
           No member matches “{dq}”.
         </Text>

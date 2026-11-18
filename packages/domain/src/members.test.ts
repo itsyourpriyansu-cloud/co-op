@@ -128,3 +128,11 @@ describe('profile change requests (MB-19, D-057)', () => {
     expect(Object.keys(e).sort()).toEqual(['fields.bogus', 'fields.designation', 'fields.dob', 'fields.fatherName', 'fields.name', 'fields.nominee.relation', 'fields.payProfile.grossSalary']);
   });
 });
+
+describe('isSearchable (member and surety search)', () => {
+  it('runs from one digit or two characters', async () => {
+    const { isSearchable } = await import('./members');
+    expect(['3', ' 7 ', '12', 'ra'].map(isSearchable)).toEqual([true, true, true, true]);
+    expect(['', ' ', 'r', '-'].map(isSearchable)).toEqual([false, false, false, false]);
+  });
+});

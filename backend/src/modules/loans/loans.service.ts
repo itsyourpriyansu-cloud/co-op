@@ -8,6 +8,7 @@ import {
   checkTopupEligibility,
   firstDueCycle,
   formatINR,
+  isSearchable,
   lastInstalmentCycle,
   lastInterestChargedOn,
   LOAN_STAGE_OWNER,
@@ -581,14 +582,14 @@ export class LoansService {
   async search(user: SessionUser, query: string): Promise<MemberPick[]> {
     if (user.role !== 'MEMBER') await this.requireStaffView(user);
     const q = query.trim().toLowerCase();
-    if (q.length < 2) return [];
+    if (!isSearchable(q)) return [];
     const [w, all] = await Promise.all([this.world(), this.app.members.all()]);
     const open = await this.repo.lite(w.cycle, { statuses: OPEN });
     const max = w.settings.maxGuaranteesPerSurety;
     return all
       .filter((m) => m.status === 'ACTIVE' && m.id !== user.memberId && (m.name.toLowerCase().includes(q) || m.generalNo.startsWith(q)) && (user.role !== 'DDO' || m.departmentId === user.departmentId))
       .map((m) => ({ id: m.id, name: m.name, generalNo: m.generalNo, departmentName: w.depts.get(m.departmentId)?.name ?? '', designation: m.designation, leftoverLabel: calculateLeftoverService(m.dor, w.today).label, activeGuarantees: this.guaranteesOf(open, m.id).length }))
-      .sort((a, b) => Number(a.activeGuarantees >= max) - Number(b.activeGuarantees >= max) || a.name.localeCompare(b.name))
+      .sort((a, b) => Number(b.generalNo === q) - Number(a.generalNo === q) || Number(a.activeGuarantees >= max) - Number(b.activeGuarantees >= max) || a.name.localeCompare(b.name))
       .slice(0, 12);
   }
 

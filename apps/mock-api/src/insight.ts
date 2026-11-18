@@ -1,7 +1,7 @@
 // M9 (D-063): ST-01 role dashboards, ST-03 notifications + simulated message composer + replies to
 // member questions (MB-13), ST-50/51 reports, ST-52 defaulter notice. Read models over the store; the
 // only writes are notifications, the message log and ticket replies.
-import { checkDefaulter, formatCycle, formatDisplayDate, formatINR, fullMonthsBetween } from '@tgs/domain';
+import { checkDefaulter, isSearchable, formatCycle, formatDisplayDate, formatINR, fullMonthsBetween } from '@tgs/domain';
 import type { AppNotification, SearchHit, ComposeInput, ComposePreview, DefaulterNotice, Member, OutboxMessage, ReportFilterKey, RoleDashboard, SessionUser, StaffNotifications, StaffTicketRow, WorkflowEvent } from '@tgs/types';
 import { memberDues } from './collections';
 import { audit, can, nowIso, requirePermission, requireStaff, type Api, type Guard } from './common';
@@ -376,7 +376,7 @@ export function registerInsight(api: Api, store: Store, requireSession: Guard) {
   api.get('/search', requireSession, (c) => {
     const user = staff(c.get('session'));
     const q = (c.req.query('q') ?? '').trim().toLowerCase();
-    if (q.length < 2) return c.json<SearchHit[]>([]);
+    if (!isSearchable(q)) return c.json<SearchHit[]>([]);
     const d = db();
     const dept = (id: string) => d.departments.find((x) => x.id === id)?.name ?? '';
     const member = new Map(d.members.map((m) => [m.id, m]));

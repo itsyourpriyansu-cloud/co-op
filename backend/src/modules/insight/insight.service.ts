@@ -1,4 +1,4 @@
-import { calculateLeftoverService, daysBetweenDates as daysBetween, depositActionsFor, formatCycle, formatDisplayDate, formatINR, loanActionsFor, membershipActionsFor, PRIMARY_DEPOSIT_ACTION, PRIMARY_LOAN_ACTION, PROFILE_FIELDS, serviceTarget } from '@tgs/domain';
+import { calculateLeftoverService, isSearchable, daysBetweenDates as daysBetween, depositActionsFor, formatCycle, formatDisplayDate, formatINR, loanActionsFor, membershipActionsFor, PRIMARY_DEPOSIT_ACTION, PRIMARY_LOAN_ACTION, PROFILE_FIELDS, serviceTarget } from '@tgs/domain';
 import type { DashboardSummary, DepositAccount, Loan, LoanStatus, MembershipApplication, Permission, RoleDashboard, SearchHit, SessionUser, WorkflowEvent, WorkItem, WorkQueue } from '@tgs/types';
 import type { FastifyInstance } from 'fastify';
 import { fail } from '../../common/errors/app-error';
@@ -390,7 +390,7 @@ export class InsightService {
   async search(user: SessionUser, query: string): Promise<SearchHit[]> {
     this.staff(user);
     const q = query.trim().toLowerCase();
-    if (q.length < 2) return [];
+    if (!isSearchable(q)) return [];
     const w = await this.world(user);
     const dept = (id: string) => w.deptName.get(id) ?? '';
     const digits = q.replace(/\D/g, '');

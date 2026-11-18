@@ -12,6 +12,12 @@ export function ageOn(dob: ISODate, today: ISODate): number {
   return Math.floor(fullMonthsBetween(dob, today) / 12);
 }
 
+/** Searches run from two characters, or from a single digit so a short General No. ("3") can be found. */
+export function isSearchable(q: string): boolean {
+  const t = q.trim();
+  return t.length >= 2 || /^\d$/.test(t);
+}
+
 /** Lists never show a full mobile number: "9876543210" → "98XXXXXX10". */
 export function maskMobile(mobile: string): string {
   return mobile.length < 4 ? mobile : `${mobile.slice(0, 2)}XXXXXX${mobile.slice(-2)}`;

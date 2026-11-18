@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { LoanRequestInput, LoanStatusGroup } from '@tgs/types';
+import { isSearchable } from '@tgs/domain';
 import { api } from './api';
 
 export const loanKeys = { mine: ['my-loans'] as const, one: (id: string) => ['my-loan', id] as const, context: ['loan-context'] as const };
@@ -40,7 +41,7 @@ export function useAssessment(input: LoanRequestInput, enabled: boolean, loanId?
 
 export function useMemberSearch(q: string) {
   const d = useDebounced(q.trim(), 350);
-  return useQuery({ queryKey: ['member-search', d], queryFn: () => api.loans.searchMembers(d), enabled: d.length >= 2 });
+  return useQuery({ queryKey: ['member-search', d], queryFn: () => api.loans.searchMembers(d), enabled: isSearchable(d) });
 }
 
 export const SEGMENTS: Array<{ value: LoanStatusGroup; label: string }> = [

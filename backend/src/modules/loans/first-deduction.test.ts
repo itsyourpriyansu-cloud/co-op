@@ -51,6 +51,8 @@ describe('first deduction month and early interest (D-124)', () => {
   it('the paid loan starts in the chosen month; closing that month first blocks payment until the Accountant moves it', async () => {
     const sanction = (await act(loan.id, 'sendForSanction', accountant, { firstDueCycle: '2026-11' })).json();
     expect(sanction.loan.status).toBe('SANCTION_SECRETARY');
+    // D-130: the Accountant's signature is kept with the assessment and printed on F2 / F3.
+    expect(sanction.loan.signOffs.assessment.signatureFileId).toEqual(expect.any(String));
     expect((await act(loan.id, 'secretarySign', secretary)).json().loan.status).toBe('SANCTION_PRESIDENT');
     expect((await act(loan.id, 'presidentSign', president)).json().loan.status).toBe('SANCTIONED');
 
