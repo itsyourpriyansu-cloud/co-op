@@ -14,6 +14,7 @@ const STAGE_LABEL: Record<string, string> = {
   membership: 'Joining',
   profile: 'Profile changes',
   mandate: 'Mandates',
+  retirement: 'Retirement date',
   deposit: 'Deposits',
   demand: 'Demand sheets',
   payments: 'Reported payments',
@@ -53,7 +54,7 @@ export class InsightService {
   /** Everything the read models need, loaded once per request. */
   private async world(user: SessionUser) {
     const a = this.app;
-    const [today, cycle, now, settings, members, departments, products, loans, deposits, applications, changes, mandates, sheets, reports, perms] = await Promise.all([
+    const [today, cycle, now, settings, members, departments, products, loans, deposits, applications, changes, mandates, sheets, reports, perms, retirementChanges] = await Promise.all([
       businessToday(a),
       businessCycle(a),
       businessNow(a),
@@ -69,11 +70,12 @@ export class InsightService {
       a.collections.repo.allSheetHeads(),
       a.collections.repo.reports(),
       Promise.all((['members.view', 'loans.view', 'deposits.view', 'membership.view', 'collections.view', 'members.decideChanges'] as Permission[]).map(async (p) => [p, await a.permissions.has(user.role, p)] as const)),
+      a.members.pendingRetirementChanges(),
     ]);
     const memberById = new Map(members.map((m) => [m.id, m]));
     const deptName = new Map(departments.map((d) => [d.id, d.name]));
     const can = new Map(perms);
-    return { today, cycle, now, settings, members, memberById, departments, deptName, products, loans, deposits, applications, changes, mandates, sheets, reports, can: (p: Permission) => can.get(p) ?? false, inScope: (memberId: string) => !user.departmentId || memberById.get(memberId)?.departmentId === user.departmentId };
+    return { today, cycle, now, settings, members, memberById, departments, deptName, products, loans, deposits, applications, changes, mandates, sheets, reports, retirementChanges, can: (p: Permission) => can.get(p) ?? false, inScope: (memberId: string) => !user.departmentId || memberById.get(memberId)?.departmentId === user.departmentId };
   }
 
   private loanVisible(w: World, l: Loan, user: SessionUser): boolean {
@@ -120,6 +122,13 @@ export class InsightService {
       if (!mine) continue;
       const since = (r.ddoCertified?.at ?? r.createdAt).slice(0, 10);
       items.push({ kind: 'changeRequest', id: r.id, ref: `General No. ${m.generalNo}`, title: m.name, subtitle: `Change of ${r.fields.map((f) => PROFILE_FIELDS[f.field].label.toLowerCase()).join(', ')}`, stage: 'profile', stageLabel: STAGE_LABEL.profile!, departmentName: dept(m.departmentId), since, days: daysBetween(since, today), actionLabel: needsDdo ? 'Certify' : 'Decide', link: '/members/change-requests' });
+    }
+    // D-131: a date-of-retirement correction waits for the Accountant, then the Secretary, then the President.
+    for (const r of w.retirementChanges) {
+      const m = w.memberById.get(r.memberId);
+      if (!m || r.nextApprover !== user.role) continue;
+      const since = (r.approvals.at(-1)?.at ?? r.proposed.at).slice(0, 10);
+      items.push({ kind: 'retirementChange', id: r.id, ref: `General No. ${m.generalNo}`, title: m.name, subtitle: `Date of retirement ${formatDisplayDate(r.currentDor)} → ${formatDisplayDate(r.newDor)}`, stage: 'retirement', stageLabel: STAGE_LABEL.retirement!, departmentName: dept(m.departmentId), since, days: daysBetween(since, today), actionLabel: 'Decide', link: `/members/${m.id}` });
     }
     if (user.role === 'DDO') {
       for (const x of w.mandates.values()) {

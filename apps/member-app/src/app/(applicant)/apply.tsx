@@ -237,7 +237,7 @@ function EmploymentStep({ form, update, errors, reference }: StepProps) {
     <View style={styles.fields}>
       <SelectField label="Department" required searchable value={e.departmentId} options={reference.departments.map((d) => ({ value: d.id, label: d.name }))} onChange={(v) => update({ employment: { departmentId: v } })} hint="Your department officer (DDO) will verify this" error={errors['employment.departmentId']} />
       <SelectField label="Designation" required value={e.designation} options={reference.designations.map((d) => ({ value: d, label: d }))} onChange={(v) => update({ employment: { designation: v } })} error={errors['employment.designation']} />
-      <TextField label="Employee ID (optional)" value={e.employeeId ?? ''} onChangeText={(v) => update({ employment: { employeeId: v.toUpperCase() } })} autoCapitalize="characters" />
+      <TextField label="Employee ID" required value={e.employeeId ?? ''} onChangeText={(v) => update({ employment: { employeeId: v.toUpperCase() } })} autoCapitalize="characters" hint="As in your pay slip" error={errors['employment.employeeId']} />
       <View style={{ gap: space[4] }}>
         <Text role="label">
           Appointment type<Text role="label" tone="danger"> *</Text>

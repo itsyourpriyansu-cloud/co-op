@@ -6,6 +6,7 @@ import { ArrowLeft, FileSearch, Printer } from 'lucide-react';
 import { ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type } from '@juspay/blend-design-system';
 import { amountInWords, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import { Seal } from '@/components/Seal';
+import { SignatureMark } from '@/components/SignatureMark';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
 
@@ -80,9 +81,11 @@ export function FdrPage() {
                 ] as const
               ).map(([label, s]) => (
                 <div key={label}>
+                  <div className="flex min-h-12 items-end">{s?.signatureFileId && <SignatureMark fileId={s.signatureFileId} name={s.byName} className="h-12" />}</div>
                   <p className="font-semibold">{s?.byName ?? '—'}</p>
                   <p>{label} · Accepted</p>
-                  <p className="text-caption">{s ? `Signed digitally · ${formatDisplayDateTime(s.at)}` : ''}</p>
+                  {/* An FDR without a digital sign-off was issued before the app (register import): signed on paper. */}
+                  <p className="text-caption">{s ? `Signed digitally · ${formatDisplayDateTime(s.at)}` : 'Signed on paper, before the app'}</p>
                 </div>
               ))}
             </div>

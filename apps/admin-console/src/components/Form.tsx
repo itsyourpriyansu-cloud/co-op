@@ -142,14 +142,16 @@ export function fieldErrorsOf(error: unknown): FieldErrors {
 }
 
 /** Sticky footer that appears while a form has unsaved changes. */
-export function SaveBar({ dirty, saving, onSave, onDiscard, message }: { dirty: boolean; saving: boolean; onSave: () => void; onDiscard: () => void; message?: string }) {
-  if (!dirty && !saving) return null;
+/** Always on screen for an editor, so Save is never hard to find; it is switched off until something changes. */
+export function SaveBar({ dirty, saving, onSave, onDiscard, message, readOnly }: { dirty: boolean; saving: boolean; onSave: () => void; onDiscard: () => void; message?: string; readOnly?: boolean }) {
+  if (readOnly) return null;
+  const pending = dirty || saving;
   return (
     <div className="sticky bottom-4 z-10 mt-5 flex items-center justify-between gap-3 rounded-card border border-line bg-surface px-5 py-3 shadow-dropdown">
-      <span className="text-body text-fg-secondary">{message ?? 'You have unsaved changes.'}</span>
+      <span className="text-body text-fg-secondary">{pending ? (message ?? 'You have unsaved changes.') : 'No unsaved changes. Edit a value above, then save.'}</span>
       <div className="flex gap-2">
-        <ButtonV2 text="Discard" buttonType={ButtonV2Type.SECONDARY} onClick={onDiscard} disabled={saving} />
-        <ButtonV2 text="Save changes" buttonType={ButtonV2Type.PRIMARY} onClick={onSave} loading={saving} />
+        <ButtonV2 text="Discard" buttonType={ButtonV2Type.SECONDARY} onClick={onDiscard} disabled={saving || !dirty} />
+        <ButtonV2 text="Save changes" buttonType={ButtonV2Type.PRIMARY} onClick={onSave} loading={saving} disabled={!dirty} />
       </div>
     </div>
   );

@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronRight, KeyRound, ShieldCheck, Smartphone } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Check, ChevronRight, Copy, KeyRound, ShieldCheck, Smartphone } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { isApiError } from '@tgs/api-client';
 import { ROLE_LABELS, type Persona, type Session, type TotpSetup } from '@tgs/types';
@@ -26,6 +27,7 @@ export default function StaffLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string>();
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -113,6 +115,7 @@ export default function StaffLogin() {
                 <Text role="bodyStrong" selectable>
                   {step.setup.secret.replace(/(.{4})/g, '$1 ').trim()}
                 </Text>
+                <Button text={copied ? 'Copied' : 'Copy key'} buttonType="secondary" size="sm" leftSlot={copied ? Check : Copy} onPress={() => void Clipboard.setStringAsync(step.setup.secret).then(() => setCopied(true))} />
               </View>
             </View>
           </Card>

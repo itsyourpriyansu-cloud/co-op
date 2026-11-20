@@ -30,7 +30,7 @@ describe('loans (P5)', () => {
     instalments: 60,
     purpose: 'House repairs',
     sureties,
-    form: { pay: { scaleOfPay: sravaniRec.payProfile.scaleOfPay, grossSalary: sravaniRec.payProfile.grossSalary, govtLoanDeductions: 0, otherLoanDeductions: 0 } },
+    form: { bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' }, pay: { scaleOfPay: sravaniRec.payProfile.scaleOfPay, grossSalary: sravaniRec.payProfile.grossSalary, govtLoanDeductions: 0, otherLoanDeductions: 0 } },
   });
 
   beforeAll(async () => {

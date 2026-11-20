@@ -1,5 +1,5 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { calculateLeftoverService, formatCycle, formatDisplayDate, formatINR, fullMonthsBetween } from '@tgs/domain';
+import { calculateLeftoverService, formatCycle, formatDisplayDate, formatINR, fullMonthsBetween, serviceRemaining } from '@tgs/domain';
 import type {
   ComposeInput,
   ComposePreview,
@@ -608,6 +608,7 @@ export class NotificationsService {
     if (unpaid > 0) actions.push({ key: 'dues', title: `${formatINR(unpaid)} unpaid`, detail: d.arrears.length ? `Short deduction in ${d.arrears.map((a) => formatCycle(a.cycle)).join(', ')}` : 'Share capital', link: '/payments', tone: 'danger' });
     return {
       member: { name: m.name, generalNo: m.generalNo, designation: m.designation, departmentName: depts.find((x) => x.id === m.departmentId)?.name ?? '', leftoverMonths: leftover.months, leftoverLabel: leftover.label },
+      service: serviceRemaining(m.dor, today),
       shares: { count: share?.numberOfShares ?? m.numberOfShares, capital: share?.shareCapital ?? 0, shareDeposit: share?.shareDepositBalance ?? 0 },
       deposits: { total: fd + bal('CRD') + bal('SRDS') + bal('SAVINGS'), fd, fdCount: fds.length, crd: bal('CRD'), srds: bal('SRDS'), savings: bal('SAVINGS'), ...(next ? { nextMaturity: { date: next.maturityDate!, amount: next.maturityValue ?? next.principal ?? 0, fdrNo: next.fdrNo ?? next.accountNo } } : {}) },
       loans,

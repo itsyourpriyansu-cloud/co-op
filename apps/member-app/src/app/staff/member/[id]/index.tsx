@@ -4,14 +4,16 @@ import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { FileUp } from 'lucide-react-native';
-import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR, REQUIRED_DOCUMENTS } from '@tgs/domain';
+import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR, REQUIRED_DOCUMENTS, RETIREMENT_CHANGE_APPROVERS } from '@tgs/domain';
 import type { MemberDetail, MemberLoanRow } from '@tgs/types';
 import { FileButton } from '@/components/FileButton';
-import { ActionAlert, ask, Expand, Loaded, PrintButton, StatTile, TileGrid, useAction, useCan } from '@/components/staff';
+import { ActionAlert, ask, Expand, Loaded, StatTile, TileGrid, useAction, useCan, StaffDocument } from '@/components/staff';
 import { pickDocumentImage } from '@/lib/files';
 import { api } from '@/lib/api';
+import { agreementHtml, defaulterNoticeHtml, membershipFormHtml, membershipFromMember } from '@/lib/staffDocuments';
+import { documentFileName } from '@/lib/documents';
 import { changeValue, EVENT_LABEL, fieldLabel, MANDATE_LABEL, retiringLabel, SCHEME_LABEL } from '@/lib/staffMembers';
-import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, SelectField, StageTracker, StatusTag, Tag, Text } from '@/ui';
+import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, SelectField, StageTracker, StatusTag, Tag, Text, TextField } from '@/ui';
 import { space } from '@/theme';
 
 const address = (a: { line1: string; line2?: string; city: string; district: string; pincode: string }) => [a.line1, a.line2, a.city, a.district, a.pincode].filter(Boolean).join(', ');
@@ -55,6 +57,59 @@ function LoanRows({ rows, empty, guarantee }: { rows: MemberLoanRow[]; empty: st
         </Card>
       ))}
     </View>
+  );
+}
+
+const APPROVER_NAME: Record<string, string> = { ACCOUNTANT: 'Accountant', SECRETARY: 'Secretary', PRESIDENT: 'President' };
+
+/** D-131: the Super Admin proposes a new date of retirement; the Accountant, Secretary and President approve in turn. */
+function RetirementSection({ d }: { d: MemberDetail }) {
+  const a = useAction();
+  const [remarks, setRemarks] = useState('');
+  const c = d.retirementChange;
+  if (!c && !d.can.proposeRetirementChange) return null;
+  const decide = async (decision: 'approve' | 'reject') => {
+    const verb = decision === 'approve' ? 'Approve' : 'Reject';
+    if (await ask(`${verb} the new date`, c ? `${formatDisplayDate(c.currentDor)} → ${formatDisplayDate(c.newDor)} for ${d.member.name}.` : '', verb)) await a.run(() => api.members.decideRetirementChange(d.member.id, decision, remarks.trim() || undefined), () => setRemarks(''));
+  };
+  return (
+    <Section title="Date of retirement" description="Super Admin proposes; Accountant, Secretary and President approve">
+      {c ? (
+        <Card>
+          <View style={{ gap: space[2] }}>
+            <Text role="label">
+              {formatDisplayDate(c.currentDor)} → {formatDisplayDate(c.newDor)}
+            </Text>
+            <Text role="caption" tone="secondary">
+              {c.status === 'PENDING' ? `Waiting for the ${APPROVER_NAME[c.nextApprover ?? ''] ?? ''}` : c.status === 'APPROVED' ? 'Approved' : 'Rejected'} · Reason: {c.reason}
+            </Text>
+            <Text role="caption" tone="tertiary">
+              Proposed by {c.proposed.byName} · {formatDisplayDateTime(c.proposed.at)}
+            </Text>
+            {RETIREMENT_CHANGE_APPROVERS.map((role, i) => {
+              const ok = c.approvals[i];
+              const no = !ok && c.rejection?.role === role ? c.rejection : undefined;
+              return (
+                <Text key={role} role="caption" tone={ok ? 'secondary' : 'tertiary'}>
+                  {APPROVER_NAME[role]}: {ok ? `approved · ${ok.byName}` : no ? `rejected · ${no.byName}: ${no.remarks ?? ''}` : c.status === 'PENDING' && c.nextApprover === role ? 'waiting' : '—'}
+                </Text>
+              );
+            })}
+          </View>
+        </Card>
+      ) : null}
+      {d.can.decideRetirementChange ? (
+        <>
+          <TextField label="Remarks" value={remarks} onChangeText={setRemarks} placeholder="Needed to reject" multiline numberOfLines={2} error={a.fields.remarks} />
+          <View style={{ flexDirection: 'row', gap: space[3] }}>
+            <Button text="Approve" loading={a.busy} disabled={a.busy} onPress={() => void decide('approve')} />
+            <Button text="Reject" buttonType="danger" disabled={a.busy} onPress={() => void decide('reject')} />
+          </View>
+        </>
+      ) : null}
+      {d.can.proposeRetirementChange ? <Button text="Change date of retirement" buttonType="secondary" fullWidth onPress={() => router.push(`/staff/member/${d.member.id}/retirement`)} /> : null}
+      <ActionAlert action={a} heading="Not saved" />
+    </Section>
   );
 }
 
@@ -124,6 +179,8 @@ function Body({ d, refetching, refetch }: { d: MemberDetail; refetching: boolean
         <ActionAlert action={a} heading="Couldn't agree" />
       </Section>
 
+      <RetirementSection d={d} />
+
       {dues.data || notices.data ? (
         <Section title="Outstanding & notices" description="Unpaid from posted months; penal grows daily until paid">
           <Card>
@@ -168,7 +225,7 @@ function Body({ d, refetching, refetch }: { d: MemberDetail; refetching: boolean
             ) : null}
           </Card>
           {penal > 0 && can('collections.waivePenal') ? <Button text="Waive penal interest" buttonType="secondary" fullWidth onPress={() => router.push(`/staff/member/${m.id}/waive`)} /> : null}
-          {notices.data?.defaulter.isDefaulter ? <PrintButton text="Print defaulter notice" path={`/reports/print/defaulter-notice?member=${m.id}`} /> : null}
+          {notices.data?.defaulter.isDefaulter ? <StaffDocument title="Defaulter notice" fileName={documentFileName('Defaulter-notice', m.generalNo)} build={async (o) => defaulterNoticeHtml(await api.reports.defaulterNotice(m.id), o)} /> : null}
         </Section>
       ) : null}
 
@@ -295,9 +352,9 @@ function Body({ d, refetching, refetch }: { d: MemberDetail; refetching: boolean
       </Expand>
 
       <View style={{ gap: space[3] }}>
-        <PrintButton text="Print F5 agreement" path={`/reports/print/agreement?member=${m.id}&version=A`} />
-        <PrintButton text="Print F6 agreement" path={`/reports/print/agreement?member=${m.id}&version=B`} />
-        <PrintButton text="Print F1 membership form" path={`/reports/print/membership?member=${m.id}`} />
+        <StaffDocument title="F5 agreement (to the Secretary)" fileName={documentFileName('F5', m.generalNo)} build={(o) => agreementHtml(d, 'A', o)} />
+        <StaffDocument title="F6 agreement (to the pay officer)" fileName={documentFileName('F6', m.generalNo)} build={(o) => agreementHtml(d, 'B', o)} />
+        <StaffDocument title="F1 membership form" fileName={documentFileName('F1', m.generalNo)} build={(o) => membershipFormHtml(membershipFromMember(d), o)} />
       </View>
     </Screen>
   );

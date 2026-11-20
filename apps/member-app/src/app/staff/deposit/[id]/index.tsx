@@ -4,8 +4,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { formatDisplayDate, formatDisplayDateTime, formatINR, minorMajorityDate } from '@tgs/domain';
 import type { DepositDetail } from '@tgs/types';
-import { Expand, Loaded, PrintButton } from '@/components/staff';
+import { Expand, Loaded, StaffDocument } from '@/components/staff';
 import { api } from '@/lib/api';
+import { fdFormHtml, fdVoucherHtml } from '@/lib/staffDocuments';
+import { documentFileName, fdrHtml } from '@/lib/documents';
 import { ACTION_LABEL, isSecondary, METHOD, MODE, PAYOUT, SCHEME } from '@/lib/staffDeposits';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Tag, Text } from '@/ui';
 import { space } from '@/theme';
@@ -193,8 +195,9 @@ function Body({ d, refetching, refetch }: { d: DepositDetail; refetching: boolea
       ) : null}
 
       <View style={{ gap: space[3] }}>
-        {dep.fdrNo ? <PrintButton text="FDR" path={`/deposits/${dep.id}/fdr`} /> : null}
-        {dep.vouchers?.filter((v) => v.kind !== 'INTEREST').map((v) => <PrintButton key={v.no} text={`Voucher ${v.no}`} path={`/reports/print/fd-voucher?deposit=${dep.id}&vr=${v.no}`} />)}
+        {dep.scheme === 'FD' ? <StaffDocument title="F4 fixed deposit form" fileName={documentFileName('F4', dep.accountNo)} build={(o) => fdFormHtml(d, o)} /> : null}
+        {dep.fdrNo ? <StaffDocument title={`FDR ${dep.fdrNo}`} fileName={documentFileName('FDR', dep.fdrNo)} build={(o) => fdrHtml(d, { ...o, ...(dep.payoutFrequency ? { payout: PAYOUT[dep.payoutFrequency] } : {}), copy: 'office' })} /> : null}
+        {dep.vouchers?.filter((v) => v.kind !== 'INTEREST').map((v) => <StaffDocument key={v.no} title={`Voucher ${v.no}`} fileName={documentFileName('FD-voucher', v.no)} build={(o) => fdVoucherHtml(d, v.no, o)} />)}
       </View>
     </Screen>
   );

@@ -2,11 +2,13 @@
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { amountInWords, daysBetweenDates, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { amountInWords, daysBetweenDates, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR, formatBankAccount } from '@tgs/domain';
 import { ROLE_LABELS, type LoanDetail, type Role } from '@tgs/types';
-import { ActionAlert, ask, Expand, Loaded, PrintButton, RuleChecks, useAction, useToday } from '@/components/staff';
+import { ActionAlert, ask, Expand, Loaded, RuleChecks, useAction, useToday, StaffDocument } from '@/components/staff';
 import { StaffSanctionSheet } from '@/components/StaffSanctionSheet';
 import { api } from '@/lib/api';
+import { loanBondHtml, loanFormHtml } from '@/lib/staffDocuments';
+import { documentFileName, sanctionLetterHtml, scheduleHtml } from '@/lib/documents';
 import { useAuth } from '@/lib/auth';
 import { ACTION_LABEL, formFor, SECONDARY } from '@/lib/staffLoans';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Tag, Text } from '@/ui';
@@ -197,6 +199,7 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
         {f.education ? <KeyValue label="Education" value={`${f.education.studentName} (${f.education.relation}) · ${f.education.course}, ${f.education.institution}`} /> : null}
         {d.product.code !== 'SALARY' ? <KeyValue label="8 · Security" value={d.pledgedDeposit ? `Pledge of FD ${d.pledgedDeposit.accountNo} (${formatINR(d.pledgedDeposit.principal)})` : f.security?.type === 'OTHER' ? (f.security.description ?? 'Other') : d.sureties.length ? `${d.sureties.length} sureties` : '—'} /> : null}
         {f.additionalShares ? <KeyValue label="6c · Additional shares proposed" value={String(f.additionalShares)} /> : null}
+        <KeyValue label="Pay the loan into" value={f.bankAccount ? formatBankAccount(f.bankAccount) : 'Not given (made before bank details were asked)'} />
         <KeyValue label="Entered" value={l.channel === 'COUNTER' ? `By ${l.createdByName ?? 'the office'} from the paper form` : 'By the member in the app'} />
         <KeyValue label="Signed" value={l.signature ? `With OTP · ${formatDisplayDateTime(l.signature.signedAt)} · text ${l.signature.textVersion}` : l.channel === 'COUNTER' ? 'On paper' : 'Not yet'} />
         {pay ? (
@@ -348,13 +351,16 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
         <KeyValue label="Mobile" value={d.member.mobileMasked} />
         <KeyValue label="Retires on" value={formatDisplayDate(d.member.dor)} />
         <KeyValue label="Left-over service" value={d.member.leftover.label} />
+        {/* D-131: every application this member has made, so the reviewer sees past outcomes. */}
+        {d.history ? <KeyValue label="Loan record" value={`Applied ${d.history.applied} · Approved ${d.history.approved} · Rejected ${d.history.rejected}`} /> : null}
         {d.parentLoan ? <KeyValue label="Top-up of" value={d.parentLoan.loanNo ?? d.parentLoan.applicationNo} /> : null}
       </Expand>
 
       <View style={{ gap: space[3] }}>
-        {l.status !== 'DRAFT' && l.product !== 'DEPOSIT' ? <PrintButton text="Print form" path={`/reports/print/loan-form?loan=${l.id}`} /> : null}
-        {l.sanctionLetterNo ? <PrintButton text="Bond & receipt" path={`/reports/print/loan-bond?loan=${l.id}`} /> : null}
-        {l.sanctionLetterNo ? <PrintButton text="Sanction letter" path={`/loans/${l.id}/letter`} /> : null}
+        {l.status !== 'DRAFT' && l.product !== 'DEPOSIT' ? <StaffDocument title={`${l.product === 'SALARY' ? 'F3' : 'F2'} loan application`} fileName={documentFileName('Loan-form', l.applicationNo)} build={async (o) => loanFormHtml(d, await api.members.get(l.memberId).catch(() => undefined), o)} /> : null}
+        {l.sanctionLetterNo ? <StaffDocument title="Bond & receipt" fileName={documentFileName('Bond', l.loanNo ?? l.applicationNo)} build={(o) => loanBondHtml(d, o)} /> : null}
+        {l.sanctionLetterNo ? <StaffDocument title="Sanction letter" fileName={documentFileName('Sanction-letter', l.sanctionLetterNo)} build={(o) => sanctionLetterHtml(d, { ...o, copy: 'office' })} /> : null}
+        {l.schedule.length ? <StaffDocument title="Repayment schedule" fileName={documentFileName('Repayment-schedule', l.loanNo ?? l.applicationNo)} build={(o) => scheduleHtml(d, { ...o, copy: 'office' })} /> : null}
       </View>
     </Screen>
   );

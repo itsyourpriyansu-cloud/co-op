@@ -15,7 +15,7 @@ import { space } from '@/theme';
 
 const GROUPS: Array<{ title: string; fields: ProfileField[] }> = [
   { title: 'Personal', fields: ['name', 'fatherName', 'dob'] },
-  { title: 'Employment', fields: ['designation', 'doj', 'dor'] },
+  { title: 'Employment', fields: ['designation', 'doj'] },
   { title: 'Nominee', fields: ['nominee.name', 'nominee.relation'] },
   { title: 'Pay', fields: ['payProfile.scaleOfPay', 'payProfile.grossSalary'] },
 ];

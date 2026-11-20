@@ -1,5 +1,7 @@
 # 08 · Data Model
 
+> Version 0.14 · 2026-11-19 · D-132: `LoanApplicationForm.bankAccount` (`LoanBankAccount`: holderName, bankName, branch?, accountNo, ifsc), where the loan is paid.
+> Version 0.13 · 2026-11-18 · D-131: table `retirement_changes` (`RetirementChange`: current / new date, reason, status, proposed, approvals, rejection), setting `probationMonths`.
 > Version 0.12 · 2026-11-16 · D-124: `DemandSheet.supplementNo` (table `demand_sheets.supplement_no`, unique with cycle + department), `ScheduleRow.earlyInterest`, `SanctionSheet.{firstDueChosen, earlyInterest, earlyInterestFrom}`, settings `earlyInterestEnabled`, `lateJoinerOwesMissedMonth`.
 > Version 0.11 · 2026-11-12 · G7 (D-117): `declarations.privacyConsent`, `SignatureRecord.privacyVersion`, setting `applicantDataRetentionMonths`. v0.10 · G4 (D-114): `push_tokens`, setting `minAppVersion`. v0.9 · G2 (D-112): `ledger_accounts.parent_code`, `office_vouchers`, `financial_years`, new heads. v0.8 · G1 (D-111): `idempotency_keys`; `files` holds documents (`purpose` DOCUMENT, `doc_type`, `file_name`, `uploaded_by`); `profile_change_requests.document_file_id`; `Receipt.purpose` LOAN_CLOSURE and `coins`; `DepositAccount.interestPayouts`.
 > Version 0.7 · 2026-10-30 · Production tables: see `docs/22` §5.1 (P1 auth), §5.2 (P2 masters: versioned settings and loan products, REQ-130) and §5.3 (P3 ledger: chart, journal entries and lines, REQ-131)
@@ -175,6 +177,8 @@ Caste categories (Q-406) · Nominee relations · Document types (Q-403) · Disbu
 
 ### Loan: new fields [PF F2 F3]
 `applicationSnapshot { payProfile, netSalary, netSubstantivePay?, netPayEarnedToDate?, sharesHeld, paidUpShareCapital, additionalSharesProposed?, securityType: SURETY | DEPOSIT_PLEDGE | OTHER, securityDescription?, instalments (≤100) }`, `applicantSignature: SignatureRecord`, `ddoCertification?`, `officeUse { olBalance, slBalance, interestToDate, totalLoansBalance, olTakenOn?, slTakenOn?, suretyRecoveries }` (computed at assessment), `approvals: ApprovalSignature[]`.
+
+**D-132:** `form.bankAccount { holderName, bankName, branch?, accountNo (9–18 digits), ifsc }`: the borrower's account the net amount is paid into. Required on every application; kept on the loan (the member-level `bankAccount` above stays a proposal).
 
 ### LoanSurety: new fields [PF F2 item 9–10]
 `particularsSnapshot { generalNo, office, dob, designationOfficiating, substantivePay, officiatingPay, totalServiceInOfficiatingPost, sharesHeld, additionalSharesProposed?, dor, retiresDuringLoan: boolean }`, `existingGuarantees[] {borrowerName, generalNo, designation, department, loanNo, outstanding}`, `signature?: SignatureRecord`, `correctionRequest?`

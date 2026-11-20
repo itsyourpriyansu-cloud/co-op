@@ -103,6 +103,7 @@ test('Act 2 · joining the society (phone → console → phone)', async ({ page
   // Employment.
   await pick(phone, 'Department', 'Finance');
   await pick(phone, 'Designation', /Junior Assistant/);
+  await phone.getByLabel('Employee ID').fill('TS40912');
   await phone.getByRole('radio', { name: /^Regular appointment/ }).click();
   await phone.getByLabel('Date of regular appointment').fill('01/07/2019');
   await tap(phone, 'Save & continue');
@@ -171,6 +172,10 @@ test('Act 3 · a loan from application to money (phone ↔ console)', async ({ p
   await phone.getByLabel('Relation to you').fill('Daughter');
   await phone.getByLabel('Institution').fill('JNTU Hyderabad');
   await phone.getByLabel('Course').fill('B.Tech');
+  // D-132: the account the loan is paid into (the holder's name is pre-filled).
+  await phone.getByLabel('Bank name').fill('State Bank of India');
+  await phone.getByLabel('Account number').fill('12345678901');
+  await phone.getByLabel('IFSC').fill('SBIN0001234');
   await expect(phone.getByText('You are eligible')).toBeVisible({ timeout: 20_000 });
   await tap(phone, 'Save & continue');
   for (const q of ['Sravani', '1104']) {

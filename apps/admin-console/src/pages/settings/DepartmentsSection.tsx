@@ -17,8 +17,9 @@ const EMPTY: Partial<Department> = { code: '', name: '', kind: 'SECRETARY_DEPT',
 
 export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
   const list = useQuery({ queryKey: ['departments'], queryFn: api.settings.departments });
+  const users = useQuery({ queryKey: ['users'], queryFn: api.settings.users });
   const [editing, setEditing] = useState<Partial<Department> | null>(null);
-  const save = useSettingsSave((d: Partial<Department>) => (d.id ? api.settings.updateDepartment(d.id, d) : api.settings.createDepartment(d)), 'Department saved');
+  const save = useSettingsSave((d: Partial<Department>) => (d.id ? api.settings.updateDepartment(d.id, d) : api.settings.createDepartment(d)), 'Department saved', ['departments']);
   const errors = fieldErrorsOf(save.error);
   const set = (patch: Partial<Department>) => setEditing((e) => ({ ...e, ...patch }));
 
@@ -50,7 +51,23 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
         </div>
       ),
     },
-    { field: 'ddoUserId', header: 'Console login', type: ColumnType.REACT_ELEMENT, isSortable: false, renderCell: (_v, r) => (r.ddoUserId ? <TagV2 text="Has login" size={TagV2Size.XS} color={TagV2Color.SUCCESS} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} /> : <span className="text-caption text-fg-tertiary">No login yet</span>) },
+    {
+      field: 'ddoUserId',
+      header: 'DDO login',
+      type: ColumnType.REACT_ELEMENT,
+      isSortable: false,
+      minWidth: '180px',
+      renderCell: (_v, r) => {
+        const login = users.data?.find((u) => u.id === r.ddoUserId);
+        if (!r.ddoUserId) return <span className="text-caption text-fg-tertiary">No login yet · add one in Users</span>;
+        return (
+          <div>
+            <TagV2 text="Has login" size={TagV2Size.XS} color={TagV2Color.SUCCESS} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
+            {login && <p className="mt-1 text-caption text-fg-tertiary">{login.name} · {login.userId}</p>}
+          </div>
+        );
+      },
+    },
     { field: 'memberCount', header: 'Members', type: ColumnType.NUMBER, width: '110px' },
     ...(canEdit
       ? [{ field: 'id' as const, header: '', type: ColumnType.REACT_ELEMENT, isSortable: false, width: '90px', renderCell: (_v: unknown, r: Row) => <ButtonV2 text="Edit" size={ButtonV2Size.SMALL} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Pencil size={14} /> }} onClick={() => setEditing(r)} /> } satisfies ColumnDefinition<Row>]

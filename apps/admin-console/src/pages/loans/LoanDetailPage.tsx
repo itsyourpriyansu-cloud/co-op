@@ -3,6 +3,7 @@
 // drawers (ST-24 … ST-28) arrive with M5; the "Next step" panel names who acts.
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { useOpenForm } from '@/lib/forms';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowLeft, Clock, FileSearch, FileText, FlaskConical, Printer, ShieldCheck } from 'lucide-react';
 import {
@@ -34,7 +35,7 @@ import {
   addSnackbarV2,
 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { amountInWords, daysBetweenDates, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { amountInWords, daysBetweenDates, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR, formatBankAccount } from '@tgs/domain';
 import { ROLE_LABELS, type LoanDetail, type Role } from '@tgs/types';
 import { useAuth } from '@/app/auth';
 import { Money } from '@/components/Money';
@@ -80,6 +81,7 @@ function ApplicationTab({ d }: { d: LoanDetail }) {
         )}
         {d.product.code !== 'SALARY' && <Field label="8 · Security">{d.pledgedDeposit ? `Pledge of FD ${d.pledgedDeposit.accountNo} (${formatINR(d.pledgedDeposit.principal)})` : f.security?.type === 'OTHER' ? (f.security.description ?? 'Other') : d.sureties.length ? `${d.sureties.length} sureties` : '—'}</Field>}
         {f.additionalShares ? <Field label="6c · Additional shares proposed">{String(f.additionalShares)}</Field> : null}
+        <Field label="Pay the loan into" wide>{f.bankAccount ? formatBankAccount(f.bankAccount) : 'Not given (application made before bank details were asked)'}</Field>
         <Field label="Entered">{l.channel === 'COUNTER' ? `By ${l.createdByName ?? 'the office'} from the paper form` : 'By the member in the app'}</Field>
         <Field label="Signed">{l.signature ? `With OTP · ${formatDisplayDateTime(l.signature.signedAt)} · text ${l.signature.textVersion}` : l.channel === 'COUNTER' ? 'On paper' : 'Not yet'}</Field>
       </dl>
@@ -253,6 +255,7 @@ function ActivityTab({ d }: { d: LoanDetail }) {
 export function LoanDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const openForm = useOpenForm();
   const [tab, setTab] = useState('application');
   const { session } = useAuth();
   const [drawer, setDrawer] = useState<string | null>(null);
@@ -309,8 +312,8 @@ export function LoanDetailPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {l.status !== 'DRAFT' && l.product !== 'DEPOSIT' && <ButtonV2 text="Print form" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => navigate(`/reports/print/loan-form?loan=${l.id}`)} />}
-                {l.sanctionLetterNo && <ButtonV2 text="Bond & receipt" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => navigate(`/reports/print/loan-bond?loan=${l.id}`)} />}
+                {l.status !== 'DRAFT' && l.product !== 'DEPOSIT' && <ButtonV2 text="Print form" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => openForm(`/reports/print/loan-form?loan=${l.id}`)} />}
+                {l.sanctionLetterNo && <ButtonV2 text="Bond & receipt" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => openForm(`/reports/print/loan-bond?loan=${l.id}`)} />}
                 {l.sanctionLetterNo && <ButtonV2 text="Sanction letter" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => navigate(`/loans/${l.id}/letter`)} />}
                 {d.actions.filter((a) => SECONDARY.has(a)).map((a) => (
                   <ButtonV2 key={a} text={ACTION_LABEL[a] ?? a} buttonType={ButtonV2Type.SECONDARY} onClick={() => setDrawer(a)} />
@@ -453,6 +456,12 @@ export function LoanDetailPage() {
                     <Field label="Retires on">{formatDisplayDate(d.member.dor)}</Field>
                     <Field label="Left-over service">{d.member.leftover.label}</Field>
                   </dl>
+                  {/* D-131: every application this member has made, so the reviewer sees past outcomes at a glance. */}
+                  {d.history && (
+                    <p className="mt-3 text-caption text-fg-secondary">
+                      Loan record: <span className="tabular text-label text-fg">Applied {d.history.applied} · Approved {d.history.approved} · Rejected {d.history.rejected}</span>
+                    </p>
+                  )}
                   {d.parentLoan && (
                     <p className="mt-3 flex items-center gap-1.5 text-caption text-fg-secondary">
                       <ShieldCheck size={14} aria-hidden /> Top-up of {d.parentLoan.loanNo ?? d.parentLoan.applicationNo}

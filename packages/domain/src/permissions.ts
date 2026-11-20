@@ -12,6 +12,12 @@ const STAFF_COMMON: Permission[] = [
   'demo.control',
 ];
 
+/**
+ * D-134: only the Super Admin may change settings, users and permissions, so these are never granted to
+ * another role, and the Super Admin always keeps them (nobody can lock the society out of its settings).
+ */
+export const SUPER_ADMIN_ONLY: Permission[] = ['settings.edit', 'users.manage'];
+
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   SUPER_ADMIN: [
     ...STAFF_COMMON,

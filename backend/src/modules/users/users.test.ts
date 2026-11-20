@@ -40,6 +40,16 @@ describe('staff users, permissions and audit (P1a)', () => {
     expect(Object.keys(res.json().fieldErrors)).toEqual(expect.arrayContaining(['name', 'userId']));
   });
 
+  it('keeps one active DDO login per real department', async () => {
+    const post = (payload: object) => app.inject({ method: 'POST', url: '/api/v1/users', headers: bearer(admin), payload });
+    const second = await post({ name: 'Second Ddo', userId: 'ddo.fin2', role: 'DDO', departmentId: 'dept-fin' });
+    expect(second.statusCode).toBe(400);
+    expect(second.json().fieldErrors.departmentId).toContain('ddo.fin');
+    expect((await post({ name: 'Ghost Ddo', userId: 'ddo.ghost', role: 'DDO', departmentId: 'dept-none' })).json().fieldErrors.departmentId).toBe('Choose a department from the list.');
+    // An inactive second login is allowed (prepared for a handover)
+    expect((await post({ name: 'Spare Ddo', userId: 'ddo.spare', role: 'DDO', departmentId: 'dept-fin', active: false })).statusCode).toBe(200);
+  });
+
   it('hands over a temporary password that must be changed', async () => {
     const reset = await app.inject({ method: 'POST', url: '/api/v1/users/stf-asha-k/reset-password', headers: bearer(admin) });
     expect(reset.statusCode).toBe(200);
@@ -80,6 +90,10 @@ describe('staff users, permissions and audit (P1a)', () => {
     const put = await app.inject({ method: 'PUT', url: '/api/v1/permissions/SUPER_ADMIN', headers: bearer(admin), payload: { permissions: ['dashboard.view'] } });
     expect(put.json().grants.SUPER_ADMIN).toEqual(expect.arrayContaining(['settings.edit', 'users.manage', 'settings.view']));
     expect((await app.inject({ method: 'PUT', url: '/api/v1/permissions/CASHIER', headers: bearer(admin), payload: { permissions: ['no.such'] } })).statusCode).toBe(400);
+    // D-134: no other role can be given the right to change settings, users or permissions.
+    const grant = await app.inject({ method: 'PUT', url: '/api/v1/permissions/ACCOUNTANT', headers: bearer(admin), payload: { permissions: ['dashboard.view', 'users.manage'] } });
+    expect(grant.statusCode).toBe(400);
+    expect(grant.json().message).toContain('users.manage');
   });
 
   it('writes an audit row for sign-ins and changes', async () => {

@@ -9,8 +9,10 @@ import {
   keepsAppAccess,
   maskMobile,
   PROFILE_FIELDS,
+  retirementChangeNextApprover,
   transferEffectiveCycle,
   validateMemberInput,
+  validateRetirementChange,
 } from '@tgs/domain';
 import type {
   Address,
@@ -27,6 +29,7 @@ import type {
   ProfileChangeRequest,
   ProfileFieldChange,
   RecoveryMandate,
+  RetirementChange,
   ServiceEvent,
   SessionUser,
   ShareAccount,
@@ -215,8 +218,9 @@ export class MembersService {
     const current = await this.load(user, idOrGeneralNo);
     if (current.status !== 'ACTIVE') fail('RULE_VIOLATION', 'Only active members can be edited.');
     if (body.departmentId && body.departmentId !== current.departmentId) fail('VALIDATION_ERROR', 'Use Transfer to change the department.', { fieldErrors: { departmentId: 'Use Transfer to change the department (ST-13)' } });
-    // Shares change through a share purchase, not an edit: keep the current number.
-    const input = await this.validate({ ...body, departmentId: current.departmentId, numberOfShares: current.numberOfShares }, current.id);
+    // Shares change through a share purchase, not an edit: keep the current number. D-131: the date of
+    // retirement changes only through the Super Admin's request and three approvals, never in an edit.
+    const input = await this.validate({ ...body, departmentId: current.departmentId, numberOfShares: current.numberOfShares, dor: current.dor }, current.id);
     if (input.mobile !== current.mobile) await this.app.appAccounts.assertMobileFree(input.mobile, current.id);
     const next: Member = {
       ...current,
@@ -232,7 +236,6 @@ export class MembersService {
       permanentAddress: input.permanentAddress,
       designation: input.designation,
       doj: input.doj,
-      dor: input.dor,
       employmentType: input.employmentType,
       nominee: input.nominee,
       payProfile: { ...current.payProfile, ...input.payProfile },
@@ -246,8 +249,7 @@ export class MembersService {
     const events: ServiceEvent[] = [];
     const event = (e: Omit<ServiceEvent, 'id' | 'memberId' | 'date' | 'byName'>) => events.push({ id: `sev-${randomUUID().slice(0, 8)}`, memberId: current.id, date: today, byName: user.name, ...e });
     if (current.designation !== next.designation) event({ type: 'DESIGNATION_CHANGED', summary: `Designation changed from ${current.designation} to ${next.designation}` });
-    if (current.dor !== next.dor) event({ type: 'RETIREMENT_DATE_CHANGED', summary: `Date of retirement changed to ${formatDisplayDate(next.dor)}` });
-    const other = changed.filter((k) => k !== 'designation' && k !== 'dor');
+    const other = changed.filter((k) => k !== 'designation');
     if (other.length) event({ type: 'PROFILE_UPDATED', summary: `Profile edited by the office (${other.join(', ')})` });
 
     await withTransaction(this.app.db, async (tx) => {
@@ -318,6 +320,62 @@ export class MembersService {
       await this.app.audit.record(request, { action: 'agree', entity: 'mandate', entityId: mandate!.id, summary: `${byName} agreed the salary recovery mandate for ${m.name}` }, tx);
     });
     return this.toDetail(user, m);
+  }
+
+  // ---- D-131: date of retirement corrections ----
+
+  /** The Super Admin proposes a new date of retirement; it waits for the Accountant, Secretary and President. */
+  async proposeRetirementChange(request: FastifyRequest, idOrGeneralNo: string, input: { newDor?: string; reason?: string }): Promise<MemberDetail> {
+    const user = sessionOf(request);
+    if (user.role !== 'SUPER_ADMIN') fail('FORBIDDEN', 'Only the Super Admin can propose a change to the date of retirement.');
+    const m = await this.load(user, idOrGeneralNo);
+    if (m.status !== 'ACTIVE') fail('RULE_VIOLATION', "Only an active member's date of retirement can be changed.");
+    if ((await this.repo.retirementChange(m.id))?.status === 'PENDING') fail('RULE_VIOLATION', 'A change to the date of retirement is already waiting for approval.');
+    const fieldErrors = validateRetirementChange(m, input);
+    if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
+    const change: RetirementChange = { id: `rtc-${randomUUID().slice(0, 8)}`, memberId: m.id, currentDor: m.dor, newDor: input.newDor!, reason: input.reason!.trim(), status: 'PENDING', proposed: this.signOff(user), approvals: [] };
+    await withTransaction(this.app.db, async (tx) => {
+      await this.repo.insertRetirementChange(tx, change);
+      await this.app.audit.record(request, { action: 'propose', entity: 'retirementChange', entityId: change.id, summary: `Proposed date of retirement ${formatDisplayDate(change.newDor)} for ${m.name} (now ${formatDisplayDate(m.dor)})`, after: change }, tx);
+    });
+    return this.toDetail(user, m);
+  }
+
+  /** The Accountant, then the Secretary, then the President approve; the President's approval changes the date. */
+  async decideRetirementChange(request: FastifyRequest, idOrGeneralNo: string, decision: 'approve' | 'reject', remarks?: string): Promise<MemberDetail> {
+    const user = sessionOf(request);
+    await this.requireView(user);
+    const m = await this.load(user, idOrGeneralNo);
+    const change = await this.repo.retirementChange(m.id);
+    if (change?.status !== 'PENDING') return fail('INVALID_TRANSITION', 'No change to the date of retirement is waiting for approval.');
+    if (change.nextApprover !== user.role) fail('FORBIDDEN', `Waiting for the ${change.nextApprover?.toLowerCase()} to approve.`);
+    if (decision === 'reject' && (remarks ?? '').trim().length < 5) fail('VALIDATION_ERROR', 'Say why it is rejected.', { fieldErrors: { remarks: 'Say why (a few words)' } });
+    const sign = this.signOff(user, remarks);
+    const next: RetirementChange = decision === 'reject' ? { ...change, status: 'REJECTED', rejection: sign } : { ...change, approvals: [...change.approvals, sign] };
+    delete next.nextApprover;
+    const done = decision === 'approve' && !retirementChangeNextApprover(next.approvals.length);
+    if (done) next.status = 'APPROVED';
+    const today = await businessToday(this.app);
+    const member: Member = done ? { ...m, dor: change.newDor } : m;
+    await withTransaction(this.app.db, async (tx) => {
+      await this.repo.saveRetirementChange(tx, next);
+      if (done) {
+        await this.repo.update(tx, member);
+        await this.repo.addEvent(tx, { id: `sev-${randomUUID().slice(0, 8)}`, memberId: m.id, type: 'RETIREMENT_DATE_CHANGED', date: today, summary: `Date of retirement changed from ${formatDisplayDate(change.currentDor)} to ${formatDisplayDate(change.newDor)} (approved by the Accountant, Secretary and President)`, byName: user.name });
+      }
+      const what = decision === 'reject' ? 'Rejected' : done ? 'Approved (final)' : 'Approved';
+      await this.app.audit.record(request, { action: decision, entity: 'retirementChange', entityId: change.id, summary: `${what} date of retirement ${formatDisplayDate(change.newDor)} for ${m.name}`, before: change, after: next }, tx);
+    });
+    return this.toDetail(user, member);
+  }
+
+  /** Pending corrections, for the work queue. */
+  async pendingRetirementChanges(): Promise<RetirementChange[]> {
+    return this.repo.pendingRetirementChanges();
+  }
+
+  private signOff(user: SessionUser, remarks?: string) {
+    return { byId: user.id, byName: user.name, role: user.role, at: new Date().toISOString(), ...(remarks?.trim() ? { remarks: remarks.trim() } : {}) };
   }
 
   // ---- P4b: changes from change requests and the member app ----
@@ -478,7 +536,7 @@ export class MembersService {
 
   // ---- helpers ----
   private async toDetail(user: SessionUser, m: Member): Promise<MemberDetail> {
-    const [legacy, settings, department, events, mandate, transfers, canEdit, canDemo] = await Promise.all([
+    const [legacy, settings, department, events, mandate, transfers, canEdit, canDemo, retirementChange] = await Promise.all([
       this.legacy(m.id),
       this.app.masters.settings(),
       this.app.departments.get(m.departmentId),
@@ -487,6 +545,7 @@ export class MembersService {
       this.repo.transfers(m.id),
       this.app.permissions.has(user.role, 'members.edit'),
       this.app.permissions.has(user.role, 'demo.control'),
+      this.repo.retirementChange(m.id),
     ]);
     const today = legacy.today;
     const expectedDor = expectedRetirementDate(m.dob, settings.retirementAge);
@@ -512,11 +571,14 @@ export class MembersService {
       documents: await documentsOf(this.app, m),
       changeRequests: await this.app.profileChanges.forMember(m.id),
       ledger: legacy.ledger,
+      ...(retirementChange ? { retirementChange } : {}),
       can: {
         edit: canEdit && m.status === 'ACTIVE',
         transfer: canEdit && m.status === 'ACTIVE',
         agreeMandate: mandatePending && user.role === 'DDO' && user.departmentId === mandate.departmentId,
         seeFullMobile,
+        proposeRetirementChange: user.role === 'SUPER_ADMIN' && m.status === 'ACTIVE' && retirementChange?.status !== 'PENDING',
+        decideRetirementChange: retirementChange?.status === 'PENDING' && retirementChange.nextApprover === user.role,
       },
       ...(mandatePending && !ddoForMandate && canDemo && user.role !== 'DDO' ? { demoAgreeAs: `${mandateDept?.ddoName ?? 'DDO'} (DDO, ${mandateDept?.name ?? ''})` } : {}),
     };

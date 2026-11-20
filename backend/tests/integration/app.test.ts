@@ -88,7 +88,9 @@ describe('production safety', () => {
   });
 
   it('refuses to start in production without real secrets', () => {
-    expect(() => loadEnv({ ...process.env, NODE_ENV: 'production' })).toThrow(/JWT_SECRET and DATA_ENCRYPTION_KEY are required/);
+    // Cleared here: a developer's own .env may hold real values, which would make this pass silently.
+    const { JWT_SECRET: _jwt, DATA_ENCRYPTION_KEY: _key, ...rest } = process.env;
+    expect(() => loadEnv({ ...rest, NODE_ENV: 'production' })).toThrow(/JWT_SECRET and DATA_ENCRYPTION_KEY are required/);
   });
 });
 

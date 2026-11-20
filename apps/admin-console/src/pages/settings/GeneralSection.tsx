@@ -5,13 +5,14 @@ import { FormSection, MoneyField, NumberField, PlaceholderTag, SaveBar, TextFiel
 import { api } from '@/lib/api';
 import { MONTH_ITEMS, isPlaceholder, useSettingsSave } from './shared';
 
-type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths' | 'messageWindowStartHour' | 'messageWindowEndHour'>;
+type Values = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'probationMonths' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths' | 'messageWindowStartHour' | 'messageWindowEndHour'>;
 const pick = (s: SocietySettings): Values => ({
   shareValue: s.shareValue,
   admissionFee: s.admissionFee,
   minShares: s.minShares,
   maxShares: s.maxShares,
   retirementAge: s.retirementAge,
+  probationMonths: s.probationMonths,
   financialYearStartMonth: s.financialYearStartMonth,
   maxGuaranteesPerSurety: s.maxGuaranteesPerSurety,
   emiToNetSalaryMaxPercent: s.emiToNetSalaryMaxPercent,
@@ -65,6 +66,7 @@ export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
       <FormSection title="Service and year" tag={ph('retirementAge')}>
         <NumberField label="Retirement age" name="retirementAge" value={v.retirementAge} onChange={(retirementAge) => setV({ retirementAge })} errors={errors} unit="years" disabled={ro} hint="Used for left-over service (BR-001, BR-002)" />
         <SingleSelectV2 label="Financial year starts in" placeholder="Month" items={[{ items: MONTH_ITEMS }]} selected={String(v.financialYearStartMonth)} onSelect={(m) => setV({ financialYearStartMonth: Number(m) })} disabled={ro} />
+        <NumberField label="Probation period" name="probationMonths" value={v.probationMonths} onChange={(probationMonths) => setV({ probationMonths })} errors={errors} unit="months" disabled={ro} hint="A probationer who joins with less service is flagged to staff, not blocked (D-131). 0 = off" />
       </FormSection>
 
       <FormSection title="Service targets" description="REQ-135: the society aims to decide a membership within 48 hours and a loan within 4–5 days, counting working days only (F-14): Sundays, second Saturdays and the holidays below do not count. A loan's clock starts when its last surety signs. Work past the target is flagged on the Work Queue and dashboards. 0 = no target.">
@@ -96,6 +98,7 @@ export function GeneralSection({ bundle }: { bundle: SettingsBundle }) {
       </FormSection>
 
       <SaveBar
+        readOnly={ro}
         dirty={society.dirty || values.dirty}
         saving={saveSociety.isPending || saveValues.isPending}
         onSave={() => void save()}

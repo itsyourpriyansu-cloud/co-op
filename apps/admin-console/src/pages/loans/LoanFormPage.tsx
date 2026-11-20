@@ -70,6 +70,7 @@ export function LoanFormPage() {
       pay: { scaleOfPay: c.pay.scaleOfPay, grossSalary: c.pay.grossSalary, govtLoanDeductions: c.pay.govtLoanDeductions, otherLoanDeductions: c.pay.otherLoanDeductions },
       salary: { substantivePay: c.pay.substantivePay, compulsoryDeductions: [{ label: 'G.P.F.', amount: 0 }], netPayEarnedToDate: 0 },
       security: { type: 'SURETY' },
+      bankAccount: { holderName: c.member.name, bankName: '', branch: '', accountNo: '', ifsc: '' },
     });
     setSureties([]);
     setPledged('');
@@ -89,6 +90,7 @@ export function LoanFormPage() {
         ...(product === 'SALARY' ? { salary: form.salary } : { pay: form.pay, security: product === 'DEPOSIT' ? { type: 'DEPOSIT_PLEDGE' as const } : form.security }),
         ...(product === 'EDUCATION' ? { education: form.education ?? { studentName: '', relation: 'Son', institution: '', course: '' } } : {}),
         ...(form.additionalShares ? { additionalShares: form.additionalShares } : {}),
+        ...(form.bankAccount ? { bankAccount: form.bankAccount } : {}),
       },
     }),
     [product, amount, instalments, purpose, sureties, pledged, topupOf, form],
@@ -112,6 +114,7 @@ export function LoanFormPage() {
 
   const setPay = (p: Partial<NonNullable<LoanApplicationForm['pay']>>) => setForm((f) => ({ ...f, pay: { ...f.pay!, ...p } }));
   const setSalary = (p: Partial<NonNullable<LoanApplicationForm['salary']>>) => setForm((f) => ({ ...f, salary: { ...f.salary!, ...p } }));
+  const setBank = (p: Partial<NonNullable<LoanApplicationForm['bankAccount']>>) => setForm((f) => ({ ...f, bankAccount: { holderName: '', bankName: '', accountNo: '', ifsc: '', ...f.bankAccount, ...p } }));
   const setEdu = (p: Partial<NonNullable<LoanApplicationForm['education']>>) => setForm((f) => ({ ...f, education: { studentName: '', relation: 'Son', institution: '', course: '', ...f.education, ...p } }));
 
   return (
@@ -267,6 +270,14 @@ export function LoanFormPage() {
                     {fe.pledgedDepositId && <p className="text-caption text-danger-fg">{fe.pledgedDepositId}</p>}
                   </div>
                 )}
+              </FormSection>
+
+              <FormSection title="Pay the loan into" description="The member's own bank account, as on the paper form. The Cashier pays the loan here by bank transfer (D-132).">
+                <TextField label="Account holder's name" name="bankAccount.holderName" value={form.bankAccount?.holderName ?? ''} onChange={(holderName) => setBank({ holderName })} errors={fe} />
+                <TextField label="Bank name" name="bankAccount.bankName" value={form.bankAccount?.bankName ?? ''} onChange={(bankName) => setBank({ bankName })} errors={fe} placeholder="e.g. State Bank of India" />
+                <TextField label="Branch (optional)" name="bankAccount.branch" value={form.bankAccount?.branch ?? ''} onChange={(branch) => setBank({ branch })} errors={fe} />
+                <TextField label="Account number" name="bankAccount.accountNo" value={form.bankAccount?.accountNo ?? ''} onChange={(v) => setBank({ accountNo: v.replace(/\D/g, '').slice(0, 18) })} errors={fe} />
+                <TextField label="IFSC" name="bankAccount.ifsc" value={form.bankAccount?.ifsc ?? ''} onChange={(v) => setBank({ ifsc: v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) })} errors={fe} placeholder="e.g. SBIN0001234" />
               </FormSection>
 
               {prod && prod.suretiesRequired > 0 && (

@@ -96,3 +96,13 @@ export function suretyProgress(sureties: Pick<LoanSurety, 'status'>[], required:
   const pending = current.filter((s) => s.status === 'PENDING').length;
   return { accepted, declined, pending, allAccepted: accepted >= required && declined === 0 && pending === 0 };
 }
+
+/** D-131: a member's loan record at a glance: applied (not drafts), approved (sanctioned or later), rejected. */
+export function loanHistoryCounts(statuses: LoanStatus[]): { applied: number; approved: number; rejected: number } {
+  const approved = new Set<LoanStatus>(['SANCTIONED', 'ACTIVE', 'CLOSED', 'CLOSED_BY_TOPUP']);
+  return {
+    applied: statuses.filter((s) => s !== 'DRAFT').length,
+    approved: statuses.filter((s) => approved.has(s)).length,
+    rejected: statuses.filter((s) => s === 'REJECTED').length,
+  };
+}

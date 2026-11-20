@@ -1,6 +1,6 @@
 // M5: sanction sheet, top-up settlement (BR-007 + BR-004), surety progress, assessment limits.
 import { describe, expect, it } from 'vitest';
-import { buildSanctionSheet, checkTopupEligibility, lastInterestChargedOn, suretyProgress, validateSanctionAdjustment } from './index';
+import { buildSanctionSheet, checkTopupEligibility, lastInterestChargedOn, loanHistoryCounts, suretyProgress, validateSanctionAdjustment } from './index';
 
 const ordinary = { code: 'ORDINARY' as const, name: 'Ordinary Loan', topupAllowed: true, ratePercent: 11, emiMethod: 'EQUAL_PRINCIPAL' as const, shareDepositPercent: 10 };
 
@@ -61,5 +61,12 @@ describe('validateSanctionAdjustment and suretyProgress', () => {
     expect(suretyProgress([{ status: 'ACCEPTED' }, { status: 'PENDING' }], 2)).toMatchObject({ accepted: 1, pending: 1, allAccepted: false });
     expect(suretyProgress([{ status: 'REPLACED' }, { status: 'ACCEPTED' }, { status: 'ACCEPTED' }], 2).allAccepted).toBe(true);
     expect(suretyProgress([{ status: 'DECLINED' }, { status: 'ACCEPTED' }], 2)).toMatchObject({ declined: 1, allAccepted: false });
+  });
+});
+
+describe('D-131 loan history counts', () => {
+  it('counts applied (not drafts), approved (sanctioned or later) and rejected', () => {
+    expect(loanHistoryCounts(['DRAFT', 'ACTIVE', 'CLOSED', 'CLOSED_BY_TOPUP', 'REJECTED', 'REJECTED', 'WITHDRAWN', 'ACCOUNTANT_REVIEW'])).toEqual({ applied: 7, approved: 3, rejected: 2 });
+    expect(loanHistoryCounts([])).toEqual({ applied: 0, approved: 0, rejected: 0 });
   });
 });

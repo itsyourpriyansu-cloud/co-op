@@ -133,7 +133,7 @@ export function DepositsSection({ bundle }: { bundle: SettingsBundle }) {
         <NumberField label="Penalty" name="fdPrematurePenaltyPercent" value={v.fdPrematurePenaltyPercent} onChange={(fdPrematurePenaltyPercent) => set({ fdPrematurePenaltyPercent })} errors={errors} unit={v.fdPrematurePenaltyMethod === 'RATE_CUT' ? 'points' : '% of interest'} decimals disabled={ro} />
       </FormSection>
 
-      <SaveBar dirty={form.dirty} saving={save.isPending} onSave={() => save.mutate(v)} onDiscard={form.reset} />
+      <SaveBar readOnly={ro} dirty={form.dirty} saving={save.isPending} onSave={() => save.mutate(v)} onDiscard={form.reset} />
     </div>
   );
 }

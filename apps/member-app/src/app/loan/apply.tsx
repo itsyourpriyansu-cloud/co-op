@@ -9,8 +9,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, CircleX, PenLine, Plus, Search, TriangleAlert, X } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
-import { amountInWords, formatDisplayDate, formatINR, instalmentChoices, validateLoanRequest } from '@tgs/domain';
+import { amountInWords, formatDisplayDate, formatINR, instalmentChoices, maskAccountNo, validateLoanRequest } from '@tgs/domain';
 import type { LoanApplicationForm, LoanContext, LoanProductCode, LoanRequestInput, MemberPick } from '@tgs/types';
+import { BankAccountFields, EMPTY_BANK } from '@/components/BankAccountFields';
 import { api } from '@/lib/api';
 import { loanKeys, useAssessment, useLoanContext, useMemberSearch } from '@/lib/loans';
 import { Alert, Button, Card, ChoiceCard, Divider, Header, KeyValue, MonthPicker, OtpInput, Screen, Section, Skeleton, Text, TextField, WizardProgress } from '@/ui';
@@ -21,7 +22,7 @@ const TITLES: Record<StepKey, string> = { type: 'Choose a loan', pay: 'About you
 const STEP_FIELDS: Record<StepKey, (k: string) => boolean> = {
   type: () => false,
   pay: (k) => k.startsWith('pay.') || k.startsWith('salary.'),
-  loan: (k) => ['amount', 'instalments', 'purpose', 'pledgedDepositId'].includes(k) || k.startsWith('education.'),
+  loan: (k) => ['amount', 'instalments', 'purpose', 'pledgedDepositId'].includes(k) || k.startsWith('education.') || k.startsWith('bankAccount.'),
   sureties: (k) => k === 'sureties',
   review: () => false,
 };
@@ -34,6 +35,7 @@ function startForm(ctx: LoanContext): LoanApplicationForm {
     pay: { scaleOfPay: ctx.pay.scaleOfPay, grossSalary: ctx.pay.grossSalary, govtLoanDeductions: ctx.pay.govtLoanDeductions, otherLoanDeductions: ctx.pay.otherLoanDeductions },
     salary: { substantivePay: ctx.pay.substantivePay, compulsoryDeductions: [{ label: 'G.P.F.', amount: 0 }], netPayEarnedToDate: 0 },
     security: { type: 'SURETY' },
+    bankAccount: { ...EMPTY_BANK, holderName: ctx.member.name },
   };
 }
 
@@ -124,8 +126,8 @@ export default function ApplyLoan() {
       ...(topupOf ? { topupOf } : {}),
       form:
         product === 'SALARY'
-          ? { salary: form.salary }
-          : { pay: form.pay, security: product === 'DEPOSIT' ? { type: 'DEPOSIT_PLEDGE' } : { type: 'SURETY' }, ...(product === 'EDUCATION' ? { education: form.education ?? { studentName: '', relation: '', institution: '', course: '' } } : {}) },
+          ? { salary: form.salary, ...(form.bankAccount ? { bankAccount: form.bankAccount } : {}) }
+          : { pay: form.pay, ...(form.bankAccount ? { bankAccount: form.bankAccount } : {}), security: product === 'DEPOSIT' ? { type: 'DEPOSIT_PLEDGE' } : { type: 'SURETY' }, ...(product === 'EDUCATION' ? { education: form.education ?? { studentName: '', relation: '', institution: '', course: '' } } : {}) },
     }),
     [product, amount, instalments, purpose, sureties, pledged, topupOf, form, prod],
   );
@@ -369,6 +371,11 @@ export default function ApplyLoan() {
               ) : null}
             </Section>
           ) : null}
+          <Section title="Pay the loan into">
+            <Card>
+              <BankAccountFields value={form.bankAccount} onChange={(bankAccount) => setForm((f) => ({ ...f, bankAccount }))} err={err} intro="Your own savings or salary account. The society pays the loan here by bank transfer." />
+            </Card>
+          </Section>
           {eligibility}
         </>
       )}
@@ -446,6 +453,7 @@ export default function ApplyLoan() {
             <KeyValue label="Purpose" value={purpose} />
             {a ? <KeyValue label="First instalment" value={formatINR(a.preview.emi)} /> : null}
             {a ? <KeyValue label="You receive" value={formatINR(a.preview.netDisbursable)} /> : null}
+            {form.bankAccount?.accountNo ? <KeyValue label="Paid into" value={`${form.bankAccount.bankName} · A/c ${maskAccountNo(form.bankAccount.accountNo)}`} /> : null}
             {sureties.length ? <KeyValue label="Sureties" value={sureties.map((s) => s.name).join(', ')} /> : null}
           </Card>
           {a && !a.eligible ? <Alert type="error" heading="Not possible as entered" description={blocks[0]?.message} /> : null}

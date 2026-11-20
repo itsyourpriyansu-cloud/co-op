@@ -92,8 +92,9 @@ export function MemberFormPage() {
   // BR-001: suggest the DOR from the DOB until the user types one; show left-over service live.
   const suggestedDor = v.dob && s ? safe(() => expectedRetirementDate(v.dob, s.retirementAge)) : undefined;
   useEffect(() => {
-    if (!dorTouched && suggestedDor) setV((x) => ({ ...x, dor: suggestedDor }));
-  }, [suggestedDor, dorTouched]);
+    // D-131: an existing member's date changes only through the Super Admin's request on the profile.
+    if (!editing && !dorTouched && suggestedDor) setV((x) => ({ ...x, dor: suggestedDor }));
+  }, [suggestedDor, dorTouched, editing]);
   const leftover = v.dor ? safe(() => calculateLeftoverService(v.dor, today || v.dor).label) : undefined;
   const designations = useMemo(() => {
     const list = reference.data?.designations ?? [];
@@ -223,7 +224,8 @@ export function MemberFormPage() {
               }}
               errors={errors}
               required
-              hint={suggestedDor && v.dor !== suggestedDor ? `Retirement age ${s?.retirementAge} gives ${formatDisplayDate(suggestedDor)}` : suggestedDor ? `From the date of birth at age ${s?.retirementAge}` : undefined}
+              disabled={editing}
+              hint={editing ? 'Changed from the member profile: the Super Admin proposes, three officers approve' : suggestedDor && v.dor !== suggestedDor ? `Retirement age ${s?.retirementAge} gives ${formatDisplayDate(suggestedDor)}` : suggestedDor ? `From the date of birth at age ${s?.retirementAge}` : undefined}
             />
             <div className="rounded-control bg-surface-subtle px-4 py-3 sm:col-span-2">
               <p className="text-caption text-fg-tertiary">Left-over service</p>

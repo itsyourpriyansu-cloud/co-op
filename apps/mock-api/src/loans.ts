@@ -22,6 +22,7 @@ import {
   nextLoanStatus,
   validateLoanRequest,
   type RuleCheck,
+  loanHistoryCounts,
 } from '@tgs/domain';
 import {
   ROLE_LABELS,
@@ -268,6 +269,7 @@ export function loanDetail(db: Db, l: Loan, user: SessionUser): LoanDetail {
     ...(demoActAs ? { demoActAs } : {}),
     ...(parent ? { parentLoan: { id: parent.id, applicationNo: parent.applicationNo, ...(parent.loanNo ? { loanNo: parent.loanNo } : {}), outstanding: parent.outstandingPrincipal } } : {}),
     ...(pledged ? { pledgedDeposit: { id: pledged.id, accountNo: pledged.accountNo, principal: pledged.principal ?? pledged.balance } } : {}),
+    history: loanHistoryCounts(db.loans.filter((x) => x.memberId === l.memberId).map((x) => x.status)),
   };
 }
 

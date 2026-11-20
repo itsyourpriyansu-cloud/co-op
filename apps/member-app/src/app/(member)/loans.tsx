@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronRight, HandCoins, Plus } from 'lucide-react-native';
-import { formatCycle, formatDisplayDate, formatINR } from '@tgs/domain';
+import { formatCycle, formatDisplayDate, formatINR, loanHistoryCounts } from '@tgs/domain';
 import type { LoanRow, LoanStatusGroup } from '@tgs/types';
 import { SEGMENTS, useMyLoans } from '@/lib/loans';
 import { Alert, Button, Card, EmptyState, Screen, Segmented, Skeleton, StatusTag, Text } from '@/ui';
@@ -61,6 +61,12 @@ export default function Loans() {
         </Text>
         <Button text="Apply" size="sm" leftSlot={Plus} onPress={() => router.push('/loan/apply')} />
       </View>
+      {/* D-131: the member's loan record at a glance. */}
+      {loans.data?.length ? (
+        <Text role="caption" tone="secondary">
+          {(({ applied, approved, rejected }) => `Applied ${applied} · Approved ${approved} · Rejected ${rejected}`)(loanHistoryCounts(loans.data.map((r) => r.status)))}
+        </Text>
+      ) : null}
       <Segmented label="Show" value={segment} options={SEGMENTS.map((s) => ({ value: s.value, label: `${s.label} ${count(s.value) || ''}`.trim() }))} onChange={setSegment} />
       {loans.isLoading ? (
         <View style={{ gap: space[6] }}>

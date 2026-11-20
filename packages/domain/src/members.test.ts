@@ -6,6 +6,10 @@ import {
   changeRequestRoute,
   expectedRetirementDate,
   maskMobile,
+  probationCheck,
+  retirementChangeNextApprover,
+  serviceRemaining,
+  validateRetirementChange,
   profileFieldValue,
   transferEffectiveCycle,
   validateChangeRequest,
@@ -73,6 +77,29 @@ describe('BR-001 / BR-010 helpers', () => {
     expect(expectedRetirementDate('1966-12-09', 61)).toBe('2027-12-31');
     expect(expectedRetirementDate('1968-02-10', 60)).toBe('2028-02-29');
   });
+  it('D-131: a member born on the 1st retires on the last day of the month before (FR 56)', () => {
+    expect(expectedRetirementDate('1966-12-01', 61)).toBe('2027-11-30');
+    expect(expectedRetirementDate('1968-03-01', 60)).toBe('2028-02-29');
+    expect(expectedRetirementDate('1966-01-01', 61)).toBe('2026-12-31');
+    expect(expectedRetirementDate('1966-12-02', 61)).toBe('2027-12-31');
+  });
+  it('D-131: service remaining in months and days', () => {
+    expect(serviceRemaining('2027-12-31', '2026-11-18')).toEqual({ months: 13, label: expect.any(String), days: 408, dor: '2027-12-31' });
+    expect(serviceRemaining('2026-01-31', '2026-11-18')).toMatchObject({ months: 0, days: 0 });
+  });
+  it('D-131: probation warns only for probationers short of the months', () => {
+    expect(probationCheck('REGULAR', '2026-10-01', '2026-11-18', 6)).toBeUndefined();
+    expect(probationCheck('APPROVED_PROBATIONER', '2026-08-01', '2026-11-18', 6)).toMatchObject({ ruleId: 'BR-054', pass: false, severity: 'warn' });
+    expect(probationCheck('APPROVED_PROBATIONER', '2026-05-18', '2026-11-18', 6)).toMatchObject({ pass: true, severity: 'warn' });
+    expect(probationCheck('APPROVED_PROBATIONER', '2026-08-01', '2026-11-18', 0)).toBeUndefined();
+  });
+  it('D-131: retirement date changes go Accountant → Secretary → President', () => {
+    expect([0, 1, 2, 3].map(retirementChangeNextApprover)).toEqual(['ACCOUNTANT', 'SECRETARY', 'PRESIDENT', undefined]);
+    const m = { dor: '2030-05-31', doj: '2000-01-10' };
+    expect(validateRetirementChange(m, { newDor: '2030-04-30', reason: 'Service register entry' })).toEqual({});
+    expect(validateRetirementChange(m, { newDor: '2030-05-31', reason: 'x' })).toEqual({ newDor: expect.any(String), reason: expect.any(String) });
+    expect(validateRetirementChange(m, { newDor: '1999-01-01', reason: 'Service register' }).newDor).toMatch(/after the date of joining/);
+  });
   it('transfer moves on the first sheet not yet generated for the old department', () => {
     expect(transferEffectiveCycle('2026-10-15', ['2026-09', '2026-10'])).toBe('2026-11');
     expect(transferEffectiveCycle('2026-12-01', ['2026-10'])).toBe('2026-12');
@@ -89,6 +116,10 @@ describe('profile change requests (MB-19, D-057)', () => {
   it('routes employment / pay changes through the DDO', () => {
     expect(changeRequestRoute(['nominee.name'])).toBe('OFFICE');
     expect(changeRequestRoute(['nominee.name', 'designation'])).toBe('DDO_THEN_OFFICE');
+  });
+
+  it('D-131: the date of retirement cannot be asked for in a request', () => {
+    expect(validateChangeRequest(member, { fields: [{ field: 'dor', newValue: '2043-02-28' }], reason: 'Wrong date' }, [], '2026-10-24')['fields.dor']).toMatch(/society office/);
   });
 
   it('reads and writes every kind of field', () => {

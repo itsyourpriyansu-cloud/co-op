@@ -5,8 +5,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { DemandSheetDetail } from '@tgs/types';
-import { Expand, Loaded, plain, PrintButton, ShareCsvButton, Stack2 } from '@/components/staff';
+import { Expand, Loaded, plain, ShareCsvButton, Stack2, StaffDocument } from '@/components/staff';
 import { api } from '@/lib/api';
+import { demandSheetHtml } from '@/lib/staffDocuments';
+import { documentFileName } from '@/lib/documents';
 import { useAuth } from '@/lib/auth';
 import { ENTRY_LABEL, HEAD_COLUMNS } from '@/lib/staffCollections';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Text, TextField } from '@/ui';
@@ -134,7 +136,7 @@ function Body({ d, refetching, refetch }: { d: DemandSheetDetail; refetching: bo
 
       <View style={{ gap: space[3] }}>
         <ShareCsvButton title={`Demand ${sh.cycle}`} rows={() => csvRows(d)} />
-        <PrintButton path={`/demand-sheets/${sh.id}`} />
+        <StaffDocument title="Demand sheet" fileName={documentFileName('Demand', `${sh.cycle}-${d.department?.code ?? sh.id}`)} build={(o) => demandSheetHtml(d, HEAD_COLUMNS, o)} />
       </View>
     </Screen>
   );

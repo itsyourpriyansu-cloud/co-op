@@ -282,6 +282,17 @@ export interface LoanApplicationForm {
   education?: { studentName: string; relation: string; institution: string; course: string };
   /** F3 items 5–9, Salary loans. */
   salary?: { substantivePay: Paise; compulsoryDeductions: Array<{ label: string; amount: Paise }>; netPayEarnedToDate: Paise };
+  /** D-132: the borrower's bank account the net amount is paid into (NEFT / transfer). */
+  bankAccount?: LoanBankAccount;
+}
+
+/** D-132: where a sanctioned loan is paid. */
+export interface LoanBankAccount {
+  holderName: string;
+  bankName: string;
+  branch?: string;
+  accountNo: string;
+  ifsc: string;
 }
 
 /** F-06 [P]: RATE_CUT = interest at the FD rate less this many points; SHARE_OF_INTEREST = this % of the interest earned. */
@@ -523,6 +534,25 @@ export interface SignatureRecord {
 export const F1_CERT_ITEMS = ['name', 'fatherName', 'dob', 'address', 'designation', 'office', 'appointment'] as const;
 export type F1CertItem = (typeof F1_CERT_ITEMS)[number];
 
+/**
+ * D-131: a date-of-retirement correction. Only the Super Admin proposes it; the Accountant, the
+ * Secretary and the President approve in that order; the date changes when the President approves.
+ */
+export interface RetirementChange {
+  id: string;
+  memberId: string;
+  currentDor: ISODate;
+  newDor: ISODate;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  proposed: StaffSignOff;
+  /** In order: Accountant, Secretary, President. */
+  approvals: StaffSignOff[];
+  rejection?: StaffSignOff;
+  /** Whose turn it is while PENDING. */
+  nextApprover?: 'ACCOUNTANT' | 'SECRETARY' | 'PRESIDENT';
+}
+
 /** A staff action recorded on a workflow item: who, when, what they said. */
 export interface StaffSignOff {
   byId: string;
@@ -689,6 +719,8 @@ export interface SocietySettings {
   crdMonthly: Paise;
   srdsMonthly: Paise;
   retirementAge: number;
+  /** D-131 [S]: months an approved probationer should have served before joining (a warning to staff, never a block). */
+  probationMonths: number;
   defaulterCycles: number;
   fdSlabs: Array<{ fromMonths: number; toMonths: number; ratePercent: number }>;
   savingsRatePercent: number;

@@ -1,10 +1,11 @@
 // M4 loan application rules: F2/F3 completeness, Salary-loan limit (BR-023), stage tracker (MB-04).
 import { describe, expect, it } from 'vitest';
 import type { LoanStatus, WorkflowEvent } from '@tgs/types';
-import { checkSalaryLoan, firstDueCycle, lastInstalmentCycle, loanStages, loanStatusGroup, validateLoanRequest } from './index';
+import { checkSalaryLoan, firstDueCycle, lastInstalmentCycle, loanStages, loanStatusGroup, formatBankAccount, maskAccountNo, validateLoanRequest } from './index';
 
 const pay = { scaleOfPay: '45960-124340', grossSalary: 9_500_000, govtLoanDeductions: 0, otherLoanDeductions: 0 };
-const base = { product: 'ORDINARY', amount: 20_000_000, instalments: 60, purpose: 'House repair', sureties: ['mem-2', 'mem-3'], form: { pay } };
+const bank = { holderName: 'A B', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' };
+const base = { product: 'ORDINARY', amount: 20_000_000, instalments: 60, purpose: 'House repair', sureties: ['mem-2', 'mem-3'], form: { pay, bankAccount: bank } };
 
 describe('cycles', () => {
   it('first EMI is next month; last instalment counts from it', () => {
@@ -31,8 +32,8 @@ describe('validateLoanRequest', () => {
   it('accepts a complete Ordinary application', () => expect(validateLoanRequest(base, ord, 'mem-1')).toEqual({}));
   it('flags missing basics and pay', () => {
     const e = validateLoanRequest({ ...base, amount: 0, instalments: 0, purpose: '', form: {} }, ord, 'mem-1');
-    expect(Object.keys(e).sort()).toEqual(['amount', 'instalments', 'pay.grossSalary', 'purpose']);
-    expect(validateLoanRequest({ ...base, form: { pay: { ...pay, govtLoanDeductions: -1 } } }, ord, 'mem-1')['pay.deductions']).toBeTruthy();
+    expect(Object.keys(e).sort()).toEqual(['amount', 'bankAccount.accountNo', 'bankAccount.bankName', 'bankAccount.holderName', 'bankAccount.ifsc', 'instalments', 'pay.grossSalary', 'purpose']);
+    expect(validateLoanRequest({ ...base, form: { bankAccount: bank, pay: { ...pay, govtLoanDeductions: -1 } } }, ord, 'mem-1')['pay.deductions']).toBeTruthy();
   });
   it('checks sureties: self, duplicates, too few, too many', () => {
     expect(validateLoanRequest({ ...base, sureties: ['mem-1', 'mem-2'] }, ord, 'mem-1').sureties).toMatch(/own surety/);
@@ -41,17 +42,33 @@ describe('validateLoanRequest', () => {
     expect(validateLoanRequest({ ...base, sureties: ['mem-2', 'mem-3', 'mem-4'] }, ord, 'mem-1').sureties).toMatch(/exactly 2/);
   });
   it('Education needs student details; Deposit needs a pledge; Salary needs F3 pay', () => {
-    const edu = validateLoanRequest({ ...base, form: { pay, education: { studentName: '', relation: 'Son', institution: '', course: '' } } }, { code: 'EDUCATION', suretiesRequired: 2 }, 'mem-1');
+    const edu = validateLoanRequest({ ...base, form: { pay, bankAccount: bank, education: { studentName: '', relation: 'Son', institution: '', course: '' } } }, { code: 'EDUCATION', suretiesRequired: 2 }, 'mem-1');
     expect(Object.keys(edu).sort()).toEqual(['education.course', 'education.institution', 'education.studentName']);
-    expect(validateLoanRequest({ ...base, form: { pay } }, { code: 'EDUCATION', suretiesRequired: 2 }, 'mem-1')['education.studentName']).toBeTruthy();
-    expect(validateLoanRequest({ ...base, form: { pay, education: { studentName: 'Ravi', relation: 'Son', institution: 'JNTU', course: 'B.Tech' } } }, { code: 'EDUCATION', suretiesRequired: 2 }, 'mem-1')).toEqual({});
+    expect(validateLoanRequest({ ...base, form: { pay, bankAccount: bank } }, { code: 'EDUCATION', suretiesRequired: 2 }, 'mem-1')['education.studentName']).toBeTruthy();
+    expect(validateLoanRequest({ ...base, form: { pay, bankAccount: bank, education: { studentName: 'Ravi', relation: 'Son', institution: 'JNTU', course: 'B.Tech' } } }, { code: 'EDUCATION', suretiesRequired: 2 }, 'mem-1')).toEqual({});
     expect(validateLoanRequest({ ...base, sureties: [] }, { code: 'DEPOSIT', suretiesRequired: 0 }, 'mem-1')).toEqual({ pledgedDepositId: expect.any(String) });
     expect(validateLoanRequest({ ...base, sureties: [], pledgedDepositId: 'd1' }, { code: 'DEPOSIT', suretiesRequired: 0 }, 'mem-1')).toEqual({});
     const sal = { code: 'SALARY' as const, suretiesRequired: 0 };
-    expect(validateLoanRequest({ ...base, sureties: [], form: {} }, sal, 'mem-1')).toEqual({ 'salary.substantivePay': expect.any(String) });
-    expect(Object.keys(validateLoanRequest({ ...base, sureties: [], form: { salary: { substantivePay: 0, netPayEarnedToDate: 0, compulsoryDeductions: [{ label: '', amount: 5 }] } } }, sal, 'mem-1')).sort()).toEqual(['salary.compulsoryDeductions', 'salary.netPayEarnedToDate', 'salary.substantivePay']);
-    expect(validateLoanRequest({ ...base, sureties: [], form: { salary: { substantivePay: 1, netPayEarnedToDate: 1, compulsoryDeductions: [{ label: 'GPF', amount: 0 }] } } }, sal, 'mem-1')).toEqual({});
-    expect(validateLoanRequest({ ...base, sureties: [], form: { salary: { substantivePay: 1, netPayEarnedToDate: 1, compulsoryDeductions: [{ label: 'GPF', amount: -1 }] } } }, sal, 'mem-1')['salary.compulsoryDeductions']).toBeTruthy();
+    expect(validateLoanRequest({ ...base, sureties: [], form: { bankAccount: bank } }, sal, 'mem-1')).toEqual({ 'salary.substantivePay': expect.any(String) });
+    expect(Object.keys(validateLoanRequest({ ...base, sureties: [], form: { bankAccount: bank, salary: { substantivePay: 0, netPayEarnedToDate: 0, compulsoryDeductions: [{ label: '', amount: 5 }] } } }, sal, 'mem-1')).sort()).toEqual(['salary.compulsoryDeductions', 'salary.netPayEarnedToDate', 'salary.substantivePay']);
+    expect(validateLoanRequest({ ...base, sureties: [], form: { bankAccount: bank, salary: { substantivePay: 1, netPayEarnedToDate: 1, compulsoryDeductions: [{ label: 'GPF', amount: 0 }] } } }, sal, 'mem-1')).toEqual({});
+    expect(validateLoanRequest({ ...base, sureties: [], form: { bankAccount: bank, salary: { substantivePay: 1, netPayEarnedToDate: 1, compulsoryDeductions: [{ label: 'GPF', amount: -1 }] } } }, sal, 'mem-1')['salary.compulsoryDeductions']).toBeTruthy();
+  });
+});
+
+describe('loan bank account (D-132)', () => {
+  const ord = { code: 'ORDINARY' as const, suretiesRequired: 2 };
+  const withBank = (b: Partial<typeof bank>) => validateLoanRequest({ ...base, form: { pay, bankAccount: { ...bank, ...b } } }, ord, 'mem-1');
+  it('needs a holder, a bank, a 9–18 digit account number and a valid IFSC', () => {
+    expect(withBank({})).toEqual({});
+    expect(Object.keys(withBank({ holderName: ' ', bankName: '', accountNo: '12345678', ifsc: 'sbin0001234' })).sort()).toEqual(['bankAccount.accountNo', 'bankAccount.bankName', 'bankAccount.holderName', 'bankAccount.ifsc']);
+    expect(withBank({ accountNo: '1234567890123456789' })['bankAccount.accountNo']).toBeTruthy();
+    expect(withBank({ ifsc: 'SBIN1001234' })['bankAccount.ifsc']).toBeTruthy();
+  });
+  it('masks all but the last four digits', () => expect(maskAccountNo('12345678901')).toBe('XXXXXXX8901'));
+  it('formats one line, masked for member copies', () => {
+    expect(formatBankAccount({ ...bank, branch: 'Abids' })).toBe('A B · State Bank of India, Abids · A/c 12345678901 · IFSC SBIN0001234');
+    expect(formatBankAccount(bank, true)).toBe('A B · State Bank of India · A/c XXXXXXX8901 · IFSC SBIN0001234');
   });
 });
 

@@ -63,6 +63,11 @@ describe('member documents', () => {
     expect(html).toContain('Sec Name');
     expect(html).toContain('Pres Name');
     expect(() => sanctionLetterHtml(loan({ sanctionLetterNo: undefined }), { society, generatedOn })).toThrow();
+    // D-132: the loan number, and the account the loan is paid into, masked on the member's copy.
+    expect(html).toContain('Loan No. LN-2026-00001');
+    const paid = sanctionLetterHtml(loan({ form: { bankAccount: { holderName: 'Ravi', bankName: 'SBI', accountNo: '12345678901', ifsc: 'SBIN0001234' } } }), { society, generatedOn });
+    expect(paid).toContain('A/c XXXXXXX8901');
+    expect(paid).not.toContain('12345678901');
   });
 
   it('repayment schedule: every row, totals, and the early-interest note', () => {

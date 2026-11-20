@@ -3,6 +3,7 @@
 // The statements themselves (day book, trial balance, P&L, balance sheet…) are under Reports.
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import { useOpenForm } from '@/lib/forms';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2Type, ModalV2, SingleSelectV2, TabsV2, TabsV2List, TabsV2Trigger, TabsV2Variant, TextInputV2 } from '@juspay/blend-design-system';
 import { Plus, Printer } from 'lucide-react';
@@ -49,6 +50,7 @@ export function AccountsPage() {
 function Vouchers() {
   const { can } = useAuth();
   const navigate = useNavigate();
+  const openForm = useOpenForm();
   const [page, setPage] = useState(1);
   const [kind, setKind] = useState<'' | 'PAYMENT' | 'RECEIPT'>('');
   const [open, setOpen] = useState(false);
@@ -114,7 +116,7 @@ function Vouchers() {
                       <span className="block text-caption text-fg-tertiary">{v.mode === 'CASH' ? 'Cash' : `Bank · ${v.reference ?? ''}`}</span>
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <ButtonV2 text="Print" size={ButtonV2Size.SMALL} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={14} /> }} onClick={() => navigate(`/reports/print/office-voucher?id=${v.id}`)} />
+                      <ButtonV2 text="Print" size={ButtonV2Size.SMALL} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={14} /> }} onClick={() => openForm(`/reports/print/office-voucher?id=${v.id}`)} />
                     </td>
                   </tr>
                 ))

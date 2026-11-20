@@ -1,4 +1,4 @@
-import { PERMISSION_LABELS } from '@tgs/domain';
+import { PERMISSION_LABELS, SUPER_ADMIN_ONLY } from '@tgs/domain';
 import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type Permission, type PermissionMatrix, type Role } from '@tgs/types';
 import type { FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
@@ -8,7 +8,7 @@ import type { AuditService } from '../audit/audit.service';
 import type { PermissionsRepository } from './permissions.repository';
 
 /** Permissions every Super Admin keeps, so nobody can lock the society out of its own settings. */
-const SUPER_ADMIN_FLOOR: Permission[] = ['settings.view', 'settings.edit', 'users.manage'];
+const SUPER_ADMIN_FLOOR: Permission[] = ['settings.view', ...SUPER_ADMIN_ONLY];
 const KNOWN = new Set(PERMISSION_LABELS.map((p) => p.key));
 
 /**
@@ -65,6 +65,8 @@ export class PermissionsService {
     const unknown = permissions.filter((p) => !KNOWN.has(p));
     if (unknown.length) fail('VALIDATION_ERROR', `Unknown permission: ${unknown.join(', ')}`, { fieldErrors: { permissions: 'Unknown permission' } });
     const next = [...new Set(permissions)];
+    const adminOnly = role === 'SUPER_ADMIN' ? [] : next.filter((p) => SUPER_ADMIN_ONLY.includes(p));
+    if (adminOnly.length) fail('VALIDATION_ERROR', `Only the Super Admin can have: ${adminOnly.join(', ')}.`, { fieldErrors: { permissions: 'Settings, users and permissions stay with the Super Admin.' } });
     if (role === 'SUPER_ADMIN') for (const p of SUPER_ADMIN_FLOOR) if (!next.includes(p)) next.push(p);
     const before = await this.forRole(role);
     await withTransaction(this.db, async (tx) => {

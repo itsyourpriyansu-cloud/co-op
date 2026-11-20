@@ -6,6 +6,7 @@ import { brand } from '@tgs/design-tokens';
 import { ROLE_LABELS } from '@tgs/types';
 import { NAV_GROUPS, navItemFor } from '@/config/navigation';
 import { AppMark } from '@/components/AppMark';
+import { formOrigin } from '@/lib/forms';
 import { useAuth } from '../auth';
 import { ConsoleTopbar } from './ConsoleTopbar';
 import { Initials } from '@/components/Initials';
@@ -13,7 +14,7 @@ import { Initials } from '@/components/Initials';
 export function ConsoleShell() {
   const { can, session } = useAuth();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
 
   // a11y (D-064): most TabsV2 here are filters with no TabsV2Content, so Radix's aria-controls would
   // point at a panel that does not exist. Drop the dangling reference wherever it appears.
@@ -30,6 +31,12 @@ export function ConsoleShell() {
     mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-controls', 'aria-label'] });
     return () => mo.disconnect();
   }, []);
+
+  // A new page opens at its top. Blend scrolls its own main area, not the window, so the router can't reset it.
+  useEffect(() => {
+    document.querySelector('[data-main-content="true"]')?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
+  }, [pathname]);
 
   const data = useMemo<DirectoryData[]>(
     () =>
@@ -75,7 +82,7 @@ export function ConsoleShell() {
       sidebarTopSlot={brandBlock}
       footer={footer}
       topbar={<ConsoleTopbar />}
-      activeItem={navItemFor(pathname)?.id ?? null}
+      activeItem={navItemFor(formOrigin(state) ?? pathname)?.id ?? null}
       sidebarCollapseKey="/"
     >
       <div className="mx-auto w-full max-w-[1440px] px-6 py-6">

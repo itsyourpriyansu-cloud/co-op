@@ -1,11 +1,16 @@
-import type { Member, RecoveryMandate, ServiceEvent, TransferEvent } from '@tgs/types';
+import type { Member, RecoveryMandate, RetirementChange, ServiceEvent, TransferEvent } from '@tgs/types';
 import { and, desc, eq, max, ne, or, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
 import type { Tx } from '../../db/transaction';
-import { memberTransfers, members, recoveryMandates, serviceEvents } from '../../models';
-import { maskMobile } from '@tgs/domain';
+import { memberTransfers, members, recoveryMandates, retirementChanges, serviceEvents } from '../../models';
+import { maskMobile, retirementChangeNextApprover } from '@tgs/domain';
 
 type MemberRow = typeof members.$inferSelect;
+
+function toRetirementChange(r: typeof retirementChanges.$inferSelect): RetirementChange {
+  const next = r.status === 'PENDING' ? retirementChangeNextApprover(r.approvals.length) : undefined;
+  return { id: r.id, memberId: r.memberId, currentDor: r.currentDor, newDor: r.newDor, reason: r.reason, status: r.status, proposed: r.proposed, approvals: r.approvals, ...(r.rejection ? { rejection: r.rejection } : {}), ...(next ? { nextApprover: next } : {}) };
+}
 
 /** The API's Member shape (same as the mock) from a database row. */
 export function toMember(r: MemberRow): Member {
@@ -131,6 +136,26 @@ export class MembersRepository {
 
   async addEvent(tx: Tx, e: ServiceEvent): Promise<void> {
     await tx.insert(serviceEvents).values({ ...e, effectiveCycle: e.effectiveCycle ?? null, byName: e.byName ?? null });
+  }
+
+  // ---- D-131 retirement date changes ----
+  /** The member's pending change, else the latest decided one. */
+  async retirementChange(memberId: string, tx?: Tx): Promise<RetirementChange | undefined> {
+    const rows = await (tx ?? this.db).select().from(retirementChanges).where(eq(retirementChanges.memberId, memberId)).orderBy(desc(retirementChanges.createdAt));
+    const r = rows.find((x) => x.status === 'PENDING') ?? rows[0];
+    return r ? toRetirementChange(r) : undefined;
+  }
+
+  async pendingRetirementChanges(): Promise<RetirementChange[]> {
+    return (await this.db.select().from(retirementChanges).where(eq(retirementChanges.status, 'PENDING')).orderBy(retirementChanges.createdAt)).map(toRetirementChange);
+  }
+
+  async insertRetirementChange(tx: Tx, c: RetirementChange): Promise<void> {
+    await tx.insert(retirementChanges).values({ id: c.id, memberId: c.memberId, currentDor: c.currentDor, newDor: c.newDor, reason: c.reason, status: c.status, proposed: c.proposed, approvals: c.approvals });
+  }
+
+  async saveRetirementChange(tx: Tx, c: RetirementChange): Promise<void> {
+    await tx.update(retirementChanges).set({ status: c.status, approvals: c.approvals, rejection: c.rejection ?? null }).where(eq(retirementChanges.id, c.id));
   }
 
   // ---- mandates ----

@@ -22,6 +22,8 @@ import {
   type NewLoanProduct,
   type LoanProductCode,
   type NotificationTemplate,
+  type ConsoleRole,
+  type Permission,
   type PermissionMatrix,
   type RatesReference,
   type SettingsBundle,
@@ -420,6 +422,8 @@ export function createApiClient(options: ApiClientOptions) {
       /** Backend only: the user sets up a new authenticator at the next sign-in. */
       resetUserTotp: (id: string) => request<StaffUser[]>('POST', `/users/${id}/reset-totp`),
       permissions: () => request<PermissionMatrix>('GET', '/permissions'),
+      /** Backend only (D-134): the Super Admin replaces one role's permissions. */
+      updatePermissions: (role: ConsoleRole, permissions: Permission[]) => request<PermissionMatrix>('PUT', `/permissions/${role}`, { permissions }),
       templates: () => request<NotificationTemplate[]>('GET', '/notification-templates'),
       updateTemplate: (key: string, t: Partial<NotificationTemplate>) => request<NotificationTemplate[]>('PUT', `/notification-templates/${key}`, t),
     },
@@ -434,6 +438,9 @@ export function createApiClient(options: ApiClientOptions) {
       update: (id: string, input: MemberInput) => request<MemberDetail>('PUT', `/members/${id}`, input),
       transfer: (id: string, input: TransferInput) => request<MemberDetail>('POST', `/members/${id}/transfers`, input),
       agreeMandate: (id: string) => request<MemberDetail>('POST', `/members/${id}/mandate/agree`),
+      /** D-131: the Super Admin proposes; the Accountant, Secretary and President decide in turn. */
+      proposeRetirementChange: (id: string, input: { newDor: string; reason: string }) => request<MemberDetail>('POST', `/members/${id}/retirement-change`, input),
+      decideRetirementChange: (id: string, decision: 'approve' | 'reject', remarks?: string) => request<MemberDetail>('POST', `/members/${id}/retirement-change/decision`, { decision, ...(remarks ? { remarks } : {}) }),
       /** F-08 (D-098): a member leaves and is settled. */
       settlement: (memberId: string) => request<SettlementView>('GET', `/members/${memberId}/settlement`),
       exit: (memberId: string, body: { status: 'RETIRED' | 'RESIGNED' | 'DECEASED'; date: string; remarks?: string }) => request<SettlementView>('POST', `/members/${memberId}/exit`, body),

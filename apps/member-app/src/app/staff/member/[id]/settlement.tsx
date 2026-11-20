@@ -5,8 +5,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { SettlementLine, SettlementView } from '@tgs/types';
-import { ActionAlert, ask, Loaded, MoneyField, PrintButton, useAction } from '@/components/staff';
+import { ActionAlert, ask, Loaded, MoneyField, useAction, StaffDocument } from '@/components/staff';
 import { api } from '@/lib/api';
+import { settlementHtml } from '@/lib/staffDocuments';
+import { documentFileName } from '@/lib/documents';
 import { Alert, Button, Card, DateField, Divider, Header, KeyValue, Screen, Section, Segmented, Text, TextField } from '@/ui';
 import { space } from '@/theme';
 
@@ -123,7 +125,7 @@ export default function Settlement() {
                   <Lines title="Due to the society" lines={st.owes} total={st.totalOwed} />
                   <Lines title="Held by the society for the member" lines={st.holds} total={st.totalHeld} />
                   <Alert type={st.net < 0 ? 'warning' : st.net > 0 ? 'primary' : 'success'} heading={st.net < 0 ? `Recover ${formatINR(-st.net)} from the gratuity` : st.net > 0 ? `Pay ${formatINR(st.net)} to ${deceased ? `the nominee, ${v.member.nominee?.name ?? ''}` : 'the member'}` : 'Settled in full'} description={st.net < 0 ? 'As agreed in the salary recovery agreement, the pay office remits it to the society.' : st.net > 0 ? 'Nothing is due to the society.' : 'Nothing is due either way.'} />
-                  <PrintButton text="Print the settlement letter" path={`/members/${id}/settlement`} />
+                  <StaffDocument title="Settlement letter" fileName={documentFileName('Settlement', v.member.generalNo)} build={(o) => settlementHtml(v, o)} />
                 </>
               ) : null}
               {s.posted ? <Alert type="success" heading="Posted" description={`${formatDisplayDateTime(s.posted.at)} by ${s.posted.byName}: received ${formatINR(s.posted.received)}, paid ${formatINR(s.posted.paid)} to ${s.posted.payeeName}, ref ${s.posted.reference}${s.posted.journalNo ? `, ${s.posted.journalNo}` : ''}.`} /> : null}

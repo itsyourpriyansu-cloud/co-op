@@ -1,6 +1,7 @@
 # 09 · Business Rules
 
-> Version 0.20 · 2026-11-16 · BR-006 first deduction month and early interest, BR-030 Regenerate and supplementary sheets (D-124).
+> Version 0.22 · 2026-11-19 · BR-055 loan bank account (D-132); BR-056 one DDO login per department, Employee ID required on F1 (D-133).
+> Version 0.21 · 2026-11-18 · BR-001 retirement date rule and the three-step correction, BR-054 probation warning (D-131). v0.20: BR-006 first deduction month and early interest, BR-030 Regenerate and supplementary sheets (D-124).
 > Version 0.19 · 2026-11-14 · BR-016 / BR-022 tenure is one of the Admin's periods (D-123).
 > Version 0.18 · 2026-11-13 · BR-051 receipt cancellation, BR-052 FD renewal, BR-053 notification delivery (G9, D-119 … D-121).
 > Version 0.17 · 2026-11-12 · BR-050 personal data (G7, D-117). v0.16: BR-049 go-live data import (G6, D-116). v0.15: BR-048 app security and versions (G4, D-114). v0.14: BR-044 office vouchers, BR-045 annual interest, BR-046 dividend, BR-047 year close and lock (G2, D-112). v0.13: BR-040 … BR-043 (G1, D-111).
@@ -46,7 +47,10 @@
 ## BR-001 Left-over service
 - Source: DOR is an entered field [A]. "Left over Service" is listed as a field [A].
 - **Proposed calculation [P]:** `leftoverMonths = full months between demoToday and DOR` (floor). Display `X yrs Y mths`. Recomputed on every read, never stored.
-- **Proposed check [ASSUMPTION]:** if `retirementAge` is configured (Telangana government retirement age is understood to be 61; confirm, Q-314), warn when DOR ≠ last day of the month in which the member reaches that age. Warn only, never auto-change.
+- **Proposed check [ASSUMPTION]:** if `retirementAge` is configured (Telangana government retirement age is understood to be 61; confirm, Q-314), warn when DOR ≠ the expected date. Warn only, never auto-change.
+- **Expected date [S, D-131]:** the last day of the month the member reaches `retirementAge`; a member born on the 1st retires on the last day of the month before (government rule FR 56). New members get it at admission.
+- **Changing a saved date [S, D-131]:** only the Super Admin proposes it, with a reason; the Accountant, then the Secretary, then the President approve; the date changes on the President's approval; a rejection needs a reason and ends it. One pending change per member. Staff edits and member change requests cannot change it.
+- **Shown to the member [S, D-131]:** service remaining as `X yrs Y mths (N days)` and the retirement date on the home screen (`serviceRemaining`).
 
 ## BR-002 Tenure eligibility [A]
 > "Loan approval will be permitted only when the member's remaining service period exceeds the requested loan tenure."
@@ -347,6 +351,18 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand �
 - Only a MATURED FD; the Cashier records it on the member's request. New tenure must be in the FD rate slabs; the rate is today's slab rate.
 - With interest: the new principal is the maturity value. Without: the principal stays and the interest is paid to the bank (voucher).
 - The new FD starts on the renewal date and goes through Secretary then President acceptance (BR on FD acceptance); its FDR names the old one. No auto-renewal.
+
+### BR-054 Probation period [S] (D-131)
+- No minimum service to join or borrow. An approved probationer should have served `probationMonths` (6) since the date of joining service (the appointment date on the membership form).
+- A shortfall shows as a warning in the joining checks for staff; it never blocks. 0 turns the check off.
+
+### BR-055 Loan bank account [D-132]
+- Every loan application gives the account the net amount is paid into: holder's name, bank, branch (optional), account number (9–18 digits), IFSC (`^[A-Z]{4}0[A-Z0-9]{6}$`). Checked by `validateLoanRequest` before signing / submitting.
+- The office sees it in full (loan detail, disbursement, F2 / F3). Letters the member keeps show the account number masked to its last 4 digits.
+
+### BR-056 DDO logins and Employee ID [D-133]
+- A department has at most one **active** DDO login; a DDO login must belong to an existing department. An inactive second login may be prepared for a handover.
+- The Employee ID is required on the membership application (F1), as on the staff member form.
 
 ### BR-053 Message delivery [P] (D-121)
 - Every WhatsApp / email send is queued and retried on a provider fault (timeout, 408, 429, 5xx, Meta rate limits) after 30 s, 2, 8 and 32 minutes; then FAILED. A refusal of the number or the text fails at once.

@@ -164,6 +164,9 @@ function memberDetail(db: Db, m: Member, user: SessionUser): MemberDetail {
       transfer: can(user, 'members.edit') && m.status === 'ACTIVE',
       agreeMandate: mandatePending && user.role === 'DDO' && user.departmentId === mandate.departmentId,
       seeFullMobile,
+      // D-131: retirement date corrections are a backend feature; the prototype demo does not offer them.
+      proposeRetirementChange: false,
+      decideRetirementChange: false,
     },
     ...(mandatePending && !ddoForMandate && can(user, 'demo.control') && user.role !== 'DDO' ? { demoAgreeAs: `${db.departments.find((d) => d.id === mandate.departmentId)?.ddoName ?? 'DDO'} (DDO, ${deptName(db, mandate.departmentId)})` } : {}),
   };

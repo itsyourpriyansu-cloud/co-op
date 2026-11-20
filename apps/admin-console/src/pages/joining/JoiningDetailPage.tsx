@@ -2,6 +2,7 @@
 // the audit trail, with the action for the signed-in role (drawers: ActionDrawer).
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { useOpenForm } from '@/lib/forms';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, BadgeCheck, CircleCheck, Clock, FileImage, FileText, FlaskConical, Printer, ShieldCheck, UserX } from 'lucide-react';
 import {
@@ -277,6 +278,7 @@ const ACTION_HINT: Record<MembershipAction, string> = {
 export function JoiningDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const openForm = useOpenForm();
   const qc = useQueryClient();
   const [drawer, setDrawer] = useState<MembershipAction | null>(null);
   const [tab, setTab] = useState('application');
@@ -328,7 +330,7 @@ export function JoiningDetailPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {app.status !== 'DRAFT' && <ButtonV2 text="Print form" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => navigate(`/reports/print/membership?application=${app.id}`)} />}
+                {app.status !== 'DRAFT' && <ButtonV2 text="Print form" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <Printer size={16} /> }} onClick={() => openForm(`/reports/print/membership?application=${app.id}`)} />}
                 {d.actions.filter((a) => !isPrimaryAction(a)).map((a) => (
                   <ButtonV2 key={a} text={ACTION_LABEL[a]} buttonType={ButtonV2Type.SECONDARY} onClick={() => setDrawer(a)} />
                 ))}

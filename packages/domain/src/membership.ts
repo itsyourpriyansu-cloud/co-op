@@ -52,6 +52,7 @@ export function validateMembershipForm(form: MembershipForm | undefined, require
   }
   req('employment.departmentId', f.employment?.departmentId);
   req('employment.designation', f.employment?.designation);
+  req('employment.employeeId', f.employment?.employeeId?.trim(), 'Enter your employee ID');
   req('employment.employmentType', f.employment?.employmentType);
   req('employment.regularAppointmentDate', f.employment?.regularAppointmentDate, 'Enter a valid date');
   if (f.employment?.employmentType === 'APPROVED_PROBATIONER') req('employment.probationServiceMonths', f.employment?.probationServiceMonths);

@@ -56,7 +56,7 @@ describe('M5 exit: J-01 → J-08 across both apps', () => {
   it('phone apply → sureties sign (one declines, replaced) → review → DDO → assessment → sanction → disbursement → phone sees ACTIVE', async () => {
     const sravani = await login('mem-1103', 'app');
     const [s1, s2, s3] = freeMembers(3, ['mem-1103']);
-    const loan = await applyOnPhone(sravani, { product: 'ORDINARY', amount: 15_000_000, instalments: 60, purpose: 'House repair', sureties: [s1!, s2!], form: { pay } });
+    const loan = await applyOnPhone(sravani, { product: 'ORDINARY', amount: 15_000_000, instalments: 60, purpose: 'House repair', sureties: [s1!, s2!], form: { bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' }, pay } });
     expect(loan.loan.status).toBe('SURETY_PENDING');
     const id = loan.loan.id;
 
@@ -123,13 +123,13 @@ describe('return, resubmit, withdraw, top-up, queue scope', () => {
   it('returned loan: the member corrects it and resubmits with OTP; signed sureties stay signed', async () => {
     const sravani = await login('mem-1103', 'app');
     const [s1, s2] = freeMembers(2, ['mem-1103']);
-    const loan = await applyOnPhone(sravani, { product: 'ORDINARY', amount: 10_000_000, instalments: 36, purpose: 'Repairs', sureties: [s1!, s2!], form: { pay } });
+    const loan = await applyOnPhone(sravani, { product: 'ORDINARY', amount: 10_000_000, instalments: 36, purpose: 'Repairs', sureties: [s1!, s2!], form: { bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' }, pay } });
     await suretySigns(s1!, loan.loan.id);
     await suretySigns(s2!, loan.loan.id);
     const acc = await login('stf-accountant');
     expect((await act(loan.loan.id, 'returnToMember', acc)).status).toBe(400);
     expect((await act(loan.loan.id, 'returnToMember', acc, { remarks: 'Purpose too vague' })).body.loan.returnInfo?.reason).toBe('Purpose too vague');
-    const edited = await call<LoanDetail>('PUT', `/me/loans/${loan.loan.id}`, { product: 'ORDINARY', amount: 10_000_000, instalments: 36, purpose: 'Roof repair of own house', sureties: [s1, s2], form: { pay } }, sravani);
+    const edited = await call<LoanDetail>('PUT', `/me/loans/${loan.loan.id}`, { product: 'ORDINARY', amount: 10_000_000, instalments: 36, purpose: 'Roof repair of own house', sureties: [s1, s2], form: { bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' }, pay } }, sravani);
     expect(edited.body.loan.sureties.every((s) => s.status === 'ACCEPTED')).toBe(true);
     const otp = await call<OtpChallenge>('POST', `/me/loans/${loan.loan.id}/sign/request`, {}, sravani);
     const again = await call<LoanDetail>('POST', `/me/loans/${loan.loan.id}/submit`, { otpRef: otp.body.otpRef, otp: '123456' }, sravani);
@@ -139,7 +139,7 @@ describe('return, resubmit, withdraw, top-up, queue scope', () => {
 
   it('member withdraws before sanction', async () => {
     const t = await login('mem-1104', 'app');
-    const loan = await applyOnPhone(t, { product: 'SALARY', amount: 1_000_000, instalments: 6, purpose: 'Medical', sureties: [], form: { salary: { substantivePay: 4_000_000, compulsoryDeductions: [], netPayEarnedToDate: 2_000_000 } } });
+    const loan = await applyOnPhone(t, { product: 'SALARY', amount: 1_000_000, instalments: 6, purpose: 'Medical', sureties: [], form: { bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' }, salary: { substantivePay: 4_000_000, compulsoryDeductions: [], netPayEarnedToDate: 2_000_000 } } });
     expect(loan.loan.status).toBe('ACCOUNTANT_REVIEW');
     expect((await call<LoanDetail>('POST', `/me/loans/${loan.loan.id}/withdraw`, { reason: 'No longer needed' }, t)).body.loan.status).toBe('WITHDRAWN');
     expect((await call('POST', `/me/loans/${loan.loan.id}/withdraw`, {}, t)).status).toBe(409);
@@ -149,10 +149,10 @@ describe('return, resubmit, withdraw, top-up, queue scope', () => {
     const lakshmi = await login('mem-1101', 'app');
     const parent = store.db.loans.find((l) => l.memberId === 'mem-1101' && l.product === 'ORDINARY' && l.status === 'ACTIVE')!;
     const [s1, s2] = freeMembers(2, ['mem-1101']);
-    const a = await call<{ eligible: boolean; preview: { topup?: { settlement: number }; netDisbursable: number } }>('POST', '/loans/assess', { product: 'ORDINARY', amount: 10_000_000, instalments: 36, purpose: 'Top-up', sureties: [s1, s2], topupOf: parent.id, form: { pay } }, lakshmi);
+    const a = await call<{ eligible: boolean; preview: { topup?: { settlement: number }; netDisbursable: number } }>('POST', '/loans/assess', { product: 'ORDINARY', amount: 10_000_000, instalments: 36, purpose: 'Top-up', sureties: [s1, s2], topupOf: parent.id, form: { bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' }, pay } }, lakshmi);
     expect(a.body.eligible).toBe(true);
     expect(a.body.preview.topup?.settlement).toBeGreaterThanOrEqual(parent.outstandingPrincipal);
-    const loan = await applyOnPhone(lakshmi, { product: 'ORDINARY', amount: 10_000_000, instalments: 36, purpose: 'Top-up', sureties: [s1!, s2!], topupOf: parent.id, form: { pay } });
+    const loan = await applyOnPhone(lakshmi, { product: 'ORDINARY', amount: 10_000_000, instalments: 36, purpose: 'Top-up', sureties: [s1!, s2!], topupOf: parent.id, form: { bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' }, pay } });
     expect(loan.loan.parentLoanId).toBe(parent.id);
     const admin = await login('stf-admin');
     let d = loan;

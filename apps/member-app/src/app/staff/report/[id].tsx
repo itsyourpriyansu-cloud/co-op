@@ -8,8 +8,10 @@ import { FileSearch, UserRound } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import { formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { MemberPick, ReportCell, ReportColumn, ReportFilterKey, ReportResult } from '@tgs/types';
-import { Expand, MemberPicker, PrintButton, ShareCsvButton, staffHref, FilterBar, RecordCard, Stack2, plain } from '@/components/staff';
+import { Expand, MemberPicker, ShareCsvButton, StaffDocument, staffHref, FilterBar, RecordCard, Stack2, plain } from '@/components/staff';
 import { api } from '@/lib/api';
+import { documentFileName } from '@/lib/documents';
+import { reportHtml } from '@/lib/staffDocuments';
 import { Alert, Button, Card, DateField, EmptyState, Header, KeyValue, Screen, Section, SelectField, Skeleton, Text } from '@/ui';
 import { space } from '@/theme';
 
@@ -131,7 +133,6 @@ export default function ReportViewer() {
     setMember(undefined);
   };
   const errorMsg = q.error && isApiError(q.error) ? (Object.values(q.error.fieldErrors ?? {})[0] ?? q.error.message) : undefined;
-  const qs = new URLSearchParams(filters as Record<string, string>).toString();
 
   return (
     <Screen header={<Header title={def?.title ?? 'Report'} onBack={() => router.back()} />}>
@@ -183,7 +184,7 @@ export default function ReportViewer() {
           <Result r={r} />
           <View style={{ gap: space[3] }}>
             <ShareCsvButton title={r.def.title} rows={() => csvRows(r)} />
-            <PrintButton path={`/reports/${id}${qs ? `?${qs}` : ''}`} />
+            <StaffDocument title="Print this report" fileName={documentFileName(r.def.title, r.asOf)} build={(o) => reportHtml(r, o)} />
           </View>
         </>
       ) : null}

@@ -3,6 +3,7 @@
 // receipt with denominations and the FDR. CRD / SRDS / Savings show the ledger.
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { useOpenForm } from '@/lib/forms';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, FileSearch, FileText, FlaskConical } from 'lucide-react';
 import {
@@ -220,6 +221,7 @@ function ActionDrawer({ d, action, onClose, today }: { d: DepositDetail; action:
 export function DepositDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const openForm = useOpenForm();
   const qc = useQueryClient();
   const [drawer, setDrawer] = useState<string | null>(null);
   const q = useQuery({ queryKey: ['deposit', id], queryFn: () => api.deposits.get(id), refetchInterval: drawer ? false : 5000, retry: (n, e) => !(isApiError(e) && e.status === 404) && n < 2 });
@@ -289,7 +291,7 @@ export function DepositDetailPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {dep.fdrNo && <ButtonV2 text="FDR" buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => navigate(`/deposits/${dep.id}/fdr`)} />}
-                {dep.vouchers?.filter((v) => v.kind !== 'INTEREST').map((v) => <ButtonV2 key={v.no} text={`Voucher ${v.no}`} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => navigate(`/reports/print/fd-voucher?deposit=${dep.id}&vr=${v.no}`)} />)}
+                {dep.vouchers?.filter((v) => v.kind !== 'INTEREST').map((v) => <ButtonV2 key={v.no} text={`Voucher ${v.no}`} buttonType={ButtonV2Type.SECONDARY} leftSlot={{ slot: <FileText size={16} /> }} onClick={() => openForm(`/reports/print/fd-voucher?deposit=${dep.id}&vr=${v.no}`)} />)}
                 {secondary.map((a) => (
                   <ButtonV2 key={a} text={ACTION_LABEL[a] ?? a} buttonType={ButtonV2Type.SECONDARY} onClick={() => setDrawer(a)} />
                 ))}
@@ -360,7 +362,7 @@ export function DepositDetailPage() {
                           <span className="flex items-center gap-3">
                             <Money value={p.amount} />
                             {p.voucherNo && (
-                              <button type="button" className="text-caption text-link underline underline-offset-2" onClick={() => navigate(`/reports/print/fd-voucher?deposit=${dep.id}&vr=${p.voucherNo}`)}>
+                              <button type="button" className="text-caption text-link underline underline-offset-2" onClick={() => openForm(`/reports/print/fd-voucher?deposit=${dep.id}&vr=${p.voucherNo}`)}>
                                 {p.voucherNo}
                               </button>
                             )}

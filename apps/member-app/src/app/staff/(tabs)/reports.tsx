@@ -1,32 +1,32 @@
 // ST-50m Reports catalogue (J-13, D-063) and the printable forms and letters (ST-52m).
-import { Linking, View } from 'react-native';
+import { View } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Lock, ScrollText } from 'lucide-react-native';
 import type { ReportDef } from '@tgs/types';
-import { consoleUrl, Loaded, Row, plain } from '@/components/staff';
+import { Loaded, Row, plain } from '@/components/staff';
 import { api } from '@/lib/api';
 import { Card, Screen, Section, Tag, Text } from '@/ui';
 import { color, space } from '@/theme';
 
 const GROUPS: Array<ReportDef['group']> = ['Collections', 'Loans', 'Deposits & Shares', 'Members', 'Cash & Accounts'];
 
-/** The nine printables. `href` opens the list the record is printed from; the rest open the console's print page (D-106). */
-const PRINTABLES: Array<{ key: string; title: string; form?: string; hint: string; href?: Href; print?: string }> = [
-  { key: 'receipt', title: 'Receipt', hint: 'Open a receipt in Payments, then Print', href: '/staff/payments' },
-  { key: 'sanction', title: 'Sanction letter', hint: 'Open a sanctioned loan, then Sanction letter', href: '/staff/loans' },
-  { key: 'demand', title: 'Demand sheet', hint: 'Open a sheet, then Print', href: '/staff/demand' },
-  { key: 'fd', title: 'Fixed deposit form + FDR', form: 'F4', hint: 'The green F4 form with the cash slip', print: '/reports/print/fd-form' },
-  { key: 'defaulter', title: 'Defaulter notice', hint: 'Asks a member to clear overdue dues', print: '/reports/print/defaulter-notice' },
-  { key: 'membership', title: 'Membership application', form: 'F1', hint: 'The white form', print: '/reports/print/membership' },
-  { key: 'loan', title: 'Ordinary / Education loan application', form: 'F2', hint: 'The green form with sureties and the DDO certificate', print: '/reports/print/loan-form' },
-  { key: 'salary', title: 'Salary loan application', form: 'F3', hint: 'The white slip with the office-use block', print: '/reports/print/loan-form?product=SALARY' },
-  { key: 'agreement', title: 'Recovery agreement', form: 'F5 / F6', hint: 'Salary recovery authorisation', print: '/reports/print/agreement' },
+/** The printables. Each one is printed from its record, inside the app (D-133): this opens the list to pick it from. */
+const PRINTABLES: Array<{ key: string; title: string; form?: string; hint: string; href: Href }> = [
+  { key: 'receipt', title: 'Receipt', hint: 'Open a receipt in Payments', href: '/staff/payments' },
+  { key: 'sanction', title: 'Sanction letter, bond, schedule', form: 'F7–F9', hint: 'Open a sanctioned loan', href: '/staff/loans' },
+  { key: 'demand', title: 'Demand sheet', hint: 'Open a sheet', href: '/staff/demand' },
+  { key: 'fd', title: 'Fixed deposit form, FDR, vouchers', form: 'F4 / F10', hint: 'Open a fixed deposit', href: '/staff/deposits' },
+  { key: 'defaulter', title: 'Defaulter notice', hint: 'Open a defaulter from the Defaulters report', href: '/staff/report/defaulters' },
+  { key: 'membership', title: 'Membership application', form: 'F1', hint: 'Open an application, or a member', href: '/staff/joining' },
+  { key: 'loan', title: 'Loan application', form: 'F2 / F3', hint: 'Open a loan', href: '/staff/loans' },
+  { key: 'agreement', title: 'Recovery agreement', form: 'F5 / F6', hint: 'Open a member', href: '/staff/members' },
 ];
 
 export default function Reports() {
   const q = useQuery({ queryKey: ['reports'], queryFn: api.reports.catalogue });
-  const open = (r: ReportDef) => (r.kind === 'print' ? void Linking.openURL(consoleUrl(r.printLink!)) : router.push(`/staff/report/${r.id}`));
+  // The defaulter notice is printed from the member: start from the defaulters list.
+  const open = (r: ReportDef) => router.push(`/staff/report/${r.kind === 'print' ? 'defaulters' : r.id}`);
   return (
     <Screen refreshing={q.isRefetching} onRefresh={() => void q.refetch()}>
       <View style={{ gap: space[1] }}>
@@ -64,10 +64,10 @@ export default function Reports() {
                 </Section>
               ) : null;
             })}
-            <Section title="Printable forms & letters" description="All nine print on the society letterhead. Forms open in your browser.">
+            <Section title="Printable forms & letters" description="On the society letterhead, with signatures. Open the record, then Download PDF or Print.">
               <Card padded={false}>
                 {PRINTABLES.map((p, i) => (
-                  <Row key={p.key} icon={p.form ? ScrollText : FileText} label={p.title} hint={p.hint} divider={i > 0} {...(p.form ? { right: <Tag text={p.form} color="neutral" size="xs" /> } : {})} onPress={() => (p.href ? router.push(p.href) : void Linking.openURL(consoleUrl(p.print!)))} />
+                  <Row key={p.key} icon={p.form ? ScrollText : FileText} label={p.title} hint={p.hint} divider={i > 0} {...(p.form ? { right: <Tag text={p.form} color="neutral" size="xs" /> } : {})} onPress={() => router.push(p.href)} />
                 ))}
               </Card>
             </Section>

@@ -5,8 +5,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Lock, Minus, Pencil, Plus, Trash2, X } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
-import { calculateEmi, calculateFdMaturity, formatDisplayDateTime, formatINR, HEAD_PRIORITY, toPaise } from '@tgs/domain';
-import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type DemandHead, type Department, type LoanProduct, type NewLoanProduct, type NotificationTemplate, type SettingsBundle, type SocietyProfile, type SocietySettings, type StaffUser } from '@tgs/types';
+import { calculateEmi, calculateFdMaturity, formatDisplayDateTime, formatINR, HEAD_PRIORITY, SUPER_ADMIN_ONLY, toPaise } from '@tgs/domain';
+import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type Permission, type DemandHead, type Department, type LoanProduct, type NewLoanProduct, type NotificationTemplate, type SettingsBundle, type SocietyProfile, type SocietySettings, type StaffUser } from '@tgs/types';
 import { ActionAlert, ask, Loaded, MoneyField, RecordCard, Stack2, useAction, plain } from '@/components/staff';
 import { api } from '@/lib/api';
 import { AUDIENCE, CHANNELS, ENTITY, fill, isPlaceholder, MONTHS, RECOVERY_LABEL, ROLE_HINT, SECTIONS, vars } from '@/lib/staffSettings';
@@ -164,12 +164,13 @@ function Editor({ title, onBack, canEdit, dirty, a, onSave, onDiscard, saveText 
   return (
     <Screen
       header={<Header title={title} onBack={onBack} />}
-      {...(canEdit && dirty
+      {...(canEdit
         ? {
+            // Always shown to an editor so Save is easy to find; off until something changes.
             footer: (
               <View style={{ gap: space[3] }}>
-                <Button text={saveText} size="lg" fullWidth loading={a.busy} disabled={a.busy || a.unconfirmed} onPress={() => void save()} />
-                <Button text="Discard" buttonType="secondary" fullWidth disabled={a.busy} onPress={onDiscard} />
+                <Button text={saveText} size="lg" fullWidth loading={a.busy} disabled={!dirty || a.busy || a.unconfirmed} onPress={() => void save()} />
+                <Button text="Discard" buttonType="secondary" fullWidth disabled={!dirty || a.busy} onPress={onDiscard} />
               </View>
             ),
           }
@@ -187,13 +188,13 @@ const back = () => router.back();
 
 // ---- ST-60m General ------------------------------------------------------------------------
 
-type GeneralValues = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths' | 'messageWindowStartHour' | 'messageWindowEndHour'>;
+type GeneralValues = Pick<SocietySettings, 'shareValue' | 'admissionFee' | 'minShares' | 'maxShares' | 'retirementAge' | 'probationMonths' | 'financialYearStartMonth' | 'maxGuaranteesPerSurety' | 'emiToNetSalaryMaxPercent' | 'membershipTargetHours' | 'loanTargetDays' | 'holidays' | 'casteCategories' | 'minAppVersion' | 'applicantDataRetentionMonths' | 'messageWindowStartHour' | 'messageWindowEndHour'>;
 
 function General({ b, title }: { b: SettingsBundle; title: string }) {
   const ro = !b.canEdit;
   const x = b.settings;
   const society = useDraft<SocietyProfile>(b.society);
-  const values = useDraft<GeneralValues>({ shareValue: x.shareValue, admissionFee: x.admissionFee, minShares: x.minShares, maxShares: x.maxShares, retirementAge: x.retirementAge, financialYearStartMonth: x.financialYearStartMonth, maxGuaranteesPerSurety: x.maxGuaranteesPerSurety, emiToNetSalaryMaxPercent: x.emiToNetSalaryMaxPercent, membershipTargetHours: x.membershipTargetHours, loanTargetDays: x.loanTargetDays, holidays: x.holidays, casteCategories: x.casteCategories, minAppVersion: x.minAppVersion, applicantDataRetentionMonths: x.applicantDataRetentionMonths, messageWindowStartHour: x.messageWindowStartHour, messageWindowEndHour: x.messageWindowEndHour });
+  const values = useDraft<GeneralValues>({ shareValue: x.shareValue, admissionFee: x.admissionFee, minShares: x.minShares, maxShares: x.maxShares, retirementAge: x.retirementAge, probationMonths: x.probationMonths, financialYearStartMonth: x.financialYearStartMonth, maxGuaranteesPerSurety: x.maxGuaranteesPerSurety, emiToNetSalaryMaxPercent: x.emiToNetSalaryMaxPercent, membershipTargetHours: x.membershipTargetHours, loanTargetDays: x.loanTargetDays, holidays: x.holidays, casteCategories: x.casteCategories, minAppVersion: x.minAppVersion, applicantDataRetentionMonths: x.applicantDataRetentionMonths, messageWindowStartHour: x.messageWindowStartHour, messageWindowEndHour: x.messageWindowEndHour });
   const a = useAction();
   const s = society.draft;
   const v = values.draft;
@@ -235,6 +236,7 @@ function General({ b, title }: { b: SettingsBundle; title: string }) {
       <Block title="Service and year" tag={ph('retirementAge')}>
         <Num label="Retirement age" value={v.retirementAge} onChange={(retirementAge) => setV({ retirementAge })} error={e.retirementAge} unit="years" disabled={ro} hint="Used for left-over service" />
         <Choose label="Financial year starts in" value={String(v.financialYearStartMonth)} options={MONTHS} onChange={(m) => setV({ financialYearStartMonth: Number(m) })} disabled={ro} />
+        <Num label="Probation period" value={v.probationMonths} onChange={(probationMonths) => setV({ probationMonths })} error={e.probationMonths} unit="months" disabled={ro} hint="Shorter service is flagged to staff, not blocked. 0 = off" />
       </Block>
       <Block title="Service targets" description="Working days only. Sundays, second Saturdays and the holidays below do not count. A loan's clock starts when its last surety signs. 0 = no target.">
         <Num label="Membership" value={v.membershipTargetHours} onChange={(membershipTargetHours) => setV({ membershipTargetHours })} error={e.membershipTargetHours} unit="working hours" hint="From submission" disabled={ro} />
@@ -509,7 +511,10 @@ function InsuranceDemand({ b, title }: { b: SettingsBundle; title: string }) {
 const EMPTY_DEPT: Partial<Department> = { code: '', name: '', kind: 'SECRETARY_DEPT', ddoName: '', ddoDesignation: 'Assistant Secretary to Government' };
 
 function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
+  const qc = useQueryClient();
   const list = useQuery({ queryKey: ['departments'], queryFn: api.settings.departments });
+  const users = useQuery({ queryKey: ['users'], queryFn: api.settings.users });
+  const loginOf = (id?: string) => users.data?.find((u) => u.id === id);
   const [editing, setEditing] = useState<Partial<Department>>();
   const a = useAction();
   const e = a.fields;
@@ -517,7 +522,7 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
   if (editing) {
     const close = () => setEditing(undefined);
     const save = async () => {
-      const ok = await a.run(() => (editing.id ? api.settings.updateDepartment(editing.id, editing) : api.settings.createDepartment(editing)));
+      const ok = await a.run(async () => qc.setQueryData(['departments'], await (editing.id ? api.settings.updateDepartment(editing.id, editing) : api.settings.createDepartment(editing))));
       if (ok) close();
       return ok;
     };
@@ -551,7 +556,7 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
               {rows.map((r) => (
                 <RecordCard key={r.id} title={r.name} subtitle={`${r.code} · ${r.memberCount} members`} caption={`DDO ${r.ddoName}, ${r.ddoDesignation}`} {...(canEdit ? { onPress: () => setEditing(r) } : {})}>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-                    <Tag text={r.ddoUserId ? 'Has login' : 'No login yet'} color={r.ddoUserId ? 'success' : 'neutral'} size="xs" />
+                    <Tag text={r.ddoUserId ? `Login: ${loginOf(r.ddoUserId)?.userId ?? 'yes'}` : 'No login yet'} color={r.ddoUserId ? 'success' : 'neutral'} size="xs" />
                     {r.kind === 'EXTERNAL_OFFICE' ? <Tag text="Outside Secretariat" color="neutral" size="xs" /> : null}
                   </View>
                 </RecordCard>
@@ -593,6 +598,7 @@ function SignIn({ user }: { user: BackendUser }) {
 }
 
 function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
+  const qc = useQueryClient();
   const users = useQuery({ queryKey: ['users'], queryFn: api.settings.users });
   const depts = useQuery({ queryKey: ['departments'], queryFn: api.settings.departments });
   const [editing, setEditing] = useState<Partial<StaffUser>>();
@@ -603,7 +609,7 @@ function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
   if (editing) {
     const close = () => setEditing(undefined);
     const save = async () => {
-      const ok = await a.run(() => (editing.id ? api.settings.updateUser(editing.id, editing) : api.settings.createUser(editing)));
+      const ok = await a.run(async () => qc.setQueryData(['users'], await (editing.id ? api.settings.updateUser(editing.id, editing) : api.settings.createUser(editing))));
       if (ok) close();
       return ok;
     };
@@ -617,7 +623,7 @@ function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
         <TextField label="Mobile (optional)" keyboardType="phone-pad" value={editing.mobile ?? ''} onChangeText={(mobile) => set({ mobile: mobile.replace(/\D/g, '').slice(0, 10) })} error={e.mobile} />
         <TextField label="Email (optional)" keyboardType="email-address" autoCapitalize="none" value={editing.email ?? ''} onChangeText={(email) => set({ email })} error={e.email} />
         <SelectField label="Role" value={editing.role ?? ''} options={CONSOLE_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r], hint: ROLE_HINT[r] }))} onChange={(role) => set({ role: role as ConsoleRole })} error={e.role} />
-        {editing.role === 'DDO' ? <SelectField label="Department" searchable value={editing.departmentId ?? ''} options={(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))} onChange={(departmentId) => set({ departmentId })} error={e.departmentId} /> : null}
+        {editing.role === 'DDO' ? <SelectField label="Department" searchable value={editing.departmentId ?? ''} options={(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))} onChange={(departmentId) => set({ departmentId, ...(editing.name ? {} : { name: depts.data?.find((d) => d.id === departmentId)?.ddoName ?? '' }) })} error={e.departmentId} hint="One active DDO login per department." /> : null}
         {editing.id ? <Checkbox checked={editing.active !== false} onChange={(active) => set({ active })} label="Can sign in" {...(e.active ? { description: e.active } : {})} /> : null}
         {editing.id && 'totpEnabled' in editing ? <SignIn user={editing as BackendUser} /> : null}
       </Editor>
@@ -645,9 +651,13 @@ function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
 
 // ---- ST-62m Permissions --------------------------------------------------------------------
 
-function Permissions({ title }: { title: string }) {
+function Permissions({ title, canEdit }: { title: string; canEdit: boolean }) {
+  const qc = useQueryClient();
   const q = useQuery({ queryKey: ['permissions'], queryFn: api.settings.permissions });
   const [role, setRole] = useState<string>();
+  const a = useAction();
+  // D-134: each tap saves at once and is recorded in the change history.
+  const toggle = (r: ConsoleRole, next: Permission[]) => void a.run(async () => qc.setQueryData(['permissions'], await api.settings.updatePermissions(r, next)));
   return (
     <Screen header={<Header title={title} onBack={back} />}>
       <Loaded q={q} what="permissions">
@@ -657,7 +667,7 @@ function Permissions({ title }: { title: string }) {
           return (
             <>
               <Text role="body" tone="secondary">
-                Fixed by role. Approvals are also limited by stage: each person can only act on the step that belongs to their role, and the President must be a different person from the Secretary.
+                {canEdit ? 'Tap a right to switch it on or off for this role; it is saved at once. Locked rights stay with the Super Admin.' : 'Only the Super Admin can change these.'} Approvals are also limited by stage: each person can only act on the step that belongs to their role, and the President must be a different person from the Secretary.
               </Text>
               <SelectField label="Role" value={current} options={m.roles.map((r) => ({ value: r.role, label: r.label }))} onChange={setRole} />
               {groups.map((g) => (
@@ -668,6 +678,9 @@ function Permissions({ title }: { title: string }) {
                       .map((p) => {
                         const yes = !!m.grants[current]?.includes(p.key);
                         const Icon = yes ? Check : Minus;
+                        const r = current as ConsoleRole;
+                        if (canEdit && !SUPER_ADMIN_ONLY.includes(p.key) && !(r === 'SUPER_ADMIN' && p.key === 'settings.view'))
+                          return <Checkbox key={p.key} checked={yes} label={p.label} onChange={(on) => toggle(r, on ? [...(m.grants[r] ?? []), p.key] : (m.grants[r] ?? []).filter((x) => x !== p.key))} />;
                         return (
                           <View key={p.key} style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }} accessible accessibilityLabel={`${p.label}: ${yes ? 'yes' : 'no'}`}>
                             <Text role="body" tone={yes ? 'primary' : 'tertiary'} style={{ flex: 1 }}>
@@ -680,6 +693,7 @@ function Permissions({ title }: { title: string }) {
                   </Card>
                 </Section>
               ))}
+              <ActionAlert action={a} heading="Couldn't save" />
             </>
           );
         }}
@@ -819,7 +833,7 @@ export default function SettingsSection() {
     case 'users':
       return <Users canEdit={b.canEdit} title={title} />;
     case 'permissions':
-      return <Permissions title={title} />;
+      return <Permissions title={title} canEdit={b.canEdit} />;
     case 'templates':
       return <Templates canEdit={b.canEdit} title={title} />;
     default:

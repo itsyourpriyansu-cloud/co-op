@@ -9,7 +9,7 @@ import type { Address, MemberDetail, MemberInput, SocietySettings } from '@tgs/t
 import { ActionAlert, Loaded, MoneyField, useAction, useToday } from '@/components/staff';
 import { api } from '@/lib/api';
 import { emptyMemberInput, memberToInput, RELATIONS } from '@/lib/staffMembers';
-import { Alert, Button, Card, Checkbox, DateField, Header, KeyValue, Screen, Segmented, SelectField, TextField, WizardProgress } from '@/ui';
+import { Alert, Button, Card, Checkbox, DateField, Header, KeyValue, Screen, Segmented, SelectField, Text, TextField, WizardProgress } from '@/ui';
 import { space } from '@/theme';
 
 const STEPS = ['Personal', 'Address', 'Employment & service', 'Nominee', 'Shares', 'Pay profile'];
@@ -131,18 +131,28 @@ function Form({ d, s, id }: { d?: MemberDetail; s: SocietySettings; id?: string 
           <SelectField label="Designation" required searchable placeholder="Choose designation" value={v.designation} options={designations} onChange={(x) => set({ designation: x })} error={errors.designation} />
           <Segmented label="Employment type" value={v.employmentType} options={[{ value: 'REGULAR', label: 'Regular' }, { value: 'APPROVED_PROBATIONER', label: 'Probationer' }]} onChange={(x) => set({ employmentType: x as MemberInput['employmentType'] })} />
           <DateField label="Date of joining service" required value={v.doj} onChange={(x) => set({ doj: x ?? '' })} error={errors.doj} />
-          <DateField
-            key={dorTouched ? 'typed' : v.dor}
-            label="Date of retirement"
-            required
-            value={v.dor}
-            onChange={(x) => {
-              setDorTouched(true);
-              set({ dor: x ?? '' });
-            }}
-            error={errors.dor}
-            hint={suggestedDor && v.dor !== suggestedDor ? `Retirement age ${s.retirementAge} gives ${formatDisplayDate(suggestedDor)}` : suggestedDor ? `From the date of birth at age ${s.retirementAge}` : undefined}
-          />
+          {/* D-131: an existing member's date changes only through the Super Admin's request on the profile. */}
+          {editing ? (
+            <Card>
+              <KeyValue label="Date of retirement" value={formatDisplayDate(v.dor)} />
+              <Text role="caption" tone="tertiary">
+                Changed from the member profile: the Super Admin proposes, three officers approve.
+              </Text>
+            </Card>
+          ) : (
+            <DateField
+              key={dorTouched ? 'typed' : v.dor}
+              label="Date of retirement"
+              required
+              value={v.dor}
+              onChange={(x) => {
+                setDorTouched(true);
+                set({ dor: x ?? '' });
+              }}
+              error={errors.dor}
+              hint={suggestedDor && v.dor !== suggestedDor ? `Retirement age ${s.retirementAge} gives ${formatDisplayDate(suggestedDor)}` : suggestedDor ? `From the date of birth at age ${s.retirementAge}` : undefined}
+            />
+          )}
           <Card>
             <KeyValue label="Left-over service" value={leftover ?? 'Enter the date of retirement'} />
           </Card>

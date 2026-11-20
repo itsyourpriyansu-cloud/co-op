@@ -1,6 +1,8 @@
 # 03 · Roles & Permissions
 
 > Version 0.4 · 2026-10-25 · Roles from the flow diagrams [F] and the paper forms [PF]. Action-level permissions are **[P]** (D-016, D-037).
+> Version 0.8 · 2026-11-19 · One active DDO login per department (D-133, BR-056). Only the Super Admin edits the permission matrix; `settings.edit` and `users.manage` stay with the Super Admin (D-134).
+> Version 0.7 · 2026-11-18 · Date of retirement changes: Super Admin proposes, three approvers (D-131).
 > Version 0.6 · 2026-11-10 · Staff screens built (D-108).
 > Version 0.5 · 2026-11-10 · Platform rule widened (D-101).
 > Platform rule (D-033, D-101): R1–R5 use the **Admin Console** (desktop web) or the **staff screens in the mobile app** (Android and iOS, docs/23, D-106), with the same permissions. R6–R7 use the **Member App** only and never see staff screens.
@@ -14,7 +16,7 @@
 | R3a | **Secretary** | Admin Console | All | 1st sign-off: loan sanction, FD acceptance, membership approval (Q-511) | PF, D-027 |
 | R3b | **President** | Admin Console | All | 2nd (final) sign-off on the same items | PF, D-027 |
 | R4 | **Cashier / Disbursement Officer** | Admin Console | All | Cash/transfer receipts with denominations, FD payment receipt, loan disbursement | F, PF (Q-509) |
-| R5 | DDO (Asst. Secretary to Govt / Section Officer (Claims)) | Admin Console | **Own department only** | Certify membership items 1–7, certify loan items 1–5, agree salary-recovery mandates, view own department's demand sheets | F, PF |
+| R5 | DDO (Asst. Secretary to Govt / Section Officer (Claims)) | Admin Console | **Own department only** | Certify membership items 1–7, certify loan items 1–5, agree salary-recovery mandates, view own department's demand sheets | F, PF. One active DDO login per department (D-133) |
 | R6 | Member | Member App | Own records + loans where they are a surety | Self-service, loan/FD applications, surety confirmations, sign agreements | A, F |
 | R7 | Applicant (not yet a member) | Member App (applicant mode) | Own application only | Apply for membership, upload documents, sign declarations, track stage, respond to info requests | PF, D-026 |
 
@@ -76,7 +78,7 @@ Legend: **F** full · **V** view · **A** stage action · **—** none · *own* 
 - SOD-5 Super Admin views every stage but cannot act on any stage unless the override in Q-112 is approved.
 
 ## 4. Implementation notes
-- The permission map lives on the API (`role → module → actions[]`) and is enforced server-side. ST-62 edits it.
+- The permission map lives on the API (`role → module → actions[]`) and is enforced server-side. ST-62 edits it: the Super Admin only, and changing settings, users and permissions can't be given to another role (D-134).
 - `GET /me` returns effective permissions. The console's route guards and `<Can action>` checks, and the app's mode (applicant vs member), are driven by it.
 - Denied console routes → SYS-01. The app never shows features outside the user's mode.
 
@@ -94,6 +96,7 @@ Legend: **F** full · **V** view · **A** stage action · **—** none · *own* 
 |---|---|
 | Staff sign-in | User ID + password (argon2id). 5 wrong tries lock the account for 15 minutes |
 | Authenticator (TOTP) | Required for every staff role: Super Admin, Accountant, Secretary, President, Cashier and DDO (`TOTP_ROLES`, D-127). First sign-in enrols by QR code; the Super Admin can reset it. Members sign in with mobile + OTP |
+| Date of retirement change | Only the Super Admin proposes; the Accountant, then the Secretary, then the President approve (D-131). Staff edits and member requests cannot change it |
 | Member / applicant sign-in | Mobile number + one-time code (D-067). New mobiles sign up as applicants |
 | Permission matrix | Stored in `role_permissions`, editable by the Super Admin (`PUT /permissions/:role`). The Super Admin always keeps settings.view, settings.edit and users.manage |
 | Sessions | Ended at once when a user is deactivated, changes role, or has their password or authenticator reset |

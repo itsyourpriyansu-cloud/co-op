@@ -15,4 +15,6 @@ export class MembersController {
   update = (r: Req<{ id: string }, unknown, Partial<MemberInput>>) => this.service.update(r, r.params.id, r.body);
   transfer = (r: Req<{ id: string }, unknown, Partial<TransferInput>>) => this.service.transfer(r, r.params.id, r.body);
   agreeMandate = (r: Req<{ id: string }>) => this.service.agreeMandate(r, r.params.id);
+  proposeRetirementChange = (r: Req<{ id: string }, unknown, { newDor?: string; reason?: string }>) => this.service.proposeRetirementChange(r, r.params.id, r.body);
+  decideRetirementChange = (r: Req<{ id: string }, unknown, { decision: 'approve' | 'reject'; remarks?: string }>) => this.service.decideRetirementChange(r, r.params.id, r.body.decision, r.body.remarks);
 }

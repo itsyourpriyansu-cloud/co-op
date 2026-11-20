@@ -3,7 +3,7 @@
 // unpaid dues), quick actions and the bell with the unread count.
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, type Href } from 'expo-router';
-import { Bell, Calculator, ChevronRight, HandCoins, PiggyBank, ReceiptIndianRupee, type LucideIcon } from 'lucide-react-native';
+import { Bell, Calculator, CalendarClock, ChevronRight, HandCoins, PiggyBank, ReceiptIndianRupee, type LucideIcon } from 'lucide-react-native';
 import { formatCycle, formatDisplayDate, formatINR } from '@tgs/domain';
 import type { MemberHome } from '@tgs/types';
 import { AppMark } from '@/components/AppMark';
@@ -143,9 +143,29 @@ export default function Home() {
             </Card>
           ) : null}
 
-          <Text role="caption" tone="tertiary" style={{ textAlign: 'center' }}>
-            {h.member.designation} · {h.member.leftoverLabel} of service left
-          </Text>
+          {/* D-131: service remaining, from the date of birth and the society's retirement age. */}
+          {h.service ? (
+            <Card>
+              <View style={styles.row} accessible accessibilityLabel={`Service remaining ${h.service.label}, ${h.service.days} days. Retires on ${formatDisplayDate(h.service.dor)}.`}>
+                <CalendarClock size={22} color={color.brand.solid} strokeWidth={1.75} />
+                <View style={{ flex: 1, gap: space[1] }}>
+                  <Text role="caption" tone="secondary">
+                    Service remaining
+                  </Text>
+                  <Text role="label">
+                    {h.service.label} ({h.service.days.toLocaleString('en-IN')} days)
+                  </Text>
+                  <Text role="caption" tone="secondary">
+                    {h.member.designation} · retires on {formatDisplayDate(h.service.dor)}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          ) : (
+            <Text role="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+              {h.member.designation} · {h.member.leftoverLabel} of service left
+            </Text>
+          )}
         </>
       )}
     </Screen>

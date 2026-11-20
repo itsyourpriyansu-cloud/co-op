@@ -3,8 +3,10 @@ import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { amountInWords, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
-import { Loaded, PrintButton } from '@/components/staff';
+import { Loaded, StaffDocument } from '@/components/staff';
 import { api } from '@/lib/api';
+import { officeVoucherHtml } from '@/lib/staffDocuments';
+import { documentFileName } from '@/lib/documents';
 import { Alert, Card, Header, KeyValue, Screen, Text } from '@/ui';
 import { space } from '@/theme';
 
@@ -14,7 +16,7 @@ export default function Voucher() {
   return (
     <Loaded page q={q} what="this voucher">
       {(v) => (
-        <Screen header={<Header title={v.kind === 'PAYMENT' ? 'Payment voucher' : 'Receipt voucher'} onBack={() => router.back()} />} footer={<PrintButton path={`/reports/print/office-voucher?id=${v.id}`} text="Print voucher" />}>
+        <Screen header={<Header title={v.kind === 'PAYMENT' ? 'Payment voucher' : 'Receipt voucher'} onBack={() => router.back()} />} footer={<StaffDocument title={`Voucher ${v.voucherNo}`} fileName={documentFileName('Voucher', v.voucherNo)} build={(o) => officeVoucherHtml(v, o)} />}>
           <View style={{ gap: space[2] }}>
             <Text role="metric">{formatINR(v.amount)}</Text>
             <Text role="caption" tone="tertiary">

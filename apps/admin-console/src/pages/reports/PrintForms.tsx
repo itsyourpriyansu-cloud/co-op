@@ -3,11 +3,13 @@
 // agreements. Each fills the society's original layout from the live record so the office can still
 // file paper. Without a record id each page shows a picker.
 import type { ReactNode } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
+import { navItemFor } from '@/config/navigation';
+import { formOrigin } from '@/lib/forms';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ChevronRight, Printer, UserRound } from 'lucide-react';
 import { ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type } from '@juspay/blend-design-system';
-import { amountInWords, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { amountInWords, formatBankAccount, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { Address, LoanDetail, MemberDetail, MembershipDetail } from '@tgs/types';
 import { Chips } from '@/components/Chips';
 import { Letterhead, PrintSheet } from '@/components/Letterhead';
@@ -25,9 +27,11 @@ const PAYOUT: Record<string, string> = { MONTHLY: 'Monthly', QUARTERLY: 'Quarter
 
 function Toolbar({ back, backLabel = 'Reports', ready, children }: { back: string; backLabel?: string; ready: boolean; children?: ReactNode }) {
   const navigate = useNavigate();
+  // Opened from a record (a loan, a member): go back there, not to Reports.
+  const from = formOrigin(useLocation().state);
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
-      <ButtonV2 text={backLabel} buttonType={ButtonV2Type.SECONDARY} subType={ButtonV2SubType.INLINE} size={ButtonV2Size.SMALL} leftSlot={{ slot: <ArrowLeft size={14} /> }} onClick={() => navigate(back)} />
+      <ButtonV2 text={from ? `Back to ${navItemFor(from)?.label ?? 'previous page'}` : backLabel} buttonType={ButtonV2Type.SECONDARY} subType={ButtonV2SubType.INLINE} size={ButtonV2Size.SMALL} leftSlot={{ slot: <ArrowLeft size={14} /> }} onClick={() => navigate(from ?? back)} />
       <div className="flex items-center gap-2">
         {children}
         {ready && <ButtonV2 text="Print" leftSlot={{ slot: <Printer size={16} /> }} onClick={() => window.print()} />}
@@ -60,6 +64,11 @@ function Signatures({ items }: { items: Array<{ label: string; name?: string; at
     </div>
   );
 }
+
+/** A record finished before the app was used (register import, demo history) was signed on paper: say so rather than leave a blank line. */
+const ON_PAPER = 'On paper, before the app';
+const orPaper = <T extends { name?: string; value?: string }>(slot: T, done: boolean): T => (done && !slot.name && !slot.value ? { ...slot, value: ON_PAPER } : slot);
+const SANCTIONED_OR_LATER = ['SANCTIONED', 'ACTIVE', 'CLOSED', 'CLOSED_BY_TOPUP'];
 
 function FormTitle({ form, title, subtitle }: { form: string; title: string; subtitle?: string }) {
   return (
@@ -419,6 +428,7 @@ function F2({ d, m }: { d: LoanDetail; m?: MemberDetail }) {
         {d.sureties.flatMap((s) => s.guarantees.map((g) => `${s.name}: ${g.product} of ${g.borrower} (${g.generalNo}), outstanding ${formatINR(g.outstanding)}`)).join(' · ') || 'Nil'}
       </p>
       <Line no="11" label="No. of monthly instalments (not exceeding 100)" value={String(l.sanctionedInstalments ?? l.appliedInstalments)} />
+      <Line label="Pay the loan into (bank account, D-132)" value={l.form?.bankAccount ? formatBankAccount(l.form.bankAccount) : ''} />
       <p className="mt-3 text-body leading-relaxed">
         12. We, the applicant and the sureties, jointly authorise the Drawing & Disbursing Officer and our future pay officers to recover the instalments of this loan from our salaries. On transfer, the new pay officer will recover as per the society's demand; on deputation, the sureties will inform the society of the applicant's address.
       </p>
@@ -455,6 +465,7 @@ function F3({ d, m }: { d: LoanDetail; m?: MemberDetail }) {
         <Line no="9" label="Net pay earned up to date" value={s ? formatINR(s.netPayEarnedToDate) : ''} />
         <Line no="10" label="Amount of loan required" value={`${formatINR(l.appliedAmount)} (${amountInWords(l.appliedAmount)})`} />
         <Line no="11" label="Purpose (mention clearly)" value={l.purpose} />
+        <Line label="Pay the loan into (bank account, D-132)" value={l.form?.bankAccount ? formatBankAccount(l.form.bankAccount) : ''} />
       </div>
       <p className="mt-4 text-body">I hereby authorise the Pay Disbursing Officer to have the above loan recovered from my salary.</p>
       <Signatures items={[{ label: 'Signature of the applicant', ...(l.signature ? { name: d.member.name, at: formatDisplayDateTime(l.signature.signedAt), ...(l.signature.fileId ? { fileId: l.signature.fileId } : {}) } : {}) }, { label: 'Date', ...(l.signature ? { value: formatDisplayDate(l.signature.signedAt.slice(0, 10)) } : {}) }]} />
@@ -487,11 +498,13 @@ function OfficeUse({ d, salary }: { d: LoanDetail; salary?: boolean }) {
         <p className="mt-2 text-caption text-[#555]">{['SANCTION_SECRETARY', 'SANCTION_PRESIDENT', 'SANCTIONED', 'ACTIVE', 'CLOSED', 'CLOSED_BY_TOPUP'].includes(l.status) ? 'Assessed before this system was used: the office-use details are in the society register.' : 'Not assessed yet.'}</p>
       )}
       <Signatures
-        items={[
-          { label: 'Accountant (assessed)', ...(so?.assessment ? { name: so.assessment.byName, at: formatDisplayDateTime(so.assessment.at), ...(so.assessment.signatureFileId ? { fileId: so.assessment.signatureFileId } : {}) } : {}) },
-          { label: 'Secretary (sanctioned)', ...(so?.secretary ? { name: so.secretary.byName, at: formatDisplayDateTime(so.secretary.at), ...(so.secretary.signatureFileId ? { fileId: so.secretary.signatureFileId } : {}) } : {}) },
-          { label: 'President (sanctioned)', ...(so?.president ? { name: so.president.byName, at: formatDisplayDateTime(so.president.at), ...(so.president.signatureFileId ? { fileId: so.president.signatureFileId } : {}) } : {}) },
-        ]}
+        items={(
+          [
+            { label: 'Accountant (assessed)', ...(so?.assessment ? { name: so.assessment.byName, at: formatDisplayDateTime(so.assessment.at), ...(so.assessment.signatureFileId ? { fileId: so.assessment.signatureFileId } : {}) } : {}) },
+            { label: 'Secretary (sanctioned)', ...(so?.secretary ? { name: so.secretary.byName, at: formatDisplayDateTime(so.secretary.at), ...(so.secretary.signatureFileId ? { fileId: so.secretary.signatureFileId } : {}) } : {}) },
+            { label: 'President (sanctioned)', ...(so?.president ? { name: so.president.byName, at: formatDisplayDateTime(so.president.at), ...(so.president.signatureFileId ? { fileId: so.president.signatureFileId } : {}) } : {}) },
+          ] as Array<{ label: string; name?: string; at?: string; fileId?: string; value?: string }>
+        ).map((slot) => orPaper(slot, SANCTIONED_OR_LATER.includes(l.status)))}
       />
     </div>
   );
@@ -554,7 +567,12 @@ export function FdFormPrintPage() {
                 <p className="text-label">FOR OFFICE USE</p>
                 <Line label="Account No." value={dep.status === 'ACTIVE' || dep.fdrNo ? dep.accountNo : ''} />
                 <Line label="F.D.R. No." value={dep.fdrNo} />
-                <Signatures items={[{ label: 'Secretary (accepted)', ...(dep.signOffs?.secretary ? { name: dep.signOffs.secretary.byName, ...(dep.signOffs.secretary.signatureFileId ? { fileId: dep.signOffs.secretary.signatureFileId } : {}) } : {}) }, { label: 'President (accepted)', ...(dep.signOffs?.president ? { name: dep.signOffs.president.byName, ...(dep.signOffs.president.signatureFileId ? { fileId: dep.signOffs.president.signatureFileId } : {}) } : {}) }]} />
+                <Signatures
+                  items={[
+                    orPaper({ label: 'Secretary (accepted)', ...(dep.signOffs?.secretary ? { name: dep.signOffs.secretary.byName, at: formatDisplayDateTime(dep.signOffs.secretary.at), ...(dep.signOffs.secretary.signatureFileId ? { fileId: dep.signOffs.secretary.signatureFileId } : {}) } : {}) }, Boolean(dep.fdrNo)),
+                    orPaper({ label: 'President (accepted)', ...(dep.signOffs?.president ? { name: dep.signOffs.president.byName, at: formatDisplayDateTime(dep.signOffs.president.at), ...(dep.signOffs.president.signatureFileId ? { fileId: dep.signOffs.president.signatureFileId } : {}) } : {}) }, Boolean(dep.fdrNo)),
+                  ]}
+                />
               </div>
               <div className="rounded border border-[#999] p-3">
                 <p className="text-label">CASH SLIP</p>

@@ -1,5 +1,6 @@
 # 23 · Staff mobile UI: plan and task tracker
 
+> Version 0.8 · 2026-11-19 · Staff prints are made in the app (D-133); Permissions editable by the Super Admin (D-134).
 > Version 0.7 · 2026-11-10 · Full screen audit (D-110): §4.2 updated, internal numbers out of the staff copy.
 > Version 0.6 · 2026-11-10 · Register layout for the staff screens (D-109): §4.2 updated.
 > Version 0.5 · 2026-11-10 · S1–S9 built and tested on Expo web against the backend. §5 ticked means built and tested on web at 412 and 360 px wide. §3, §4.2 and §4.3 describe what was built. Only S10, the real-phone check, is open.
@@ -116,7 +117,7 @@ The design system is frozen (Blend blue, Inter, Lucide, tokens through `@/theme`
 | Ctrl+K search | Search icon in the `Header` opens a screen with a `TextField` and `Card` results |
 | Snackbar | `Alert` at the top of the screen, as the member screens do |
 | CSV download | `Share.share` from React Native with the CSV as text |
-| Print | "Print" `Button` opens the console's print page in the phone's browser with `Linking`, where it prints or saves as PDF. Needs one new variable, `EXPO_PUBLIC_CONSOLE_URL`, like `EXPO_PUBLIC_API_URL`. The person signs in to the console in that browser once |
+| Print | "Download PDF" and "Print" make the office copy inside the app (`lib/staffDocuments.ts`, `StaffDocument`), with each signer's signature on file; no console sign-in (D-133). The console keeps its own print pages |
 
 ### 4.3 Bottom tabs by role
 
@@ -402,4 +403,4 @@ Done by hand when you decide, and tracked here only so nothing is forgotten.
 
 | Topic | As planned | Alternative |
 |---|---|---|
-| Print | Opens the console page in the phone's browser, signing in there once | `expo-print` + `expo-sharing` give a PDF inside the app, but they are new dependencies and need their own templates. Only with your approval |
+| Print | Office copies made in the app with `expo-print` / `expo-sharing` (already used for members, D-125) and the templates in `lib/staffDocuments.ts` (D-133) | Was: open the console page in the browser |

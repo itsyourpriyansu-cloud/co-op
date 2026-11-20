@@ -8,6 +8,8 @@ import { isApiError } from '@tgs/api-client';
 import { checkPassword, isSearchable, DENOMINATIONS, denominationsFor, formatINR, type Denomination } from '@tgs/domain';
 import type { MemberPick, Permission, Role, StaffTicketRow } from '@tgs/types';
 import { api } from '@/lib/api';
+import { DEFAULT_SOCIETY, localDate, withSignatures, type Society } from '@/lib/documents';
+import { DocumentActions } from '@/components/DocumentActions';
 import { useAuth } from '@/lib/auth';
 import { getServerUrl } from '@/lib/serverUrl';
 import { Alert, Button, Card, Header, Screen, Segmented, SelectField, Skeleton, Text, TextField, type TagColor, Tag } from '@/ui';
@@ -275,8 +277,19 @@ export function WaitTag({ days }: { days: number }) {
   return <Tag text={days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'}`} color={c} size="xs" />;
 }
 
-export function PrintButton({ path, text = 'Print' }: { path: string; text?: string }) {
-  return <Button text={text} buttonType="secondary" leftSlot={Printer} fullWidth onPress={() => void Linking.openURL(consoleUrl(path))} />;
+/**
+ * D-133: an office copy made in the app (Download PDF / Print / share), with each signer's signature on
+ * file, instead of opening the console in the browser. `build` gets the society for the letterhead.
+ */
+export function StaffDocument({ title, fileName, build }: { title: string; fileName: string; build: (o: { society: Society; generatedOn: string }) => string | Promise<string> }) {
+  const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings.get, staleTime: 5 * 60_000 });
+  const society = settings.data?.society ?? DEFAULT_SOCIETY;
+  return (
+    <View style={{ gap: space[2] }}>
+      <Text role="label">{title}</Text>
+      <DocumentActions title={title} fileName={fileName} html={async () => withSignatures(await build({ society, generatedOn: localDate() }), async (id) => (await api.signatures.image(id)).dataUrl)} />
+    </View>
+  );
 }
 
 /** CSV goes to the phone's share sheet as text (docs/23 §4.2). */

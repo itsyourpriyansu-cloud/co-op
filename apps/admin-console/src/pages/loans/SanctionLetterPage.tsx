@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, FileSearch, Printer } from 'lucide-react';
 import { ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type } from '@juspay/blend-design-system';
-import { amountInWords, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { amountInWords, formatBankAccount, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import { Seal } from '@/components/Seal';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
@@ -44,7 +44,10 @@ export function SanctionLetterPage() {
               </div>
             </header>
             <div className="mt-6 flex justify-between text-body">
-              <span>Ref: {l.sanctionLetterNo}</span>
+              <span>
+                Ref: {l.sanctionLetterNo}
+                {l.loanNo ? ` · Loan No. ${l.loanNo}` : ''}
+              </span>
               <span>Date: {formatDisplayDate((l.signOffs?.president?.at ?? '').slice(0, 10) || l.appliedOn)}</span>
             </div>
             <p className="mt-6 text-body">
@@ -92,6 +95,7 @@ export function SanctionLetterPage() {
                 </tr>
               </tbody>
             </table>
+            {l.form?.bankAccount && <p className="mt-5 text-body leading-relaxed">The net amount will be paid by bank transfer to {formatBankAccount(l.form.bankAccount, true)}.</p>}
             <p className="mt-5 text-body leading-relaxed">The loan is subject to the bye-laws of the society and the salary recovery agreement signed by you{d.sureties.length ? ` and your sureties (${d.sureties.map((s) => s.name).join(', ')})` : ''}.</p>
             <div className="mt-12 grid grid-cols-2 gap-10 text-body">
               {[

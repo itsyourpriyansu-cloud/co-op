@@ -3,6 +3,7 @@ import {
   AGREEMENTS,
   checkMembershipEligibility,
   expectedRetirementDate,
+  probationCheck,
   isMembershipInFlight,
   MEMBERSHIP_STAGE_OWNER,
   membershipActionsFor,
@@ -497,6 +498,9 @@ export class JoiningService {
     const checks: MembershipDetail['checks'] = e
       ? checkMembershipEligibility({ ...e, ...(dob ? { dob, today } : {}) }).checks
       : [{ ruleId: 'BR-026', pass: false, message: 'Eligibility answers were not captured.', severity: 'warn' }];
+    // D-131: a probationer short of the probation period is flagged to the staff (never blocked).
+    const probation = probationCheck(a.form?.employment?.employmentType, a.form?.employment?.regularAppointmentDate, today, settings.probationMonths ?? 0);
+    if (probation) checks.push(probation);
     const mobile = a.form?.personal?.mobile;
     const empId = a.form?.employment?.employeeId;
     const others = (await this.app.members.duplicates(mobile, empId)).filter((m) => m.generalNo !== a.allottedGeneralNo);

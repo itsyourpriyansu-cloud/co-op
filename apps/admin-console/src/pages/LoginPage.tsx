@@ -1,8 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, KeyRound, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Copy, KeyRound, ShieldCheck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Navigate, useLocation, useNavigate } from 'react-router';
-import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Type, Skeleton, Spinner, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, TextInputV2 } from '@juspay/blend-design-system';
+import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2Type, Skeleton, Spinner, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, TextInputV2 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
 import { checkPassword } from '@tgs/domain';
 import { brand } from '@tgs/design-tokens';
@@ -246,6 +246,7 @@ export function LoginPage() {
                   <div className="min-w-0 flex-1">
                     <p className="text-caption text-fg-secondary">Can't scan? Type this key instead:</p>
                     <p className="mt-1 select-all break-all font-mono text-body text-fg">{step.setup.secret.replace(/(.{4})/g, '$1 ').trim()}</p>
+                    <CopyKey secret={step.setup.secret} />
                   </div>
                 </div>
               ) : (
@@ -318,6 +319,27 @@ function StepError({ message }: { message: string }) {
   return (
     <div className="mt-4">
       <AlertV2 type={AlertV2Type.ERROR} subType={AlertV2SubType.SUBTLE} heading="That didn't work" description={message} />
+    </div>
+  );
+}
+
+/** Copies the authenticator key (no spaces) so it can be pasted into the authenticator app. */
+function CopyKey({ secret }: { secret: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="mt-2">
+      <ButtonV2
+        text={copied ? 'Copied' : 'Copy key'}
+        size={ButtonV2Size.SMALL}
+        buttonType={ButtonV2Type.SECONDARY}
+        leftSlot={{ slot: copied ? <Check size={14} /> : <Copy size={14} /> }}
+        onClick={() =>
+          void navigator.clipboard.writeText(secret).then(
+            () => setCopied(true),
+            () => setCopied(false),
+          )
+        }
+      />
     </div>
   );
 }

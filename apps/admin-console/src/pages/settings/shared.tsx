@@ -8,15 +8,14 @@ export const MONTH_ITEMS = ['January', 'February', 'March', 'April', 'May', 'Jun
 
 export const isPlaceholder = (bundle: SettingsBundle, key: string) => bundle.settings.placeholders.some((p) => p === key || p.startsWith(`${key}.`));
 
-/** Save a settings change: refresh the bundle and the rate card, toast the result. */
-export function useSettingsSave<A>(fn: (arg: A) => Promise<unknown>, success: string) {
+/** Save a settings change: refresh the bundle, the rate card and any list the save changed (`refresh`), toast the result. */
+export function useSettingsSave<A>(fn: (arg: A) => Promise<unknown>, success: string, refresh: string[] = []) {
   const qc = useQueryClient();
   const m = useMutation({
     mutationFn: fn,
     onSuccess: (data) => {
       if (data && typeof data === 'object' && 'settings' in data) qc.setQueryData(['settings'], data);
-      void qc.invalidateQueries({ queryKey: ['settings'] });
-      void qc.invalidateQueries({ queryKey: ['rates'] });
+      for (const key of ['settings', 'rates', ...refresh]) void qc.invalidateQueries({ queryKey: [key] });
       addSnackbarV2({ header: success, description: 'Recorded in the change history.', variant: SnackbarV2Variant.SUCCESS });
     },
     onError: (e) => {

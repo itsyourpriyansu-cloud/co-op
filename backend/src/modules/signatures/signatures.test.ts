@@ -55,6 +55,12 @@ describe('signatures (F-01)', () => {
     expect((await call('PUT', '/me/signature', member, { png: Buffer.from('not a png').toString('base64') })).statusCode).toBe(400);
   });
 
+  it('seeded sign-offs and member signatures are linked to the signers’ images', async () => {
+    const one = async (q: ReturnType<typeof sql>) => ((await app.db.execute(q)).rows[0] as { file: string | null } | undefined)?.file;
+    expect(await one(sql`select data->'signOffs'->'secretary'->>'signatureFileId' as file from deposits where data->'signOffs'->'secretary' is not null limit 1`)).toMatch(/^fil-/);
+    expect(await one(sql`select data->'signature'->>'fileId' as file from deposits where data->'signature' is not null limit 1`)).toMatch(/^fil-/);
+  });
+
   it('staff may see a signature (audited); another member may not', async () => {
     const mine = (await call('GET', '/me/signature', member)).json() as MySignature;
     expect((await call('GET', `/signatures/${mine.fileId}`, other)).statusCode).toBe(404);

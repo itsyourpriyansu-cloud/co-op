@@ -8,7 +8,7 @@ import { apiCall, apiToken, consoleAs, CONSOLE_URL, expect, OTP, resetDemo, shot
 async function loanAtReview(request: APIRequestContext): Promise<string> {
   const s = (await apiToken(request, 'mem-1103', 'app')).token;
   const pay = { scaleOfPay: '31040-92050', grossSalary: 6_500_000, govtLoanDeductions: 200_000, otherLoanDeductions: 0 };
-  const d = await apiCall<{ loan: { id: string } }>(request, 'POST', '/me/loans', s, { product: 'ORDINARY', amount: 20_000_000, instalments: 48, purpose: 'House construction', sureties: ['mem-1104', 'mem-1101'], form: { pay } });
+  const d = await apiCall<{ loan: { id: string } }>(request, 'POST', '/me/loans', s, { product: 'ORDINARY', amount: 20_000_000, instalments: 48, purpose: 'House construction', sureties: ['mem-1104', 'mem-1101'], form: { pay, bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' } } });
   const id = d.loan.id;
   const sign = await apiCall<{ otpRef: string }>(request, 'POST', `/me/loans/${id}/sign/request`, s);
   await apiCall(request, 'POST', `/me/loans/${id}/submit`, s, { otpRef: sign.otpRef, otp: OTP });

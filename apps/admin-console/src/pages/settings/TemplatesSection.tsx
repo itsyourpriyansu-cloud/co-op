@@ -46,7 +46,7 @@ const vars = (t: NotificationTemplate) => [...new Set([...`${t.title} ${t.body}`
 export function TemplatesSection({ canEdit }: { canEdit: boolean }) {
   const q = useQuery({ queryKey: ['templates'], queryFn: api.settings.templates });
   const [editing, setEditing] = useState<NotificationTemplate | null>(null);
-  const save = useSettingsSave((t: NotificationTemplate) => api.settings.updateTemplate(t.key, t), 'Template saved');
+  const save = useSettingsSave((t: NotificationTemplate) => api.settings.updateTemplate(t.key, t), 'Template saved', ['templates']);
   const errors = fieldErrorsOf(save.error);
   const audienceLabel = { MEMBER: 'Members', APPLICANT: 'Applicants', STAFF: 'Staff' } as const;
 

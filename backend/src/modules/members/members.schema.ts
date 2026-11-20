@@ -32,4 +32,8 @@ export const transferInput = z.object({
 
 /** MemberList / MemberDetail (packages/types, checked by TypeScript) pass through as they are. */
 export const memberListResponse = z.any().describe('MemberList (packages/types/src/api.ts)');
+/** D-131: the Super Admin's proposed date of retirement, and an approver's decision. */
+export const retirementChangeInput = z.object({ newDor: z.string().max(10).optional(), reason: z.string().max(500).optional() });
+export const retirementDecisionInput = z.object({ decision: z.enum(['approve', 'reject']), remarks: z.string().max(500).optional() });
+
 export const memberDetailResponse = z.any().describe('MemberDetail (packages/types/src/api.ts)');

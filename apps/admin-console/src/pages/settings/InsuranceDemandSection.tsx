@@ -88,7 +88,7 @@ export function InsuranceDemandSection({ bundle }: { bundle: SettingsBundle }) {
         </ol>
       </section>
 
-      <SaveBar dirty={form.dirty} saving={save.isPending} onSave={() => save.mutate(v)} onDiscard={form.reset} />
+      <SaveBar readOnly={ro} dirty={form.dirty} saving={save.isPending} onSave={() => save.mutate(v)} onDiscard={form.reset} />
     </div>
   );
 }

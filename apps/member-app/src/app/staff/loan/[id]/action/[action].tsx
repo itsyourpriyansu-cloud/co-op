@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { CircleCheck } from 'lucide-react-native';
-import { amountInWords, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { amountInWords, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR, formatBankAccount } from '@tgs/domain';
 import type { LoanActionInput, LoanDetail } from '@tgs/types';
 import { ActionAlert, ask, DoneAlert, Loaded, MoneyField, RuleChecks, useAction, useDebounced, useTodayDate } from '@/components/staff';
 import { StaffSanctionSheet } from '@/components/StaffSanctionSheet';
@@ -210,6 +210,7 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
       {action === 'disburse' ? (
         <Section title="Payment">
           <View style={{ gap: space[8] }}>
+            <KeyValue label="Borrower's account" value={l.form?.bankAccount ? formatBankAccount(l.form.bankAccount) : 'Not on the application. Confirm it with the member before paying.'} />
             <Segmented label="Mode" value={mode} options={[{ value: 'NEFT', label: 'NEFT / RTGS' }, { value: 'CHEQUE', label: 'Cheque' }, { value: 'TRANSFER', label: 'Transfer' }]} onChange={(v) => setMode(v as typeof mode)} />
             <TextField label={mode === 'CHEQUE' ? 'Cheque number' : 'UTR / reference'} required value={reference} onChangeText={setReference} error={fe.reference ?? fe['disbursement.reference']} />
             <TextField label="Paid to (only if not the borrower)" value={payee} onChangeText={setPayee} hint="F7: the borrower authorises payment to this person" error={fe.payee ?? fe['disbursement.payee']} />

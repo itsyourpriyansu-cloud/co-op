@@ -1,6 +1,6 @@
 // API envelope types shared by the mock API and both clients (docs/11-api-contracts.md).
 import type { Channel, Permission, Role } from './roles';
-import type { Address, AppNotification, AuditEntry, DeliveryStatus, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, SuretyRecovery, TransferEvent, FinalSettlement, FinalSettlementStatement } from './entities';
+import type { Address, AppNotification, AuditEntry, DeliveryStatus, MemberNotice, DeductionEntrySource, DeductionEntryStatus, SupportTicket, DemandComponent, DemandHead, DemandSheet, PaymentReport, Receipt, FdHolder, SanctionSheet, Cycle, Department, DepositAccount, ISODate, ISODateTime, Loan, LoanApplicationForm, LoanProduct, LoanProductCode, Member, MembershipApplication, Nominee, NotificationTemplate, Paise, ProfileChangeRequest, ProfileField, RecoveryMandate, RetirementChange, ServiceEvent, ShareAccount, SocietyProfile, SocietySettings, StaffUser, SuretyRecovery, TransferEvent, FinalSettlement, FinalSettlementStatement } from './entities';
 import type { DemandSheetStatus, DepositStatus, LoanStatus, MemberStatus, MembershipStatus, SuretyStatus } from './status';
 
 export const API_PREFIX = '/api/v1';
@@ -469,8 +469,10 @@ export interface MemberDetail {
   documents: MemberDocument[];
   changeRequests: ProfileChangeRequest[];
   ledger: MemberLedgerRow[];
-  /** What the signed-in staff user may do here. */
-  can: { edit: boolean; transfer: boolean; agreeMandate: boolean; seeFullMobile: boolean };
+  /** D-131: the pending date-of-retirement correction, else the latest decided one. */
+  retirementChange?: RetirementChange;
+  /** What the signed-in staff user may do here. D-131: propose (Super Admin) and decide (whose turn it is) a retirement date change. */
+  can: { edit: boolean; transfer: boolean; agreeMandate: boolean; seeFullMobile: boolean; proposeRetirementChange: boolean; decideRetirementChange: boolean };
   /** The mandate is waiting on a DDO without a login: demo users may record it for them. */
   demoAgreeAs?: string;
 }
@@ -641,6 +643,8 @@ export interface LoanDetail {
   demoActAs?: string;
   parentLoan?: { id: string; applicationNo: string; loanNo?: string; outstanding: Paise };
   pledgedDeposit?: { id: string; accountNo: string; principal: Paise };
+  /** D-131: the borrower's loan record at a glance (all their applications). */
+  history: { applied: number; approved: number; rejected: number };
 }
 
 /** Everything a form needs to preview eligibility for one member (MB-05, ST-21). */
@@ -736,7 +740,7 @@ export interface SanctionPreview {
 
 /** ST-02 Work Queue item: anything waiting on the signed-in user. */
 export interface WorkItem {
-  kind: 'loan' | 'membership' | 'changeRequest' | 'mandate' | 'deposit' | 'demandSheet' | 'paymentReport';
+  kind: 'loan' | 'membership' | 'changeRequest' | 'mandate' | 'deposit' | 'demandSheet' | 'paymentReport' | 'retirementChange';
   id: string;
   ref: string;
   title: string;
@@ -1173,6 +1177,8 @@ export interface ActivationSample {
 
 export interface MemberHome {
   member: { name: string; generalNo: string; designation: string; departmentName: string; leftoverMonths: number; leftoverLabel: string };
+  /** D-131: service remaining, shown on the home screen. */
+  service: { months: number; label: string; days: number; dor: ISODate };
   shares: { count: number; capital: Paise; shareDeposit: Paise };
   deposits: { total: Paise; fd: Paise; fdCount: number; crd: Paise; srds: Paise; savings: Paise; nextMaturity?: { date: ISODate; amount: Paise; fdrNo: string } };
   loans: Array<{ id: string; productName: string; loanNo: string; outstanding: Paise; nextDue?: { cycle: Cycle; amount: Paise } }>;

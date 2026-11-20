@@ -58,6 +58,7 @@ export const SETTINGS: SocietySettings = {
   crdMonthly: R(500),
   srdsMonthly: R(300),
   retirementAge: 61,
+  probationMonths: 6,
   // Society (Q-310, D-067): every unpaid month makes a defaulter (D-088).
   defaulterCycles: 1,
   fdSlabs: [

@@ -95,7 +95,7 @@ test.describe('cross-app (AC-X01)', () => {
   test('loan: Sravani applies → Lakshmi and Mahesh sign on their phones → console to disbursement → Active on her phone', async ({ page, browser, request, errors }) => {
     const sravani = (await apiToken(request, 'mem-1103', 'app')).token;
     const pay = { scaleOfPay: '24280-72850', grossSalary: 5_200_000, govtLoanDeductions: 300_000, otherLoanDeductions: 0 };
-    const d = await apiCall<{ loan: { id: string } }>(request, 'POST', '/me/loans', sravani, { product: 'EDUCATION', amount: 15_000_000, instalments: 36, purpose: 'B.Tech fees', sureties: ['mem-1101', 'mem-1104'], form: { pay, education: { studentName: 'Kavya M', relation: 'Daughter', institution: 'JNTU Hyderabad', course: 'B.Tech' } } });
+    const d = await apiCall<{ loan: { id: string } }>(request, 'POST', '/me/loans', sravani, { product: 'EDUCATION', amount: 15_000_000, instalments: 36, purpose: 'B.Tech fees', sureties: ['mem-1101', 'mem-1104'], form: { pay, bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' }, education: { studentName: 'Kavya M', relation: 'Daughter', institution: 'JNTU Hyderabad', course: 'B.Tech' } } });
     const id = d.loan.id;
     const sign = await apiCall<{ otpRef: string }>(request, 'POST', `/me/loans/${id}/sign/request`, sravani);
     await apiCall(request, 'POST', `/me/loans/${id}/submit`, sravani, { otpRef: sign.otpRef, otp: OTP });

@@ -5,8 +5,9 @@ import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { DENOMINATIONS, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
-import { ActionAlert, ask, Loaded, PrintButton, useAction } from '@/components/staff';
+import { ActionAlert, ask, Loaded, useAction, StaffDocument } from '@/components/staff';
 import { api } from '@/lib/api';
+import { documentFileName, receiptHtml } from '@/lib/documents';
 import { PURPOSE_LABEL, SOURCE_LABEL } from '@/lib/staffCollections';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, Text, TextField } from '@/ui';
 import { space } from '@/theme';
@@ -75,7 +76,7 @@ export default function ReceiptScreen() {
                   Reported by the member in the app on {d.report.reportedAt ? formatDisplayDateTime(d.report.reportedAt) : formatDisplayDate(d.report.paidOn)} and verified against the bank statement.
                 </Text>
               ) : null}
-              <PrintButton path={`/payments/${r.id}`} />
+              <StaffDocument title={`Receipt ${r.receiptNo}`} fileName={documentFileName('Receipt', r.receiptNo)} build={(o) => receiptHtml(d, { ...o, paidBy: SOURCE_LABEL[r.source], copy: 'office' })} />
               {d.canCancel && !cancelling ? <Button text="Cancel receipt" buttonType="secondary" fullWidth onPress={() => setCancelling(true)} /> : null}
               {d.canCancel && cancelling ? (
                 <Section title="Cancel receipt">

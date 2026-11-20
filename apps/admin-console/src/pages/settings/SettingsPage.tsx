@@ -75,7 +75,7 @@ export function SettingsPage() {
                 {section === 'insurance-demand' && <InsuranceDemandSection bundle={bundle.data} />}
                 {section === 'departments' && <DepartmentsSection canEdit={bundle.data.canEdit} />}
                 {section === 'users' && <UsersSection canEdit={bundle.data.canEdit} />}
-                {section === 'permissions' && <PermissionsSection />}
+                {section === 'permissions' && <PermissionsSection canEdit={bundle.data.canEdit} />}
                 {section === 'templates' && <TemplatesSection canEdit={bundle.data.canEdit} />}
                 {section === 'history' && <HistorySection bundle={bundle.data} />}
               </>

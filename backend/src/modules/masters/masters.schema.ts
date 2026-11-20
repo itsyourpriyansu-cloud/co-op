@@ -14,6 +14,7 @@ export const societySettingsSchema = z.object({
   crdMonthly: paise,
   srdsMonthly: paise,
   retirementAge: z.number().int(),
+  probationMonths: z.number().int(),
   defaulterCycles: z.number().int(),
   fdSlabs: z.array(fdSlabSchema),
   savingsRatePercent: z.number(),

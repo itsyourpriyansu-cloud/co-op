@@ -10,6 +10,7 @@ import type { LoanApplicationForm, LoanDetail, LoanProductCode, LoanRequestInput
 import { ActionAlert, MemberPicker, MoneyField, RuleChecks, useAction, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { formFor } from '@/lib/staffLoans';
+import { BankAccountFields, EMPTY_BANK } from '@/components/BankAccountFields';
 import { Button, Card, ChoiceCard, Divider, Header, KeyValue, MonthPicker, Screen, Section, Skeleton, Text, TextField, WizardProgress } from '@/ui';
 import { space } from '@/theme';
 
@@ -45,6 +46,7 @@ export default function NewLoan() {
       pay: { scaleOfPay: c.pay.scaleOfPay, grossSalary: c.pay.grossSalary, govtLoanDeductions: c.pay.govtLoanDeductions, otherLoanDeductions: c.pay.otherLoanDeductions },
       salary: { substantivePay: c.pay.substantivePay, compulsoryDeductions: [{ label: 'G.P.F.', amount: 0 }], netPayEarnedToDate: 0 },
       security: { type: 'SURETY' },
+      bankAccount: { ...EMPTY_BANK, holderName: c.member.name },
     });
     setSureties([]);
     setPledged('');
@@ -64,6 +66,7 @@ export default function NewLoan() {
         ...(product === 'SALARY' ? { salary: form.salary } : { pay: form.pay, security: product === 'DEPOSIT' ? { type: 'DEPOSIT_PLEDGE' as const } : form.security }),
         ...(product === 'EDUCATION' ? { education: form.education ?? { studentName: '', relation: 'Son', institution: '', course: '' } } : {}),
         ...(form.additionalShares ? { additionalShares: form.additionalShares } : {}),
+        ...(form.bankAccount ? { bankAccount: form.bankAccount } : {}),
       },
     }),
     [product, amount, instalments, purpose, sureties, pledged, topupOf, form],
@@ -216,6 +219,9 @@ export default function NewLoan() {
               ) : null}
             </Section>
           ) : null}
+          <Section title="Pay the loan into">
+            <BankAccountFields value={form.bankAccount} onChange={(bankAccount) => setForm((f) => ({ ...f, bankAccount }))} err={(k) => fe[`form.${k}`] ?? fe[k]} intro="The member's own bank account, as on the paper form. The loan is paid here by bank transfer." />
+          </Section>
         </View>
       ) : null}
 

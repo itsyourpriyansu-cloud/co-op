@@ -33,8 +33,21 @@ export class UsersService {
     return (await this.repo.list()).map((u) => toOut(u, now));
   }
 
+  /**
+   * A DDO login needs a real department, and only one active DDO login per department: every DDO task
+   * (certify, mandate, demand sheet) goes to departments.ddoLogin(), which returns a single user.
+   */
+  private async checkDdo(input: StaffUserIn, exceptId?: string): Promise<void> {
+    if (input.role !== 'DDO') return;
+    if (!(await this.app.departments.get(input.departmentId!))) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors: { departmentId: 'Choose a department from the list.' } });
+    if (input.active === false) return;
+    const other = (await this.repo.list()).find((u) => u.role === 'DDO' && u.status === 'ACTIVE' && u.departmentId === input.departmentId && u.id !== exceptId);
+    if (other) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors: { departmentId: `${other.name} (${other.username}) is already the DDO login for this department. Deactivate that login first.` } });
+  }
+
   async create(request: FastifyRequest, input: StaffUserIn): Promise<StaffUserOut[]> {
     if (await this.repo.usernameTaken(input.userId)) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors: { userId: 'This user ID is taken.' } });
+    await this.checkDdo(input);
     const id = `stf-${input.userId.replace(/\./g, '-')}`;
     if (await this.repo.byId(id)) fail('ALREADY_EXISTS', 'A user with this ID already exists.');
     // The account starts with an unknown random password: the Super Admin resets it to hand over a temporary one.
@@ -67,6 +80,7 @@ export class UsersService {
     const active = input.active !== false;
     if (id === me.id && !active) fail('VALIDATION_ERROR', 'You cannot deactivate yourself.', { fieldErrors: { active: 'You cannot deactivate yourself.' } });
     if (id === me.id && input.role !== current.role) fail('VALIDATION_ERROR', 'You cannot change your own role.', { fieldErrors: { role: 'Ask another Super Admin.' } });
+    await this.checkDdo(input, id);
 
     await withTransaction(this.app.db, async (tx) => {
       await this.repo.update(

@@ -1,13 +1,20 @@
-// ST-62 Permissions: what each role can open. Fixed by role in the prototype so segregation of
-// duties (BR-019) cannot be switched off by accident.
+// ST-62 Permissions: what each role can open. Only the Super Admin changes it (D-134); changing
+// settings, users and permissions stays with the Super Admin, so those boxes are locked.
 import { Fragment } from 'react';
 import { Check, Lock, Minus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { SUPER_ADMIN_ONLY } from '@tgs/domain';
+import type { ConsoleRole, Permission } from '@tgs/types';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
+import { useSettingsSave } from './shared';
 
-export function PermissionsSection() {
+/** A box nobody can change: admin-only rights, and the Super Admin's hold on the settings. */
+const locked = (role: ConsoleRole, p: Permission) => SUPER_ADMIN_ONLY.includes(p) || (role === 'SUPER_ADMIN' && p === 'settings.view');
+
+export function PermissionsSection({ canEdit }: { canEdit: boolean }) {
   const q = useQuery({ queryKey: ['permissions'], queryFn: api.settings.permissions });
+  const save = useSettingsSave((x: { role: ConsoleRole; permissions: Permission[] }) => api.settings.updatePermissions(x.role, x.permissions), 'Permissions saved', ['permissions', 'me']);
   const m = q.data;
   const groups = m ? [...new Set(m.permissions.map((p) => p.group))] : [];
   return (
@@ -20,7 +27,7 @@ export function PermissionsSection() {
               <p className="mt-0.5 max-w-2xl text-caption text-fg-tertiary">Approvals are also limited by stage: each person can only act on the step that belongs to their role, and the President must be a different person from the Secretary.</p>
             </div>
             <span className="inline-flex items-center gap-1 text-caption text-fg-tertiary">
-              <Lock size={14} aria-hidden /> Fixed by role
+              <Lock size={14} aria-hidden /> {canEdit ? 'Click a box to change it. Locked boxes stay with the Super Admin.' : 'Only the Super Admin can change these'}
             </span>
           </header>
           <div className="overflow-x-auto">
@@ -49,10 +56,27 @@ export function PermissionsSection() {
                         <tr key={p.key} className="border-b border-line-subtle last:border-0">
                           <td className="px-5 py-2.5 text-body text-fg">{p.label}</td>
                           {m.roles.map((r) => {
-                            const yes = m.grants[r.role]?.includes(p.key);
+                            const role = r.role as ConsoleRole;
+                            const yes = Boolean(m.grants[role]?.includes(p.key));
+                            const mark = yes ? <Check size={16} className="inline text-success-fg" aria-hidden /> : <Minus size={16} className="inline text-fg-disabled" aria-hidden />;
+                            const fixed = locked(role, p.key);
                             return (
                               <td key={r.role} className="px-3 py-2.5 text-center">
-                                {yes ? <Check size={16} className="inline text-success-fg" aria-label="Yes" /> : <Minus size={16} className="inline text-fg-disabled" aria-label="No" />}
+                                {canEdit && !fixed ? (
+                                  <button
+                                    type="button"
+                                    role="checkbox"
+                                    aria-checked={yes}
+                                    aria-label={`${r.label}: ${p.label}`}
+                                    disabled={save.isPending}
+                                    onClick={() => save.mutate({ role, permissions: yes ? m.grants[role]!.filter((x) => x !== p.key) : [...(m.grants[role] ?? []), p.key] })}
+                                    className="rounded-control p-1 hover:bg-surface-subtle disabled:opacity-50"
+                                  >
+                                    {mark}
+                                  </button>
+                                ) : (
+                                  <span role="img" aria-label={`${r.label}: ${p.label}: ${yes ? 'yes' : 'no'}${canEdit ? ' (locked)' : ''}`}>{mark}</span>
+                                )}
                               </td>
                             );
                           })}

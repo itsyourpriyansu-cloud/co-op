@@ -3,6 +3,7 @@ import {
   assessLoanApplication,
   buildSanctionSheet,
   calculateLeftoverService,
+  loanHistoryCounts,
   checkSalaryLoan,
   checkSuretyEligibility,
   checkTopupEligibility,
@@ -348,6 +349,7 @@ export class LoansService {
       ...(demoActAs ? { demoActAs } : {}),
       ...(parent ? { parentLoan: { id: parent.id, applicationNo: parent.applicationNo, ...(parent.loanNo ? { loanNo: parent.loanNo } : {}), outstanding: parent.outstandingPrincipal } } : {}),
       ...(pledged ? { pledgedDeposit: { id: pledged.id, accountNo: pledged.accountNo, principal: pledged.principal ?? pledged.balance } } : {}),
+      history: loanHistoryCounts((await this.repo.forMember(m.id)).map((x) => x.status)),
     };
   }
 

@@ -1,6 +1,6 @@
 // Loan application (M4): what makes an F2 / F3 application complete, the Salary-loan limit
 // (BR-023, Q-502 placeholder), and the stage tracker both apps draw (MB-04 labels, D-030).
-import type { Cycle, ISODate, LoanApplicationForm, LoanProduct, LoanStatus, LoanStatusGroup, Paise, WorkflowEvent } from '@tgs/types';
+import type { Cycle, ISODate, LoanApplicationForm, LoanBankAccount, LoanProduct, LoanStatus, LoanStatusGroup, Paise, WorkflowEvent } from '@tgs/types';
 import { addMonths, toCycle } from './dates';
 import { calculateSalaryLoanNetPay } from './loans';
 import { formatINR } from './money';
@@ -29,6 +29,18 @@ export function checkSalaryLoan(amount: Paise, salary: NonNullable<LoanApplicati
       amount <= salary.netPayEarnedToDate ? pass('BR-023', `Within the net pay earned so far (${formatINR(salary.netPayEarnedToDate)}).`) : fail('BR-023', `A salary loan can be at most the net pay earned so far (${formatINR(salary.netPayEarnedToDate)}).`),
     ],
   };
+}
+
+/** D-132: Indian bank account numbers are 9–18 digits; IFSC is 4 letters, a 0, then 6 letters or digits. */
+export const BANK_ACCOUNT_PATTERN = /^\d{9,18}$/;
+export const IFSC_PATTERN = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+/** "XXXXXX1234": what a member-facing letter shows of an account number. */
+export const maskAccountNo = (accountNo: string) => `${'X'.repeat(Math.max(0, accountNo.length - 4))}${accountNo.slice(-4)}`;
+
+/** One line for the office: "Ravi K · SBI, Abids · A/c 12345678901 · IFSC SBIN0001234". `masked` for member copies. */
+export function formatBankAccount(b: LoanBankAccount, masked = false): string {
+  return `${b.holderName} · ${b.bankName}${b.branch?.trim() ? `, ${b.branch.trim()}` : ''} · A/c ${masked ? maskAccountNo(b.accountNo) : b.accountNo} · IFSC ${b.ifsc}`;
 }
 
 export interface LoanRequestShape {
@@ -65,6 +77,11 @@ export function validateLoanRequest(input: LoanRequestShape, product: Pick<LoanP
     if (!ed?.institution.trim()) e['education.institution'] = 'Enter the institution';
     if (!ed?.course.trim()) e['education.course'] = 'Enter the course';
   }
+  const bank = f.bankAccount;
+  if (!bank?.holderName?.trim()) e['bankAccount.holderName'] = "Enter the account holder's name";
+  if (!bank?.bankName?.trim()) e['bankAccount.bankName'] = 'Enter the bank name';
+  if (!BANK_ACCOUNT_PATTERN.test(bank?.accountNo ?? '')) e['bankAccount.accountNo'] = 'Enter the account number (9 to 18 digits)';
+  if (!IFSC_PATTERN.test(bank?.ifsc ?? '')) e['bankAccount.ifsc'] = 'Enter the 11-character IFSC, e.g. SBIN0001234';
   if (product.code === 'DEPOSIT' && !input.pledgedDepositId) e.pledgedDepositId = 'Choose the fixed deposit to pledge';
   if (product.suretiesRequired > 0) {
     const unique = new Set(input.sureties);

@@ -3,6 +3,7 @@
 // the right (DDO agrees it after a transfer, BR-028). Transfer opens ST-13.
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { useOpenForm } from '@/lib/forms';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRightLeft, BadgeCheck, CalendarClock, FileImage, FileText, FlaskConical, Pencil, Printer, ShieldAlert, UserX } from 'lucide-react';
 import {
@@ -38,6 +39,7 @@ import { api } from '@/lib/api';
 import { openFile, prepareDocument } from '@/lib/files';
 import { cn } from '@/lib/utils';
 import { changeValue, EVENT_META, fieldLabel, MANDATE_LABEL, retiringLabel } from './members';
+import { RetirementChangePanel } from './RetirementChangePanel';
 import { TransferDrawer } from './TransferDrawer';
 import { Initials } from '@/components/Initials';
 
@@ -370,6 +372,7 @@ function RequestsTab({ d }: { d: MemberDetail }) {
 export function MemberProfilePage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const openForm = useOpenForm();
   const qc = useQueryClient();
   const [tab, setTab] = useState('overview');
   const [transfer, setTransfer] = useState(false);
@@ -523,9 +526,9 @@ export function MemberProfilePage() {
                     <p className="text-body text-fg-secondary">No mandate on record.</p>
                   )}
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <ButtonV2 text="Print F5" buttonType={ButtonV2Type.SECONDARY} size={ButtonV2Size.SMALL} leftSlot={{ slot: <Printer size={14} /> }} onClick={() => navigate(`/reports/print/agreement?member=${d.member.id}&version=A`)} />
-                    <ButtonV2 text="Print F6" buttonType={ButtonV2Type.SECONDARY} size={ButtonV2Size.SMALL} leftSlot={{ slot: <Printer size={14} /> }} onClick={() => navigate(`/reports/print/agreement?member=${d.member.id}&version=B`)} />
-                    <ButtonV2 text="Print F1" buttonType={ButtonV2Type.SECONDARY} size={ButtonV2Size.SMALL} leftSlot={{ slot: <Printer size={14} /> }} onClick={() => navigate(`/reports/print/membership?member=${d.member.id}`)} />
+                    <ButtonV2 text="Print F5" buttonType={ButtonV2Type.SECONDARY} size={ButtonV2Size.SMALL} leftSlot={{ slot: <Printer size={14} /> }} onClick={() => openForm(`/reports/print/agreement?member=${d.member.id}&version=A`)} />
+                    <ButtonV2 text="Print F6" buttonType={ButtonV2Type.SECONDARY} size={ButtonV2Size.SMALL} leftSlot={{ slot: <Printer size={14} /> }} onClick={() => openForm(`/reports/print/agreement?member=${d.member.id}&version=B`)} />
+                    <ButtonV2 text="Print F1" buttonType={ButtonV2Type.SECONDARY} size={ButtonV2Size.SMALL} leftSlot={{ slot: <Printer size={14} /> }} onClick={() => openForm(`/reports/print/membership?member=${d.member.id}`)} />
                   </div>
                 </Panel>
                 {(dues.data || notices.data) && (
@@ -574,6 +577,7 @@ export function MemberProfilePage() {
                     )}
                   </Panel>
                 )}
+                <RetirementChangePanel d={d} />
                 <Panel title="At a glance">
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                     <Field label="Left-over service">{d.leftover.label}</Field>

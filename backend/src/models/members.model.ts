@@ -1,4 +1,4 @@
-import type { Address, FinalSettlement, Member, MembershipApplication, MembershipStatus, MemberStatus, Nominee, PayProfile, ProfileChangeRequest, ProfileFieldChange, RecoveryMandate, ServiceEventType } from '@tgs/types';
+import type { Address, FinalSettlement, Member, MembershipApplication, MembershipStatus, MemberStatus, Nominee, PayProfile, ProfileChangeRequest, ProfileFieldChange, RecoveryMandate, RetirementChange, ServiceEventType, StaffSignOff } from '@tgs/types';
 import { date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, boolean } from 'drizzle-orm/pg-core';
 import { departments } from './masters.model';
 
@@ -135,6 +135,26 @@ export const profileChangeRequests = pgTable(
     remarks: text('remarks'),
   },
   (t) => [index('profile_change_requests_member_idx').on(t.memberId), index('profile_change_requests_status_idx').on(t.status)],
+);
+
+/** D-131: date-of-retirement corrections (Super Admin proposes; Accountant, Secretary, President approve). */
+export const retirementChanges = pgTable(
+  'retirement_changes',
+  {
+    id: text('id').primaryKey(),
+    memberId: text('member_id')
+      .notNull()
+      .references(() => members.id),
+    currentDor: day('current_dor').notNull(),
+    newDor: day('new_dor').notNull(),
+    reason: text('reason').notNull(),
+    status: text('status').$type<RetirementChange['status']>().notNull(),
+    proposed: jsonb('proposed').$type<StaffSignOff>().notNull(),
+    approvals: jsonb('approvals').$type<StaffSignOff[]>().notNull().default([]),
+    rejection: jsonb('rejection').$type<StaffSignOff>(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('retirement_changes_member_idx').on(t.memberId), index('retirement_changes_status_idx').on(t.status)],
 );
 
 /**

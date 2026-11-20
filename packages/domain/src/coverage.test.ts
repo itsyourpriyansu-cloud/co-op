@@ -107,7 +107,7 @@ describe('membership edges (BR-026, F1 validation)', () => {
     const ok: MembershipForm = {
       personal: { fullName: 'A B', fatherName: 'C B', dob: '1995-01-01', gender: 'F', caste: 'OC', email: 'a@b.org' },
       address: { present: { line1: 'x', city: 'Hyd', pincode: '500001' }, sameAsPresent: true },
-      employment: { departmentId: 'd', designation: 'JA', employmentType: 'REGULAR', regularAppointmentDate: '2020-01-01' },
+      employment: { departmentId: 'd', designation: 'JA', employeeId: 'TS12345', employmentType: 'REGULAR', regularAppointmentDate: '2020-01-01' },
       shares: { sharesProposed: 10 },
       nominee: { name: 'N', relation: 'Father' },
       documents: [{ type: 'PHOTO', fileName: 'p.jpg', uploadedAt: '2026-10-24T00:00:00Z' }],
@@ -115,9 +115,9 @@ describe('membership edges (BR-026, F1 validation)', () => {
     };
     expect(validateMembershipForm(ok, docs)).toEqual({});
     const bad = validateMembershipForm(
-      { ...ok, personal: { ...ok.personal, email: 'nope' }, address: { present: { line1: 'x', city: 'Hyd', pincode: '5001' } }, employment: { ...ok.employment, employmentType: 'APPROVED_PROBATIONER' }, shares: { sharesProposed: Number.NaN } },
+      { ...ok, personal: { ...ok.personal, email: 'nope' }, address: { present: { line1: 'x', city: 'Hyd', pincode: '5001' } }, employment: { ...ok.employment, employeeId: ' ', employmentType: 'APPROVED_PROBATIONER' }, shares: { sharesProposed: Number.NaN } },
       docs,
     );
-    expect(Object.keys(bad)).toEqual(expect.arrayContaining(['personal.email', 'address.present.pincode', 'address.permanent.line1', 'employment.probationServiceMonths', 'shares.sharesProposed']));
+    expect(Object.keys(bad)).toEqual(expect.arrayContaining(['personal.email', 'address.present.pincode', 'address.permanent.line1', 'employment.employeeId', 'employment.probationServiceMonths', 'shares.sharesProposed']));
   });
 });

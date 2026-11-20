@@ -1,5 +1,6 @@
 # 16 · Paper Forms → Digital Flows
 
+> Version 0.4 · 2026-11-19 · F1 Employee ID required; F2 / F3 add a "Pay the loan into" bank account line (D-132, not on the paper form); unsigned slots of finished older records print "On paper, before the app" (D-133).
 > Version 0.3 · 2026-11-06 · F7–F10 built (D-099).
 > Version 0.2 · 2026-11-05 · six more photos (D-093), stored in `docs/paper-forms/`; F7–F10 added.
 > Version 0.1 · 2026-10-24

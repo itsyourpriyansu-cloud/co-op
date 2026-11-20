@@ -17,7 +17,7 @@ test.describe('FD premature withdrawal · backend', () => {
     const penalty = page.getByLabel('Penalty');
     await penalty.fill('2');
     await page.getByRole('button', { name: 'Save changes' }).click();
-    await expect(page.getByRole('button', { name: 'Save changes' })).toBeHidden();
+    await expect(page.getByText('No unsaved changes.')).toBeVisible();
 
     const { token } = await apiToken(request, 'stf-admin', 'console');
     const fds = await apiCall<{ items: Array<{ id: string; pledged: boolean; openedOn: string }> }>(request, 'GET', '/deposits?tab=FD&status=ACTIVE&pageSize=100', token);

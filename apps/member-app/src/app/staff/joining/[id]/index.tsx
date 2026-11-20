@@ -7,8 +7,10 @@ import { formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain
 import { ROLE_LABELS, type MembershipDetail, type Role, type WorkflowEvent } from '@tgs/types';
 import { FileButton } from '@/components/FileButton';
 import { SignatureImage } from '@/components/SignatureImage';
-import { Expand, Loaded, PrintButton, RuleChecks } from '@/components/staff';
+import { Expand, Loaded, RuleChecks, StaffDocument } from '@/components/staff';
 import { api } from '@/lib/api';
+import { membershipFormHtml, membershipFromApplication } from '@/lib/staffDocuments';
+import { documentFileName } from '@/lib/documents';
 import { ACTION_HINT, ACTION_LABEL, certItems, EVENT_TITLE, isPrimaryAction, STEPS } from '@/lib/staffJoining';
 import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Tag, Text } from '@/ui';
 import { color, space } from '@/theme';
@@ -195,7 +197,7 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
         )}
       </Expand>
 
-      {app.status !== 'DRAFT' ? <PrintButton text="Print form" path={`/reports/print/membership?application=${app.id}`} /> : null}
+      {app.status !== 'DRAFT' ? <StaffDocument title="F1 membership form" fileName={documentFileName('F1', app.applicationNo)} build={(o) => membershipFormHtml(membershipFromApplication(d), o)} /> : null}
     </Screen>
   );
 }

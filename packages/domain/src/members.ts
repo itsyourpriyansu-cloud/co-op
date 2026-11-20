@@ -1,5 +1,6 @@
 import type { Cycle, ISODate, Member, MemberInput, Nominee, ProfileField, ProfileFieldChange } from '@tgs/types';
-import { addMonths, daysInMonth, formatDuration, fullMonthsBetween, parseISODate, toCycle } from './dates';
+import { addMonths, daysBetweenDates, daysInMonth, formatDisplayDate, formatDuration, fullMonthsBetween, parseISODate, toCycle } from './dates';
+import { fail, pass, type RuleCheck } from './rules';
 
 /** BR-001: whole months from today until the date of retirement (never stored, always derived). */
 export function calculateLeftoverService(dor: ISODate, today: ISODate): { months: number; label: string } {
@@ -23,11 +24,47 @@ export function maskMobile(mobile: string): string {
   return mobile.length < 4 ? mobile : `${mobile.slice(0, 2)}XXXXXX${mobile.slice(-2)}`;
 }
 
-/** BR-001 [ASSUMPTION]: retirement falls on the last day of the month the member reaches `retirementAge`. */
+/**
+ * BR-001 (D-131, government rule FR 56): retirement falls on the last day of the month the member
+ * reaches `retirementAge`; a member born on the 1st retires on the last day of the month before.
+ */
 export function expectedRetirementDate(dob: ISODate, retirementAge: number): ISODate {
-  const { y, m } = parseISODate(dob);
-  const ry = y + retirementAge;
-  return `${ry}-${String(m).padStart(2, '0')}-${String(daysInMonth(ry, m)).padStart(2, '0')}`;
+  const { y, m, d } = parseISODate(dob);
+  let ry = y + retirementAge;
+  let rm = m;
+  if (d === 1) [ry, rm] = rm === 1 ? [ry - 1, 12] : [ry, rm - 1];
+  return `${ry}-${String(rm).padStart(2, '0')}-${String(daysInMonth(ry, rm)).padStart(2, '0')}`;
+}
+
+/** D-131: what a member sees on their home screen: months and days of service left, and the date. */
+export function serviceRemaining(dor: ISODate, today: ISODate): { months: number; label: string; days: number; dor: ISODate } {
+  return { ...calculateLeftoverService(dor, today), days: Math.max(0, daysBetweenDates(today, dor)), dor };
+}
+
+/** D-131: a probationer's completed months since the date of joining service (warn only, never block). */
+export function probationCheck(employmentType: string | undefined, joinedServiceOn: ISODate | undefined, today: ISODate, requiredMonths: number): RuleCheck | undefined {
+  if (employmentType !== 'APPROVED_PROBATIONER' || !joinedServiceOn || requiredMonths <= 0) return undefined;
+  const months = Math.max(0, fullMonthsBetween(joinedServiceOn, today));
+  return months >= requiredMonths
+    ? pass('BR-054', `Probation: ${months} months of service since ${formatDisplayDate(joinedServiceOn)} (${requiredMonths} needed).`, 'warn')
+    : fail('BR-054', `Probation not complete: only ${months} of ${requiredMonths} months of service since the date of joining service.`, 'warn');
+}
+
+/** D-131: a retirement date change proposed by the Admin is approved by these roles, in this order. */
+export const RETIREMENT_CHANGE_APPROVERS = ['ACCOUNTANT', 'SECRETARY', 'PRESIDENT'] as const;
+export type RetirementChangeApprover = (typeof RETIREMENT_CHANGE_APPROVERS)[number];
+
+/** Whose turn it is, given how many have approved; undefined once all three have. */
+export const retirementChangeNextApprover = (approvals: number): RetirementChangeApprover | undefined => RETIREMENT_CHANGE_APPROVERS[approvals];
+
+/** D-131: the Admin's proposal must be a real date, differ from the current one, and fall after the date of joining. */
+export function validateRetirementChange(member: Pick<Member, 'dor' | 'doj'>, input: { newDor?: string; reason?: string }): Record<string, string> {
+  const e: Record<string, string> = {};
+  if (!isIsoDate(input.newDor)) e.newDor = 'Enter a valid date';
+  else if (input.newDor === member.dor) e.newDor = 'This is the same as the current date of retirement';
+  else if (input.newDor <= member.doj) e.newDor = 'Must be after the date of joining service';
+  if ((input.reason ?? '').trim().length < 5) e.reason = 'Say why (a few words, e.g. the service record entry)';
+  return e;
 }
 
 const isIsoDate = (v: string | undefined): v is string => {
@@ -186,8 +223,9 @@ export function validateChangeRequest(member: Member, input: { fields: Array<{ f
   for (const { field, newValue } of input.fields) {
     const key = `fields.${field}`;
     const meta = PROFILE_FIELDS[field];
-    if (!meta) {
-      e[key] = 'This detail cannot be changed here';
+    // D-131: the date of retirement changes only through the Admin's request and three approvals.
+    if (!meta || field === 'dor') {
+      e[key] = field === 'dor' ? 'The date of retirement is corrected by the society office, not by a request' : 'This detail cannot be changed here';
       continue;
     }
     const v = newValue.trim();

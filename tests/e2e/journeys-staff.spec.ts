@@ -7,7 +7,7 @@ import { apiCall, apiToken, consoleAs, expect, OTP, phoneAs, PHONE_URL, phoneSet
 async function loanAtReview(request: APIRequestContext): Promise<string> {
   const s = (await apiToken(request, 'mem-1103', 'app')).token;
   const pay = { scaleOfPay: '31040-92050', grossSalary: 6_500_000, govtLoanDeductions: 200_000, otherLoanDeductions: 0 };
-  const d = await apiCall<{ loan: { id: string } }>(request, 'POST', '/me/loans', s, { product: 'ORDINARY', amount: 20_000_000, instalments: 48, purpose: 'House construction', sureties: ['mem-1104', 'mem-1101'], form: { pay } });
+  const d = await apiCall<{ loan: { id: string } }>(request, 'POST', '/me/loans', s, { product: 'ORDINARY', amount: 20_000_000, instalments: 48, purpose: 'House construction', sureties: ['mem-1104', 'mem-1101'], form: { pay, bankAccount: { holderName: 'Test Member', bankName: 'State Bank of India', accountNo: '12345678901', ifsc: 'SBIN0001234' } } });
   const id = d.loan.id;
   const sign = await apiCall<{ otpRef: string }>(request, 'POST', `/me/loans/${id}/sign/request`, s);
   await apiCall(request, 'POST', `/me/loans/${id}/submit`, s, { otpRef: sign.otpRef, otp: OTP });
@@ -189,6 +189,10 @@ test.describe('staff journeys', () => {
     // D-123: the tenure is one of the periods the Admin offers (Salary: 6, 12, 18, 24).
     await page.getByRole('radio', { name: /^12 months/ }).click();
     await page.getByLabel(/7b · Purpose/).fill('Medical');
+    // D-132: the account the loan is paid into (the holder's name is filled in from the member).
+    await page.getByLabel('Bank name').fill('State Bank of India');
+    await page.getByLabel('Account number').fill('12345678901');
+    await page.getByLabel('IFSC').fill('SBIN0001234');
     await tap(page, 'Continue');
     await expect(page.getByText('Eligibility')).toBeVisible();
     await shot(page, 'staff-loan-new-check');
@@ -296,7 +300,9 @@ test.describe('staff journeys', () => {
     await page.getByText("I found this credit in the society's bank statement").click();
     await tap(page, 'Verify & create receipt');
     await page.waitForURL(/\/staff\/payment\/(?!verify|new)[^/]+$/);
-    await expect(page.getByRole('button', { name: 'Print' })).toBeVisible();
+    // D-133: the office copy is made in the app (Download PDF / Print), not the console.
+    await expect(page.getByRole('button', { name: /^Print Receipt / })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Download Receipt .* as PDF/ })).toBeVisible();
 
     await page.goto(`${PHONE_URL}/staff/payment/new`);
     await phoneSettled(page);
@@ -337,16 +343,25 @@ test.describe('staff journeys', () => {
     await shot(page, 'staff-report');
   });
 
-  test('S7 a print button opens its console page', async ({ page, request }) => {
-    // window.open is how Linking.openURL leaves the app on web.
+  test('S7 a form prints inside the app as an office copy with the signatures on file (D-133)', async ({ page, request }) => {
+    // On web the document opens in a new tab and prints; catch what is written to that tab.
     await page.addInitScript(() => {
-      (window as unknown as { opened: string[] }).opened = [];
-      window.open = (url) => ((window as unknown as { opened: string[] }).opened.push(String(url)), null);
+      const w = window as unknown as { printed: string[] };
+      w.printed = [];
+      window.open = () => ({ document: { write: (h: string) => w.printed.push(h), close: () => undefined }, focus: () => undefined, print: () => undefined }) as unknown as Window;
     });
-    await staffAs(page, request, 'stf-accountant', '/staff/reports');
+    await staffAs(page, request, 'stf-accountant', '/staff/member/mem-1103');
     await phoneSettled(page);
-    await tap(page, /Fixed deposit form/);
-    await expect.poll(() => page.evaluate(() => (window as unknown as { opened: string[] }).opened)).toEqual([expect.stringContaining('/reports/print/fd-form')]);
+    await page.getByRole('button', { name: 'Print F5 agreement (to the Secretary)' }).click();
+    const html = await expect
+      .poll(() => page.evaluate(() => (window as unknown as { printed: string[] }).printed[0] ?? ''), { timeout: 20_000 })
+      .toContain('AGREEMENT WITH THE SOCIETY')
+      .then(() => page.evaluate(() => (window as unknown as { printed: string[] }).printed[0]!));
+    expect(html).toContain('Office copy');
+    expect(html).toContain('FORM F5');
+    // The member's signature on file is drawn, not a placeholder or a link to the console.
+    expect(html).toMatch(/<img class="sig" src="data:image\/png;base64,/);
+    expect(html).not.toContain('data-sig=');
   });
 
   test('S8 an Admin edit on the phone is recorded and shows on the console', async ({ page, request }) => {

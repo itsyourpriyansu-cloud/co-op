@@ -21,7 +21,7 @@ const call = async <T>(method: string, path: string, body?: unknown, token?: str
 const COMPLETE: MembershipForm = {
   personal: { fullName: 'Kavya Reddy', fatherName: 'Ramesh Reddy', dob: '1996-03-14', gender: 'F', caste: 'OC', mobile: '9876500011' },
   address: { present: { line1: 'H.No 4-12, Ameerpet', city: 'Hyderabad', district: 'Hyderabad', pincode: '500016' }, sameAsPresent: true },
-  employment: { departmentId: 'dept-fin', designation: 'Junior Assistant', employmentType: 'REGULAR', regularAppointmentDate: '2022-07-01' },
+  employment: { departmentId: 'dept-fin', designation: 'Junior Assistant', employeeId: 'TS40912', employmentType: 'REGULAR', regularAppointmentDate: '2022-07-01' },
   shares: { sharesProposed: 20 },
   nominee: { name: 'Ramesh Reddy', relation: 'Father' },
   documents: [

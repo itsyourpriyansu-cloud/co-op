@@ -2,7 +2,7 @@
 // forgot and change password are retired), MB-01 home snapshot, MB-12 notifications, MB-13 help &
 // support, MB-14 preferences.
 import { randomUUID } from 'node:crypto';
-import { calculateLeftoverService, formatCycle, formatINR } from '@tgs/domain';
+import { calculateLeftoverService, formatCycle, formatINR, serviceRemaining } from '@tgs/domain';
 import type { ActivationSample, Member, MemberHome, MemberPreferences, MyNotifications, OtpStarted, Session, SessionUser, SupportCenter, SupportTicket } from '@tgs/types';
 import { memberDues } from './collections';
 import { audit, nowIso, requireMember, type Api, type Guard } from './common';
@@ -75,6 +75,7 @@ function homeFor(db: Db, m: Member): MemberHome {
   if (dues.totalArrears + dues.shareCapitalDue > 0) actions.push({ key: 'dues', title: `${formatINR(dues.totalArrears + dues.shareCapitalDue)} unpaid`, detail: dues.arrears.length ? `Short deduction in ${dues.arrears.map((a) => formatCycle(a.cycle)).join(', ')}` : 'Share capital', link: '/payments', tone: 'danger' });
   return {
     member: { name: m.name, generalNo: m.generalNo, designation: m.designation, departmentName: db.departments.find((d) => d.id === m.departmentId)?.name ?? '', leftoverMonths: leftover.months, leftoverLabel: leftover.label },
+    service: serviceRemaining(m.dor, today),
     shares: { count: share?.numberOfShares ?? m.numberOfShares, capital: share?.shareCapital ?? 0, shareDeposit: share?.shareDepositBalance ?? 0 },
     deposits: { total: fd + bal('CRD') + bal('SRDS') + bal('SAVINGS'), fd, fdCount: fds.length, crd: bal('CRD'), srds: bal('SRDS'), savings: bal('SAVINGS'), ...(next ? { nextMaturity: { date: next.maturityDate!, amount: next.maturityValue ?? next.principal ?? 0, fdrNo: next.fdrNo ?? next.accountNo } } : {}) },
     loans,

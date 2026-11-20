@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, CircleCheck } from 'lucide-react';
 import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Type, Checkbox, CheckboxSize, SnackbarV2Variant, TextAreaV2, TextInputV2, addSnackbarV2 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
-import { amountInWords, daysBetweenDates, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
+import { amountInWords, daysBetweenDates, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR, formatBankAccount } from '@tgs/domain';
 import type { LoanActionInput, LoanDetail, SanctionSheet } from '@tgs/types';
 import { Chips } from '@/components/Chips';
 import { MoneyField, TextField } from '@/components/Form';
@@ -345,6 +345,7 @@ export function LoanActionDrawer({ detail, action, onClose, today }: { detail: L
                 </button>
               ))}
             </div>
+            <p className="text-body text-fg-secondary">Borrower's account: {l.form?.bankAccount ? formatBankAccount(l.form.bankAccount) : 'not on the application. Confirm it with the member before paying.'}</p>
             <TextField label={mode === 'CHEQUE' ? 'Cheque number' : 'UTR / reference'} name="reference" value={reference} onChange={setReference} errors={fe} />
             <TextField label="Paid to (only if not the borrower)" name="payee" value={payee} onChange={setPayee} errors={fe} hint="F7: the borrower authorises payment to this person" />
             <TextInputV2 label="Payment date" type="date" value={date} onChange={(e) => setDate(e.target.value)} error={fe.date ? { show: true, message: fe.date } : undefined} />

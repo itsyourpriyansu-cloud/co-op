@@ -34,7 +34,7 @@ export function UsersSection({ canEdit }: { canEdit: boolean }) {
   const users = useQuery({ queryKey: ['users'], queryFn: api.settings.users });
   const depts = useQuery({ queryKey: ['departments'], queryFn: api.settings.departments });
   const [editing, setEditing] = useState<Partial<StaffUser> | null>(null);
-  const save = useSettingsSave((u: Partial<StaffUser>) => (u.id ? api.settings.updateUser(u.id, u) : api.settings.createUser(u)), 'User saved');
+  const save = useSettingsSave((u: Partial<StaffUser>) => (u.id ? api.settings.updateUser(u.id, u) : api.settings.createUser(u)), 'User saved', ['users', 'departments']);
   const errors = fieldErrorsOf(save.error);
   const set = (patch: Partial<StaffUser>) => setEditing((e) => ({ ...e, ...patch }));
   const deptName = (id?: string) => depts.data?.find((d) => d.id === id)?.name;
@@ -115,13 +115,14 @@ export function UsersSection({ canEdit }: { canEdit: boolean }) {
                       key={d.id}
                       type="button"
                       aria-pressed={editing.departmentId === d.id}
-                      onClick={() => set({ departmentId: d.id })}
+                      onClick={() => set({ departmentId: d.id, ...(editing.name ? {} : { name: d.ddoName }) })}
                       className={cn('rounded-pill border px-3 py-1.5 text-caption-strong transition-colors', editing.departmentId === d.id ? 'border-brand-border bg-brand-subtle text-brand-text' : 'border-line bg-surface text-fg-secondary hover:bg-surface-subtle')}
                     >
                       {d.name}
                     </button>
                   ))}
                 </div>
+                <p className="text-caption text-fg-tertiary">One active DDO login per department. It certifies that office's applications and its demand sheet.</p>
                 {errors.departmentId && <p className="text-caption text-danger-fg">{errors.departmentId}</p>}
               </section>
             )}
