@@ -49,6 +49,9 @@ param alertEmail string
 @description('WhatsApp Cloud API phone number id (Meta Business). Empty keeps WhatsApp simulated: members cannot receive sign-in codes.')
 param whatsappPhoneNumberId string = ''
 
+@description('D-135: true once the owner has put the Firebase service-account key file in Key Vault (FCM-SERVICE-ACCOUNT). False keeps push notifications simulated.')
+param pushEnabled bool = false
+
 var name = 'tgseccsl-${env}'
 var short = '${prefix}${env == 'production' ? 'prd' : 'stg'}'
 var tags = { app: 'tgseccsl', env: env }
@@ -293,7 +296,9 @@ var appSettings = [
   // G9 (D-121): delivery / read receipts. The owner adds both secrets to Key Vault with the token.
   { name: 'WHATSAPP_APP_SECRET', value: empty(whatsappPhoneNumberId) ? '' : '${kvRef}WHATSAPP-APP-SECRET)' }
   { name: 'WHATSAPP_WEBHOOK_VERIFY_TOKEN', value: empty(whatsappPhoneNumberId) ? '' : '${kvRef}WHATSAPP-WEBHOOK-VERIFY-TOKEN)' }
-  { name: 'PUSH_PROVIDER', value: 'expo' }
+  // D-135: Android through Firebase Cloud Messaging, iPhones through the Expo push service. The owner adds FCM-SERVICE-ACCOUNT to Key Vault first.
+  { name: 'PUSH_PROVIDER', value: pushEnabled ? 'fcm' : 'simulated' }
+  { name: 'FCM_SERVICE_ACCOUNT_JSON', value: pushEnabled ? '${kvRef}FCM-SERVICE-ACCOUNT)' : '' }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
 ]
 var siteConfig = {

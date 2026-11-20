@@ -302,7 +302,7 @@ test.describe('staff journeys', () => {
     await page.waitForURL(/\/staff\/payment\/(?!verify|new)[^/]+$/);
     // D-133: the office copy is made in the app (Download PDF / Print), not the console.
     await expect(page.getByRole('button', { name: /^Print Receipt / })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Download Receipt .* as PDF/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Download PDF of Receipt / })).toBeVisible();
 
     await page.goto(`${PHONE_URL}/staff/payment/new`);
     await phoneSettled(page);

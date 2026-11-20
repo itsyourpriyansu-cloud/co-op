@@ -96,6 +96,16 @@ describe('staff users, permissions and audit (P1a)', () => {
     expect(grant.json().message).toContain('users.manage');
   });
 
+  it('a demo reset puts the staff back to the demo set (users added since are removed)', async () => {
+    await app.inject({ method: 'POST', url: '/api/v1/users', headers: bearer(admin), payload: { name: 'Temp User', userId: 'temp.user', role: 'CASHIER' } });
+    await reseed(app);
+    const fresh = await signInAs(app, 'stf-admin');
+    const list = (await app.inject({ method: 'GET', url: '/api/v1/users', headers: bearer(fresh) })).json() as Array<{ userId: string }>;
+    expect(list.some((u) => u.userId === 'temp.user')).toBe(false);
+    expect(list.some((u) => u.userId === 'ddo.fin')).toBe(true);
+    admin = fresh;
+  });
+
   it('writes an audit row for sign-ins and changes', async () => {
     // Plain SQL keeps the test independent of the repository it checks.
     const result = await app.db.execute<{ action: string }>(sql`select action from audit_log`);

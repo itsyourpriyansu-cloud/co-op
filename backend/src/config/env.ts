@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseServiceAccount } from '../integrations/push';
 
 // Every environment variable the backend reads, validated once at start-up (docs/22 §2).
 // A wrong or missing value stops the server with a clear message instead of failing later.
@@ -81,9 +82,14 @@ const EnvSchema = z.object({
   ACS_ENDPOINT: z.string().trim().default(''),
   /** The sender address for society email (F-10). */
   EMAIL_FROM: z.string().trim().default(''),
-  /** G4 / G5 (D-114): push notifications. `simulated` logs them; `expo` sends through the Expo push service. */
-  PUSH_PROVIDER: z.enum(['simulated', 'expo']).default('simulated'),
-  /** Only if "enhanced push security" is on for the Expo project. */
+  /**
+   * G4 / G5 (D-114, D-135): push notifications. `simulated` logs them; `fcm` sends Android phones'
+   * pushes directly through Firebase Cloud Messaging and iPhones' through the Expo push service (APNs).
+   */
+  PUSH_PROVIDER: z.enum(['simulated', 'fcm']).default('simulated'),
+  /** D-135: the Firebase service-account key file's JSON, on one line (Key Vault in production). Required when PUSH_PROVIDER=fcm. */
+  FCM_SERVICE_ACCOUNT_JSON: z.string().trim().default(''),
+  /** Only if "enhanced push security" is on for the Expo project (iPhone pushes). */
   EXPO_ACCESS_TOKEN: z.string().trim().default(''),
   /**
    * G4 (D-114): the one mobile Apple and Google reviewers sign in with (a fictional member with no
@@ -116,6 +122,14 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   }
   if (raw.WHATSAPP_PROVIDER === 'meta' && !(raw.WHATSAPP_PHONE_NUMBER_ID && raw.WHATSAPP_TOKEN)) throw new Error('Invalid backend configuration: WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TOKEN are required when WHATSAPP_PROVIDER=meta.');
   if (raw.EMAIL_PROVIDER === 'acs' && !(raw.ACS_ENDPOINT && raw.EMAIL_FROM)) throw new Error('Invalid backend configuration: ACS_ENDPOINT and EMAIL_FROM are required when EMAIL_PROVIDER=acs.');
+  if (raw.PUSH_PROVIDER === 'fcm') {
+    if (!raw.FCM_SERVICE_ACCOUNT_JSON) throw new Error('Invalid backend configuration: FCM_SERVICE_ACCOUNT_JSON is required when PUSH_PROVIDER=fcm.');
+    try {
+      parseServiceAccount(raw.FCM_SERVICE_ACCOUNT_JSON);
+    } catch (err) {
+      throw new Error(`Invalid backend configuration: ${(err as Error).message}`);
+    }
+  }
   if (!raw.STORE_REVIEW_MOBILE !== !raw.STORE_REVIEW_OTP) throw new Error('Invalid backend configuration: set both STORE_REVIEW_MOBILE and STORE_REVIEW_OTP, or neither.');
   if (raw.FILE_STORE === 'azure-blob' && !raw.AZURE_STORAGE_ACCOUNT) throw new Error('Invalid backend configuration: AZURE_STORAGE_ACCOUNT is required when FILE_STORE=azure-blob.');
   // P9 (D-100): in production only the apps' own origins may call the API.

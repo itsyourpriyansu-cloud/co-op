@@ -6,6 +6,7 @@
 // URLs come from env so the same suite can point at a hosted demo later (D-054):
 //   E2E_CONSOLE_URL (default http://localhost:5180) · E2E_PHONE_URL (8090) · E2E_API_URL (4100, the backend;
 //   http://localhost:4000 runs the same suite against the mock API demo). P9 (D-100): the backend is the default.
+//   E2E_DATABASE_URL (e.g. postgres://…/tgseccsl_e2e): the backend the suite starts uses that database (D-136).
 import { defineConfig, devices } from '@playwright/test';
 
 const CONSOLE_URL = process.env.E2E_CONSOLE_URL ?? 'http://localhost:5180';
@@ -32,7 +33,7 @@ export default defineConfig({
   projects: [
     {
       name: 'console',
-      testMatch: /(console-smoke|journeys-console|cross-app|a11y-console|states-console|screens|demo-script|auth-backend|deposits-backend|collections-backend|signatures-backend|settlements-backend|service-retirement-backend|scenarios-backend)\.spec\.ts$/,
+      testMatch: /(console-smoke|journeys-console|cross-app|a11y-console|states-console|screens|demo-script|auth-backend|deposits-backend|collections-backend|signatures-backend|settlements-backend|service-retirement-backend|scenarios-backend|scenarios-more-backend)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'], baseURL: CONSOLE_URL, viewport: { width: 1440, height: 900 } },
     },
     {
@@ -46,7 +47,9 @@ export default defineConfig({
       // The backend needs PostgreSQL migrated and seeded, with DEMO_MODE on (backend/README.md).
       command: MOCK ? 'npm run start -w @tgs/mock-api' : 'npm run start -w @tgs/backend',
       url: `${API_URL}/health`,
-      env: { PORT: port(API_URL), MOCK_PERSIST: '0' },
+      // E2E_DATABASE_URL runs the backend on its own database with demo mode on (the suite resets it);
+      // without it the backend uses backend/.env, where demo mode stays as set, so a developer's data is never reset.
+      env: { PORT: port(API_URL), MOCK_PERSIST: '0', ...(process.env.E2E_DATABASE_URL ? { DATABASE_URL: process.env.E2E_DATABASE_URL, DEMO_MODE: 'true' } : {}) },
       reuseExistingServer: true,
       timeout: 60_000,
     },

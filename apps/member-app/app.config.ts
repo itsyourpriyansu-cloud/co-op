@@ -2,16 +2,25 @@
 // - Plain http (a laptop on the LAN) only in development builds; preview and store builds talk https only.
 // - Face ID wording for the staff lock, and the notification icon.
 // - The EAS project id from the environment when app.json does not have it yet (needed for push).
+// - D-135: Firebase's google-services.json for Android push (FCM). EAS gives it as the file variable
+//   GOOGLE_SERVICES_JSON; a local build uses ./google-services.json when present. Never committed (.gitignore).
+/// <reference types="node" />
+import { existsSync } from 'node:fs';
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 // EAS sets EAS_BUILD_PROFILE during a cloud build; a local `expo start` / `expo run` counts as development.
 const profile = process.env.EAS_BUILD_PROFILE;
 const development = !profile || profile === 'development';
+const googleServicesFile = process.env.GOOGLE_SERVICES_JSON ?? (existsSync('./google-services.json') ? './google-services.json' : undefined);
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: config.name ?? 'TGSECCSL',
   slug: config.slug ?? 'tgseccsl-member',
+  android: {
+    ...config.android,
+    ...(googleServicesFile ? { googleServicesFile } : {}),
+  },
   plugins: [
     ...(config.plugins ?? []),
     ['expo-build-properties', { android: { usesCleartextTraffic: development } }],

@@ -66,6 +66,15 @@ az deployment group create -g $RG -f infra/main.bicep -p infra/$ENV.bicepparam
 
 4. Delivery and read receipts (G9): in the Meta app, WhatsApp > Configuration, set the callback URL to `https://<api host>/api/v1/webhooks/whatsapp`, paste the same verify token, and subscribe to the `messages` field. Meta checks the URL once; after that every status call is signed and the console shows Delivered / Read and lists failed sends under Notifications → Sent messages.
 
+Push notifications (D-135) stay simulated until the Firebase key is in Key Vault. Use the service-account key file from Firebase (docs/store-release.md §3), then:
+
+```bash
+az keyvault secret set --vault-name $KV -n FCM-SERVICE-ACCOUNT --file firebase-service-account.json
+rm firebase-service-account.json   # keep no copy on the laptop
+export TGS_PUSH_ENABLED=true
+az deployment group create -g $RG -f infra/main.bicep -p infra/$ENV.bicepparam
+```
+
 Email needs nothing by hand: the template creates Azure Communication Services with an Azure-managed sender domain (`DoNotReply@<random>.azurecomm.net`). To send from the society's own domain later, add it as a custom domain in the Email Communication Service, verify its DNS records and change `EMAIL_FROM`.
 
 **Keep an offline copy of `DATA-ENCRYPTION-KEY`** (sealed envelope, society safe). Without it, every stored signature, document and authenticator secret is lost. Changing it has the same effect.

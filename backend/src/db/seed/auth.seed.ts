@@ -1,9 +1,9 @@
 import { keepsAppAccess, ROLE_PERMISSIONS } from '@tgs/domain';
 import { demoDataset } from './dataset';
 import type { Role } from '@tgs/types';
-import { sql } from 'drizzle-orm';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 import { hashPassword } from '../../common/utils/password';
-import { appAccounts, rolePermissions, staffUsers } from '../../models';
+import { appAccounts, refreshTokens, rolePermissions, staffUsers } from '../../models';
 import type { Seeder } from '.';
 
 // P1 seeders (docs/22 §5.1): permission matrix, the 6 demo staff, and Member App accounts for
@@ -56,6 +56,11 @@ const staff: Seeder = {
           updatedAt: sql`now()`,
         },
       });
+    // A reset puts the staff back to the demo set: users added since are removed with their sign-ins
+    // (no table refers to a staff user; the audit log keeps their name in its text).
+    const ids = rows.map((r) => r.id);
+    await tx.delete(refreshTokens).where(and(eq(refreshTokens.subjectType, 'STAFF'), notInArray(refreshTokens.subjectId, ids)));
+    await tx.delete(staffUsers).where(notInArray(staffUsers.id, ids));
   },
 };
 

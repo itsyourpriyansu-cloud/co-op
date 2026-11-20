@@ -22,7 +22,7 @@ import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
 import { businessCycle, businessNow, businessToday } from '../../common/utils/business-date';
 import { createSenders, type MessageSender } from '../../integrations/messaging';
-import { expoPush, simulatedPush, type PushSender } from '../../integrations/push';
+import { expoPush, fcmPush, isExpoToken, parseServiceAccount, routedPush, simulatedPush, type PushSender } from '../../integrations/push';
 import type { DeliveryRow, NotificationsRepository, StoredNotification } from './notifications.repository';
 import { RealtimeHub } from './notifications.realtime';
 
@@ -96,7 +96,7 @@ export class NotificationsService {
     readonly repo: NotificationsRepository,
   ) {
     this.senders = createSenders(app.log, app.env);
-    this.push = app.env.PUSH_PROVIDER === 'expo' ? expoPush(app.env.EXPO_ACCESS_TOKEN) : simulatedPush(app.log);
+    this.push = app.env.PUSH_PROVIDER === 'fcm' ? routedPush(expoPush(app.env.EXPO_ACCESS_TOKEN), fcmPush(parseServiceAccount(app.env.FCM_SERVICE_ACCOUNT_JSON))) : simulatedPush(app.log);
     this.hub = new RealtimeHub(app.dbHandle.pool, app.log);
     // Open streams would hold the shutdown; the outbox finishes the send in hand first.
     app.addHook('preClose', async () => {
@@ -109,11 +109,13 @@ export class NotificationsService {
     });
   }
 
-  /** G4 (D-114): the signed-in phone asks for pushes (Expo push token). */
+  /** G4 (D-114, D-135): the signed-in phone asks for pushes: an FCM token from Android, an Expo push token from an iPhone. */
   async registerPush(user: SessionUser, body: { token?: string; platform?: string }): Promise<{ ok: true }> {
     const token = (body?.token ?? '').trim();
-    if (!/^(Exponent|Expo)PushToken\[[\w-]{10,200}\]$/.test(token)) fail('VALIDATION_ERROR', 'Not a push token.', { fieldErrors: { token: 'Not a push token' } });
-    if (body.platform !== 'ios' && body.platform !== 'android') fail('VALIDATION_ERROR', 'Choose ios or android.', { fieldErrors: { platform: 'ios or android' } });
+    if (body?.platform !== 'ios' && body?.platform !== 'android') fail('VALIDATION_ERROR', 'Choose ios or android.', { fieldErrors: { platform: 'ios or android' } });
+    // An FCM token is only accepted from Android: an iPhone's raw APNs token would also pass the FCM shape.
+    const valid = isExpoToken(token) ? /^(Exponent|Expo)PushToken\[[\w-]{10,200}\]$/.test(token) : body.platform === 'android' && /^[\w:.-]{32,4096}$/.test(token);
+    if (!valid) fail('VALIDATION_ERROR', 'Not a push token.', { fieldErrors: { token: 'Not a push token' } });
     await this.repo.savePushToken(token, user.id, body.platform);
     return { ok: true };
   }

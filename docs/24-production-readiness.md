@@ -1,6 +1,7 @@
 # 24 · Production readiness: tracker
 
 > Version 1.0 · 2026-11-13 · G9 built: receipt cancellation, FD renewal, notifications outbox with delivery receipts and live updates (D-119 … D-121).
+> Version 1.0 · 2026-11-20 · Readiness re-check (D-136): every flow has an end-to-end UI test; production dependency audit fixed except one accepted build-time item; production config guards confirmed (demo mode forced off, secrets and allowed origins required). Still owner work only.
 > Version 0.9 · 2026-11-12 · G1–G8 built. What remains is owner work (accounts, F-10 / F-11, UAT, real phones, Azure).
 > Version 0.1 · 2026-11-12 · First version (D-111): everything still missing before go-live, from the audit of 2026-11-11.
 > Branch `v2`. The owner commits by hand. Each phase ends with its exit test. Tick a box only when its code and its test are both done.
@@ -19,7 +20,7 @@ Steps marked **(owner)** need something only the owner or the society can give: 
 | G2 Accounting + reports | Day, cash and bank book, general ledger, trial balance, P&L, balance sheet, receipts & payments, deposits and shares ledgers, birthdays; vouchers for office income and expenses; chart of accounts heads; annual interest on share deposit / CRD / SRDS; dividend; financial year close and period lock | Trial balance debits = credits after every test; balance sheet balances; closed year refuses a posting |
 | G3 Platform | CI, deploy workflow, Azure Bicep (App Service, PostgreSQL, Key Vault, Blob, ACR, Static Web Apps, Log Analytics, alerts), Blob file store, new daily jobs, token clean-up | `az bicep build` passes; CI file valid; file-store tests pass with a fake Blob |
 | G4 Store release | Production build settings, no clear-text traffic, build numbers, update-required screen, account deletion request, privacy and deletion pages, store listing and data-safety notes, staff app lock, shorter staff sessions, push notifications | App typecheck + phone e2e green; `expo export` builds iOS and Android |
-| G5 Integrations | WhatsApp Cloud API and Azure email adapters behind `integrations/messaging.ts`, Expo push sender | Adapter tests with a fake HTTP server pass; simulated stays the default |
+| G5 Integrations | WhatsApp Cloud API and Azure email adapters behind `integrations/messaging.ts`, push sender (FCM direct for Android, Expo for iPhone, D-135) | Adapter tests with a fake HTTP server pass; simulated stays the default |
 | G6 Data migration | Loan, deposit and opening-balance imports with templates, checks and a reconciliation report | Import tests: a fictional register imports; trial balance balances after import |
 | G7 Hardening | Security review fixes, DPDP consent and retention, load test script and result | No high findings left; load test result recorded |
 | G8 Go-live papers | Runbook (deploy, rollback, restore, key rotation, incidents), UAT script per role, training guides, parallel-run and go-live checklists, support (hypercare) plan | Documents exist and point at real commands |

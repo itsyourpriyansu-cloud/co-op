@@ -1,5 +1,7 @@
-// G4 (D-114): push notifications on Android and iOS for members and staff (one app). The web
+// G4 (D-114, D-135): push notifications on Android and iOS for members and staff (one app). The web
 // preview has none. Remote push needs a development or store build; Expo Go on Android has no push.
+// Android registers its own FCM token (the server sends through Firebase directly); an iPhone
+// registers an Expo push token (the server sends through the Expo push service to Apple).
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
@@ -28,19 +30,33 @@ export async function registerForPush(): Promise<void> {
     let { granted } = await Notifications.getPermissionsAsync();
     if (!granted) granted = (await Notifications.requestPermissionsAsync()).granted;
     if (!granted) return;
+    if (Platform.OS === 'android') {
+      // Needs google-services.json in the build (app.config.ts); without it this throws and the phone gets no pushes.
+      await sendToken((await Notifications.getDevicePushTokenAsync()).data as string);
+      // FCM can replace a phone's token at any time; keep the server's copy current.
+      tokenListener ??= Notifications.addPushTokenListener(({ data }) => void sendToken(data as string).catch(() => undefined));
+      return;
+    }
     const projectId = (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId ?? Constants.easConfig?.projectId;
     if (!projectId) return;
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
-    await api.account.registerPush(token, Platform.OS as 'ios' | 'android');
-    await storage.setItem(TOKEN_KEY, token);
+    await sendToken((await Notifications.getExpoPushTokenAsync({ projectId })).data);
   } catch {
     // shortcut: a failed registration is retried at the next sign-in or app start, not sooner.
   }
 }
 
+let tokenListener: Notifications.EventSubscription | undefined;
+
+async function sendToken(token: string): Promise<void> {
+  await api.account.registerPush(token, Platform.OS as 'ios' | 'android');
+  await storage.setItem(TOKEN_KEY, token);
+}
+
 /** Before sign-out, while the session is still valid: this phone stops getting that person's pushes. */
 export async function unregisterPush(): Promise<void> {
   if (!supported) return;
+  tokenListener?.remove();
+  tokenListener = undefined;
   const token = await storage.getItem(TOKEN_KEY);
   if (!token) return;
   await api.account.removePush(token).catch(() => undefined);

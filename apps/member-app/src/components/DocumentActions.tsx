@@ -53,7 +53,7 @@ export function DocumentActions({ html, fileName, title }: { html: () => string 
   return (
     <View style={{ gap: space[3] }}>
       <View style={{ flexDirection: 'row', gap: space[4] }}>
-        <Button text="Download PDF" buttonType="secondary" leftSlot={Download} loading={busy === 'download'} disabled={Boolean(busy)} onPress={() => void download()} style={{ flex: 1 }} accessibilityLabel={`Download ${title} as PDF`} />
+        <Button text="Download PDF" buttonType="secondary" leftSlot={Download} loading={busy === 'download'} disabled={Boolean(busy)} onPress={() => void download()} style={{ flex: 1 }} accessibilityLabel={`Download PDF of ${title}`} />
         <Button text="Print" buttonType="secondary" leftSlot={Printer} loading={busy === 'print'} disabled={Boolean(busy)} onPress={() => void print()} style={{ flex: 1 }} accessibilityLabel={`Print ${title}`} />
       </View>
       {error ? <Alert type="error" heading="Couldn't make the document" description={error} /> : null}

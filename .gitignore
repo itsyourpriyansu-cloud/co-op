@@ -16,6 +16,10 @@ backend/backups/
 apps/mock-api/.data/
 
 # Expo / React Native
+# D-135: Firebase files (google-services.json, service-account key) never go in git
+google-services.json
+GoogleService-Info.plist
+*firebase-adminsdk*.json
 .expo/
 apps/member-app/android/
 apps/member-app/ios/

@@ -1,11 +1,12 @@
-import { createHash } from 'node:crypto';
+import { createHash, createVerify, generateKeyPairSync } from 'node:crypto';
 import type { Session } from '@tgs/types';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bearer, reseed, signInAs } from '../../../tests/helpers/auth';
 import { buildTestApp } from '../../../tests/helpers/test-app';
-import { expoPush, type PushMessage } from '../../integrations/push';
+import { loadEnv } from '../../config/env';
+import { expoPush, fcmPush, routedPush, type PushMessage, type PushSender } from '../../integrations/push';
 import { appAccounts, pushTokens, refreshTokens } from '../../models';
 
 // G4 (D-114): push tokens and delivery, the public app config, and the shorter staff sign-in.
@@ -63,6 +64,63 @@ describe('push notifications and store-release basics (G4)', () => {
     expect(bodies[0]![0]).toMatchObject({ channelId: 'default', data: { link: '/x' } });
     expect(results.filter((r) => r.unregistered).map((r) => r.to)).toContain('ExponentPushToken[t7]');
     expect(results.filter((r) => r.ok)).toHaveLength(150 - results.filter((r) => r.unregistered).length);
+  });
+
+  it('an Android FCM token is accepted, an FCM-shaped token from an iPhone is not (D-135)', async () => {
+    const fcmToken = `dGVzdA:APA91b${'x'.repeat(140)}`;
+    expect((await call('POST', '/me/push-token', member, { token: fcmToken, platform: 'android' })).statusCode).toBe(200);
+    expect((await call('POST', '/me/push-token', member, { token: fcmToken, platform: 'ios' })).json().fieldErrors).toHaveProperty('token');
+    await call('DELETE', '/me/push-token', member, { token: fcmToken });
+  });
+
+  it('the FCM sender signs in with the service account once, sends v1 data messages, and reads errors (D-135)', async () => {
+    const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const sa = { project_id: 'tgs-test', client_email: 'push@tgs-test.iam.gserviceaccount.com', private_key: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString() };
+    let signIns = 0;
+    const sends: Array<{ url: string; auth: string; body: { message: { token: string; data: Record<string, string>; android: object } } }> = [];
+    const fake = (async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url) === 'https://oauth2.googleapis.com/token') {
+        signIns++;
+        const jwt = new URLSearchParams(String(init!.body)).get('assertion')!.split('.');
+        expect(createVerify('RSA-SHA256').update(`${jwt[0]}.${jwt[1]}`).verify(publicKey, jwt[2]!, 'base64url')).toBe(true);
+        expect(JSON.parse(Buffer.from(jwt[1]!, 'base64url').toString())).toMatchObject({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/firebase.messaging' });
+        return Response.json({ access_token: 'ya29.test', expires_in: 3599 });
+      }
+      const body = JSON.parse(String(init!.body));
+      sends.push({ url: String(url), auth: new Headers(init!.headers).get('authorization')!, body });
+      if (body.message.token === 'gone') return Response.json({ error: { code: 404, status: 'NOT_FOUND', details: [{ errorCode: 'UNREGISTERED' }] } }, { status: 404 });
+      if (body.message.token === 'busy') return Response.json({ error: { code: 429, status: 'RESOURCE_EXHAUSTED' } }, { status: 429 });
+      if (body.message.token === 'bad-payload') return Response.json({ error: { code: 400, status: 'INVALID_ARGUMENT', message: 'Invalid JSON payload' } }, { status: 400 });
+      return Response.json({ name: 'projects/tgs-test/messages/1' });
+    }) as typeof fetch;
+
+    const sender = fcmPush(sa, fake);
+    const results = await sender.send(['ok-1', 'gone', 'busy', 'bad-payload'].map((to) => ({ to, title: 'T', body: 'B', link: '/loan/l-1' })));
+    await sender.send([{ to: 'ok-2', title: 'T', body: 'B' }]);
+    expect(signIns).toBe(1);
+    expect(sends[0]).toMatchObject({ url: 'https://fcm.googleapis.com/v1/projects/tgs-test/messages:send', auth: 'Bearer ya29.test' });
+    expect(sends[0]!.body.message).toEqual({ token: 'ok-1', data: { title: 'T', message: 'B', channelId: 'default', body: '{"link":"/loan/l-1"}' }, android: { priority: 'high' } });
+    expect(results.map((r) => [r.to, r.ok, r.unregistered])).toEqual([
+      ['ok-1', true, false],
+      ['gone', false, true],
+      ['busy', false, false],
+      ['bad-payload', false, false],
+    ]);
+  });
+
+  it('iPhone (Expo) and Android (FCM) tokens go to their own service (D-135)', async () => {
+    const seen: Record<string, string[]> = { expo: [], fcm: [] };
+    const fake = (name: string): PushSender => ({ send: async (ms) => (seen[name]!.push(...ms.map((m) => m.to)), ms.map((m) => ({ to: m.to, ok: true, unregistered: false }))) });
+    const results = await routedPush(fake('expo'), fake('fcm')).send(['ExponentPushToken[abc123abc123]', 'fcm-1', 'ExpoPushToken[zz]'].map((to) => ({ to, title: 'T', body: 'B' })));
+    expect(seen).toEqual({ expo: ['ExponentPushToken[abc123abc123]', 'ExpoPushToken[zz]'], fcm: ['fcm-1'] });
+    expect(results).toHaveLength(3);
+  });
+
+  it('PUSH_PROVIDER=fcm needs a real service-account key file', () => {
+    const base = { ...process.env, PUSH_PROVIDER: 'fcm', FCM_SERVICE_ACCOUNT_JSON: '' };
+    expect(() => loadEnv(base)).toThrow(/FCM_SERVICE_ACCOUNT_JSON is required/);
+    expect(() => loadEnv({ ...base, FCM_SERVICE_ACCOUNT_JSON: '{not json' })).toThrow(/not valid JSON/);
+    expect(() => loadEnv({ ...base, FCM_SERVICE_ACCOUNT_JSON: '{"project_id":"x"}' })).toThrow(/service-account key file/);
   });
 
   it('anyone can read the oldest app version allowed', async () => {

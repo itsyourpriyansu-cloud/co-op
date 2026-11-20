@@ -1,6 +1,6 @@
 # Store release: Google Play and the App Store (G4, D-114)
 
-> Version 0.1 · 2026-11-12 · Owner steps for the first release of the TGSECCSL app (members, and staff screens for console roles). The listing wording and privacy answers below are proposals [P] for the society to approve.
+> Version 0.2 · 2026-11-20 (Android push through FCM directly, D-135) · Owner steps for the first release of the TGSECCSL app (members, and staff screens for console roles). The listing wording and privacy answers below are proposals [P] for the society to approve.
 
 ## 1. What is released
 
@@ -33,12 +33,16 @@ npx eas-cli@latest env:create --environment preview    --name EXPO_PUBLIC_CONSOL
 npx eas-cli@latest env:create --environment production --name EXPO_PUBLIC_CONSOLE_URL --value https://<production console host>
 ```
 
-**Push credentials.** Run `npx eas-cli@latest credentials`:
+**Push credentials (D-135).** Android phones get pushes from our server through Firebase Cloud Messaging (FCM HTTP v1) directly; iPhones through the Expo push service to Apple.
 
-- Android: upload a Firebase Cloud Messaging V1 service-account key. Create it from a Firebase project for `in.tgseccsl.member`.
-- iOS: let EAS create the APNs key.
+1. In the [Firebase console](https://console.firebase.google.com), create one project for the society (Google Analytics not needed).
+2. Add an **Android app** with package `in.tgseccsl.member` and download **`google-services.json`**. Give it to EAS as a file variable (never commit it):
+   `npx eas-cli@latest env:create --environment preview --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret` (repeat for `production`). For a local build, put the file in `apps/member-app/` (found automatically, git-ignored). No Gradle edits: Expo adds the Google services plugin itself. iOS and the web console need no Firebase app (iPhones use Expo → APNs; the console shows live updates while open).
+3. Project settings → **Service accounts** → *Generate new private key*. This JSON file lets the server send pushes: treat it like a password (Key Vault only, never chat or email). Store it with `az keyvault secret set -n FCM-SERVICE-ACCOUNT --file …` and redeploy with `TGS_PUSH_ENABLED=true` (`infra/README.md`). The App Service then runs with `PUSH_PROVIDER=fcm`. Locally: `PUSH_PROVIDER=fcm` and `FCM_SERVICE_ACCOUNT_JSON=<the file's JSON on one line>` in `backend/.env`.
+4. Check that the **Firebase Cloud Messaging API (V1)** is enabled (Project settings → Cloud Messaging). It is on by default for new projects.
+5. iOS: `npx eas-cli@latest credentials` and let EAS create the APNs key.
 
-On the backend, set `PUSH_PROVIDER=expo` in the App Service settings.
+The server checks the key at start-up and refuses to start with a broken one. Rotate the key by generating a new one, replacing the Key Vault secret, restarting, then deleting the old key in Firebase.
 
 ## 4. Builds
 
@@ -105,7 +109,7 @@ Staff screens need a console login with an authenticator, so they are not offere
 - [ ] `version` raised in `app.json`; the remote build number is set
 - [ ] Preview build checked on real Android and iPhone (docs/23 S10)
 - [ ] `EXPO_PUBLIC_CONSOLE_URL` set for the environment; the Print buttons open the console
-- [ ] Push received on both platforms (`PUSH_PROVIDER=expo`)
+- [ ] Push received on both platforms, and a tap opens the right screen (`PUSH_PROVIDER=fcm`, D-135)
 - [ ] Privacy and account-deletion pages open without signing in
 - [ ] Reviewer mobile set, then removed after approval
 - [ ] Listing text, screenshots, Data safety and privacy label approved by the society

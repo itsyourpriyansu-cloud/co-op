@@ -19,8 +19,8 @@
 | Files (signatures, documents) | Storage account, container `files`, encrypted by the app | opening a document in the console |
 | Console | Static Web Apps | the sign-in page loads |
 | Member and staff app | Google Play / App Store; talks to the API | sign-in on a phone |
-| Secrets | Key Vault `$KV`: `DATABASE-URL`, `JWT-SECRET`, `DATA-ENCRYPTION-KEY`, `WHATSAPP-TOKEN` | — |
-| Messages | WhatsApp Cloud API (sign-in codes, notices), Azure Communication Services (email), Expo (push) | Console → Notifications → Sent shows "n not delivered" |
+| Secrets | Key Vault `$KV`: `DATABASE-URL`, `JWT-SECRET`, `DATA-ENCRYPTION-KEY`, `WHATSAPP-TOKEN`, `FCM-SERVICE-ACCOUNT` | — |
+| Messages | WhatsApp Cloud API (sign-in codes, notices), Azure Communication Services (email), Firebase Cloud Messaging (Android push), Expo (iPhone push) | Console → Notifications → Sent shows "n not delivered" |
 | Daily jobs | Inside the API: FD maturity (after the configured hour), housekeeping (FD reminders, expired sessions, closed applications per DPDP) | log lines "Daily housekeeping ran" |
 
 ## 2. Monitoring and alerts
@@ -70,6 +70,7 @@ The console: redeploy the previous commit with **Deploy → Run workflow** on th
 | `JWT-SECRET` | `az keyvault secret set --vault-name $KV -n JWT-SECRET --value "$(openssl rand -base64 48)"`, then `az webapp restart -g $RG -n $APP` | Everyone signs in again |
 | Database password | `az postgres flexible-server update -g $RG -n $DB --admin-password '<new>'`, update `DATABASE-URL` in Key Vault, restart | Brief outage during restart |
 | `WHATSAPP-TOKEN` | New permanent token in Meta Business, `az keyvault secret set ... -n WHATSAPP-TOKEN`, restart | None |
+| `FCM-SERVICE-ACCOUNT` | Firebase → Service accounts → new private key, `az keyvault secret set ... -n FCM-SERVICE-ACCOUNT --file <key>.json`, restart, then delete the old key in Firebase | None |
 | `DATA-ENCRYPTION-KEY` | **Only if it may have leaked.** See below | Planned downtime (minutes) |
 
 **Rotating `DATA-ENCRYPTION-KEY`** (re-encrypts authenticator secrets and every stored file):
@@ -97,7 +98,7 @@ The console: redeploy the previous commit with **Deploy → Run workflow** on th
 | Emails not arriving | Console → Notifications → Sent; ACS → Insights | Check the sender domain; Azure-managed domains have a daily limit, move to the society's domain |
 | Messages stuck at "Sending…" or many "Not delivered" | Console → Notifications → Sent messages (Not delivered list shows the provider's reason); log "message not delivered" / "outbox dispatch failed" | A wrong number or email: correct it on the member, then Send again. Token or template problem: fix as for codes above, then Send again. The outbox retries faults by itself for about 40 minutes |
 | Sent messages never show Delivered / Read | Meta app → WhatsApp → Configuration: callback URL and `messages` subscription; log for 401 on `/webhooks/whatsapp` | Callback must be `https://<api>/api/v1/webhooks/whatsapp`; `WHATSAPP-APP-SECRET` must be the app's current secret |
-| Push not arriving | Log "push not accepted" | Usually a phone setting; Expo access token if `EXPO_ACCESS_TOKEN` is set |
+| Push not arriving | Log "push not accepted" (`error` names the FCM / Expo reason); "Google sign-in for FCM failed" | Usually a phone setting (notifications off, battery saver). Sign-in failure or `PERMISSION_DENIED`: the Firebase key was deleted or the FCM API is off, so replace `FCM-SERVICE-ACCOUNT`. iPhones: Expo access token if `EXPO_ACCESS_TOKEN` is set |
 | A document will not open ("Blob read failed") | Storage firewall, identity role on the account | Re-run the Bicep deployment to restore the role |
 | Trial balance does not balance | Reports → Trial balance | Should never happen (every entry balances); stop postings, export the journals, contact Envizon |
 | Wrong posting by staff | Accounts → the voucher / Ledger → journal | Vouchers and manual journals: reverse on the Ledger page and post the right one. A wrong counter receipt: another officer cancels it the same day from the receipt (Cancel receipt), then a new receipt is taken; later than that, a correcting voucher. Business entries cannot be reversed from the Ledger page. Never edit the database |

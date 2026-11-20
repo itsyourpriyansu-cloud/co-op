@@ -1,6 +1,6 @@
 # Go-live: parallel run, cutover and support plan
 
-> Version 0.1 · 2026-11-12 · G8 (D-118). For the society's managing committee, the Accountant and Envizon. Dates are agreed at the readiness meeting; a box is ticked only with the evidence named next to it.
+> Version 0.2 · 2026-11-20 (push readiness R4a, D-135) · G8 (D-118). For the society's managing committee, the Accountant and Envizon. Dates are agreed at the readiness meeting; a box is ticked only with the evidence named next to it.
 
 ## 1. Readiness (decide go / no-go)
 
@@ -10,6 +10,7 @@
 | R2 | Secrets in Key Vault; offline sealed copy of `DATA-ENCRYPTION-KEY` in the society safe | Secretary's signed note | |
 | R3 | WhatsApp Business number verified, `society_notice` and `login_code` templates approved, `WHATSAPP-TOKEN` set (F-10) | A test member receives a real code | |
 | R4 | Email sender works (Azure-managed or the society's domain) | Test email received | |
+| R4a | Push: Firebase project, `google-services.json` in EAS, `FCM-SERVICE-ACCOUNT` in Key Vault, `pushEnabled` deployed (D-135) | A test member gets a push on Android and on an iPhone, and tapping it opens the right screen | |
 | R5 | Apps in the stores (internal / TestFlight at least), pointed at production, `minAppVersion` set | Store links; sign-in on an Android and an iPhone (docs/23 S10) | |
 | R6 | UAT signed off, no open P1 / P2 | `docs/uat-script.md` sign-off page | |
 | R7 | Staff trained, each with an account and authenticator | Attendance sheet; Admin → Users | |
