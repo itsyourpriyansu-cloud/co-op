@@ -1,6 +1,6 @@
 # 12 · Design Direction & Design System
 
-> Version 0.6 · 2026-11-05 · Status: **Proposed (D-034)**. Tokens live in `packages/design-tokens` → Tailwind preset (web) + NativeWind preset (app).
+> Version 0.7 · 2026-11-20 · Status: **Proposed (D-034)**. Tokens live in `packages/design-tokens` → Tailwind preset (web) + NativeWind preset (app).
 > Research basis: platform guidelines (Material 3, WCAG 2.2), Google's HEART metrics framework, and fintech/banking UX practice. Sources are listed in §10. Points marked *(practice)* come from industry articles, not standards.
 
 ---
@@ -137,29 +137,22 @@ Dark mode: Admin Console supports it (long working sessions). The app starts lig
 | **Spot illustrations** (flat, 2-tone: teal + gold on neutral) | Empty states, onboarding, success screens (application submitted, General No. allotted, loan disbursed), MA-04 offline | One consistent set, recoloured to the tokens. Source from an open-licensed set that allows recolouring, or commission it (verify the licence) |
 | **Data as imagery** | Dashboards, the member snapshot card, allocation waterfall | Charts follow `dataviz` rules: muted series, one highlight colour |
 | **App identity** | Icon, splash, login, app headers | The TG app mark (D-094). See "App mark usage" below |
-| **Society identity** | Letterhead, FDR, receipts, prints | The official seal (D-052) + name + Regd. No. P-929. See "Seal usage" below |
+| **Society identity** | Letterhead, FDR, receipts, prints | The society logo (D-137) + name + Regd. No. P-929. See "Logo usage" below |
 | **Document thumbnails** | Member documents, uploaded proofs | Real file previews, not generic icons |
 | **Avoid** | Stock photos of people, the Secretariat building photo (rights unclear), 3D clip-art | Feels inauthentic in a members-only institution |
 
-**App mark usage (D-094).** Masters: `assets/brand/tgseccsl-mark.svg` (TG glyph only, `currentColor`, square viewBox) and `assets/brand/tgseccsl-mark-tile.svg` (white TG on a `#0561E2` tile, radius 22 %). Two strokes, width 12 on a 100-unit grid, square ends, no font.
+**Logo usage (D-137, supersedes D-094 / D-052 artwork).** One society logo everywhere: the navy (`#003471`) and gold (`#D4A547`) TGSECCS seal. Masters as supplied, in `apps/member-app/assets/logo/`: `tgseccs-logo.svg` (vector), `tgseccs-logo.png` (1500 px, transparent), `tgseccs-logo.jpg` (white background, print / share master). Every PNG below is rendered from the PNG master, trimmed to the circle.
 
 | Where | File | Size shown |
 |---|---|---|
-| Member App: Welcome / Sign in / Home header | `components/AppMark.tsx` (inline copy of the tile SVG) | 72 / 56 / 40 dp |
-| Android icon (legacy) | `assets/icon.png`: full-bleed blue, TG at 62 % | launcher |
-| Android adaptive icon | `android-icon-foreground.png` (white TG ≈ 42 % wide, inside the 66/108 safe zone) on blue `android-icon-background.png` / `backgroundColor #0561E2`; `android-icon-monochrome.png` = the same glyph (themed icons) | launcher |
-| Splash | `assets/splash-icon.png` (white TG) via `expo-splash-screen`, 96 dp on `#0561E2` | splash |
-| Admin Console: login panel / sidebar | `src/assets/app-mark.svg` via `components/AppMark.tsx` | 48 (56 on narrow) / 32 px |
-| Favicons, touch icon | console `public/favicon.png` (64), `public/apple-touch-icon.png` (180); member web `assets/favicon.png` (64) | browser |
-
-Mark rules: minimum 16 px; clear space ¼ of the tile; only white-on-blue or blue-on-white; never outline, stretch or add the seal to it. Regenerate PNGs from the master geometry (one-off resvg render), never from a screenshot.
-
-**Seal usage (D-052, prints since D-094).** Master: `assets/brand/tgseccsl-seal-source.jpg` (as supplied) and `assets/brand/tgseccsl-seal.png` (1024 px, circle cropped, transparent outside the ring, seal navy `#012258`).
-
-| Where | File | Size shown |
-|---|---|---|
-| Admin Console: letterhead, receipt, FDR, sanction letter | `src/assets/seal.png` via `components/Seal.tsx` | 64–72 px |
-| Member App: FD certificate card, payment receipt | `assets/images/seal.png` via `components/Logo.tsx` | 40 dp |
+| Member App: Welcome / Sign in / Home header | `assets/images/app-mark.png` (512) via `components/AppMark.tsx` | 72 / 56 / 40 dp |
+| App icon (iOS / legacy Android) | `assets/icon.png`: logo at 92 % on white (no transparency) | launcher |
+| Android adaptive icon | `android-icon-foreground.png` (logo at 60 %, inside the 66/108 safe zone) on white `android-icon-background.png` / `backgroundColor #FFFFFF`; `android-icon-monochrome.png` = white silhouette (themed icons and the notification icon, accent `#003471`) | launcher |
+| Splash | `assets/splash-icon.png` via `expo-splash-screen`, 160 dp on white | splash |
+| Admin Console: login panel / sidebar | `src/assets/logo.svg` (copy of the SVG master) via `components/AppMark.tsx` | 48 (56 on narrow) / 32 px |
+| Favicons, touch icon | console `public/favicon.png` (64), `public/apple-touch-icon.png` (180, on white); member web `assets/favicon.png` (64) | browser |
+| Admin Console: letterhead, receipt, FDR, sanction letter | `src/assets/seal.png` (512) via `components/Seal.tsx` | 64–72 px |
+| Member App: FD certificate card, payment receipt | `assets/images/seal.png` (512) via `components/Logo.tsx` | 40 dp |
 
 Rules: always show the whole seal, never recolour, crop or put it inside another shape; minimum 32 px (it becomes a navy ring below that, which is acceptable only for the favicon); keep clear space of ¼ of its diameter. The seal reads "TGSECCS", while the app name is "TGSECCSL" (the "L" stands for "Ltd."). Both are correct. Regenerate every size from the master PNG, never from a screenshot.
 

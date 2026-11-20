@@ -25,7 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...(config.plugins ?? []),
     ['expo-build-properties', { android: { usesCleartextTraffic: development } }],
     ['expo-local-authentication', { faceIDPermission: 'Allow $(PRODUCT_NAME) to use Face ID to unlock the staff screens.' }],
-    ['expo-notifications', { icon: './assets/android-icon-monochrome.png', color: '#0561E2', defaultChannel: 'default' }],
+    ['expo-notifications', { icon: './assets/android-icon-monochrome.png', color: '#003471', defaultChannel: 'default' }],
   ],
   extra: {
     ...config.extra,

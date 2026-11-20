@@ -14,7 +14,7 @@
     "android": {
       "package": "in.tgseccsl.member",
       "adaptiveIcon": {
-        "backgroundColor": "#0561E2",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -33,9 +33,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 96,
+          "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#0561E2"
+          "backgroundColor": "#FFFFFF"
         }
       ],
       [
