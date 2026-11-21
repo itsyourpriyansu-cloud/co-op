@@ -104,8 +104,23 @@ export function Section({ title, description, right, children }: { title?: strin
   );
 }
 
-/** Astryx MetadataListItem: label left, value right, figures tabular. */
+/** A value too long for the right-hand column (a bank account, a sign-off line) goes under its label instead
+ *  of wrapping into a narrow right-aligned column. Short figures stay label left, value right. */
+export const stacksValue = (label: string, value: string) => value.length > 24 || label.length + value.length > 48;
+
+/** Astryx MetadataListItem: label left, value right, figures tabular; long values stack under the label. */
 export function MetadataListItem({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
+  if (stacksValue(label, value))
+    return (
+      <View style={styles.kvStacked}>
+        <Text type="supporting" tone="secondary">
+          {label}
+        </Text>
+        <Text type={emphasis ? 'amount' : 'body'} weight={emphasis ? undefined : 'medium'}>
+          {value}
+        </Text>
+      </View>
+    );
   return (
     <View style={styles.kv}>
       <Text type="supporting" tone="secondary" style={{ flexShrink: 1 }}>
@@ -163,6 +178,7 @@ const styles = StyleSheet.create({
   bannerIcon: { marginTop: 2 },
   sectionHead: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing[3] },
   kv: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing[4], paddingVertical: spacing[2] },
+  kvStacked: { gap: spacing[0.5], paddingVertical: spacing[2] },
   kvValue: { flexShrink: 1, maxWidth: '64%', textAlign: 'right', fontVariant: ['tabular-nums'] },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: color.borderEmphasized },
 });
