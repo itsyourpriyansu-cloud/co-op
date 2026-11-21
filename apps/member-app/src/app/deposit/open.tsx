@@ -11,12 +11,19 @@ import { amountInWords, calculateFdMaturity, fdRateFor, formatDisplayDate, forma
 import type { FdHolder, FdRequestInput, Nominee } from '@tgs/types';
 import { api } from '@/lib/api';
 import { PAYOUT_LABEL, depositKeys, useDepositContext } from '@/lib/deposits';
-import { Banner, Button, Card, CheckboxInput, SelectableCard, DateField, Divider, Header, MetadataListItem, OtpInput, Screen, Section, SelectField, Skeleton, Text, TextField, Stepper, Link } from '@/ui';
+import { Banner, Button, Card, CheckboxInput, SelectableCard, DateField, Divider, Header, MetadataListItem, OtpInput, Screen, Section, SelectField, Skeleton, StepHeader, Text, TextField, Link } from '@/ui';
 import { color, radius, spacing } from '@/theme';
 
 type StepKey = 'amount' | 'payout' | 'holders' | 'nominee' | 'review';
 const STEPS: StepKey[] = ['amount', 'payout', 'holders', 'nominee', 'review'];
 const TITLES: Record<StepKey, string> = { amount: 'Amount and period', payout: 'Interest payout', holders: 'Who holds the deposit', nominee: 'Nominee', review: 'Review & sign' };
+/** One line under each step's title (the nominee step explains itself in its first line). */
+const INTROS: Partial<Record<StepKey, string>> = {
+  amount: 'How much to deposit, and for how long. The rate depends on the period.',
+  payout: 'When you want the interest: added at maturity, or paid out as you go.',
+  holders: 'Only you, jointly with other members, or on behalf of a minor.',
+  review: 'Check the details, then sign with the code sent to your mobile.',
+};
 const STEP_FIELDS: Record<StepKey, (k: string) => boolean> = {
   amount: (k) => k === 'principal' || k === 'tenureMonths',
   payout: (k) => k === 'payoutFrequency',
@@ -144,10 +151,7 @@ export default function OpenFd() {
         )
       }
     >
-      <View style={{ gap: spacing[4] }}>
-        <Stepper step={step + 1} total={STEPS.length} title={TITLES[key]} />
-        <Text type="h1">{TITLES[key]}</Text>
-      </View>
+      <StepHeader step={step + 1} total={STEPS.length} title={TITLES[key]} {...(INTROS[key] ? { intro: INTROS[key] } : {})} />
       {showErrors && Object.keys(stepErrors).length ? <Banner status="error" heading="A few details are missing" description="Fix the highlighted fields to continue." /> : null}
       {serverError ? <Banner status="error" heading="Something went wrong" description={serverError} /> : null}
 
@@ -294,6 +298,7 @@ export default function OpenFd() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
-  chip: { minWidth: 96, paddingVertical: spacing[2], paddingHorizontal: spacing[3], borderRadius: radius.element, borderWidth: 1, borderColor: color.border, backgroundColor: color.background.surface, gap: spacing[0.5] },
+  // An even three-column grid, as the loan months.
+  chip: { flexBasis: '31%', flexGrow: 1, maxWidth: '33%', paddingVertical: spacing[2], paddingHorizontal: spacing[3], borderRadius: radius.element, borderWidth: 1, borderColor: color.border, backgroundColor: color.background.surface, gap: spacing[0.5] },
   chipOn: { borderColor: color.accent, backgroundColor: color.accentMuted },
 });

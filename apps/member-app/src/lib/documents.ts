@@ -3,6 +3,7 @@
 // Pure: no React Native imports, so the wording is unit-tested. The office print stays the official copy.
 import { amountInWords, formatBankAccount, formatCycle, formatDisplayDate, formatDisplayDateTime, formatINR } from '@tgs/domain';
 import type { DepositDetail, JoiningReference, LoanDetail, ReceiptDetail } from '@tgs/types';
+import { SEAL_DATA_URI } from './sealImage';
 
 export type Society = JoiningReference['society'];
 
@@ -22,7 +23,8 @@ export const row = (label: string, value: string) => `<tr><th>${esc(label)}</th>
 const CSS = `
   @page { size: A4; margin: 16mm; }
   body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 12px; line-height: 1.45; margin: 0; }
-  header { border-bottom: 2px solid #1b3a6b; padding-bottom: 8px; margin-bottom: 14px; }
+  header { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #1b3a6b; padding-bottom: 10px; margin-bottom: 14px; }
+  header img.seal { width: 60px; height: 60px; flex: none; }
   header h1 { font-size: 16px; margin: 0; color: #1b3a6b; }
   header p { margin: 2px 0 0; font-size: 11px; }
   h2 { text-align: center; font-size: 14px; letter-spacing: 1px; margin: 12px 0; }
@@ -54,7 +56,7 @@ const CSS = `
 /** Staff print the office copy (D-133); members keep a member copy (D-125). */
 export function page(title: string, society: Society, body: string, generatedOn: string, copy: 'member' | 'office' = 'member'): string {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title><style>${CSS}</style></head><body>
-<header><h1>${esc(society.name)}</h1><p>Regd. No. ${esc(society.registrationNo)}${society.address ? ` · ${esc(society.address)}` : ''}</p></header>
+<header><img class="seal" src="${SEAL_DATA_URI}" alt="${esc(society.shortName)} seal"><div><h1>${esc(society.name)}</h1><p>Regd. No. ${esc(society.registrationNo)}${society.address ? ` · ${esc(society.address)}` : ''}</p></div></header>
 ${body}
 <footer>${copy === 'office' ? `Office copy, printed from the ${esc(society.shortName)} staff app on ${esc(formatDisplayDate(generatedOn))}. Signatures are the ones on file for each signer.` : `Member copy, generated from the ${esc(society.shortName)} app on ${esc(formatDisplayDate(generatedOn))}. The copy signed at the society office is the official document.`}</footer>
 </body></html>`;

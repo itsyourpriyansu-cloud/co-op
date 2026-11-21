@@ -118,10 +118,8 @@ export default function Tracker() {
           </Card>
         ) : (
           <View style={{ gap: spacing[1.5] }}>
-            <View style={styles.rowBetween}>
-              <Text type="h1" style={{ flex: 1 }}>
-                Your application
-              </Text>
+            <Text type="h1">Your application</Text>
+            <View style={{ alignSelf: 'flex-start' }}>
               <StatusToken entity="membership" status={app.status} size="md" />
             </View>
             <Text type="supporting" tone="secondary">

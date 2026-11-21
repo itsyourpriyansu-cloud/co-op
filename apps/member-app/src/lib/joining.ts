@@ -67,13 +67,14 @@ export function stagesFor(app: MembershipApplication): Stage[] {
 
 /** Wizard steps and the form keys each one owns (for step-level validation). */
 export const STEPS = [
-  { key: 'personal', title: 'About you', prefixes: ['personal.'] },
-  { key: 'address', title: 'Address', prefixes: ['address.'] },
-  { key: 'employment', title: 'Employment', prefixes: ['employment.'] },
-  { key: 'shares', title: 'Shares & nominee', prefixes: ['shares.', 'nominee.'] },
-  { key: 'documents', title: 'Documents', prefixes: ['documents.'] },
-  { key: 'agreements', title: 'Declarations', prefixes: ['declarations.'] },
-  { key: 'review', title: 'Review & sign', prefixes: [] },
+  // `intro`: one line under the step's title. Shares and declarations explain themselves in their first line.
+  { key: 'personal', title: 'About you', intro: 'Your details as they appear in your service records.', prefixes: ['personal.'] },
+  { key: 'address', title: 'Address', intro: 'Where the society can reach you by post.', prefixes: ['address.'] },
+  { key: 'employment', title: 'Employment', intro: 'Your post and pay. Your department (DDO) confirms these.', prefixes: ['employment.'] },
+  { key: 'shares', title: 'Shares & nominee', intro: '', prefixes: ['shares.', 'nominee.'] },
+  { key: 'documents', title: 'Documents', intro: 'Clear photos or PDFs of the papers listed here.', prefixes: ['documents.'] },
+  { key: 'agreements', title: 'Declarations', intro: '', prefixes: ['declarations.'] },
+  { key: 'review', title: 'Review & sign', intro: 'Check each section, then sign with the code sent to your mobile.', prefixes: [] },
 ] as const;
 
 export function errorsForStep(errors: Record<string, string>, step: number): Record<string, string> {

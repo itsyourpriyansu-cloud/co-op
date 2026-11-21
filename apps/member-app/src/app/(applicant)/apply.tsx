@@ -10,7 +10,7 @@ import { api } from '@/lib/api';
 import { pickDocumentImage } from '@/lib/files';
 import { SignatureCard } from '@/components/SignatureCard';
 import { errorsForStep, firstIncompleteStep, STEPS, useJoiningReference, useMyApplication, useSaveDraft } from '@/lib/joining';
-import { Banner, Button, Card, CheckboxInput, SelectableCard, DateField, Divider, Header, MetadataListItem, NumberInput, OtpInput, Screen, SegmentedControl, SelectField, Skeleton, Text, TextField, Stepper, Link } from '@/ui';
+import { Banner, Button, Card, CheckboxInput, SelectableCard, DateField, Divider, Header, MetadataListItem, NumberInput, OtpInput, Screen, SegmentedControl, SelectField, Skeleton, StepHeader, Text, TextField, Link } from '@/ui';
 import { color, radius, spacing } from '@/theme';
 
 type Update = (patch: MembershipForm) => void;
@@ -139,10 +139,7 @@ export default function Apply() {
         )
       }
     >
-      <View style={{ gap: spacing[4] }}>
-        <Stepper step={step + 1} total={STEPS.length} title={current?.title ?? ''} />
-        <Text type="h1">{current?.title}</Text>
-      </View>
+      <StepHeader step={step + 1} total={STEPS.length} title={current?.title ?? ''} {...(current?.intro ? { intro: current.intro } : {})} />
 
       {app.status === 'INFO_REQUESTED' && app.infoRequest ? (
         <Banner status="warning" heading={`${app.infoRequest.by === 'DDO' ? 'Your department' : 'The society office'} needs a correction`} description={app.infoRequest.message} />

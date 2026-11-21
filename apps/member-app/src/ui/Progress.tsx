@@ -31,6 +31,23 @@ export function Stepper({ step, total, title }: { step: number; total: number; t
   );
 }
 
+/** A wizard step's top: progress, the step's title, and one line on what this step is for. */
+export function StepHeader({ step, total, title, intro }: { step: number; total: number; title: string; intro?: string }) {
+  return (
+    <View style={{ gap: spacing[3] }}>
+      <Stepper step={step} total={total} title={title} />
+      <View style={{ gap: spacing[1] }}>
+        <Text type="h1">{title}</Text>
+        {intro ? (
+          <Text type="body" tone="secondary">
+            {intro}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 export type StageStatus = 'done' | 'current' | 'todo' | 'attention' | 'failed';
 export interface Stage {
   key: string;

@@ -75,3 +75,51 @@
 [data-element='checkbox-label'][data-status='enabled'] {
   color: var(--tgs-text-primary) !important;
 }
+/* Printing (D-140): a page prints as the document alone. Blend's SidebarV2 owns the sidebar, the topbar
+   and an 852 px scroll panel that clipped forms to one page, so they are reached by structure here, once,
+   for every print page. Zero @page margin also drops the browser's date / title / URL lines; the margin
+   comes back as padding cloned onto every printed page. */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body > :not(#root),
+  #root > :not(:has([data-main-content])),
+  nav[data-sidebar],
+  main[role='main'] > :not([data-main-content]) {
+    display: none !important;
+  }
+  #root,
+  #root :has(> main[role='main']),
+  main[role='main'],
+  [data-main-content] {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+  [data-main-content] > div {
+    max-width: none !important;
+    padding: 12mm 14mm !important;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  /* A heading (forms use `text-label` for theirs) stays with what follows; a table row never splits. */
+  h1,
+  h2,
+  h3,
+  h4,
+  .text-label {
+    break-after: avoid;
+  }
+  tr,
+  img {
+    break-inside: avoid;
+  }
+}
