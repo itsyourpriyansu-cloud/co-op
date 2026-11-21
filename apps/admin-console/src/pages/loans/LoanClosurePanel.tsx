@@ -37,17 +37,17 @@ export function LoanClosurePanel({ loanId }: { loanId: string }) {
   return (
     <Panel title="Close the loan early" subtitle="Outstanding principal and interest up to today (BR-040)">
       <dl className="flex flex-col gap-1.5">
-        <div className="flex justify-between text-label text-fg">
+        <div className="flex flex-wrap justify-between gap-x-4 text-label text-fg">
           <dt>Principal outstanding</dt>
           <dd className="tabular">{formatINR(p.principal)}</dd>
         </div>
-        <div className="flex justify-between text-label text-fg">
+        <div className="flex flex-wrap justify-between gap-x-4 text-label text-fg">
           <dt>
             Interest from {formatDisplayDate(p.interestFrom)} <span className="text-caption text-fg-tertiary">({p.ratePercent}% a year)</span>
           </dt>
           <dd className="tabular">{formatINR(p.interest)}</dd>
         </div>
-        <div className="flex justify-between border-t border-line-subtle pt-1.5 text-card-title text-fg">
+        <div className="flex flex-wrap justify-between gap-x-4 border-t border-line-subtle pt-1.5 text-card-title text-fg">
           <dt>To close today</dt>
           <dd className="tabular">{formatINR(p.total)}</dd>
         </div>

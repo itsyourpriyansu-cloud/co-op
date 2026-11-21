@@ -134,7 +134,7 @@ export function RoleDashboardView({ d, summary }: { d: RoleDashboard; summary?: 
               {d.queue.map((q) => (
                 <li key={q.key}>
                   <button type="button" className="flex w-full flex-col gap-1.5 text-left" onClick={() => navigate(q.link)}>
-                    <span className="flex items-baseline justify-between text-caption">
+                    <span className="flex items-baseline justify-between gap-3 text-caption">
                       <span className="text-label text-fg">{q.label}</span>
                       <span className="tabular text-fg">
                         {q.count}
@@ -205,7 +205,7 @@ export function RoleDashboardView({ d, summary }: { d: RoleDashboard; summary?: 
               const rate = t.demand ? t.recovered / t.demand : 0;
               return (
                 <li key={t.cycle} className="flex flex-col gap-1.5">
-                  <div className="flex items-baseline justify-between text-caption">
+                  <div className="flex items-baseline justify-between gap-3 text-caption">
                     <span className="text-fg-secondary">{formatCycle(t.cycle)}</span>
                     <span className="tabular text-fg">
                       {formatINRCompact(t.recovered)} <span className="text-fg-tertiary">/ {formatINRCompact(t.demand)}</span> <span className="text-caption-strong">{(rate * 100).toFixed(1)}%</span>

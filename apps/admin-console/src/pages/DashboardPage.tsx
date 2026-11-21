@@ -108,7 +108,7 @@ export function DashboardPage() {
     <>
       <PageHeader
         title={`${greeting()}, ${firstName}`}
-        description={s ? `${ROLE_LABELS[session.user.role]}${session.user.departmentId ? ' · your department only' : ''} · data as of ${formatDisplayDate(s.asOf)} · current cycle ${formatCycle(s.currentCycle)}` : ROLE_LABELS[session.user.role]}
+        description={s ? `${ROLE_LABELS[session.user.role]}${(role.data ? role.data.scope.departmentName : session.user.departmentId) ? ' · your department only' : ''} · data as of ${formatDisplayDate(s.asOf)} · current cycle ${formatCycle(s.currentCycle)}` : ROLE_LABELS[session.user.role]}
         meta={myQueue > 0 ? <TagV2 text={`${myQueue} waiting on you`} color={TagV2Color.WARNING} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} size={TagV2Size.SM} /> : undefined}
         actions={<ButtonV2 text="Reports" buttonType={ButtonV2Type.SECONDARY} size={ButtonV2Size.SMALL} onClick={() => navigate('/reports')} />}
       />
@@ -155,7 +155,7 @@ export function DashboardPage() {
                     const rate = t.demand ? t.recovered / t.demand : 0;
                     return (
                       <li key={t.cycle} className="flex flex-col gap-1.5">
-                        <div className="flex items-baseline justify-between text-caption">
+                        <div className="flex items-baseline justify-between gap-3 text-caption">
                           <span className="text-fg-secondary">{formatCycle(t.cycle)}</span>
                           <span className="tabular text-fg">
                             {formatINRCompact(t.recovered)} <span className="text-fg-tertiary">/ {formatINRCompact(t.demand)}</span>

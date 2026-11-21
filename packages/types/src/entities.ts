@@ -724,6 +724,12 @@ export interface SocietySettings {
   retirementAge: number;
   /** D-131 [S]: months an approved probationer should have served before joining (a warning to staff, never a block). */
   probationMonths: number;
+  /** D-145: who does the DDO's work. PER_DEPARTMENT (unset, the default): each department's DDO in charge (D-142).
+   *  SINGLE: one DDO login certifies, agrees mandates and receives the demand sheets of every department. */
+  ddoMode?: 'PER_DEPARTMENT' | 'SINGLE';
+  /** D-145: the DDO login for all departments when ddoMode is SINGLE. Unset or no longer an active DDO:
+   *  the longest-standing active DDO login. */
+  singleDdoUserId?: string;
   defaulterCycles: number;
   fdSlabs: Array<{ fromMonths: number; toMonths: number; ratePercent: number }>;
   savingsRatePercent: number;

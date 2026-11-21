@@ -1,3 +1,4 @@
+import { inDepartmentScope } from '@tgs/domain';
 import type { Permission, SessionUser } from '@tgs/types';
 import type { FastifyRequest } from 'fastify';
 import { fail } from '../errors/app-error';
@@ -36,10 +37,10 @@ export function requirePermission(permission: Permission, message = 'You do not 
   };
 }
 
-/** DDO scope (docs/03 R5): a DDO may only touch their own department. Other staff roles pass. */
+/** DDO scope (docs/03 R5): a DDO may only touch their own department (the one DDO for all departments any, D-145). Other staff roles pass. */
 export function assertDepartmentScope(request: FastifyRequest, departmentId: string): void {
   const s = request.session;
-  if (s?.role === 'DDO' && s.departmentId !== departmentId) {
+  if (s && !inDepartmentScope(s, departmentId)) {
     fail('FORBIDDEN', 'This record belongs to another department.');
   }
 }

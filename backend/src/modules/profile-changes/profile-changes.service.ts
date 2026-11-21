@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { changeRequestRoute, PROFILE_FIELDS, profileFieldValue, validateChangeRequest } from '@tgs/domain';
+import { changeRequestRoute, PROFILE_FIELDS, profileFieldValue, validateChangeRequest, inDepartmentScope } from '@tgs/domain';
 import type { ChangeRequestInput, ChangeRequestList, ChangeRequestRow, Member, ProfileChangeRequest, SessionUser } from '@tgs/types';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
@@ -57,7 +57,7 @@ export class ProfileChangesService {
       if (!needsDdo(r)) fail('INVALID_TRANSITION', 'This request does not need the DDO.');
       const [login, dept] = await Promise.all([this.app.departments.ddoLogin(member.departmentId), this.app.departments.get(member.departmentId)]);
       let byName: string;
-      if (user.role === 'DDO' && user.departmentId === member.departmentId) byName = user.name;
+      if (user.role === 'DDO' && inDepartmentScope(user, member.departmentId)) byName = user.name;
       else if (!login && user.role !== 'DDO' && (await this.app.permissions.has(user.role, 'demo.control'))) byName = dept?.ddoName ?? 'DDO';
       else return fail('FORBIDDEN', `Only the ${dept?.name ?? ''} DDO can certify this.`);
       const at = new Date().toISOString();
@@ -140,7 +140,7 @@ export class ProfileChangesService {
     const ddoStep = needsDdo(r);
     const ddoName = login ? ((await this.app.departments.ddoLoginName(m.departmentId)) ?? dept?.ddoName) : dept?.ddoName;
     const waitingOn = r.status !== 'PENDING' ? undefined : ddoStep ? `${ddoName ?? 'DDO'} (DDO, ${dept?.name ?? ''})` : `${accountant ?? 'Accountant'} (Accountant)`;
-    const myAction = r.status !== 'PENDING' ? undefined : ddoStep ? (user.role === 'DDO' && user.departmentId === m.departmentId ? ('certify' as const) : undefined) : canDecide ? ('decide' as const) : undefined;
+    const myAction = r.status !== 'PENDING' ? undefined : ddoStep ? (user.role === 'DDO' && inDepartmentScope(user, m.departmentId) ? ('certify' as const) : undefined) : canDecide ? ('decide' as const) : undefined;
     return {
       ...r,
       memberName: m.name,
@@ -156,7 +156,7 @@ export class ProfileChangesService {
   /** A DDO sees only employment / pay requests of their own department. */
   private visible(user: SessionUser, r: ProfileChangeRequest, m: Member | undefined): boolean {
     if (user.role !== 'DDO') return true;
-    return r.route === 'DDO_THEN_OFFICE' && m?.departmentId === user.departmentId;
+    return r.route === 'DDO_THEN_OFFICE' && Boolean(m) && inDepartmentScope(user, m!.departmentId);
   }
 
   private async loadPending(tx: Parameters<Parameters<FastifyInstance['db']['transaction']>[0]>[0], user: SessionUser, id: string): Promise<ProfileChangeRequest> {

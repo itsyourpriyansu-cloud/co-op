@@ -1,8 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Check, Copy, KeyRound, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, CalendarCheck, Check, Copy, HandCoins, KeyRound, PiggyBank, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Navigate, useLocation, useNavigate } from 'react-router';
-import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2Type, Skeleton, Spinner, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, TextInputV2 } from '@juspay/blend-design-system';
+import { AlertV2, AlertV2SubType, AlertV2Type, ButtonV2, ButtonV2Size, ButtonV2Type, OTPInputV2, Skeleton, Spinner, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, TextInputV2 } from '@juspay/blend-design-system';
 import { isApiError } from '@tgs/api-client';
 import { checkPassword } from '@tgs/domain';
 import { brand } from '@tgs/design-tokens';
@@ -11,6 +11,7 @@ import { useAuth } from '@/app/auth';
 import { API_URL, api } from '@/lib/api';
 import { AppMark } from '@/components/AppMark';
 import { Initials } from '@/components/Initials';
+import { PasswordInput } from '@/components/PasswordInput';
 
 type Step =
   | { kind: 'password' }
@@ -118,17 +119,30 @@ export function LoginPage() {
   return (
     <div className="flex min-h-full bg-canvas">
       {/* Brand panel */}
-      <aside className="hidden w-[44%] max-w-[560px] flex-col justify-between bg-inverse p-10 text-fg-inverse lg:flex">
-        <div className="flex items-center gap-3">
+      {/* D-144: a light panel in the console palette (brand blue with the status colours), not a dark slab. */}
+      <aside className="tgs-login-panel relative hidden w-[44%] max-w-[560px] flex-col justify-between overflow-hidden border-r border-line bg-brand-subtle p-10 text-fg lg:flex">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-24 -top-24 size-80 rounded-full bg-brand/25 blur-3xl" />
+          <div className="absolute -right-20 top-1/3 size-72 rounded-full bg-approval-solid/20 blur-3xl" />
+          <div className="absolute -bottom-24 left-1/4 size-80 rounded-full bg-success-solid/15 blur-3xl" />
+          <div className="absolute bottom-1/4 -right-10 size-48 rounded-full bg-warning-solid/15 blur-3xl" />
+        </div>
+        <div className="relative flex items-center gap-3">
           <AppMark size={48} />
           <span className="text-card-title">{brand.appName}</span>
         </div>
-        <div>
-          <p className="text-overline opacity-70">Admin Console</p>
+        <div className="relative">
+          <p className="text-overline text-brand-text">Admin Console</p>
           <h1 className="mt-2 text-display">Every loan, deposit and deduction in one place.</h1>
-          <p className="mt-4 max-w-md text-body-lg opacity-80">Certify, review, sanction and disburse with a full audit trail, for every member of the society.</p>
+          <p className="mt-4 max-w-md text-body-lg text-fg-secondary">Certify, review, sanction and disburse with a full audit trail, for every member of the society.</p>
+          <ul className="mt-8 grid grid-cols-2 gap-3">
+            <Feature icon={HandCoins} tone="bg-brand text-on-brand" title="Loans" text="Apply, assess, sanction" />
+            <Feature icon={PiggyBank} tone="bg-success-solid text-on-brand" title="Deposits" text="FDs, FDRs, payouts" />
+            <Feature icon={CalendarCheck} tone="bg-warning-solid text-on-brand" title="Deductions" text="Monthly demand sheets" />
+            <Feature icon={BadgeCheck} tone="bg-approval-solid text-on-brand" title="Sign-offs" text="Secretary and President" />
+          </ul>
         </div>
-        <p className="text-caption opacity-60">
+        <p className="relative text-caption text-fg-tertiary">
           {brand.legalName} · Regd. No. {brand.registrationNo}
         </p>
       </aside>
@@ -166,7 +180,7 @@ export function LoginPage() {
               {isBackend && (
                 <form className="mt-6 flex flex-col gap-4" onSubmit={submitPassword} noValidate>
                   <TextInputV2 label="User ID" value={username} autoComplete="username" required onChange={(e) => setUsername(e.target.value)} error={show(fieldErrors, 'username')} />
-                  <TextInputV2 label="Password" type="password" value={password} autoComplete="current-password" required onChange={(e) => setPassword(e.target.value)} error={show(fieldErrors, 'password')} />
+                  <PasswordInput label="Password" value={password} autoComplete="current-password" required onChange={(e) => setPassword(e.target.value)} error={show(fieldErrors, 'password')} />
                   <ButtonV2 text="Sign in" buttonType={ButtonV2Type.PRIMARY} width="100%" type="submit" loading={busy === 'password'} disabled={!username.trim() || !password || busy !== null} />
                 </form>
               )}
@@ -263,8 +277,8 @@ export function LoginPage() {
           {step.kind === 'change' && (
             <StepCard icon={<KeyRound size={22} aria-hidden />} title="Choose a new password" lead="You signed in with a temporary password. Choose your own before you continue.">
               <form className="flex flex-col gap-4" onSubmit={submitNewPassword} noValidate>
-                <TextInputV2 label="Temporary password" type="password" value={password} autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} error={show(fieldErrors, 'currentPassword')} />
-                <TextInputV2 label="New password" type="password" value={newPassword} autoComplete="new-password" onChange={(e) => setNewPassword(e.target.value)} error={show(fieldErrors, 'newPassword')} />
+                <PasswordInput label="Temporary password" value={password} autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} error={show(fieldErrors, 'currentPassword')} />
+                <PasswordInput label="New password" value={newPassword} autoComplete="new-password" onChange={(e) => setNewPassword(e.target.value)} error={show(fieldErrors, 'newPassword')} />
                 <ul className="flex flex-col gap-1" aria-label="Password rules">
                   {newPasswordCheck.checks.map((c) => (
                     <li key={c.ruleId} className={`text-caption ${newPassword && c.pass ? 'text-success-text' : 'text-fg-secondary'}`}>
@@ -273,7 +287,7 @@ export function LoginPage() {
                     </li>
                   ))}
                 </ul>
-                <TextInputV2 label="Type the new password again" type="password" value={confirmPassword} autoComplete="new-password" onChange={(e) => setConfirmPassword(e.target.value)} error={show(fieldErrors, 'confirmPassword')} />
+                <PasswordInput label="Type the new password again" value={confirmPassword} autoComplete="new-password" onChange={(e) => setConfirmPassword(e.target.value)} error={show(fieldErrors, 'confirmPassword')} />
                 <ButtonV2 text="Save and continue" buttonType={ButtonV2Type.PRIMARY} width="100%" type="submit" loading={busy === 'change'} disabled={!password || !newPasswordCheck.ok || !confirmPassword || busy !== null} />
               </form>
               {error && <StepError message={error} />}
@@ -282,6 +296,20 @@ export function LoginPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function Feature({ icon: Icon, tone, title, text }: { icon: LucideIcon; tone: string; title: string; text: string }) {
+  return (
+    <li className="flex items-center gap-3 rounded-card border border-line bg-surface/80 p-3 shadow-raised backdrop-blur">
+      <span className={`flex size-10 shrink-0 items-center justify-center rounded-control ${tone}`}>
+        <Icon size={20} aria-hidden />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-label text-fg">{title}</span>
+        <span className="block text-caption text-fg-secondary">{text}</span>
+      </span>
+    </li>
   );
 }
 
@@ -301,17 +329,12 @@ function StepCard({ icon, title, lead, onBack, children }: { icon: ReactNode; ti
   );
 }
 
+/** Six equal boxes, as on the phone (D-143): typing moves on, Backspace goes back, a pasted code fills them all. */
 function CodeInput({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
   return (
-    <TextInputV2
-      label="6-digit code"
-      value={value}
-      inputMode="numeric"
-      autoComplete="one-time-code"
-      maxLength={6}
-      onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-      error={error ? { show: true, message: error } : undefined}
-    />
+    <div className="max-w-sm">
+      <OTPInputV2 label="6-digit code" length={6} value={value} autoFocus onChange={onChange} error={!!error} errorMessage={error} />
+    </div>
   );
 }
 

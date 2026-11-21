@@ -73,6 +73,32 @@ test.describe('owner scenarios · backend', () => {
     await expect(finance.getByRole('listitem', { name: 'Kiran Kumar · ddo.fin · in charge' })).toBeVisible();
   });
 
+  test('Admin switches to one DDO for all departments and back (D-145)', async ({ page, request }) => {
+    const { token: ddo } = await apiToken(request, 'stf-ddo-fin', 'console');
+    // Members the Finance DDO can see (their own department, or every department in single mode).
+    const seen = async () => (await apiCall<{ total: number }>(request, 'GET', '/members?pageSize=1&status=ALL', ddo)).total;
+    const own = await seen();
+
+    await consoleAs(page, request, 'stf-admin', '/settings/departments');
+    await page.getByRole('radio', { name: /^One DDO for all departments/ }).click();
+    // The first DDO login is chosen for the Admin; Save confirms it.
+    await expect(page.getByRole('button', { name: /Kiran Kumar · ddo\.fin/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByRole('columnheader', { name: 'DDO in charge' })).toBeVisible();
+    const gadRow = page.getByRole('row').filter({ has: page.getByRole('gridcell', { name: 'GAD', exact: true }) });
+    for (const row of [financeRow(page), gadRow]) await expect(row.getByText('All departments', { exact: true })).toBeVisible();
+    await expect(gadRow.getByText('Kiran Kumar')).toBeVisible();
+    // Kiran Kumar now sees every department's members.
+    expect(await seen()).toBeGreaterThan(own);
+
+    // Back to a DDO for each department, so the other journeys keep their scope.
+    await page.getByRole('radio', { name: /^A DDO for each department/ }).click();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByRole('columnheader', { name: 'DDO logins' })).toBeVisible();
+    await expect(financeRow(page).getByRole('listitem', { name: 'Kiran Kumar · ddo.fin · in charge' })).toBeVisible();
+    expect(await seen()).toBe(own);
+  });
+
   test('only the Super Admin edits permissions, and admin-only rights stay locked', async ({
     page,
     request,

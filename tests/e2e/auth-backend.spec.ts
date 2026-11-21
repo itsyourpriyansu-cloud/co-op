@@ -2,7 +2,14 @@
 // set-up by QR key, a temporary password replaced at first sign-in, and silent token renewal.
 // Skipped when E2E_API_URL points at the mock API (the mock has no password sign-in).
 import { generate } from 'otplib';
+import type { Page } from '@playwright/test';
 import { API_URL, apiCall, apiToken, CONSOLE_URL, expect, test } from './support';
+
+// Six code boxes (D-144): typing into the first moves on box by box.
+const typeCode = async (page: Page, code: string) => {
+  await page.getByRole('textbox', { name: /digit 1 of 6/ }).click();
+  await page.keyboard.type(code);
+};
 
 test.describe('staff sign-in · backend', () => {
   test.beforeAll(async ({ request }) => {
@@ -26,7 +33,7 @@ test.describe('staff sign-in · backend', () => {
     await expect(page.getByRole('heading', { name: 'Set up an authenticator app' })).toBeVisible();
     await expect(page.getByAltText(/QR code/)).toBeVisible();
     const secret = (await page.locator('p.select-all').textContent())!.replace(/\s/g, '');
-    await page.getByRole('textbox').fill(await generate({ secret }));
+    await typeCode(page, await generate({ secret }));
     await page.getByRole('button', { name: 'Confirm and sign in' }).click();
 
     await expect(page.getByRole('heading', { name: 'Choose a new password' })).toBeVisible();
@@ -34,6 +41,7 @@ test.describe('staff sign-in · backend', () => {
     await page.goto(`${CONSOLE_URL}/dashboard`);
     await expect(page.getByRole('heading', { name: 'Choose a new password' })).toBeVisible();
     const boxes = page.getByRole('textbox');
+    await expect(boxes).toHaveCount(3);
     // After a reload the temporary password is asked again (it is never stored).
     await boxes.nth(0).fill(temporaryPassword);
     await boxes.nth(1).fill(newPassword);
@@ -49,7 +57,7 @@ test.describe('staff sign-in · backend', () => {
     await page.getByRole('textbox').nth(1).fill(newPassword);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Enter your authenticator code' })).toBeVisible();
-    await page.getByRole('textbox').fill(await generate({ secret }));
+    await typeCode(page, await generate({ secret }));
     await page.getByRole('button', { name: 'Verify and sign in' }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
   });

@@ -66,3 +66,54 @@ test.describe('states · console', () => {
     await expect(page.getByText(/You don't have access/)).toHaveCount(0);
   });
 });
+
+// D-144: the sign-in fields match the phone (D-143). The server's sign-in answers are stubbed so this
+// runs on the mock API too, which shows demo personas instead of the password form.
+test.describe('sign-in fields · console', () => {
+  test.beforeEach(async ({ page }) => {
+    const json = (body: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+    await page.route('**/health', (r) => r.fulfill(json({ ok: true, service: 'tgseccsl-backend', version: 'test', today: '2026-11-21' })));
+    await page.route('**/auth/staff/login', (r) => r.fulfill(json({ status: 'TOTP_REQUIRED', challengeToken: 'c', mustChangePassword: false })));
+  });
+
+  test('the password eye shows and hides what was typed', async ({ page }) => {
+    await page.goto(`${CONSOLE_URL}/login`);
+    const password = page.getByLabel('Password', { exact: true });
+    await password.fill('Typo1234x');
+    await expect(password).toHaveAttribute('type', 'password');
+    await page.getByRole('button', { name: 'Show password' }).click();
+    await expect(password).toHaveAttribute('type', 'text');
+    await expect(password).toHaveValue('Typo1234x');
+    await page.getByRole('button', { name: 'Hide password' }).click();
+    await expect(password).toHaveAttribute('type', 'password');
+  });
+
+  test('the authenticator code is six equal, outlined boxes: typing moves on, a paste fills them all', async ({ page }) => {
+    await page.goto(`${CONSOLE_URL}/login`);
+    await page.getByLabel('User ID').fill('president');
+    await page.getByLabel('Password', { exact: true }).fill('Secret1234x');
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Enter your authenticator code' })).toBeVisible();
+    const boxes = page.getByRole('group', { name: /6-digit code/ }).getByRole('textbox');
+    await expect(boxes).toHaveCount(6);
+    const sizes = await boxes.evaluateAll((els) => els.map((e) => [Math.round(e.getBoundingClientRect().width), Math.round(e.getBoundingClientRect().height)]));
+    expect(new Set(sizes.map((s) => s.join())).size).toBe(1);
+    expect(sizes[0]![0]).toBeGreaterThanOrEqual(40);
+    // Unfocused edges: 1.5 px in the tertiary text colour (5.3:1 on white), not Blend's faint grey.
+    await expect(boxes.nth(1)).toHaveCSS('border-top-width', '1.5px');
+    await expect(boxes.nth(1)).toHaveCSS('border-top-color', 'rgb(102, 108, 121)');
+    await expect(boxes.first()).toBeFocused();
+    await page.keyboard.type('123');
+    await expect(boxes.nth(3)).toBeFocused();
+    const verify = page.getByRole('button', { name: 'Verify and sign in' });
+    await expect(verify).toBeDisabled();
+    await boxes.first().focus();
+    await page.evaluate(() => {
+      const data = new DataTransfer();
+      data.setData('text', '654321');
+      document.activeElement!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+    });
+    await expect(boxes.nth(5)).toHaveValue('1');
+    await expect(verify).toBeEnabled();
+  });
+});

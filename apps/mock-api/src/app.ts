@@ -15,7 +15,7 @@ import {
 import { bindDemoClock } from './clock';
 import { fail, ServiceError } from './errors';
 import { permissionsFor } from './permissions';
-import { Store } from './store';
+import { Store, singleDdo } from './store';
 import { registerJoining } from './joining';
 import { registerAccount } from './account';
 import { registerInsight } from './insight';
@@ -78,7 +78,9 @@ export function createApp({ store, version, corsOrigins }: AppOptions) {
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
     const session = token ? store.db.sessions[token] : undefined;
     if (!session) fail('UNAUTHENTICATED', 'Please sign in again.');
-    c.set('session', session);
+    // D-145: the one DDO for all departments works without a department scope.
+    const all = session.role === 'DDO' && singleDdo(store.db)?.id === session.id;
+    c.set('session', all ? (({ departmentId: _own, ...rest }) => rest)(session) : session);
     c.set('token', token);
     await next();
   });

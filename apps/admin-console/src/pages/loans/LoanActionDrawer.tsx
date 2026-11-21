@@ -44,9 +44,9 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 function Row({ label, children, strong }: { label: string; children: ReactNode; strong?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-1.5">
       <span className="text-body text-fg-secondary">{label}</span>
-      <span className={cn('text-right', strong ? 'text-label text-fg' : 'text-body text-fg')}>{children}</span>
+      <span className={strong ? 'text-label text-fg' : 'text-body text-fg'}>{children}</span>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 # 08 · Data Model
 
+> Version 0.16 · 2026-11-21 · D-145: `SocietySettings.ddoMode` (`PER_DEPARTMENT` default / `SINGLE`) and `singleDdoUserId`, the DDO setup.
 > Version 0.15 · 2026-11-21 · D-142: `Department.ddoUserId` is the DDO login in charge (column `departments.ddo_user_id`); a department may have many DDO logins.
 > Version 0.14 · 2026-11-19 · D-132: `LoanApplicationForm.bankAccount` (`LoanBankAccount`: holderName, bankName, branch?, accountNo, ifsc), where the loan is paid.
 > Version 0.13 · 2026-11-18 · D-131: table `retirement_changes` (`RetirementChange`: current / new date, reason, status, proposed, approvals, rejection), setting `probationMonths`.
@@ -243,3 +244,6 @@ Caste categories (Q-406) · Nominee relations · Document types (Q-403) · Disbu
 - `MembershipApplicationForm.declarations.privacyConsent`; `SignatureRecord.privacyVersion` (`PN-2026.1`).
 - `SocietySettings.applicantDataRetentionMonths` (12, migration 0033).
 
+
+## 15. As built (DDO setup, D-145)
+- `SocietySettings.ddoMode`: `PER_DEPARTMENT` (unset = this, each department's DDO in charge) or `SINGLE` (one DDO login for all departments). `SocietySettings.singleDdoUserId`: that login (`staff_users.id`); unset or no longer an active DDO = the longest-standing active DDO login. Stored in the settings JSON, so no migration.

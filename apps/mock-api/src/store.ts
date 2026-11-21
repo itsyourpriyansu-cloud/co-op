@@ -17,9 +17,19 @@ export interface Db extends Dataset {
   messageLog: OutboxMessage[];
 }
 
+/** D-145: with one DDO for all departments (ddoMode SINGLE), that DDO login: the Admin's choice if it is
+ *  still an active DDO, else the longest-standing active DDO login. Undefined when each department has its own. */
+export function singleDdo(db: Db) {
+  if (db.settings.ddoMode !== 'SINGLE') return undefined;
+  const all = db.staffUsers.filter((u) => u.role === 'DDO' && u.active !== false);
+  return all.find((u) => u.id === db.settings.singleDdoUserId) ?? all[0];
+}
+
 /** D-142: the DDO login in charge of a department: the Admin's choice if it is still an active DDO there,
- *  else the department's longest-standing active DDO login. Every DDO task goes to this one. */
+ *  else the department's longest-standing active DDO login. Every DDO task goes to this one.
+ *  D-145: with one DDO for all departments, that one for every department. */
 export function ddoInCharge(db: Db, departmentId: string | undefined) {
+  if (db.settings.ddoMode === 'SINGLE') return singleDdo(db);
   const mine = db.staffUsers.filter((u) => u.role === 'DDO' && u.departmentId === departmentId && u.active !== false);
   return mine.find((u) => u.id === db.departments.find((d) => d.id === departmentId)?.ddoUserId) ?? mine[0];
 }

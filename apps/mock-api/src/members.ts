@@ -16,6 +16,7 @@ import {
   transferEffectiveCycle,
   validateChangeRequest,
   validateMemberInput,
+  inDepartmentScope,
 } from '@tgs/domain';
 import type {
   Address,
@@ -65,7 +66,7 @@ function currentMandate(db: Db, memberId: string): RecoveryMandate | null {
 
 /** DDOs only see members of their own department (docs/03). */
 function visible(user: SessionUser, m: Member) {
-  return user.role !== 'DDO' || m.departmentId === user.departmentId;
+  return inDepartmentScope(user, m.departmentId);
 }
 
 function documentsOf(m: Member): MemberDocument[] {
@@ -162,7 +163,7 @@ function memberDetail(db: Db, m: Member, user: SessionUser): MemberDetail {
     can: {
       edit: can(user, 'members.edit') && m.status === 'ACTIVE',
       transfer: can(user, 'members.edit') && m.status === 'ACTIVE',
-      agreeMandate: mandatePending && user.role === 'DDO' && user.departmentId === mandate.departmentId,
+      agreeMandate: mandatePending && user.role === 'DDO' && inDepartmentScope(user, mandate.departmentId),
       seeFullMobile,
       // D-131: retirement date corrections are a backend feature; the prototype demo does not offer them.
       proposeRetirementChange: false,
@@ -184,7 +185,7 @@ function changeRow(db: Db, r: ProfileChangeRequest, user: SessionUser): ChangeRe
   const accountant = db.staffUsers.find((u) => u.role === 'ACCOUNTANT');
   const ddoStep = needsDdo(r);
   const waitingOn = r.status !== 'PENDING' ? undefined : ddoStep ? `${login?.name ?? dept?.ddoName ?? 'DDO'} (DDO, ${dept?.name ?? ''})` : `${accountant?.name ?? 'Accountant'} (Accountant)`;
-  const myAction = r.status !== 'PENDING' ? undefined : ddoStep ? (user.role === 'DDO' && user.departmentId === m.departmentId ? 'certify' : undefined) : can(user, 'members.decideChanges') ? 'decide' : undefined;
+  const myAction = r.status !== 'PENDING' ? undefined : ddoStep ? (user.role === 'DDO' && inDepartmentScope(user, m.departmentId) ? 'certify' : undefined) : can(user, 'members.decideChanges') ? 'decide' : undefined;
   return {
     ...r,
     memberName: m.name,
@@ -200,7 +201,7 @@ function changeRow(db: Db, r: ProfileChangeRequest, user: SessionUser): ChangeRe
 function changeVisible(db: Db, r: ProfileChangeRequest, user: SessionUser) {
   if (user.role !== 'DDO') return true;
   const m = db.members.find((x) => x.id === r.memberId);
-  return r.route === 'DDO_THEN_OFFICE' && m?.departmentId === user.departmentId;
+  return r.route === 'DDO_THEN_OFFICE' && Boolean(m) && inDepartmentScope(user, m!.departmentId);
 }
 
 /** Accountant approval: writes the values, logs service events, tells the member. */
@@ -456,7 +457,7 @@ export function registerMembers(api: Api, store: Store, requireSession: Guard) {
     const login = ddoLogin(d, mandate.departmentId);
     const dept = d.departments.find((x) => x.id === mandate.departmentId);
     let byName: string;
-    if (user.role === 'DDO' && user.departmentId === mandate.departmentId) byName = user.name;
+    if (user.role === 'DDO' && inDepartmentScope(user, mandate.departmentId)) byName = user.name;
     else if (!login && can(user, 'demo.control') && user.role !== 'DDO') byName = dept?.ddoName ?? 'DDO';
     else return fail('FORBIDDEN', `Waiting for ${login?.name ?? dept?.ddoName ?? 'the DDO'} (DDO, ${dept?.name ?? ''}) to agree.`);
     Object.assign(mandate, { status: 'AGREED', agreedOn: d.demo.today, agreedByName: byName });
@@ -496,7 +497,7 @@ export function registerMembers(api: Api, store: Store, requireSession: Guard) {
     const login = ddoLogin(d, m.departmentId);
     const dept = d.departments.find((x) => x.id === m.departmentId);
     let byName: string;
-    if (user.role === 'DDO' && user.departmentId === m.departmentId) byName = user.name;
+    if (user.role === 'DDO' && inDepartmentScope(user, m.departmentId)) byName = user.name;
     else if (!login && can(user, 'demo.control') && user.role !== 'DDO') byName = dept?.ddoName ?? 'DDO';
     else return fail('FORBIDDEN', `Only ${login?.name ?? 'the department DDO'} can certify this.`);
     const { approve = true, remarks } = await c.req.json<{ approve?: boolean; remarks?: string }>().catch(() => ({}) as { approve?: boolean; remarks?: string });

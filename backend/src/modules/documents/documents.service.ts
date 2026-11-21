@@ -1,5 +1,5 @@
 import type { DocumentUploadInput, FileContent, SessionUser, StoredDocument } from '@tgs/types';
-import { REQUIRED_DOCUMENTS } from '@tgs/domain';
+import { REQUIRED_DOCUMENTS, inDepartmentScope } from '@tgs/domain';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
@@ -77,7 +77,7 @@ export class DocumentsService {
   async uploadFor(request: FastifyRequest, memberId: string, body: DocumentUploadInput): Promise<StoredDocument> {
     const m = (await this.app.members.repo.find(memberId)) ?? fail('NOT_FOUND', 'Member not found.');
     const user = sessionOf(request);
-    if (user.role === 'DDO' && m.departmentId !== user.departmentId) fail('NOT_FOUND', 'Member not found.');
+    if (!inDepartmentScope(user, m.departmentId)) fail('NOT_FOUND', 'Member not found.');
     return this.put(request, m.id, body);
   }
 
@@ -101,9 +101,9 @@ export class DocumentsService {
     if (!members && !joining) return false;
     if (user.role !== 'DDO') return true;
     const m = await this.app.members.repo.find(ownerId);
-    if (m) return m.departmentId === user.departmentId;
+    if (m) return inDepartmentScope(user, m.departmentId);
     const a = await this.app.joining.repo.byApplicant(ownerId);
-    return a?.departmentId === user.departmentId;
+    return Boolean(a) && inDepartmentScope(user, a!.departmentId);
   }
 
   /** Throws unless `fileId` is a document this user uploaded (a draft may only point at its own files). */

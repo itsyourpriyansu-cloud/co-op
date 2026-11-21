@@ -1,5 +1,6 @@
 # 09 · Business Rules
 
+> Version 0.24 · 2026-11-21 · BR-056: DDO setup, one DDO for all departments or one per department (D-145).
 > Version 0.23 · 2026-11-21 · BR-056: many DDO logins per department, one in charge (D-142). Earlier: BR-055 loan bank account (D-132); Employee ID required on F1 (D-133).
 > Version 0.21 · 2026-11-18 · BR-001 retirement date rule and the three-step correction, BR-054 probation warning (D-131). v0.20: BR-006 first deduction month and early interest, BR-030 Regenerate and supplementary sheets (D-124).
 > Version 0.19 · 2026-11-14 · BR-016 / BR-022 tenure is one of the Admin's periods (D-123).
@@ -360,11 +361,12 @@ Report figures come from the posted demand sheets and ledgers. Unpaid = demand �
 - Every loan application gives the account the net amount is paid into: holder's name, bank, branch (optional), account number (9–18 digits), IFSC (`^[A-Z]{4}0[A-Z0-9]{6}$`). Checked by `validateLoanRequest` before signing / submitting.
 - The office sees it in full (loan detail, disbursement, F2 / F3). Letters the member keeps show the account number masked to its last 4 digits.
 
-### BR-056 DDO logins and Employee ID [D-133, D-142]
+### BR-056 DDO logins and Employee ID [D-133, D-142, D-145]
 - A DDO login must belong to an existing department. A department may have **any number** of DDO logins (D-142); each sees its own department's records.
 - Exactly **one** DDO login is **in charge** of a department at a time. The Super Admin chooses it on Departments & DDOs, from that department's active DDO logins. Every DDO task (membership and loan certification, salary-recovery mandates, profile changes, the demand sheet sent to the DDO, work-queue items and notices) goes to the one in charge.
 - If none was chosen, or the chosen login is switched off or moved, the department's longest-standing active DDO login is in charge. A new login never takes over by itself.
 - Choosing the one in charge fills the department's printed DDO name with that person's name; the designation stays as entered.
+- **DDO setup [D-145]:** the Super Admin chooses **A DDO for each department** (default, the rules above) or **One DDO for all departments** (setting `ddoMode`). In single mode one active DDO login (setting `singleDdoUserId`; not chosen or switched off: the longest-standing active DDO login) gets every DDO task of every department and sees every department's records. Other DDO logins keep their own department's view and get no tasks. Printed DDO names and designations per office stay as entered. Single mode needs at least one active DDO login.
 - The Employee ID is required on the membership application (F1), as on the staff member form.
 
 ### BR-053 Message delivery [P] (D-121)

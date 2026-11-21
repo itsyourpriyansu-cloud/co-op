@@ -448,7 +448,7 @@ export function DepositDetailPage() {
                           ['President', dep.signOffs?.president],
                         ] as const
                       ).map(([label, s]) => (
-                        <li key={label} className="flex justify-between gap-3">
+                        <li key={label} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                           <span className="text-label text-fg">{label}</span>
                           <span className="text-caption text-fg-secondary">{s ? `${s.byName} · ${formatDisplayDateTime(s.at)}` : 'Pending'}</span>
                         </li>

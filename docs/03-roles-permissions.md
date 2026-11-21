@@ -1,6 +1,7 @@
 # 03 · Roles & Permissions
 
 > Version 0.4 · 2026-10-25 · Roles from the flow diagrams [F] and the paper forms [PF]. Action-level permissions are **[P]** (D-016, D-037).
+> Version 0.10 · 2026-11-21 · DDO setup: one DDO for all departments or one per department (D-145).
 > Version 0.9 · 2026-11-21 · Many DDO logins per department, one in charge chosen by the Super Admin (D-142, BR-056). Only the Super Admin edits the permission matrix; `settings.edit` and `users.manage` stay with the Super Admin (D-134).
 > Version 0.7 · 2026-11-18 · Date of retirement changes: Super Admin proposes, three approvers (D-131).
 > Version 0.6 · 2026-11-10 · Staff screens built (D-108).
@@ -16,7 +17,7 @@
 | R3a | **Secretary** | Admin Console | All | 1st sign-off: loan sanction, FD acceptance, membership approval (Q-511) | PF, D-027 |
 | R3b | **President** | Admin Console | All | 2nd (final) sign-off on the same items | PF, D-027 |
 | R4 | **Cashier / Disbursement Officer** | Admin Console | All | Cash/transfer receipts with denominations, FD payment receipt, loan disbursement | F, PF (Q-509) |
-| R5 | DDO (Asst. Secretary to Govt / Section Officer (Claims)) | Admin Console | **Own department only** | Certify membership items 1–7, certify loan items 1–5, agree salary-recovery mandates, view own department's demand sheets | F, PF. Many DDO logins per department; DDO tasks go to the one in charge (D-142, BR-056) |
+| R5 | DDO (Asst. Secretary to Govt / Section Officer (Claims)) | Admin Console | **Own department only** (all departments for the one DDO in single mode, D-145) | Certify membership items 1–7, certify loan items 1–5, agree salary-recovery mandates, view own department's demand sheets | F, PF. Many DDO logins per department; DDO tasks go to the one in charge (D-142, BR-056), or to the one DDO for all departments when the Super Admin chooses that DDO setup (D-145) |
 | R6 | Member | Member App | Own records + loans where they are a surety | Self-service, loan/FD applications, surety confirmations, sign agreements | A, F |
 | R7 | Applicant (not yet a member) | Member App (applicant mode) | Own application only | Apply for membership, upload documents, sign declarations, track stage, respond to info requests | PF, D-026 |
 

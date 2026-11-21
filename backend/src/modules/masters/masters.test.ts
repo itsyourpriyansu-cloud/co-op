@@ -181,6 +181,34 @@ describe('departments (P2, ST-67)', () => {
     expect(await inCharge()).toBe('stf-ddo-fin');
   });
 
+  it('one DDO for all departments or a DDO per department, chosen by the Admin (D-145)', async () => {
+    const ddo = await signInAs(app, 'stf-ddo-fin');
+    const setup = (payload: object) => app.inject({ method: 'PUT', url: '/api/v1/settings/values', headers: bearer(admin), payload });
+    const inCharge = async () => Object.fromEntries((await app.inject({ method: 'GET', url: '/api/v1/departments', headers: bearer(admin) })).json().map((d: { id: string; ddoUserId?: string }) => [d.id, d.ddoUserId]));
+    // Members the Finance DDO can see: its own department, or every department in single mode.
+    const seen = async (): Promise<number> => (await app.inject({ method: 'GET', url: '/api/v1/members?pageSize=1&status=ALL', headers: bearer(ddo) })).json().total;
+    const own = await seen();
+    await app.inject({ method: 'POST', url: '/api/v1/users', headers: bearer(admin), payload: { name: 'Gad Ddo', userId: 'ddo.gad', role: 'DDO', departmentId: 'dept-gad' } });
+    expect((await inCharge())['dept-gad']).toBe('stf-ddo-gad');
+
+    // One DDO for all: not chosen yet → the longest-standing DDO login does every department's DDO work.
+    expect((await setup({ ddoMode: 'SINGLE' })).statusCode).toBe(200);
+    expect(new Set(Object.values(await inCharge()))).toEqual(new Set(['stf-ddo-fin']));
+    expect(await app.departments.ddoLogin('dept-gad')).toBe('stf-ddo-fin');
+    expect(await seen()).toBeGreaterThan(own);
+    expect((await app.inject({ method: 'GET', url: '/api/v1/me', headers: bearer(ddo) })).json().user.departmentId).toBeUndefined();
+
+    // The Admin picks another; the first DDO is back to its own department.
+    expect((await setup({ ddoMode: 'SINGLE', singleDdoUserId: 'stf-accountant' })).json().fieldErrors.singleDdoUserId).toBe('Choose an active DDO login.');
+    expect((await setup({ singleDdoUserId: 'stf-ddo-gad' })).statusCode).toBe(200);
+    expect(new Set(Object.values(await inCharge()))).toEqual(new Set(['stf-ddo-gad']));
+    expect(await seen()).toBe(own);
+
+    // Back to a DDO per department.
+    expect((await setup({ ddoMode: 'PER_DEPARTMENT' })).statusCode).toBe(200);
+    expect(await inCharge()).toMatchObject({ 'dept-fin': 'stf-ddo-fin', 'dept-gad': 'stf-ddo-gad' });
+  });
+
   it('adds and edits a department with code checks', async () => {
     const body = { code: 'tstd', name: 'Test Department', ddoName: 'A. Officer', ddoDesignation: 'Section Officer (Claims)' };
     const created = await app.inject({ method: 'POST', url: '/api/v1/departments', headers: bearer(admin), payload: body });

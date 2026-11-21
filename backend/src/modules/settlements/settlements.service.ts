@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { fdPrematureSettlement, finalSettlement, formatDisplayDate, formatINR, keepsAppAccess, lastInterestChargedOn } from '@tgs/domain';
+import { fdPrematureSettlement, finalSettlement, formatDisplayDate, formatINR, keepsAppAccess, lastInterestChargedOn, inDepartmentScope } from '@tgs/domain';
 import type { DepositAccount, FinalSettlement, FinalSettlementStatement, Loan, Member, SessionUser, SettlementView } from '@tgs/types';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -81,7 +81,7 @@ export class SettlementsService {
   async view(user: SessionUser, memberId: string): Promise<SettlementView> {
     await this.requireStaff(user, 'members.view');
     const m = (await this.app.members.byId(memberId)) ?? fail('NOT_FOUND', 'Member not found.');
-    if (user.role === 'DDO' && m.departmentId !== user.departmentId) fail('NOT_FOUND', 'Member not found.');
+    if (!inDepartmentScope(user, m.departmentId)) fail('NOT_FOUND', 'Member not found.');
     const [s, dept, canExit, canPost] = await Promise.all([this.load(undefined, m.id), this.app.departments.get(m.departmentId), this.app.permissions.has(user.role, 'members.edit'), this.app.permissions.has(user.role, 'collections.postRecovery')]);
     const statement = s?.status === 'POSTED' ? s.posted!.statement : s ? await this.statement(m, s.exit.date) : null;
     return {

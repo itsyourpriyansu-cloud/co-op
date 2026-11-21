@@ -20,6 +20,7 @@ import {
   suretyProgress,
   validateLoanRequest,
   type RuleCheck,
+  inDepartmentScope,
 } from '@tgs/domain';
 import {
   ROLE_LABELS,
@@ -356,7 +357,7 @@ export class LoansService {
   /** Staff never see a member's unsubmitted draft; DDOs only see their department. */
   staffCanSee(l: Pick<Loan, 'status' | 'channel'>, m: Pick<Member, 'departmentId'> | undefined, user: SessionUser): boolean {
     if (l.status === 'DRAFT' && l.channel !== 'COUNTER') return false;
-    return user.role !== 'DDO' || m?.departmentId === user.departmentId;
+    return inDepartmentScope(user, m?.departmentId);
   }
 
   async requireStaffView(user: SessionUser): Promise<void> {
@@ -420,7 +421,7 @@ export class LoansService {
   async contextForStaff(user: SessionUser, memberId: string): Promise<LoanContext> {
     await this.requireStaffView(user);
     const m = await this.app.members.byId(memberId);
-    if (!m || (user.role === 'DDO' && m.departmentId !== user.departmentId)) return fail('NOT_FOUND', 'Member not found.');
+    if (!m || !inDepartmentScope(user, m.departmentId)) return fail('NOT_FOUND', 'Member not found.');
     return this.context(await this.world(), m);
   }
 
@@ -589,7 +590,7 @@ export class LoansService {
     const open = await this.repo.lite(w.cycle, { statuses: OPEN });
     const max = w.settings.maxGuaranteesPerSurety;
     return all
-      .filter((m) => m.status === 'ACTIVE' && m.id !== user.memberId && (m.name.toLowerCase().includes(q) || m.generalNo.startsWith(q)) && (user.role !== 'DDO' || m.departmentId === user.departmentId))
+      .filter((m) => m.status === 'ACTIVE' && m.id !== user.memberId && (m.name.toLowerCase().includes(q) || m.generalNo.startsWith(q)) && inDepartmentScope(user, m.departmentId))
       .map((m) => ({ id: m.id, name: m.name, generalNo: m.generalNo, departmentName: w.depts.get(m.departmentId)?.name ?? '', designation: m.designation, leftoverLabel: calculateLeftoverService(m.dor, w.today).label, activeGuarantees: this.guaranteesOf(open, m.id).length }))
       .sort((a, b) => Number(b.generalNo === q) - Number(a.generalNo === q) || Number(a.activeGuarantees >= max) - Number(b.activeGuarantees >= max) || a.name.localeCompare(b.name))
       .slice(0, 12);
