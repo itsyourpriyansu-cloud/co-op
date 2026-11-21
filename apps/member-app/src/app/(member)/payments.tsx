@@ -112,6 +112,7 @@ export default function Payments() {
 
           <SegmentedControl
             label="Show"
+            hideLabel
             value={seg}
             options={[
               { value: 'MONTHS', label: 'Monthly' },

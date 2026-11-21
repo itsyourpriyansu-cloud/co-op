@@ -2,7 +2,7 @@
 import { Children, useEffect, useState, type ReactNode } from 'react';
 import { Alert as RNAlert, Linking, Platform, Pressable, Share, StyleSheet, View, ScrollView } from 'react-native';
 import { router, type Href } from 'expo-router';
-import { ChevronDown, ChevronRight, CircleCheck, CircleX, Printer, Share2, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react-native';
+import { ChevronDown, ChevronRight, CircleCheck, CircleX, Printer, Share2, TriangleAlert, UserRound } from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { isApiError } from '@tgs/api-client';
 import { checkPassword, isSearchable, DENOMINATIONS, denominationsFor, formatINR, type Denomination } from '@tgs/domain';
@@ -12,7 +12,7 @@ import { DEFAULT_SOCIETY, localDate, withSignatures, type Society } from '@/lib/
 import { DocumentActions } from '@/components/DocumentActions';
 import { useAuth } from '@/lib/auth';
 import { getServerUrl } from '@/lib/serverUrl';
-import { Banner, Button, Card, Header, Screen, SegmentedControl, SelectField, Skeleton, Text, TextField, Token, Link } from '@/ui';
+import { Banner, Button, Card, Header, ListRow, Screen, SegmentedControl, SelectField, Skeleton, Text, TextField, Token, Link } from '@/ui';
 import { color, radius, touchTarget, spacing, type StatusName } from '@/theme';
 
 export const MUST_CHANGE_KEY = 'tgs.staff.mustChange';
@@ -203,27 +203,8 @@ export function Stack2({ children }: { children: ReactNode }) {
   );
 }
 
-/** Menu row, as on the member More screen. */
-export function Row({ icon: Icon, label, hint, onPress, danger, divider, right }: { icon?: LucideIcon; label: string; hint?: string; onPress: () => void; danger?: boolean; divider?: boolean; right?: ReactNode }) {
-  const tint = danger ? color.status.error.text : color.text.primary;
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.menu, divider && styles.divider, pressed && { backgroundColor: color.background.muted }]}>
-      {Icon ? <Icon size={22} color={tint} strokeWidth={1.75} /> : null}
-      <View style={{ flex: 1, gap: spacing[0.5], paddingVertical: spacing[1.5] }}>
-        <Text type="body" style={{ color: tint }}>
-          {label}
-        </Text>
-        {hint ? (
-          <Text type="supporting" tone="secondary">
-            {hint}
-          </Text>
-        ) : null}
-      </View>
-      {right}
-      {!danger ? <ChevronRight size={20} color={color.text.secondary} /> : null}
-    </Pressable>
-  );
-}
+/** Menu row: the kit's ListRow, under the name the staff screens import. */
+export const Row = ListRow;
 
 export function StatTile({ label, value, sub, tone, onPress }: { label: string; value: string; sub?: string; tone?: 'neutral' | 'warning' | 'danger' | 'success'; onPress?: () => void }) {
   const fg = tone === 'warning' ? color.status.warning.text : tone === 'danger' ? color.status.error.text : tone === 'success' ? color.status.success.text : color.text.primary;

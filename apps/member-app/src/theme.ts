@@ -46,6 +46,19 @@ export const color = {
     approval: { solid: '#6B4FB3', onSolid: '#FFFFFF', text: '#6B4FB3', tint: '#F1ECFA', border: '#D9CCF2' },
   },
   money: { credit: '#2A7230', debit: '#C0262C' },
+  /**
+   * D-139 glass hero (member home, profile, staff home): deep navy gradient lit by a gold glow, with
+   * frosted tiles on it. `solid` is the start colour, the worst case for text contrast.
+   */
+  hero: {
+    solid: '#063B76',
+    gradient: 'linear-gradient(155deg, #063B76 0%, #003471 50%, #001F45 100%)',
+    glow: 'radial-gradient(circle, rgba(212,165,71,0.40) 0%, rgba(212,165,71,0) 70%)',
+    ring: 'rgba(212,165,71,0.55)',
+    glass: 'rgba(255,255,255,0.08)',
+    glassBorder: 'rgba(255,255,255,0.16)',
+    glassEdge: 'inset 0px 1px 0px rgba(255,255,255,0.14)',
+  },
 } as const;
 
 export type StatusName = keyof typeof color.status;

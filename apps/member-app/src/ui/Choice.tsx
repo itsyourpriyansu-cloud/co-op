@@ -3,7 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Animated, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Check, Minus, Plus, type LucideIcon } from 'lucide-react-native';
-import { color, motion, radius, spacing, touchTarget } from '@/theme';
+import { color, motion, radius, shadow, spacing, touchTarget } from '@/theme';
 import { haptic, useMotionMode, usePressScale, useToggle } from './motion';
 import { Text } from './Text';
 
@@ -128,14 +128,42 @@ export function CheckboxInput({ checked, onChange, label, description }: { check
   );
 }
 
-/** Astryx SegmentedControl: short, mutually exclusive options side by side (e.g. gender). */
-export function SegmentedControl<T extends string>({ label, value, options, onChange, error }: { label: string; value?: T; options: Array<{ value: T; label: string }>; onChange: (v: T) => void; error?: string }) {
+/** One segment: the white thumb fades in under the label when chosen. */
+function Segment({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  const v = useToggle(on);
+  const { scaleStyle, pressHandlers } = usePressScale(0.96);
+  return (
+    <AnimatedPressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: on }}
+      aria-checked={on}
+      onPress={() => {
+        if (!on) haptic.select();
+        onPress();
+      }}
+      {...pressHandlers}
+      hitSlop={4}
+      style={[styles.seg, scaleStyle]}
+    >
+      <Animated.View pointerEvents="none" style={[styles.segOn, { opacity: v }]} />
+      <Text type="label" weight={on ? 'semibold' : 'medium'} style={{ color: on ? color.accent : color.text.secondary, textAlign: 'center' }}>
+        {label}
+      </Text>
+    </AnimatedPressable>
+  );
+}
+
+/**
+ * Astryx SegmentedControl: short, mutually exclusive options on one track (gender, list filters).
+ * `hideLabel` keeps the label for screen readers only, for a filter whose options say it all.
+ */
+export function SegmentedControl<T extends string>({ label, hideLabel, value, options, onChange, error }: { label: string; hideLabel?: boolean; value?: T; options: Array<{ value: T; label: string }>; onChange: (v: T) => void; error?: string }) {
   return (
     <View style={{ gap: spacing[1.5] }}>
-      <Text type="label">{label}</Text>
-      <View style={styles.optRow} accessibilityRole="radiogroup">
+      {hideLabel ? null : <Text type="label">{label}</Text>}
+      <View style={[styles.track, !!error && styles.optError]} accessibilityRole="radiogroup" accessibilityLabel={label}>
         {options.map((o) => (
-          <OptionButton key={o.value} label={o.label} on={value === o.value} error={!!error} onPress={() => onChange(o.value)} style={styles.grow} />
+          <Segment key={o.value} label={o.label} on={value === o.value} onPress={() => onChange(o.value)} />
         ))}
       </View>
       {error ? (
@@ -231,9 +259,13 @@ const styles = StyleSheet.create({
   optError: { borderColor: color.status.error.solid },
   // Covers the resting 1 px border, so the 2 px accent border sits exactly on it.
   optOn: { position: 'absolute', top: -1, right: -1, bottom: -1, left: -1, borderRadius: radius.element, borderCurve: 'continuous', borderWidth: 2, borderColor: color.accent, backgroundColor: color.accentMuted },
+  track: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1], padding: spacing[1], borderRadius: radius.element, borderCurve: 'continuous', borderWidth: 1, borderColor: color.border, backgroundColor: color.track },
+  seg: { flexGrow: 1, minHeight: touchTarget - 8, paddingHorizontal: spacing[3], borderRadius: radius.inner, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
+  segOn: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: radius.inner, borderCurve: 'continuous', backgroundColor: color.background.surface, boxShadow: shadow.med },
   optRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[1] },
   monthRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1.5] },
-  month: { minWidth: 104 },
+  // An even three-column grid; a short last row keeps the same widths.
+  month: { flexBasis: '31%', flexGrow: 1, maxWidth: '33%' },
   stepper: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderWidth: 1, borderColor: color.borderEmphasized, borderRadius: radius.element, borderCurve: 'continuous', backgroundColor: color.background.surface, overflow: 'hidden' },
   stepBtn: { width: touchTarget + 8, height: touchTarget + 8, alignItems: 'center', justifyContent: 'center' },
   stepPressed: { backgroundColor: color.overlayPressed },

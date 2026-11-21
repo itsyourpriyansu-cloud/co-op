@@ -9,7 +9,7 @@ import type { MemberHome } from '@tgs/types';
 import { AppMark } from '@/components/AppMark';
 import { useAuth } from '@/lib/auth';
 import { useHome } from '@/lib/account';
-import { Banner, Card, CountUp, Screen, Section, Skeleton, StatusToken, Token, Text, usePressScale } from '@/ui';
+import { Banner, Card, CountUp, glassTile, HeroCard, Screen, Section, Skeleton, StatusToken, Token, Text, usePressScale } from '@/ui';
 import { color, radius, shadow, spacing } from '@/theme';
 
 const TONE = { primary: 'info', warning: 'warning', danger: 'error' } as const;
@@ -76,26 +76,35 @@ export default function Home() {
             </Section>
           ) : null}
 
-          <View style={styles.grid}>
-            <Action icon={HandCoins} label="Apply loan" onPress={() => router.push('/loan/apply')} />
-            <Action icon={PiggyBank} label="Open FD" onPress={() => router.push('/deposit/open')} />
-            <Action icon={Calculator} label="Calculator" onPress={() => router.push('/account/calculators')} />
-            <Action icon={ReceiptIndianRupee} label="Payments" onPress={() => router.push('/payments')} />
-          </View>
+          <Section title="Quick actions">
+            <View style={styles.grid}>
+              <Action icon={HandCoins} label="Apply loan" onPress={() => router.push('/loan/apply')} />
+              <Action icon={PiggyBank} label="Open FD" onPress={() => router.push('/deposit/open')} />
+              <Action icon={Calculator} label="Calculator" onPress={() => router.push('/account/calculators')} />
+              <Action icon={ReceiptIndianRupee} label="Payments" onPress={() => router.push('/payments')} />
+            </View>
+          </Section>
 
           {h.thisMonth ? (
-            <Card onPress={() => router.push('/payments')}>
-              <View style={styles.row}>
-                <View style={{ flex: 1, gap: spacing[0.5] }}>
-                  <Text type="supporting" tone="secondary">
-                    Salary deduction · {formatCycle(h.thisMonth.cycle)}
-                  </Text>
-                  <Text type="h4">{formatINR(h.thisMonth.demand)}</Text>
+            <Section title="This month">
+              <Card onPress={() => router.push('/payments')}>
+                <View style={styles.row}>
+                  <View style={styles.monthIcon}>
+                    <ReceiptIndianRupee size={20} color={color.goldText} strokeWidth={1.75} />
+                  </View>
+                  <View style={{ flex: 1, gap: spacing[0.5] }}>
+                    <Text type="supporting" tone="secondary">
+                      Salary deduction · {formatCycle(h.thisMonth.cycle)}
+                    </Text>
+                    <Text type="h4" style={{ fontVariant: ['tabular-nums'] }}>
+                      {formatINR(h.thisMonth.demand)}
+                    </Text>
+                  </View>
+                  <StatusToken entity="demandSheet" status={h.thisMonth.status} size="xs" />
+                  <ChevronRight size={18} color={color.icon.secondary} />
                 </View>
-                <StatusToken entity="demandSheet" status={h.thisMonth.status} size="xs" />
-                <ChevronRight size={18} color={color.text.secondary} />
-              </View>
-            </Card>
+              </Card>
+            </Section>
           ) : null}
 
           <Section title="My loans" right={<Text type="supporting" weight="medium" tone="link" onPress={() => router.push('/loans')}>See all</Text>}>
@@ -174,19 +183,19 @@ export default function Home() {
 
 function Snapshot({ h }: { h: MemberHome }) {
   return (
-    <View style={styles.hero} accessible accessibilityLabel={`Deposits ${formatINR(h.deposits.total)}. Loans to repay ${formatINR(h.loansOutstanding)}. Share capital ${formatINR(h.shares.capital)}.`}>
-      <Text type="supporting" style={styles.heroDim}>
+    <HeroCard accessible accessibilityLabel={`Deposits ${formatINR(h.deposits.total)}. Loans to repay ${formatINR(h.loansOutstanding)}. Share capital ${formatINR(h.shares.capital)}.`}>
+      <Text type="supporting" weight="semibold" tone="goldOnAccent" style={styles.eyebrow}>
         My savings with the society
       </Text>
-      <CountUp type="display-2" tone="onAccent" value={h.deposits.total + h.shares.capital + h.shares.shareDeposit} format={formatINR} adjustsFontSizeToFit numberOfLines={1} />
+      <CountUp type="display-2" weight="semibold" tone="onAccent" value={h.deposits.total + h.shares.capital + h.shares.shareDeposit} format={formatINR} adjustsFontSizeToFit numberOfLines={1} style={{ fontVariant: ['tabular-nums'] }} />
       <View style={styles.heroGrid}>
         <Figure label="Deposits" value={formatINR(h.deposits.total)} sub={h.deposits.fdCount ? `${h.deposits.fdCount} FD${h.deposits.fdCount > 1 ? 's' : ''} + CRD, SRDS` : 'CRD, SRDS, savings'} onPress={() => router.push('/deposits')} />
         <Figure label="Shares" value={formatINR(h.shares.capital)} sub={`${h.shares.count} shares`} onPress={() => router.push('/profile')} />
         <Figure label="Loans" value={formatINR(h.loansOutstanding)} sub={h.loans.length ? `${h.loans.length} running` : 'None'} onPress={() => router.push('/loans')} />
       </View>
       {h.unpaid ? (
-        <Pressable accessibilityRole="button" onPress={() => router.push('/payments')} style={styles.unpaid}>
-          <Text type="supporting" weight="medium" style={{ color: color.status.error.text, flex: 1 }}>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/payments')} style={({ pressed }) => [styles.unpaid, pressed && { opacity: 0.85 }]}>
+          <Text type="supporting" weight="semibold" style={{ color: color.status.error.text, flex: 1 }}>
             {formatINR(h.unpaid)} unpaid
           </Text>
           <Text type="supporting" weight="medium" style={{ color: color.status.error.text }}>
@@ -195,22 +204,25 @@ function Snapshot({ h }: { h: MemberHome }) {
           <ChevronRight size={16} color={color.status.error.text} />
         </Pressable>
       ) : null}
-    </View>
+    </HeroCard>
   );
 }
 
 function Figure({ label, value, sub, onPress }: { label: string; value: string; sub: string; onPress: () => void }) {
+  const { scaleStyle, pressHandlers } = usePressScale(0.95);
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.figure, pressed && { opacity: 0.75 }]}>
-      <Text type="supporting" style={styles.heroDim}>
-        {label}
-      </Text>
-      <Text type="label" tone="onAccent">
-        {value}
-      </Text>
-      <Text type="supporting" style={styles.heroDim} numberOfLines={1}>
-        {sub}
-      </Text>
+    <Pressable accessibilityRole="button" onPress={onPress} {...pressHandlers} style={styles.figureHit}>
+      <Animated.View style={[glassTile, styles.figure, scaleStyle]}>
+        <Text type="supporting" style={styles.heroDim}>
+          {label}
+        </Text>
+        <Text type="label" weight="semibold" tone="onAccent" numberOfLines={1} adjustsFontSizeToFit style={{ fontVariant: ['tabular-nums'] }}>
+          {value}
+        </Text>
+        <Text type="supporting" style={styles.heroDim} numberOfLines={2}>
+          {sub}
+        </Text>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -222,7 +234,7 @@ function Action({ icon: Icon, label, onPress }: { icon: LucideIcon; label: strin
       {({ pressed }) => (
         <>
           <Animated.View style={[styles.actionIcon, pressed && styles.actionPressed, scaleStyle]}>
-            <Icon size={22} color={color.accent} strokeWidth={1.75} />
+            <Icon size={22} color={color.gold} strokeWidth={1.75} />
           </Animated.View>
           <Text type="supporting" weight="medium">
             {label}
@@ -237,18 +249,20 @@ const styles = StyleSheet.create({
   greeting: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
   bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.background.surface, borderWidth: 1, borderColor: color.border },
   badge: { position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: color.status.error.solid, alignItems: 'center', justifyContent: 'center' },
-  // The screen's one gold moment: a hairline ring on the raised navy card.
-  hero: { backgroundColor: color.accent, borderRadius: radius.container, borderCurve: 'continuous', borderWidth: 1, borderColor: color.gold, padding: spacing[5], gap: spacing[2], boxShadow: shadow.med },
+  eyebrow: { letterSpacing: 0.3 },
   heroDim: { color: color.text.onAccentMuted },
-  heroGrid: { flexDirection: 'row', gap: spacing[1.5], marginTop: spacing[2] },
-  figure: { flex: 1, gap: spacing[0.5], padding: spacing[2], borderRadius: radius.element, backgroundColor: color.accentTile },
-  unpaid: { flexDirection: 'row', alignItems: 'center', gap: spacing[1.5], marginTop: spacing[1], padding: spacing[2], borderRadius: radius.element, backgroundColor: color.status.error.tint },
+  heroGrid: { flexDirection: 'row', gap: spacing[2], marginTop: spacing[3] },
+  figureHit: { flex: 1 },
+  figure: { flex: 1, gap: spacing[0.5], padding: spacing[3] },
+  unpaid: { flexDirection: 'row', alignItems: 'center', gap: spacing[1.5], marginTop: spacing[2], minHeight: 44, paddingHorizontal: spacing[3], borderRadius: radius.element, borderCurve: 'continuous', backgroundColor: color.status.error.tint },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
   dot: { width: 10, height: 10, borderRadius: 5 },
   grid: { flexDirection: 'row', justifyContent: 'space-between' },
   action: { alignItems: 'center', gap: spacing[1.5], width: '23%' },
-  actionIcon: { width: 56, height: 56, borderRadius: radius.container, borderCurve: 'continuous', backgroundColor: color.background.surface, borderWidth: 1, borderColor: color.border, alignItems: 'center', justifyContent: 'center' },
-  actionPressed: { backgroundColor: color.accentMuted },
+  // Navy tiles with gold icons: the seal's colours in small repeats, matching the hero.
+  actionIcon: { width: 60, height: 60, borderRadius: radius.container, borderCurve: 'continuous', backgroundColor: color.hero.solid, backgroundImage: color.hero.gradient, borderWidth: 1, borderColor: color.hero.ring, alignItems: 'center', justifyContent: 'center', boxShadow: shadow.med },
+  actionPressed: { opacity: 0.9 },
+  monthIcon: { width: 40, height: 40, borderRadius: radius.element, borderCurve: 'continuous', backgroundColor: color.goldMuted, alignItems: 'center', justifyContent: 'center' },
   listRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
   divider: { borderTopWidth: 1, borderTopColor: color.border },
 });

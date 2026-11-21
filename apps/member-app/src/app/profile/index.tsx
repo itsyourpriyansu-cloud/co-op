@@ -4,11 +4,11 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { BadgeCheck, ChevronDown, ChevronUp, FileText, PenLine, ShieldAlert } from 'lucide-react-native';
+import { BadgeCheck, ChevronDown, ChevronUp, FilePen, FileText, PenLine, ShieldAlert, Signature } from 'lucide-react-native';
 import { formatCycle, formatDisplayDate, formatINR, PROFILE_FIELDS } from '@tgs/domain';
 import type { ProfileChangeRequest, ProfileFieldChange } from '@tgs/types';
 import { useMyProfile } from '@/lib/profile';
-import { Banner, Button, Card, Divider, Header, MetadataListItem, Screen, Section, Skeleton, StatusToken, Text, Link } from '@/ui';
+import { Banner, Card, Divider, Header, HeroCard, ListRow, MetadataListItem, Screen, Section, Skeleton, StatusToken, Text, Link } from '@/ui';
 import { color, radius, spacing } from '@/theme';
 
 const show = (c: Pick<ProfileFieldChange, 'field'>, v: string) => (PROFILE_FIELDS[c.field].kind === 'money' && v ? formatINR(Number(v) * 100) : v || '—');
@@ -63,9 +63,9 @@ export default function Profile() {
         <Banner status="error" heading="Couldn't load your profile" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void profile.refetch() }} />
       ) : (
         <>
-          <View style={styles.hero}>
+          <HeroCard style={styles.hero}>
             <View style={styles.initials}>
-              <Text type="h3" tone="onAccent">
+              <Text type="h3" weight="semibold" tone="goldOnAccent">
                 {m.name
                   .split(' ')
                   .map((w) => w[0])
@@ -84,13 +84,13 @@ export default function Profile() {
                 {p.departmentName}
               </Text>
             </View>
-          </View>
+          </HeroCard>
 
-          <View style={styles.actions}>
-            <Button label="Edit contact" variant="secondary" icon={PenLine} style={{ flex: 1 }} onPress={() => router.push('/profile/edit')} />
-            <Button label="Request a change" style={{ flex: 1 }} onPress={() => router.push('/profile/request')} />
-            <Button label="My signature" variant="secondary" style={{ flex: 1 }} onPress={() => router.push('/profile/signature')} />
-          </View>
+          <Card padded={false}>
+            <ListRow icon={PenLine} label="Edit contact" hint="Mobile, email and address" onPress={() => router.push('/profile/edit')} />
+            <ListRow icon={FilePen} label="Request a change" hint="Name, dates, nominee or pay" divider onPress={() => router.push('/profile/request')} />
+            <ListRow icon={Signature} label="My signature" hint="Printed on your forms" divider onPress={() => router.push('/profile/signature')} />
+          </Card>
 
           {p.changeRequests.length ? (
             <Section title="My requests" description="Changes you asked the society to make.">
@@ -197,9 +197,8 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
-  hero: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], backgroundColor: color.accent, borderRadius: radius.container, padding: spacing[4] },
-  initials: { width: 56, height: 56, borderRadius: 28, backgroundColor: color.accentTile, alignItems: 'center', justifyContent: 'center' },
-  actions: { flexDirection: 'row', gap: spacing[2] },
+  hero: { flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
+  initials: { width: 60, height: 60, borderRadius: 30, borderWidth: 1.5, borderColor: color.gold, backgroundColor: color.hero.glass, alignItems: 'center', justifyContent: 'center' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   rowIcon: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3], paddingBottom: spacing[2] },
   docRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[4], paddingVertical: spacing[3] },

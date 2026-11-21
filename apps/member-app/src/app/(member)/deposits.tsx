@@ -7,7 +7,7 @@ import { ChevronRight, PiggyBank, Plus } from 'lucide-react-native';
 import { formatDisplayDate, formatINR } from '@tgs/domain';
 import type { DepositRow } from '@tgs/types';
 import { SCHEME_LABEL, segmentOf, useMyDeposits, type DepositSegment } from '@/lib/deposits';
-import { Banner, Button, Card, EmptyState, Screen, SegmentedControl, Skeleton, StatusToken, Token, Text } from '@/ui';
+import { Banner, Button, Card, EmptyState, heroSurface, Screen, SegmentedControl, Skeleton, StatusToken, Token, Text } from '@/ui';
 import { color, radius, spacing } from '@/theme';
 
 const SEGMENTS: Array<{ value: DepositSegment; label: string }> = [
@@ -77,7 +77,7 @@ export default function Deposits() {
 
       {deposits.data ? (
         <View style={styles.hero}>
-          <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
+          <Text type="supporting" weight="semibold" tone="goldOnAccent">
             Saved with the society
           </Text>
           <Text type="display-2" tone="onAccent">
@@ -104,7 +104,7 @@ export default function Deposits() {
         </View>
       ) : null}
 
-      <SegmentedControl label="Show" value={segment} options={SEGMENTS.map((s) => ({ value: s.value, label: `${s.label} ${count(s.value) || ''}`.trim() }))} onChange={setSegment} />
+      <SegmentedControl label="Show" hideLabel value={segment} options={SEGMENTS.map((s) => ({ value: s.value, label: `${s.label} ${count(s.value) || ''}`.trim() }))} onChange={setSegment} />
 
       {deposits.isLoading ? (
         <View style={{ gap: spacing[3] }}>
@@ -133,6 +133,6 @@ export default function Deposits() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  hero: { backgroundColor: color.accent, borderRadius: radius.container, padding: spacing[5], gap: spacing[1.5] },
+  hero: { ...heroSurface, padding: spacing[5], gap: spacing[1.5] },
   heroRow: { flexDirection: 'row', gap: spacing[3], marginTop: spacing[2] },
 });

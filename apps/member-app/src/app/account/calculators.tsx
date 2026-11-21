@@ -11,7 +11,7 @@ import { calculateEmi, calculateFdMaturity, calculateNetSalary, calculateShareDe
 import type { LoanContext, PayoutFrequency, RatesReference } from '@tgs/types';
 import { api } from '@/lib/api';
 import { useLoanContext } from '@/lib/loans';
-import { Banner, Button, Card, Divider, Header, MetadataListItem, MonthPicker, NumberInput, Screen, SegmentedControl, SelectField, Skeleton, Token, Text, TextField } from '@/ui';
+import { Banner, Button, Card, Divider, Header, heroSurface, MetadataListItem, MonthPicker, NumberInput, Screen, SegmentedControl, SelectField, Skeleton, Token, Text, TextField } from '@/ui';
 import { color, radius, spacing } from '@/theme';
 
 const rupees = (t: string) => Number(t.replace(/[^0-9]/g, '')) || 0;
@@ -203,7 +203,7 @@ function FdCalc({ rates, today }: { rates: RatesReference; today: string }) {
 }
 
 const styles = StyleSheet.create({
-  result: { backgroundColor: color.accent, borderRadius: radius.container, padding: spacing[5], gap: spacing[1] },
+  result: { ...heroSurface, padding: spacing[5], gap: spacing[1] },
   check: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingVertical: spacing[1] },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
 });

@@ -2,7 +2,7 @@
 import { Text as RNText, type TextProps } from 'react-native';
 import { color, textStyle, type FontWeight, type TypeName } from '@/theme';
 
-export type TextTone = 'primary' | 'secondary' | 'disabled' | 'inverse' | 'link' | 'onAccent' | 'onAccentMuted' | 'gold' | 'success' | 'warning' | 'error' | 'credit' | 'debit';
+export type TextTone = 'primary' | 'secondary' | 'disabled' | 'inverse' | 'link' | 'onAccent' | 'onAccentMuted' | 'gold' | 'goldOnAccent' | 'success' | 'warning' | 'error' | 'credit' | 'debit';
 
 const TONE: Record<TextTone, string> = {
   primary: color.text.primary,
@@ -13,6 +13,8 @@ const TONE: Record<TextTone, string> = {
   onAccent: color.text.onAccent,
   onAccentMuted: color.text.onAccentMuted,
   gold: color.goldText,
+  // Bright seal gold, only on navy (the hero).
+  goldOnAccent: color.gold,
   success: color.status.success.text,
   warning: color.status.warning.text,
   error: color.status.error.text,
