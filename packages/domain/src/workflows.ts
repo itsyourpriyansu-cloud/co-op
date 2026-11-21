@@ -1,6 +1,7 @@
 // BR-013 / BR-019 state machines (docs/10 §1, §3, §4): who acts at each stage, which actions they
 // get, and where each action leads. Pure: the API enforces them, the UIs decide which buttons to show.
 import type { DemandSheetStatus, DepositStatus, LoanProduct, LoanStatus, Role } from '@tgs/types';
+import { inDepartmentScope } from './permissions';
 
 type Actor = { role: Role; departmentId?: string };
 
@@ -44,7 +45,7 @@ export function loanActionsFor(loan: { status: LoanStatus; memberDepartmentId: s
     case 'ACCOUNTANT_REVIEW':
       return user.role === 'ACCOUNTANT' ? ['forward', 'returnToMember', 'reject'] : [];
     case 'DDO_CERTIFICATION':
-      if (user.role === 'DDO') return user.departmentId === loan.memberDepartmentId ? ['ddoCertify', 'returnToMember', 'reject'] : [];
+      if (user.role === 'DDO') return inDepartmentScope(user, loan.memberDepartmentId) ? ['ddoCertify', 'returnToMember', 'reject'] : [];
       return user.role === 'ACCOUNTANT' ? ['ddoRecordManual'] : [];
     case 'ASSESSMENT':
       return user.role === 'ACCOUNTANT' ? ['sendForSanction', 'returnToMember', 'reject'] : [];

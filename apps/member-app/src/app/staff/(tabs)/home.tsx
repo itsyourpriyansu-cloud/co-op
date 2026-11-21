@@ -334,7 +334,8 @@ export default function StaffHome() {
           </Text>
           <Text type="supporting" tone="secondary">
             {greeting} · {ROLE_LABELS[session.user.role]}
-            {session.user.departmentId ? ' · your department only' : ''}
+            {/* The server's scope: the one DDO for all departments has none (D-145). */}
+            {(role.data ? role.data.scope.departmentName : session.user.departmentId) ? ' · your department only' : ''}
           </Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Search" onPress={() => router.push('/staff/search')} style={styles.bell} hitSlop={4}>

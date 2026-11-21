@@ -1,5 +1,5 @@
 // Read models computed from the store: dashboard KPIs and dataset counts.
-import { calculateLeftoverService } from '@tgs/domain';
+import { calculateLeftoverService, inDepartmentScope } from '@tgs/domain';
 import type { DashboardSummary, DatasetSample, DatasetSummary, LoanStatus, SessionUser } from '@tgs/types';
 import type { Db } from './store';
 
@@ -29,7 +29,7 @@ export function dashboardSummary(db: Db, user: SessionUser): DashboardSummary {
   };
   const queueStatuses = QUEUE_BY_ROLE[user.role] ?? [];
   const membershipItems = db.membershipApplications.filter((a) =>
-    user.role === 'DDO' ? a.status === 'DDO_CERTIFICATION' && a.departmentId === user.departmentId
+    user.role === 'DDO' ? a.status === 'DDO_CERTIFICATION' && inDepartmentScope(user, a.departmentId)
     : user.role === 'ACCOUNTANT' ? a.status === 'OFFICE_REVIEW' || a.status === 'SUBMITTED'
     : user.role === 'SECRETARY' ? a.status === 'APPROVAL_SECRETARY'
     : user.role === 'PRESIDENT' ? a.status === 'APPROVAL_PRESIDENT'

@@ -10,7 +10,7 @@ import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type Permission, type Dem
 import { ActionAlert, ask, Loaded, MoneyField, RecordCard, Stack2, useAction, plain } from '@/components/staff';
 import { api } from '@/lib/api';
 import { AUDIENCE, CHANNELS, ENTITY, fill, isPlaceholder, MONTHS, RECOVERY_LABEL, ROLE_HINT, SECTIONS, vars } from '@/lib/staffSettings';
-import { Banner, Button, Card, CheckboxInput, EmptyState, Header, MetadataListItem, Screen, Section, SegmentedControl, SelectField, Token, Text, TextField, Link } from '@/ui';
+import { Banner, Button, Card, CheckboxInput, EmptyState, Header, MetadataListItem, Screen, Section, SegmentedControl, SelectableCard, SelectField, Token, Text, TextField, Link } from '@/ui';
 import { color, spacing } from '@/theme';
 
 const LAKH = toPaise(100000);
@@ -510,7 +510,9 @@ function InsuranceDemand({ b, title }: { b: SettingsBundle; title: string }) {
 
 const EMPTY_DEPT: Partial<Department> = { code: '', name: '', kind: 'SECRETARY_DEPT', ddoName: '', ddoDesignation: 'Assistant Secretary to Government' };
 
-function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
+type DdoSetup = { ddoMode: 'PER_DEPARTMENT' | 'SINGLE'; singleDdoUserId: string };
+
+function Departments({ canEdit, title, settings }: { canEdit: boolean; title: string; settings: SocietySettings }) {
   const qc = useQueryClient();
   const list = useQuery({ queryKey: ['departments'], queryFn: api.settings.departments });
   const users = useQuery({ queryKey: ['users'], queryFn: api.settings.users });
@@ -521,6 +523,20 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
   const a = useAction();
   const e = a.fields;
   const set = (p: Partial<Department>) => setEditing((x) => ({ ...x, ...p }));
+  // DDO setup (D-145): one DDO for all departments, or a DDO in charge per department. The list follows the saved mode.
+  const single = settings.ddoMode === 'SINGLE';
+  const allDdos = (users.data ?? []).filter((u) => u.role === 'DDO' && u.active !== false);
+  const singleNow = single ? loginOf(list.data?.find((d) => d.ddoUserId)?.ddoUserId) : undefined;
+  const [setup, setSetup] = useState<DdoSetup>();
+  const shown: DdoSetup = setup ?? { ddoMode: single ? 'SINGLE' : 'PER_DEPARTMENT', singleDdoUserId: singleNow?.id ?? '' };
+  const pick = (ddoMode: DdoSetup['ddoMode']) => setSetup({ ddoMode, singleDdoUserId: shown.singleDdoUserId || allDdos[0]?.id || '' });
+  const s = useAction();
+  const saveSetup = () =>
+    s.run(async () => {
+      qc.setQueryData(['settings'], await api.settings.updateValues({ ddoMode: shown.ddoMode, ...(shown.ddoMode === 'SINGLE' && shown.singleDdoUserId ? { singleDdoUserId: shown.singleDdoUserId } : {}) }));
+      setSetup(undefined);
+    });
+  const deptName = (id?: string) => list.data?.find((d) => d.id === id)?.name;
   if (editing) {
     const close = () => setEditing(undefined);
     const save = async () => {
@@ -541,7 +557,11 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
             For members transferred outside the Secretariat (recovery mandate moves here).
           </Text>
         ) : null}
-        {editing.id ? (
+        {editing.id && single ? (
+          <Text type="supporting" tone="secondary">
+            One DDO for all departments is on: {singleNow ? `${singleNow.name} (${singleNow.userId})` : 'the first DDO login added'} does this office's DDO work. Change it under DDO setup.
+          </Text>
+        ) : editing.id ? (
           ddosOf(editing.id).length ? (
             <SelectField
               label="DDO in charge"
@@ -567,6 +587,32 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
       <Loaded q={list} what="departments">
         {(rows) => (
           <>
+            <Section title="DDO setup" description="Who certifies applications, agrees salary-recovery mandates and receives the monthly demand sheets. A change applies from the next task.">
+              <SelectableCard title="A DDO for each department" description="Each department's DDO in charge handles its own members. Tap a department below to choose." selected={shown.ddoMode === 'PER_DEPARTMENT'} onPress={() => canEdit && pick('PER_DEPARTMENT')} />
+              <SelectableCard title="One DDO for all departments" description="One DDO login handles every department's members and sees every department's records." selected={shown.ddoMode === 'SINGLE'} onPress={() => canEdit && pick('SINGLE')} />
+              {shown.ddoMode === 'SINGLE' ? (
+                allDdos.length ? (
+                  canEdit ? (
+                    <SelectField label="DDO for all departments" value={shown.singleDdoUserId} options={allDdos.map((u) => ({ value: u.id, label: u.name, hint: [u.userId, deptName(u.departmentId)].filter(Boolean).join(' · ') }))} onChange={(id) => setSetup({ ddoMode: 'SINGLE', singleDdoUserId: id })} error={s.fields.singleDdoUserId} />
+                  ) : null
+                ) : (
+                  <Text type="supporting" tone="secondary">
+                    No DDO login yet. Add one in Users (role DDO), then choose it here.
+                  </Text>
+                )
+              ) : null}
+              <ActionAlert action={s} heading="DDO setup not saved" />
+              {canEdit && setup ? (
+                <View style={{ flexDirection: 'row', gap: spacing[2] }}>
+                  <View style={{ flex: 1 }}>
+                    <Button label="Discard" variant="secondary" fullWidth onPress={() => setSetup(undefined)} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Button label="Save" fullWidth loading={s.busy} onPress={() => void saveSetup()} />
+                  </View>
+                </View>
+              ) : null}
+            </Section>
             <Text type="body" tone="secondary">
               {rows.length} offices. DDOs certify membership and loan applications and deduct dues from salary.
             </Text>
@@ -575,7 +621,8 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
                 <RecordCard key={r.id} title={r.name} subtitle={`${r.code} · ${r.memberCount} members`} caption={`DDO ${r.ddoName}, ${r.ddoDesignation}`} {...(canEdit ? { onPress: () => setEditing(r) } : {})}>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1] }}>
                     <Token text={r.ddoUserId ? `In charge: ${loginOf(r.ddoUserId)?.userId ?? 'yes'}` : 'No login yet'} status={r.ddoUserId ? 'success' : 'neutral'} size="xs" />
-                    {ddosOf(r.id).length > 1 ? <Token text={`${ddosOf(r.id).length} DDO logins`} status="neutral" size="xs" /> : null}
+                    {single && r.ddoUserId ? <Token text="All departments" status="info" size="xs" /> : null}
+                    {!single && ddosOf(r.id).length > 1 ? <Token text={`${ddosOf(r.id).length} DDO logins`} status="neutral" size="xs" /> : null}
                     {r.kind === 'EXTERNAL_OFFICE' ? <Token text="Outside Secretariat" status="neutral" size="xs" /> : null}
                   </View>
                 </RecordCard>
@@ -852,7 +899,7 @@ export default function SettingsSection() {
     case 'insurance-demand':
       return <InsuranceDemand b={b} title={title} />;
     case 'departments':
-      return <Departments canEdit={b.canEdit} title={title} />;
+      return <Departments canEdit={b.canEdit} title={title} settings={b.settings} />;
     case 'users':
       return <Users canEdit={b.canEdit} title={title} />;
     case 'permissions':

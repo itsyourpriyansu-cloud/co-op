@@ -148,7 +148,7 @@ export class NotificationsService {
    */
   /**
    * Work has reached a staff stage (docs/10): every active user of the owning role gets an in-app note,
-   * a DDO only for their department. Members and applicants are told by template elsewhere. A failure
+   * a DDO only for their department (or the one DDO for all departments, D-145). Members and applicants are told by template elsewhere. A failure
    * here is logged and never undoes the workflow step that already committed.
    */
   async notifyStage(owner: string | undefined, title: string, body: string, link: string, where: { departmentId?: string; memberId?: string } = {}): Promise<void> {
@@ -156,7 +156,9 @@ export class NotificationsService {
     try {
       const departmentId = where.departmentId ?? (where.memberId ? (await this.app.members.byId(where.memberId))?.departmentId : undefined);
       const createdAt = await businessNow(this.app);
-      for (const recipientId of await this.repo.staffOfRole(owner, departmentId)) {
+      // D-145: with one DDO for all departments, only that DDO is told about DDO work.
+      const single = owner === 'DDO' ? await this.app.departments.singleDdo() : undefined;
+      for (const recipientId of single ? [single.id] : await this.repo.staffOfRole(owner, departmentId)) {
         const n: StoredNotification = { id: newId('ntf'), recipientId, title, body, channel: 'IN_APP', createdAt, read: false, link, via: {} };
         await this.repo.insert(n, 'work.stage');
         await this.hub.publish({ recipientId, id: n.id, title });

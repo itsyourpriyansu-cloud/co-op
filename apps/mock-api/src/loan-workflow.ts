@@ -23,6 +23,7 @@ import {
   toCycle,
   validateSanctionAdjustment,
   type LoanAction,
+  inDepartmentScope,
 } from '@tgs/domain';
 import {
   type Loan,
@@ -340,7 +341,7 @@ export function workQueue(db: Db, user: SessionUser): WorkQueue {
   }
   if (can(user, 'membership.view')) {
     for (const a of db.membershipApplications) {
-      if (a.status === 'DRAFT' || (user.role === 'DDO' && a.departmentId !== user.departmentId)) continue;
+      if (a.status === 'DRAFT' || !inDepartmentScope(user, a.departmentId)) continue;
       if (!membershipActionsFor(a, user).length) continue;
       const since = (a.events.at(-1)?.at ?? a.submittedOn ?? today).slice(0, 10);
       items.push({ kind: 'membership', id: a.id, ref: a.applicationNo, title: a.name, subtitle: `Membership · ${a.designation}`, stage: 'membership', stageLabel: STAGE_LABEL.membership!, status: a.status, departmentName: dept(a.departmentId), since, days: daysBetween(since, today), actionLabel: 'Open', link: `/joining/${a.id}` });
@@ -351,14 +352,14 @@ export function workQueue(db: Db, user: SessionUser): WorkQueue {
     const m = db.members.find((x) => x.id === r.memberId);
     if (!m) continue;
     const needsDdo = r.route === 'DDO_THEN_OFFICE' && !r.ddoCertified;
-    const mine = needsDdo ? user.role === 'DDO' && user.departmentId === m.departmentId : can(user, 'members.decideChanges');
+    const mine = needsDdo ? user.role === 'DDO' && inDepartmentScope(user, m.departmentId) : can(user, 'members.decideChanges');
     if (!mine) continue;
     const since = (r.ddoCertified?.at ?? r.createdAt).slice(0, 10);
     items.push({ kind: 'changeRequest', id: r.id, ref: `General No. ${m.generalNo}`, title: m.name, subtitle: `Change of ${r.fields.map((f) => PROFILE_FIELDS[f.field].label.toLowerCase()).join(', ')}`, stage: 'profile', stageLabel: STAGE_LABEL.profile!, departmentName: dept(m.departmentId), since, days: daysBetween(since, today), actionLabel: needsDdo ? 'Certify' : 'Decide', link: '/members/change-requests' });
   }
   if (user.role === 'DDO') {
     for (const x of db.mandates) {
-      if (x.status !== 'PENDING_NEW_DDO' || x.departmentId !== user.departmentId) continue;
+      if (x.status !== 'PENDING_NEW_DDO' || !inDepartmentScope(user, x.departmentId)) continue;
       const m = db.members.find((y) => y.id === x.memberId);
       if (!m) continue;
       items.push({ kind: 'mandate', id: x.id, ref: `General No. ${m.generalNo}`, title: m.name, subtitle: 'Transferred in · agree the salary recovery mandate', stage: 'mandate', stageLabel: STAGE_LABEL.mandate!, departmentName: dept(m.departmentId), since: x.signedOn, days: daysBetween(x.signedOn, today), actionLabel: 'Agree', link: `/members/${m.id}` });

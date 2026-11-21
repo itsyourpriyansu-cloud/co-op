@@ -13,6 +13,7 @@ import {
   transferEffectiveCycle,
   validateMemberInput,
   validateRetirementChange,
+  inDepartmentScope,
 } from '@tgs/domain';
 import type {
   Address,
@@ -308,7 +309,7 @@ export class MembersService {
     const [login, dept] = await Promise.all([this.app.departments.ddoLogin(mandate!.departmentId), this.app.departments.get(mandate!.departmentId)]);
     let byName: string;
     let signatureFileId: string | undefined;
-    if (user.role === 'DDO' && user.departmentId === mandate!.departmentId) {
+    if (user.role === 'DDO' && inDepartmentScope(user, mandate!.departmentId)) {
       byName = user.name;
       signatureFileId = await this.app.signatures.require(user.id, 'staff');
     }
@@ -575,7 +576,7 @@ export class MembersService {
       can: {
         edit: canEdit && m.status === 'ACTIVE',
         transfer: canEdit && m.status === 'ACTIVE',
-        agreeMandate: mandatePending && user.role === 'DDO' && user.departmentId === mandate.departmentId,
+        agreeMandate: mandatePending && user.role === 'DDO' && inDepartmentScope(user, mandate.departmentId),
         seeFullMobile,
         proposeRetirementChange: user.role === 'SUPER_ADMIN' && m.status === 'ACTIVE' && retirementChange?.status !== 'PENDING',
         decideRetirementChange: retirementChange?.status === 'PENDING' && retirementChange.nextApprover === user.role,
@@ -587,7 +588,7 @@ export class MembersService {
   private async load(user: SessionUser, idOrGeneralNo: string): Promise<Member> {
     const m = await this.repo.find(idOrGeneralNo);
     // DDOs only see members of their own department (docs/03).
-    if (!m || (user.role === 'DDO' && m.departmentId !== user.departmentId)) return fail('NOT_FOUND', 'This member does not exist or is outside your department.');
+    if (!m || !inDepartmentScope(user, m.departmentId)) return fail('NOT_FOUND', 'This member does not exist or is outside your department.');
     return m;
   }
 

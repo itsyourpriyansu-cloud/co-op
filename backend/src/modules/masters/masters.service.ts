@@ -16,7 +16,7 @@ const SETTINGS_KEYS: Array<keyof SocietySettings> = [
   'insurance', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'defaulterCycles', 'fdSlabs', 'fdMinAmount', 'savingsRatePercent', 'crdRatePercent', 'srdsRatePercent', 'shareDepositRatePercent', 'depositInterestBasis', 'penalGraceDays',
   'fdMaturityJobEnabled', 'fdMaturityRunHour', 'fdPrematureWithdrawalEnabled', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent',
   'demandSendByDays', 'minTakeHomePay', 'membershipTargetHours', 'loanTargetDays', 'holidays', 'casteCategories', 'minAppVersion', 'applicantDataRetentionMonths', 'suretyRecoveryAfterCycles', 'messageWindowStartHour', 'messageWindowEndHour',
-  'earlyInterestEnabled', 'lateJoinerOwesMissedMonth', 'probationMonths',
+  'earlyInterestEnabled', 'lateJoinerOwesMissedMonth', 'probationMonths', 'ddoMode', 'singleDdoUserId',
 ];
 
 const PRODUCT_FIELDS: Array<keyof LoanProduct> = [
@@ -109,7 +109,7 @@ export class MastersService {
     const current = await this.activeSettingsRow();
     const patch = Object.fromEntries(Object.entries(body).filter(([k]) => (SETTINGS_KEYS as string[]).includes(k))) as SettingsPatch;
     const next: SocietySettings = { ...current.data, ...patch, insurance: { ...current.data.insurance, ...patch.insurance } };
-    const fieldErrors = { ...validateSocietySettings(next), ...(patch.fdSlabs ? validateFdSlabs(next.fdSlabs) : {}) };
+    const fieldErrors = { ...validateSocietySettings(next), ...(patch.fdSlabs ? validateFdSlabs(next.fdSlabs) : {}), ...(await this.app.departments.checkDdoSetup(next)) };
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
     const touched = keysOf(patch);
     if (!touched.length) return this.bundle(user);

@@ -81,3 +81,11 @@ export const PERMISSION_LABELS: Array<{ key: Permission; label: string; group: s
   { key: 'audit.view', label: 'Audit log', group: 'Admin' },
   { key: 'demo.control', label: 'Demo controls', group: 'Demo' },
 ];
+
+/**
+ * docs/03 R5, D-145: may this staff user act on a record of this department? A DDO is limited to its own
+ * department, except the one DDO for all departments (ddoMode SINGLE), whose session carries no department.
+ */
+export function inDepartmentScope(user: { role: string; departmentId?: string | undefined }, departmentId: string | undefined): boolean {
+  return user.role !== 'DDO' || !user.departmentId || user.departmentId === departmentId;
+}

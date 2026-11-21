@@ -1,7 +1,7 @@
 // M9 (D-063): ST-01 role dashboards, ST-03 notifications + simulated message composer + replies to
 // member questions (MB-13), ST-50/51 reports, ST-52 defaulter notice. Read models over the store; the
 // only writes are notifications, the message log and ticket replies.
-import { checkDefaulter, isSearchable, formatCycle, formatDisplayDate, formatINR, fullMonthsBetween } from '@tgs/domain';
+import { checkDefaulter, isSearchable, formatCycle, formatDisplayDate, formatINR, fullMonthsBetween, inDepartmentScope } from '@tgs/domain';
 import type { AppNotification, SearchHit, ComposeInput, ComposePreview, DefaulterNotice, Member, OutboxMessage, ReportFilterKey, RoleDashboard, SessionUser, StaffNotifications, StaffTicketRow, WorkflowEvent } from '@tgs/types';
 import { memberDues } from './collections';
 import { audit, can, nowIso, requirePermission, requireStaff, type Api, type Guard } from './common';
@@ -130,7 +130,7 @@ export function roleDashboard(db: Db, user: SessionUser): RoleDashboard {
       break;
     }
     case 'DDO': {
-      const members = db.members.filter((m) => m.status === 'ACTIVE' && m.departmentId === user.departmentId).length;
+      const members = db.members.filter((m) => m.status === 'ACTIVE' && inDepartmentScope(user, m.departmentId)).length;
       tiles = [
         { key: 'waiting', label: 'Pending validations', value: waiting, format: 'count', sub: queue.map((q) => `${q.count} ${q.label.toLowerCase()}`).join(' · ') || 'Nothing waiting', link: '/queue', tone: waiting ? 'warning' : 'success' },
         { key: 'members', label: 'Members in your department', value: members, format: 'count', sub: 'Active, contributing', link: '/members' },

@@ -29,6 +29,7 @@ import {
   validateDenominations,
   type DemandSheetAction,
   type JournalLineInput,
+  inDepartmentScope,
 } from '@tgs/domain';
 import type {
   Cycle,
@@ -245,7 +246,7 @@ export class CollectionsService {
     const [v, gen, sheetCycles, settings] = await Promise.all([this.view(), this.generatableCycles(), this.repo.cycles(), this.app.masters.settings()]);
     const cycle = cycleParam || v.cycle;
     const sheets = await this.repo.sheetsForCycle(cycle);
-    const depts = [...v.depts.values()].filter((d) => user.role !== 'DDO' || d.id === user.departmentId);
+    const depts = [...v.depts.values()].filter((d) => inDepartmentScope(user, d.id));
     const rows: DemandSheetRow[] = [];
     // D-124: a supplementary sheet is its own row under the department's, with its own steps.
     const sheetRows = depts.flatMap((d) => {
@@ -511,7 +512,7 @@ export class CollectionsService {
   // ---- ST-42 / ST-43 ----
   private async loadSheet(user: SessionUser, id: string, tx?: Tx, lock = false): Promise<DemandSheet> {
     const sh = await this.repo.sheet(id, tx, lock);
-    if (!sh || (user.role === 'DDO' && sh.departmentId !== user.departmentId)) return fail('NOT_FOUND', 'This demand sheet does not exist or is outside your department.');
+    if (!sh || !inDepartmentScope(user, sh.departmentId)) return fail('NOT_FOUND', 'This demand sheet does not exist or is outside your department.');
     return sh;
   }
 
@@ -765,7 +766,7 @@ export class CollectionsService {
     if (user.role === 'MEMBER' || user.role === 'APPLICANT') fail('FORBIDDEN', 'Staff only.');
     if (!(await this.app.permissions.has(user.role, 'members.view'))) fail('FORBIDDEN', 'You do not have access to members.');
     const m = (await this.app.members.byId(memberId)) ?? fail('NOT_FOUND', 'Member not found.');
-    if (user.role === 'DDO' && m.departmentId !== user.departmentId) fail('NOT_FOUND', 'Member not found.');
+    if (!inDepartmentScope(user, m.departmentId)) fail('NOT_FOUND', 'Member not found.');
     const [history, stored, settings] = await Promise.all([this.loanHistory(m.id), this.repo.noticesOf(m.id), this.app.masters.settings()]);
     // G9 (D-121): today's WhatsApp / email status (delivered, read), not the one at sending.
     const live = await this.app.notifications.repo.viaOf(stored.flatMap((n) => (n.delivery.notificationId ? [n.delivery.notificationId] : [])));
@@ -1296,7 +1297,7 @@ export class CollectionsService {
     await this.requireView(user);
     const loan = (tx ? await this.app.loans.repo.lock(tx, loanId) : await this.app.loans.repo.find(loanId)) ?? fail('NOT_FOUND', 'Loan not found.');
     const m = (await this.app.members.byId(loan.memberId)) ?? fail('NOT_FOUND', 'Loan not found.');
-    if (user.role === 'DDO' && m.departmentId !== user.departmentId) fail('NOT_FOUND', 'Loan not found.');
+    if (!inDepartmentScope(user, m.departmentId)) fail('NOT_FOUND', 'Loan not found.');
     const today = await businessToday(this.app);
     const interestFrom = lastInterestChargedOn(loan, today);
     const q = calculateLoanClosure({ outstandingPrincipal: loan.outstandingPrincipal, ratePercent: loan.ratePercent, lastInterestChargedOn: interestFrom, today });
@@ -1407,7 +1408,7 @@ export class CollectionsService {
   async reports(user: SessionUser, status?: string): Promise<PaymentReportRow[]> {
     await this.requireView(user);
     const v = await this.view();
-    const list = (await this.repo.reports(status as PaymentReport['status'] | undefined)).filter((r) => user.role !== 'DDO' || v.members.get(r.memberId)?.departmentId === user.departmentId);
+    const list = (await this.repo.reports(status as PaymentReport['status'] | undefined)).filter((r) => inDepartmentScope(user, v.members.get(r.memberId)?.departmentId));
     list.sort((a, b) => Number(b.status === 'REPORTED') - Number(a.status === 'REPORTED') || (b.reportedAt ?? b.paidOn).localeCompare(a.reportedAt ?? a.paidOn));
     return Promise.all(list.map((r) => this.reportRow(v, r)));
   }

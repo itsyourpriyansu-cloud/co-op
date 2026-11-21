@@ -1,13 +1,15 @@
 // ST-67 Departments & DDOs: who certifies and deducts for each office (incl. external offices
 // for members transferred out of the Secretariat, Q-512). A department may have many DDO logins (added in
 // Users); the Admin picks the one in charge here, and every DDO task goes to that one (D-142).
+// DDO setup (D-145): one DDO for all departments, or a DDO in charge per department.
 import { useState } from 'react';
 import { Plus, Pencil } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { ButtonV2, ButtonV2Size, ButtonV2Type, ColumnType, Radio, RadioGroup, SingleSelectV2, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, type ColumnDefinition } from '@juspay/blend-design-system';
-import type { Department, DepartmentRow, StaffUser } from '@tgs/types';
+import type { Department, DepartmentRow, SocietySettings, StaffUser } from '@tgs/types';
 import { TextField, fieldErrorsOf } from '@/components/Form';
 import { SideDrawer } from '@/components/SideDrawer';
+import { Panel } from '@/components/Panel';
 import { Table } from '@/components/Table';
 import { ViewState } from '@/components/ViewState';
 import { api } from '@/lib/api';
@@ -26,6 +28,19 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
   /** Active DDO logins of a department, longest-standing first (the list keeps creation order). */
   const ddosOf = (deptId?: string): StaffUser[] => (users.data ?? []).filter((u) => u.role === 'DDO' && u.departmentId === deptId && u.active !== false);
   const editingDdos = ddosOf(editing?.id);
+  const userOf = (id?: string) => (users.data ?? []).find((u) => u.id === id);
+  const deptName = (id?: string) => (list.data ?? []).find((d) => d.id === id)?.name;
+
+  // DDO setup (D-145). The table follows the saved mode; the panel holds unsaved edits until Save.
+  const bundle = useQuery({ queryKey: ['settings'], queryFn: api.settings.get });
+  const single = bundle.data?.settings.ddoMode === 'SINGLE';
+  const allDdos = (users.data ?? []).filter((u) => u.role === 'DDO' && u.active !== false);
+  /** The DDO login doing all departments' DDO work now (the server's choice or fallback). */
+  const singleNow = single ? userOf(list.data?.find((d) => d.ddoUserId)?.ddoUserId) : undefined;
+  const [setup, setSetup] = useState<{ ddoMode: 'PER_DEPARTMENT' | 'SINGLE'; singleDdoUserId: string } | null>(null);
+  const shown = setup ?? { ddoMode: single ? 'SINGLE' : 'PER_DEPARTMENT', singleDdoUserId: singleNow?.id ?? '' };
+  const saveSetup = useSettingsSave((p: Partial<SocietySettings>) => api.settings.updateValues(p), 'DDO setup saved', ['departments']);
+  const setupErrors = saveSetup.fieldErrors;
 
   const columns: ColumnDefinition<Row>[] = [
     { field: 'code', header: 'Code', type: ColumnType.TEXT, width: '90px' },
@@ -44,7 +59,7 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
     },
     {
       field: 'ddoName',
-      header: 'DDO',
+      header: single ? 'DDO on printed forms' : 'DDO',
       type: ColumnType.REACT_ELEMENT,
       isSortable: false,
       minWidth: '220px',
@@ -57,11 +72,26 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
     },
     {
       field: 'ddoUserId',
-      header: 'DDO logins',
+      header: single ? 'DDO in charge' : 'DDO logins',
       type: ColumnType.REACT_ELEMENT,
       isSortable: false,
       minWidth: '200px',
       renderCell: (_v, r) => {
+        if (single) {
+          const u = userOf(r.ddoUserId);
+          if (!u) return <span className="text-caption text-fg-tertiary">No DDO login yet · add one in Users</span>;
+          return (
+            <div aria-label={`${u.name} · ${u.userId} · all departments`}>
+              <p className="text-body text-fg">{u.name}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-caption text-fg-tertiary">{u.userId}</span>
+                <span className="shrink-0">
+                  <TagV2 text="All departments" size={TagV2Size.XS} color={TagV2Color.PRIMARY} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
+                </span>
+              </div>
+            </div>
+          );
+        }
         const logins = ddosOf(r.id);
         if (!logins.length) return <span className="text-caption text-fg-tertiary">No login yet · add one in Users</span>;
         return (
@@ -91,6 +121,63 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
 
   return (
     <>
+      <div className="mb-6">
+        <Panel
+          title="DDO setup"
+          subtitle="Who certifies applications, agrees salary-recovery mandates and receives the monthly demand sheets. A change applies from the next task."
+          action={
+            canEdit && setup ? (
+              <div className="flex shrink-0 gap-2">
+                <ButtonV2 text="Discard" size={ButtonV2Size.SMALL} buttonType={ButtonV2Type.SECONDARY} onClick={() => (setSetup(null), saveSetup.reset())} />
+                <ButtonV2
+                  text="Save"
+                  size={ButtonV2Size.SMALL}
+                  loading={saveSetup.isPending}
+                  onClick={() => saveSetup.mutate({ ddoMode: shown.ddoMode, ...(shown.ddoMode === 'SINGLE' && shown.singleDdoUserId ? { singleDdoUserId: shown.singleDdoUserId } : {}) }, { onSuccess: () => setSetup(null) })}
+                />
+              </div>
+            ) : undefined
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <RadioGroup
+              name="ddoMode"
+              label="DDO work is done by"
+              value={shown.ddoMode}
+              disabled={!canEdit}
+              onChange={(v) => setSetup({ ddoMode: v as 'PER_DEPARTMENT' | 'SINGLE', singleDdoUserId: shown.singleDdoUserId || allDdos[0]?.id || '' })}
+            >
+              <Radio value="PER_DEPARTMENT" subtext="Each department's DDO in charge handles its own members. Choose them with Edit in the table below.">
+                A DDO for each department
+              </Radio>
+              <Radio value="SINGLE" subtext="One DDO login handles every department's members and sees every department's records.">
+                One DDO for all departments
+              </Radio>
+            </RadioGroup>
+            {shown.ddoMode === 'SINGLE' &&
+              (allDdos.length ? (
+                <div className="max-w-md">
+                  <SingleSelectV2
+                    label="DDO for all departments"
+                    placeholder="Choose"
+                    disabled={!canEdit}
+                    items={[{ items: allDdos.map((u) => ({ label: `${u.name} · ${u.userId}${deptName(u.departmentId) ? ` · ${deptName(u.departmentId)}` : ''}`, value: u.id })) }]}
+                    selected={shown.singleDdoUserId}
+                    onSelect={(id) => setSetup({ ddoMode: 'SINGLE', singleDdoUserId: id })}
+                    {...(setupErrors.singleDdoUserId ? { error: { show: true, message: setupErrors.singleDdoUserId } } : {})}
+                  />
+                </div>
+              ) : (
+                <p className="text-caption text-fg-tertiary">No DDO login yet. Add one in Users (role DDO), then choose it here.</p>
+              ))}
+            {setupErrors.ddoMode && (
+              <p role="alert" className="text-caption text-danger-fg">
+                {setupErrors.ddoMode}
+              </p>
+            )}
+          </div>
+        </Panel>
+      </div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-body text-fg-secondary">{list.data ? `${list.data.length} offices · DDOs certify membership and loan applications and deduct dues from salary.` : ' '}</p>
         {canEdit && <ButtonV2 text="Add department" leftSlot={{ slot: <Plus size={16} /> }} onClick={() => setEditing({ ...EMPTY })} />}
@@ -123,7 +210,13 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
                 Office outside the Secretariat
               </Radio>
             </RadioGroup>
+            {editing.id && single && (
+              <p className="text-caption text-fg-tertiary">
+                One DDO for all departments is on: {singleNow ? `${singleNow.name} (${singleNow.userId})` : 'the first DDO login added'} does this office's DDO work. Change it under DDO setup.
+              </p>
+            )}
             {editing.id &&
+              !single &&
               (editingDdos.length ? (
                 <div className="flex flex-col gap-1">
                   <SingleSelectV2

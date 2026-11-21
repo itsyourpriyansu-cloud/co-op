@@ -1,4 +1,4 @@
-import type { Department, DepartmentRow, SessionUser } from '@tgs/types';
+import type { Department, DepartmentRow, SessionUser, SocietySettings } from '@tgs/types';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
@@ -14,8 +14,32 @@ export class DepartmentsService {
     private readonly repo: DepartmentsRepository,
   ) {}
 
+  /** D-145: set when one DDO login does the DDO work of every department (ddoMode SINGLE). */
+  private async single(): Promise<{ chosen?: string | undefined } | undefined> {
+    const s = await this.app.masters.settings();
+    return s.ddoMode === 'SINGLE' ? { chosen: s.singleDdoUserId } : undefined;
+  }
+
+  /** D-145: the one DDO for all departments, or undefined when each department has its own DDO in charge. */
+  async singleDdo(): Promise<{ id: string; name: string } | undefined> {
+    const single = await this.single();
+    if (!single) return undefined;
+    const users = await this.repo.allDdoUsers();
+    const u = users.find((x) => x.id === single.chosen) ?? users[0];
+    return u ? { id: u.id, name: u.name } : undefined;
+  }
+
+  /** D-145: field errors for the DDO setup in a settings change (empty when it is fine). */
+  async checkDdoSetup(s: SocietySettings): Promise<Record<string, string>> {
+    if (s.ddoMode !== 'SINGLE') return {};
+    const users = await this.repo.allDdoUsers();
+    if (!users.length) return { ddoMode: 'Add a DDO login in Users first, then choose it here.' };
+    if (s.singleDdoUserId && !users.some((u) => u.id === s.singleDdoUserId)) return { singleDdoUserId: 'Choose an active DDO login.' };
+    return {};
+  }
+
   async list(user: SessionUser): Promise<DepartmentRow[]> {
-    const [rows, ddos, counts] = await Promise.all([this.repo.list(), this.repo.ddoLogins(), this.memberCounts()]);
+    const [rows, ddos, counts] = await Promise.all([this.repo.list(), this.single().then((x) => this.repo.ddoLogins(x)), this.memberCounts()]);
     // ddoUserId is the login actually in charge (the Admin's choice, or the fallback), not only the stored choice.
     return rows.map((d) => {
       const { ddoUserId: _chosen, ...rest } = toDepartment(d);
@@ -31,17 +55,17 @@ export class DepartmentsService {
 
   /** The DDO's console login for a department, if one exists (docs/03 R5). */
   async ddoLogin(departmentId: string): Promise<string | undefined> {
-    return (await this.repo.ddoLogins()).get(departmentId);
+    return (await this.repo.ddoLogins(await this.single())).get(departmentId);
   }
 
   /** Name of that DDO login (who a request is waiting on). */
   async ddoLoginName(departmentId: string): Promise<string | undefined> {
-    return (await this.repo.ddoLoginNames()).get(departmentId);
+    return (await this.repo.ddoLoginNames(await this.single())).get(departmentId);
   }
 
   /** DDO login names by department, for many rows at once. */
   async ddoLoginNames(): Promise<Map<string, string>> {
-    return this.repo.ddoLoginNames();
+    return this.repo.ddoLoginNames(await this.single());
   }
 
   async all(): Promise<Department[]> {

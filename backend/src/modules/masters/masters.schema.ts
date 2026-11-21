@@ -15,6 +15,9 @@ export const societySettingsSchema = z.object({
   srdsMonthly: paise,
   retirementAge: z.number().int(),
   probationMonths: z.number().int(),
+  /** D-145: one DDO for all departments, or a DDO in charge per department (the default). */
+  ddoMode: z.enum(['PER_DEPARTMENT', 'SINGLE']).optional(),
+  singleDdoUserId: z.string().optional(),
   defaulterCycles: z.number().int(),
   fdSlabs: z.array(fdSlabSchema),
   savingsRatePercent: z.number(),

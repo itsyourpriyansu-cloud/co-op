@@ -14,6 +14,7 @@ import {
   TEXT_VERSION,
   PRIVACY_NOTICE_VERSION,
   validateMembershipForm,
+  inDepartmentScope,
 } from '@tgs/domain';
 import { DESIGNATIONS } from '@tgs/mock-data';
 import {
@@ -574,7 +575,7 @@ export class JoiningService {
   }
 
   private visible(a: MembershipApplication, user: SessionUser): boolean {
-    return a.status !== 'DRAFT' && (user.role !== 'DDO' || a.departmentId === user.departmentId);
+    return a.status !== 'DRAFT' && inDepartmentScope(user, a.departmentId);
   }
 
   private requireApplicant(user: SessionUser): void {

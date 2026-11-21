@@ -16,6 +16,7 @@ import {
   nextDemandSheetStatus,
   validateDenominations,
   type DemandSheetAction,
+  inDepartmentScope,
 } from '@tgs/domain';
 import type {
   Cycle,
@@ -338,7 +339,7 @@ export function registerCollections(api: Api, store: Store, requireSession: Guar
     requireStaff(user);
     requirePermission(user, 'collections.view', 'You do not have access to collections.');
   };
-  const visibleSheet = (sh: DemandSheet, user: SessionUser) => user.role !== 'DDO' || sh.departmentId === user.departmentId;
+  const visibleSheet = (sh: DemandSheet, user: SessionUser) => inDepartmentScope(user, sh.departmentId);
   const loadSheet = (id: string, user: SessionUser) => {
     staffView(user);
     const sh = db().demandSheets.find((s) => s.id === id);
@@ -353,7 +354,7 @@ export function registerCollections(api: Api, store: Store, requireSession: Guar
     staffView(user);
     const cycles = [...new Set([...db().demandSheets.map((s) => s.cycle), ...generatableCycles(db())])].sort().reverse();
     const cycle = c.req.query('cycle') || db().currentCycle;
-    const depts = db().departments.filter((d) => user.role !== 'DDO' || d.id === user.departmentId);
+    const depts = db().departments.filter((d) => inDepartmentScope(user, d.id));
     const rows = depts.map((d) => sheetRow(db(), db().demandSheets.find((s) => s.cycle === cycle && s.departmentId === d.id), d.id, cycle, user));
     const own = user.role === 'DDO' ? db().departments.find((d) => d.id === user.departmentId) : undefined;
     return c.json<DemandCycleOverview>({
@@ -491,7 +492,7 @@ export function registerCollections(api: Api, store: Store, requireSession: Guar
     const user = c.get('session');
     staffView(user);
     const q = c.req.query() as ReceiptListParams & Record<string, string>;
-    const inScope = (r: Receipt) => user.role !== 'DDO' || memberOf(db(), r.memberId)?.departmentId === user.departmentId;
+    const inScope = (r: Receipt) => inDepartmentScope(user, memberOf(db(), r.memberId)?.departmentId);
     const all = db().receipts.filter(inScope);
     const counter = (r: Receipt) => r.source !== 'SALARY_RECOVERY';
     const needle = (q.q ?? '').trim().toLowerCase();
@@ -610,7 +611,7 @@ export function registerCollections(api: Api, store: Store, requireSession: Guar
     const status = c.req.query('status');
     return c.json<PaymentReportRow[]>(
       db()
-        .paymentReports.filter((r) => (!status || r.status === status) && (user.role !== 'DDO' || memberOf(db(), r.memberId)?.departmentId === user.departmentId))
+        .paymentReports.filter((r) => (!status || r.status === status) && (inDepartmentScope(user, memberOf(db(), r.memberId)?.departmentId)))
         .sort((a, b) => Number(b.status === 'REPORTED') - Number(a.status === 'REPORTED') || (b.reportedAt ?? b.paidOn).localeCompare(a.reportedAt ?? a.paidOn))
         .map(reportRow),
     );

@@ -1,4 +1,4 @@
-import { calculateLeftoverService, isSearchable, daysBetweenDates as daysBetween, depositActionsFor, formatCycle, formatDisplayDate, formatINR, loanActionsFor, membershipActionsFor, PRIMARY_DEPOSIT_ACTION, PRIMARY_LOAN_ACTION, PROFILE_FIELDS, serviceTarget } from '@tgs/domain';
+import { calculateLeftoverService, isSearchable, daysBetweenDates as daysBetween, depositActionsFor, formatCycle, formatDisplayDate, formatINR, loanActionsFor, membershipActionsFor, PRIMARY_DEPOSIT_ACTION, PRIMARY_LOAN_ACTION, PROFILE_FIELDS, serviceTarget, inDepartmentScope } from '@tgs/domain';
 import type { DashboardSummary, DepositAccount, Loan, LoanStatus, MembershipApplication, Permission, RoleDashboard, SearchHit, SessionUser, WorkflowEvent, WorkItem, WorkQueue } from '@tgs/types';
 import type { FastifyInstance } from 'fastify';
 import { fail } from '../../common/errors/app-error';
@@ -80,7 +80,7 @@ export class InsightService {
 
   private loanVisible(w: World, l: Loan, user: SessionUser): boolean {
     if (l.status === 'DRAFT' && l.channel !== 'COUNTER') return false;
-    return user.role !== 'DDO' || w.memberById.get(l.memberId)?.departmentId === user.departmentId;
+    return inDepartmentScope(user, w.memberById.get(l.memberId)?.departmentId);
   }
 
   private target(w: World, kind: 'loan' | 'membership', startedAt: string | undefined): Pick<WorkItem, 'overTarget' | 'targetLabel'> {
@@ -108,7 +108,7 @@ export class InsightService {
     }
     if (w.can('membership.view')) {
       for (const a of w.applications) {
-        if (a.status === 'DRAFT' || (user.role === 'DDO' && a.departmentId !== user.departmentId)) continue;
+        if (a.status === 'DRAFT' || !inDepartmentScope(user, a.departmentId)) continue;
         if (!membershipActionsFor(a, user).length) continue;
         const since = (a.events.at(-1)?.at ?? a.submittedOn ?? today).slice(0, 10);
         items.push({ kind: 'membership', id: a.id, ref: a.applicationNo, title: a.name, subtitle: `Membership · ${a.designation}`, stage: 'membership', stageLabel: STAGE_LABEL.membership!, status: a.status, departmentName: dept(a.departmentId), since, days: daysBetween(since, today), actionLabel: 'Open', link: `/joining/${a.id}`, ...this.target(w, 'membership', this.submittedAt(a)) });
@@ -118,7 +118,7 @@ export class InsightService {
       const m = w.memberById.get(r.memberId);
       if (!m) continue;
       const needsDdo = r.route === 'DDO_THEN_OFFICE' && !r.ddoCertified;
-      const mine = needsDdo ? user.role === 'DDO' && user.departmentId === m.departmentId : w.can('members.decideChanges');
+      const mine = needsDdo ? user.role === 'DDO' && inDepartmentScope(user, m.departmentId) : w.can('members.decideChanges');
       if (!mine) continue;
       const since = (r.ddoCertified?.at ?? r.createdAt).slice(0, 10);
       items.push({ kind: 'changeRequest', id: r.id, ref: `General No. ${m.generalNo}`, title: m.name, subtitle: `Change of ${r.fields.map((f) => PROFILE_FIELDS[f.field].label.toLowerCase()).join(', ')}`, stage: 'profile', stageLabel: STAGE_LABEL.profile!, departmentName: dept(m.departmentId), since, days: daysBetween(since, today), actionLabel: needsDdo ? 'Certify' : 'Decide', link: '/members/change-requests' });
@@ -132,7 +132,7 @@ export class InsightService {
     }
     if (user.role === 'DDO') {
       for (const x of w.mandates.values()) {
-        if (x.status !== 'PENDING_NEW_DDO' || x.departmentId !== user.departmentId) continue;
+        if (x.status !== 'PENDING_NEW_DDO' || !inDepartmentScope(user, x.departmentId)) continue;
         const m = w.memberById.get(x.memberId);
         if (!m) continue;
         items.push({ kind: 'mandate', id: x.id, ref: `General No. ${m.generalNo}`, title: m.name, subtitle: 'Transferred in · agree the salary recovery mandate', stage: 'mandate', stageLabel: STAGE_LABEL.mandate!, departmentName: dept(m.departmentId), since: x.signedOn, days: daysBetween(x.signedOn, today), actionLabel: 'Agree', link: `/members/${m.id}` });
@@ -142,7 +142,7 @@ export class InsightService {
     if (w.can('collections.view')) {
       const lines = await this.app.collections.repo.lineCounts();
       for (const sh of w.sheets) {
-        if (user.role === 'DDO' && sh.departmentId !== user.departmentId) continue;
+        if (!inDepartmentScope(user, sh.departmentId)) continue;
         const acts = await this.app.collections.actionsFor(sh, user);
         if (!acts.length) continue;
         const review = sh.entry?.status === 'SUBMITTED' || sh.entry?.status === 'UNDER_REVIEW';
@@ -295,7 +295,7 @@ export class InsightService {
         break;
       }
       case 'DDO': {
-        const members = w.members.filter((m) => m.status === 'ACTIVE' && m.departmentId === user.departmentId).length;
+        const members = w.members.filter((m) => m.status === 'ACTIVE' && inDepartmentScope(user, m.departmentId)).length;
         tiles = [
           { key: 'waiting', label: 'Pending validations', value: waiting, format: 'count', sub: queue.map((q) => `${q.count} ${q.label.toLowerCase()}`).join(' · ') || 'Nothing waiting', link: '/queue', tone: waiting ? 'warning' : 'success' },
           { key: 'members', label: 'Members in your department', value: members, format: 'count', sub: 'Active, contributing', link: '/members' },
@@ -345,7 +345,7 @@ export class InsightService {
     };
     const queueStatuses = QUEUE_BY_ROLE[user.role] ?? [];
     const membershipItems = w.applications.filter((a) =>
-      user.role === 'DDO' ? a.status === 'DDO_CERTIFICATION' && a.departmentId === user.departmentId
+      user.role === 'DDO' ? a.status === 'DDO_CERTIFICATION' && inDepartmentScope(user, a.departmentId)
       : user.role === 'ACCOUNTANT' ? a.status === 'OFFICE_REVIEW' || a.status === 'SUBMITTED'
       : user.role === 'SECRETARY' ? a.status === 'APPROVAL_SECRETARY'
       : user.role === 'PRESIDENT' ? a.status === 'APPROVAL_PRESIDENT'

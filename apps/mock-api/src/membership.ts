@@ -11,6 +11,7 @@ import {
   membershipShareAmount,
   nextMembershipStatus,
   primaryMembershipAction,
+  inDepartmentScope,
 } from '@tgs/domain';
 import {
   F1_CERT_ITEMS,
@@ -116,7 +117,7 @@ function toRow(db: Db, app: MembershipApplication, user: SessionUser): Membershi
 }
 
 function visibleTo(app: MembershipApplication, user: SessionUser) {
-  return app.status !== 'DRAFT' && (user.role !== 'DDO' || app.departmentId === user.departmentId);
+  return app.status !== 'DRAFT' && inDepartmentScope(user, app.departmentId);
 }
 
 export function membershipDetail(db: Db, app: MembershipApplication, user: SessionUser): MembershipDetail {

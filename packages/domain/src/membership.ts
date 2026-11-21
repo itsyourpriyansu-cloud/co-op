@@ -2,6 +2,7 @@
 import type { ISODate, MembershipAction, MembershipForm, MembershipStatus, Role } from '@tgs/types';
 import { ageOn } from './members';
 import { fail, pass, type RuleCheck } from './rules';
+import { inDepartmentScope } from './permissions';
 
 export interface EligibilityAnswers {
   worksInSecretariatDept: boolean;
@@ -96,7 +97,7 @@ export function membershipActionsFor(
 ): MembershipAction[] {
   const owner = MEMBERSHIP_STAGE_OWNER[app.status];
   if (!owner || owner !== user.role) return [];
-  if (user.role === 'DDO' && user.departmentId !== app.departmentId) return [];
+  if (!inDepartmentScope(user, app.departmentId)) return [];
   switch (app.status) {
     case 'SUBMITTED':
       return ['sendToDdo', 'returnToApplicant', 'reject'];

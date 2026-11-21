@@ -51,6 +51,14 @@ export const authPlugin = fp<{ env: Env }>(
       return user;
     };
 
+    // D-145: the one DDO for all departments works without a department scope. Its token keeps its own
+    // department, so switching back to a DDO per department takes effect on the next request.
+    const scoped = async (user: SessionUser): Promise<SessionUser> => {
+      if (user.role !== 'DDO' || !user.departmentId || (await app.departments.singleDdo())?.id !== user.id) return user;
+      const { departmentId: _own, ...all } = user;
+      return all;
+    };
+
     app.addHook('onRequest', async (request) => {
       const header = request.headers.authorization;
       if (!header?.startsWith('Bearer ')) return;
@@ -62,7 +70,7 @@ export const authPlugin = fp<{ env: Env }>(
         return;
       }
       if (claims.typ !== 'access') return;
-      request.session = claims.aid ? await appUser(claims.aid) : claims.user;
+      request.session = claims.aid ? await appUser(claims.aid) : await scoped(claims.user);
     });
   },
   { name: 'auth', dependencies: ['db'] },

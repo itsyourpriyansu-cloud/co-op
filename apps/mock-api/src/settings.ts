@@ -35,7 +35,7 @@ const SETTINGS_KEYS: Array<keyof SocietySettings> = [
   'shareValue', 'admissionFee', 'minShares', 'maxShares', 'retirementAge', 'financialYearStartMonth', 'maxGuaranteesPerSurety', 'emiToNetSalaryMaxPercent',
   'insurance', 'rrfMonthly', 'crdMonthly', 'srdsMonthly', 'defaulterCycles', 'fdSlabs', 'fdMinAmount', 'savingsRatePercent', 'crdRatePercent', 'srdsRatePercent', 'shareDepositRatePercent', 'depositInterestBasis', 'penalGraceDays',
   'fdMaturityJobEnabled', 'fdMaturityRunHour', 'fdPrematureWithdrawalEnabled', 'fdPrematurePenaltyMethod', 'fdPrematurePenaltyPercent',
-  'demandSendByDays', 'minTakeHomePay', 'membershipTargetHours', 'loanTargetDays', 'holidays', 'casteCategories', 'minAppVersion', 'applicantDataRetentionMonths', 'suretyRecoveryAfterCycles', 'earlyInterestEnabled', 'lateJoinerOwesMissedMonth', 'probationMonths',
+  'demandSendByDays', 'minTakeHomePay', 'membershipTargetHours', 'loanTargetDays', 'holidays', 'casteCategories', 'minAppVersion', 'applicantDataRetentionMonths', 'suretyRecoveryAfterCycles', 'earlyInterestEnabled', 'lateJoinerOwesMissedMonth', 'probationMonths', 'ddoMode', 'singleDdoUserId',
 ];
 
 export function ratesReference(store: Store): RatesReference {
@@ -94,7 +94,11 @@ export function registerSettings(api: Api, store: Store, requireSession: Guard) 
     const body = await c.req.json<Partial<SocietySettings>>();
     const patch = Object.fromEntries(Object.entries(body).filter(([k]) => (SETTINGS_KEYS as string[]).includes(k))) as Partial<SocietySettings>;
     const next: SocietySettings = { ...db().settings, ...patch, insurance: { ...db().settings.insurance, ...patch.insurance } };
-    const fieldErrors = { ...validateSocietySettings(next), ...(patch.fdSlabs ? validateFdSlabs(next.fdSlabs) : {}) };
+    const fieldErrors: Record<string, string> = { ...validateSocietySettings(next), ...(patch.fdSlabs ? validateFdSlabs(next.fdSlabs) : {}) };
+    // D-145: one DDO for all departments needs an active DDO login.
+    const ddos = db().staffUsers.filter((u) => u.role === 'DDO' && u.active !== false);
+    if (next.ddoMode === 'SINGLE' && !ddos.length) fieldErrors.ddoMode = 'Add a DDO login in Users first, then choose it here.';
+    else if (next.ddoMode === 'SINGLE' && next.singleDdoUserId && !ddos.some((u) => u.id === next.singleDdoUserId)) fieldErrors.singleDdoUserId = 'Choose an active DDO login.';
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
     const touched = keysOf(patch);
     next.placeholders = db().settings.placeholders.filter((p) => !touched.some((t) => t === p || t.startsWith(`${p}.`) || p.startsWith(`${t}.`)));

@@ -23,6 +23,7 @@ import {
   validateLoanRequest,
   type RuleCheck,
   loanHistoryCounts,
+  inDepartmentScope,
 } from '@tgs/domain';
 import {
   ROLE_LABELS,
@@ -378,7 +379,7 @@ function newDraft(db: Db, m: Member, input: LoanRequestInput, channel: 'APP' | '
 export function staffCanSee(db: Db, l: Loan, user: SessionUser) {
   if (l.status === 'DRAFT' && l.channel !== 'COUNTER') return false;
   if (user.role !== 'DDO') return true;
-  return db.members.find((m) => m.id === l.memberId)?.departmentId === user.departmentId;
+  return inDepartmentScope(user, db.members.find((m) => m.id === l.memberId)?.departmentId);
 }
 
 // ---- routes -------------------------------------------------------------------------------------
@@ -407,7 +408,7 @@ export function registerLoans(api: Api, store: Store, requireSession: Guard) {
     const q = (c.req.query('q') ?? '').trim().toLowerCase();
     if (!isSearchable(q)) return c.json<MemberPick[]>([]);
     const rows = db()
-      .members.filter((m) => m.status === 'ACTIVE' && m.id !== user.memberId && (m.name.toLowerCase().includes(q) || m.generalNo.startsWith(q)) && (user.role !== 'DDO' || m.departmentId === user.departmentId))
+      .members.filter((m) => m.status === 'ACTIVE' && m.id !== user.memberId && (m.name.toLowerCase().includes(q) || m.generalNo.startsWith(q)) && inDepartmentScope(user, m.departmentId))
       .map((m) => ({ id: m.id, name: m.name, generalNo: m.generalNo, departmentName: deptName(db(), m.departmentId), designation: m.designation, leftoverLabel: calculateLeftoverService(m.dor, db().demo.today).label, activeGuarantees: openGuarantees(db(), m.id).length }))
       // Members who can still stand surety come first (BR-014), then by name.
       .sort((a, b) => Number(b.generalNo === q) - Number(a.generalNo === q) || Number(a.activeGuarantees >= db().settings.maxGuaranteesPerSurety) - Number(b.activeGuarantees >= db().settings.maxGuaranteesPerSurety) || a.name.localeCompare(b.name))
@@ -466,7 +467,7 @@ export function registerLoans(api: Api, store: Store, requireSession: Guard) {
     const user = c.get('session');
     staffView(user);
     const m = db().members.find((x) => x.id === c.req.param('id'));
-    if (!m || (user.role === 'DDO' && m.departmentId !== user.departmentId)) return fail('NOT_FOUND', 'Member not found.');
+    if (!m || !inDepartmentScope(user, m.departmentId)) return fail('NOT_FOUND', 'Member not found.');
     return c.json<LoanContext>(loanContext(db(), m));
   });
 
