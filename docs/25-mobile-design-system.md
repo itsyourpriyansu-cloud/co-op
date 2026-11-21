@@ -1,6 +1,6 @@
 # 25 · Mobile design system: Astryx + the TGSECCS seal
 
-> Version 1.0 (built U0–U5; U6 real phones open) · 2026-11-20 · Decision **D-138** (Accepted) · Owner: Envizon Studio
+> Version 1.1 (built U0–U5; U6 real phones open) · 2026-11-21 · §14 entry boxes and key–value rows (D-143) · Decision **D-138** (Accepted) · Owner: Envizon Studio
 > Rules for every new phone screen: the project skill `.claude/skills/tgs-mobile-ui`. As-built differences from the plan: §11.
 > Scope: **`apps/member-app` only** (member screens, joining, and the staff screens in the same app). The Admin Console and `packages/design-tokens` are **not touched** until the owner says "update the web apps" (phase W, §10).
 
@@ -241,3 +241,9 @@ Audit of the owner's phone screenshots plus a phone-size walk of 12 member scree
 
 - **Phone documents** carry the seal in the letterhead (`lib/sealImage.ts`, a 192 px PNG data URI: expo-print cannot load bundled assets). **Download PDF** writes the base64 PDF into `Paths.cache` instead of moving expo-print's file (Expo Go refuses to read that one).
 - **Wizards:** a step starts with `StepHeader` (progress, title, one line on what the step is for). Results that react to inputs sit right under those inputs (loan: "Your instalment" under amount and months). A summary on a review step has a section title. A list of periods on a card is a range ("12 to 100 months"); the step that picks one lists them all, in an even three-column grid.
+
+## 14. Entry boxes and key–value rows (D-143, 2026-11-21)
+
+- **OTP boxes** each get the same measured width (the row width less the gaps, divided by six); `flex` alone let Android draw the first box wider. Empty boxes use `color.borderInput` (#888888, at least 3:1 on body and surface, WCAG 1.4.11), filled boxes `text.secondary`, the active box a 2 px navy border with no padding change.
+- **Passwords:** every `TextField` with `secureTextEntry` has an eye button ("Show password" / "Hide password", 44 pt target) so a typo can be seen before signing in. Nothing to add on a screen.
+- **`MetadataListItem`:** short values stay label left, value right. A value longer than 24 characters, or a label and value together longer than 48, goes **under** its label, left-aligned and full width (`stacksValue()`). Bank accounts, sign-off lines and notes no longer squeeze into a narrow right-aligned column.

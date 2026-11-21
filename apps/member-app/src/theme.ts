@@ -32,6 +32,8 @@ export const color = {
   goldMuted: '#FBF4E4',
   border: '#00000014',
   borderEmphasized: '#D4D4D4',
+  /** Edge of an empty entry box that has no other outline (OTP boxes): WCAG 1.4.11, 3:1 on body and surface. */
+  borderInput: '#888888',
   overlay: '#00000080',
   overlayPressed: '#0000000F',
   skeleton: '#E2E2E2',

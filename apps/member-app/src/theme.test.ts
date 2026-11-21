@@ -48,6 +48,13 @@ const pairs: Array<[string, string, string]> = [
 ];
 
 describe('mobile theme contrast (D-138)', () => {
+  it.each([
+    ['borderInput on body', color.borderInput, bg.body],
+    ['borderInput on surface', color.borderInput, bg.surface],
+  ])('%s ≥ 3:1 (an input edge)', (_name, fg, back) => {
+    expect(contrast(fg, back)).toBeGreaterThanOrEqual(3);
+  });
+
   it.each(pairs)('%s ≥ 4.5:1', (_name, fg, back) => {
     expect(contrast(fg, back)).toBeGreaterThanOrEqual(4.5);
   });

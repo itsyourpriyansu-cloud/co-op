@@ -3,7 +3,7 @@
 // "TextInput" would clash with React Native's own. Focus draws the 2 px navy ring; a new error shakes once.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, FlatList, Modal, Platform, Pressable, StyleSheet, TextInput, useWindowDimensions, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
-import { Check, ChevronDown, Search, X } from 'lucide-react-native';
+import { Check, ChevronDown, Eye, EyeOff, Search, X } from 'lucide-react-native';
 import { parseISODate, toISODate } from '@tgs/domain';
 import { color, motion, radius, shadow, spacing, textStyle, touchTarget } from '@/theme';
 import { ease, haptic, useMotionMode, useShake } from './motion';
@@ -59,8 +59,10 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   compact?: boolean;
 }
 
-export function TextField({ label, required, hint, error, prefix, suffix, compact, editable = true, onFocus, onBlur, ...input }: TextFieldProps) {
+export function TextField({ label, required, hint, error, prefix, suffix, compact, editable = true, onFocus, onBlur, secureTextEntry, ...input }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
+  // Every password box can be shown, to catch a typo before signing in.
+  const [shown, setShown] = useState(false);
   return (
     <FieldFrame label={label} required={required} hint={hint} error={error} compact={compact}>
       <View style={[styles.box, !!error && styles.errored, focused && styles.focused, !editable && styles.readonly]}>
@@ -71,6 +73,7 @@ export function TextField({ label, required, hint, error, prefix, suffix, compac
         ) : null}
         <TextInput
           {...input}
+          secureTextEntry={!!secureTextEntry && !shown}
           editable={editable}
           accessibilityLabel={input.accessibilityLabel ?? label}
           placeholderTextColor={color.text.disabled}
@@ -86,6 +89,11 @@ export function TextField({ label, required, hint, error, prefix, suffix, compac
           }}
           style={[textStyle('body'), styles.input, { color: editable ? color.text.primary : color.text.secondary }]}
         />
+        {secureTextEntry ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={shown ? 'Hide password' : 'Show password'} hitSlop={4} onPress={() => setShown((v) => !v)} style={({ pressed }) => [styles.eye, pressed && styles.iconBtnPressed]}>
+            {shown ? <EyeOff size={20} color={color.icon.secondary} /> : <Eye size={20} color={color.icon.secondary} />}
+          </Pressable>
+        ) : null}
         {suffix}
       </View>
     </FieldFrame>
@@ -235,7 +243,9 @@ export function SelectField({ label, required, hint, error, value, options, onCh
 }
 
 /** One OTP box: the digit pops in as it lands; the active empty box shows a blinking caret. */
-function OtpBox({ ch, active, error }: { ch: string; active: boolean; error: boolean }) {
+const OTP_GAP = spacing[2];
+
+function OtpBox({ ch, active, error, width }: { ch: string; active: boolean; error: boolean; width: number | undefined }) {
   const mode = useMotionMode();
   const pop = useRef(new Animated.Value(1)).current;
   const caret = useRef(new Animated.Value(1)).current;
@@ -254,7 +264,7 @@ function OtpBox({ ch, active, error }: { ch: string; active: boolean; error: boo
     };
   }, [active, ch, mode, caret]);
   return (
-    <Animated.View pointerEvents="none" style={[styles.otpBox, !!ch && styles.otpFilled, active && styles.focused, error && styles.errored, { transform: [{ scale: pop }] }]}>
+    <Animated.View pointerEvents="none" style={[styles.otpBox, width ? { width } : styles.fill, !!ch && styles.otpFilled, active && styles.otpActive, error && styles.errored, { transform: [{ scale: pop }] }]}>
       {ch ? <Text type="h3">{ch}</Text> : active ? <Animated.View style={[styles.caret, { opacity: caret }]} /> : null}
     </Animated.View>
   );
@@ -267,11 +277,14 @@ function OtpBox({ ch, active, error }: { ch: string; active: boolean; error: boo
  */
 export function OtpInput({ value, onChange, error, length = 6 }: { value: string; onChange: (v: string) => void; error?: string; length?: number }) {
   const shake = useShake(error);
+  // Each box gets the same measured width (flex alone let Android give the first box more, D-143).
+  const [rowWidth, setRowWidth] = useState(0);
+  const boxWidth = rowWidth ? Math.floor((rowWidth - OTP_GAP * (length - 1)) / length) : undefined;
   return (
     <View style={{ gap: spacing[2] }}>
-      <Animated.View style={[styles.otpRow, shake]}>
+      <Animated.View style={[styles.otpRow, shake]} onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
         {Array.from({ length }, (_, i) => (
-          <OtpBox key={i} ch={value[i] ?? ''} active={i === Math.min(value.length, length - 1)} error={!!error} />
+          <OtpBox key={i} ch={value[i] ?? ''} active={i === Math.min(value.length, length - 1)} error={!!error} width={boxWidth} />
         ))}
         <TextInput
           accessibilityLabel="One-time password"
@@ -310,6 +323,7 @@ const styles = StyleSheet.create({
     backgroundColor: color.background.surface,
   },
   boxPressed: { backgroundColor: color.background.muted },
+  eye: { width: touchTarget, height: touchTarget, marginRight: -spacing[3], alignItems: 'center', justifyContent: 'center', borderRadius: radius.full },
   // The box draws the focus ring, so the browser's own outline is switched off (web preview).
   input: { flex: 1, minWidth: 0, paddingVertical: spacing[2], outlineWidth: 0, ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : {}) },
   // Astryx focus: 2 px accent. The border grows inward by 1 px, so padding shrinks by 1 to keep text still.
@@ -327,8 +341,10 @@ const styles = StyleSheet.create({
   option: { minHeight: touchTarget + 8, flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[4] },
   optionOn: { backgroundColor: color.accentMuted },
   otpRow: { flexDirection: 'row', gap: spacing[2], justifyContent: 'space-between' },
-  otpBox: { flex: 1, height: 56, borderRadius: radius.element, borderCurve: 'continuous', borderWidth: 1, borderColor: color.borderEmphasized, alignItems: 'center', justifyContent: 'center', backgroundColor: color.background.surface },
+  otpBox: { minWidth: 0, height: 56, borderRadius: radius.element, borderCurve: 'continuous', borderWidth: 1.5, borderColor: color.borderInput, alignItems: 'center', justifyContent: 'center', backgroundColor: color.background.surface },
   otpFilled: { borderColor: color.text.secondary },
+  // Same box size when active: the ring is drawn with a thicker border, no padding change.
+  otpActive: { borderColor: color.accent, borderWidth: 2 },
   caret: { width: 2, height: 24, borderRadius: 1, backgroundColor: color.accent },
   otpInput: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0, color: 'transparent' },
 });
