@@ -14,8 +14,8 @@ import { useAuth } from '@/lib/auth';
 import * as storage from '@/lib/storage';
 import { AppMark } from '@/components/AppMark';
 import { MUST_CHANGE_KEY, PasswordForm } from '@/components/staff';
-import { Alert, Button, Card, Header, Hero, OtpInput, Screen, Section, Skeleton, Tag, Text, TextField } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Card, Header, PageHeader, OtpInput, Screen, Section, Skeleton, Token, Text, TextField } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 
 type Step = { kind: 'password' } | { kind: 'totp'; challengeToken: string; mustChange: boolean } | { kind: 'setup'; challengeToken: string; mustChange: boolean; setup: TotpSetup } | { kind: 'change' };
@@ -94,28 +94,28 @@ export default function StaffLogin() {
       router.replace('/staff/home');
     });
 
-  const issue = error ? <Alert type="error" heading="Couldn't sign in" description={error} /> : null;
+  const issue = error ? <Banner status="error" heading="Couldn't sign in" description={error} /> : null;
 
   if (step.kind === 'totp' || step.kind === 'setup') {
     const isSetup = step.kind === 'setup';
     return (
-      <Screen header={<Header onBack={restart} />} footer={<Button text={isSetup ? 'Confirm and sign in' : 'Verify and sign in'} size="lg" fullWidth loading={busy === 'code'} disabled={code.length !== 6 || busy !== null} onPress={() => submitCode()} />}>
-        <Hero icon={ShieldCheck} title={isSetup ? 'Set up an authenticator app' : 'Enter your authenticator code'} subtitle={isSetup ? "Staff accounts handle members' money, so the society asks for a second step. Use Google Authenticator, Microsoft Authenticator or any TOTP app." : 'Open the authenticator app and type the 6-digit code shown for TGSECCSL.'} />
+      <Screen header={<Header onBack={restart} />} footer={<Button label={isSetup ? 'Confirm and sign in' : 'Verify and sign in'} size="lg" fullWidth loading={busy === 'code'} disabled={code.length !== 6 || busy !== null} onPress={() => submitCode()} />}>
+        <PageHeader icon={ShieldCheck} title={isSetup ? 'Set up an authenticator app' : 'Enter your authenticator code'} subtitle={isSetup ? "Staff accounts handle members' money, so the society asks for a second step. Use Google Authenticator, Microsoft Authenticator or any TOTP app." : 'Open the authenticator app and type the 6-digit code shown for TGSECCSL.'} />
         {step.kind === 'setup' ? (
           <Card>
-            <View style={{ gap: space[6] }}>
-              <Button text="Add to the authenticator on this phone" leftSlot={Smartphone} buttonType="secondary" fullWidth onPress={() => void Linking.openURL(step.setup.otpauthUrl)} />
+            <View style={{ gap: spacing[3] }}>
+              <Button label="Add to the authenticator on this phone" icon={Smartphone} variant="secondary" fullWidth onPress={() => void Linking.openURL(step.setup.otpauthUrl)} />
               <View style={{ alignItems: 'center' }}>
                 <Image source={{ uri: step.setup.qrDataUrl }} style={styles.qr} accessibilityLabel="QR code to add TGSECCSL to an authenticator app on another device" />
               </View>
-              <View style={{ gap: space[2] }}>
-                <Text role="caption" tone="secondary">
+              <View style={{ gap: spacing[1] }}>
+                <Text type="supporting" tone="secondary">
                   Can't scan? Type this key instead:
                 </Text>
-                <Text role="bodyStrong" selectable>
+                <Text type="body" weight="medium" selectable>
                   {step.setup.secret.replace(/(.{4})/g, '$1 ').trim()}
                 </Text>
-                <Button text={copied ? 'Copied' : 'Copy key'} buttonType="secondary" size="sm" leftSlot={copied ? Check : Copy} onPress={() => void Clipboard.setStringAsync(step.setup.secret).then(() => setCopied(true))} />
+                <Button label={copied ? 'Copied' : 'Copy key'} variant="secondary" size="sm" icon={copied ? Check : Copy} onPress={() => void Clipboard.setStringAsync(step.setup.secret).then(() => setCopied(true))} />
               </View>
             </View>
           </Card>
@@ -128,7 +128,7 @@ export default function StaffLogin() {
             if (v.length === 6) submitCode(v);
           }}
         />
-        {error && !fields.code ? <Alert type="error" heading="That didn't work" description={error} /> : null}
+        {error && !fields.code ? <Banner status="error" heading="That didn't work" description={error} /> : null}
       </Screen>
     );
   }
@@ -148,7 +148,7 @@ export default function StaffLogin() {
           />
         }
       >
-        <Hero icon={KeyRound} title="Choose a new password" subtitle="You signed in with a temporary password. Choose your own before you continue." />
+        <PageHeader icon={KeyRound} title="Choose a new password" subtitle="You signed in with a temporary password. Choose your own before you continue." />
         <PasswordForm
           currentLabel="Temporary password"
           currentValue={password}
@@ -165,33 +165,33 @@ export default function StaffLogin() {
             })
           }
         />
-        {error && !Object.keys(fields).length ? <Alert type="error" heading="That didn't work" description={error} /> : null}
+        {error && !Object.keys(fields).length ? <Banner status="error" heading="That didn't work" description={error} /> : null}
       </Screen>
     );
   }
 
   return (
     <Screen header={<Header onBack={() => router.back()} />}>
-      <AppMark size={56} />
-      <Hero title="Staff sign-in" subtitle="Use the user ID and password the Super Admin gave you." />
-      <View style={{ gap: space[8] }}>
+      <AppMark size={56} intro />
+      <PageHeader title="Staff sign-in" subtitle="Use the user ID and password the Super Admin gave you." />
+      <View style={{ gap: spacing[4] }}>
         <TextField label="User ID" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} autoComplete="username" error={fields.username} />
         <TextField label="Password" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoComplete="current-password" error={fields.password} onSubmitEditing={signIn} returnKeyType="go" />
         {issue}
-        <Button text="Sign in" size="lg" fullWidth loading={busy === 'password'} disabled={!username.trim() || !password || busy !== null} onPress={signIn} />
-        <Text role="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+        <Button label="Sign in" size="lg" fullWidth loading={busy === 'password'} disabled={!username.trim() || !password || busy !== null} onPress={signIn} />
+        <Text type="supporting" tone="secondary" style={{ textAlign: 'center' }}>
           Forgot your password? The Super Admin can give you a temporary one.
         </Text>
       </View>
 
-      {personas.isLoading ? <Skeleton height={68} radius={radius.card} /> : null}
+      {personas.isLoading ? <Skeleton height={68} radius={radius.container} /> : null}
       {personas.data?.length ? (
         <Section title="Demo sign-in" description="Fictional data only. Not available on the live server.">
-          <View style={{ gap: space[4] }}>
+          <View style={{ gap: spacing[2] }}>
             {personas.data.map((p) => (
-              <Pressable key={p.id} accessibilityRole="button" disabled={busy !== null} onPress={() => quick(p)} style={({ pressed }) => [styles.persona, pressed && { backgroundColor: color.brand.subtle, borderColor: color.brand.solid }]}>
+              <Pressable key={p.id} accessibilityRole="button" disabled={busy !== null} onPress={() => quick(p)} style={({ pressed }) => [styles.persona, pressed && { backgroundColor: color.accentMuted, borderColor: color.accent }]}>
                 <View style={styles.avatar}>
-                  <Text role="label" tone="link">
+                  <Text type="label" tone="link">
                     {p.name
                       .split(' ')
                       .map((s) => s[0])
@@ -199,14 +199,14 @@ export default function StaffLogin() {
                       .join('')}
                   </Text>
                 </View>
-                <View style={{ flex: 1, gap: space[1] }}>
-                  <Text role="label">{p.name}</Text>
-                  <Tag text={ROLE_LABELS[p.role]} color="primary" size="xs" />
-                  <Text role="caption" tone="secondary">
+                <View style={{ flex: 1, gap: spacing[0.5] }}>
+                  <Text type="label">{p.name}</Text>
+                  <Token text={ROLE_LABELS[p.role]} status="info" size="xs" />
+                  <Text type="supporting" tone="secondary">
                     {p.story}
                   </Text>
                 </View>
-                {busy === p.id ? <ActivityIndicator color={color.brand.solid} /> : <ChevronRight size={20} color={color.text.tertiary} />}
+                {busy === p.id ? <ActivityIndicator color={color.accent} /> : <ChevronRight size={20} color={color.text.secondary} />}
               </Pressable>
             ))}
           </View>
@@ -218,6 +218,6 @@ export default function StaffLogin() {
 
 const styles = StyleSheet.create({
   qr: { width: 176, height: 176, backgroundColor: '#FFFFFF' },
-  persona: { flexDirection: 'row', alignItems: 'center', gap: space[6], padding: space[6], minHeight: 68, borderRadius: radius.card, borderWidth: 1, borderColor: color.border.default, backgroundColor: color.bg.surface },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.brand.subtle, alignItems: 'center', justifyContent: 'center' },
+  persona: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], padding: spacing[3], minHeight: 68, borderRadius: radius.container, borderWidth: 1, borderColor: color.border, backgroundColor: color.background.surface },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.accentMuted, alignItems: 'center', justifyContent: 'center' },
 });

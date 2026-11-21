@@ -6,7 +6,7 @@ import { HandCoins } from 'lucide-react-native';
 import { formatCycle, formatINR } from '@tgs/domain';
 import { ActionAlert, ask, Loaded, MoneyField, useAction, useCan } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Alert, Button, ChoiceCard, EmptyState, Header, Screen, Section, Text, TextField } from '@/ui';
+import { Banner, Button, SelectableCard, EmptyState, Header, Screen, Section, Text, TextField } from '@/ui';
 
 export default function WaivePenal() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,10 +33,10 @@ export default function WaivePenal() {
   };
 
   return (
-    <Screen header={<Header title="Waive penal interest" onBack={() => router.back()} />} {...(months.length && can('collections.waivePenal') ? { footer: <Button text="Waive" size="lg" fullWidth loading={a.busy} disabled={!ready} onPress={() => void save()} /> } : {})}>
-      {note ? <Alert type="success" heading={note} /> : null}
+    <Screen header={<Header title="Waive penal interest" onBack={() => router.back()} />} {...(months.length && can('collections.waivePenal') ? { footer: <Button label="Waive" size="lg" fullWidth loading={a.busy} disabled={!ready} onPress={() => void save()} /> } : {})}>
+      {note ? <Banner status="success" heading={note} /> : null}
       {!can('collections.waivePenal') ? (
-        <Alert type="warning" heading="You can't waive penal interest" description="Ask someone with the waiver permission." />
+        <Banner status="warning" heading="You can't waive penal interest" description="Ask someone with the waiver permission." />
       ) : (
         <Loaded q={q} what="this member's dues">
           {() =>
@@ -46,7 +46,7 @@ export default function WaivePenal() {
               <>
                 <Section title="Month">
                   {months.map((x) => (
-                    <ChoiceCard
+                    <SelectableCard
                       key={x.sheetId}
                       title={formatCycle(x.cycle)}
                       description={`Owed today ${formatINR(x.penal)}${x.penalWaived ? ` · waived so far ${formatINR(x.penalWaived)}` : ''}`}
@@ -60,7 +60,7 @@ export default function WaivePenal() {
                 </Section>
                 {sel ? <MoneyField label="Amount to waive" required value={amount} onChange={setAmount} error={a.fields.amount} /> : null}
                 {sel ? <TextField label="Reason" required value={reason} onChangeText={setReason} multiline numberOfLines={2} placeholder="e.g. Delay caused by the department's late pay bill" hint="At least 10 characters." error={a.fields.reason} /> : null}
-                <Text role="caption" tone="tertiary">
+                <Text type="supporting" tone="secondary">
                   Recorded with your name and time.
                 </Text>
               </>

@@ -9,8 +9,8 @@ import type { MemberListParams, MemberRow, MemberStatus } from '@tgs/types';
 import { FilterBar, Loaded, RecordCard, Row, ShareCsvButton, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { retiringLabel } from '@/lib/staffMembers';
-import { Button, Card, EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Button, Card, EmptyState, Screen, SelectField, StatusToken, Token, Text, TextField, Link } from '@/ui';
+import { spacing } from '@/theme';
 
 const STATUS = [
   { label: 'Active members', value: 'ACTIVE' },
@@ -59,14 +59,14 @@ export default function Members() {
 
   return (
     <Screen refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
-        <View style={{ flex: 1, gap: space[1] }}>
-          <Text role="pageTitle">Members</Text>
-          <Text role="caption" tone="secondary">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+        <View style={{ flex: 1, gap: spacing[0.5] }}>
+          <Text type="h1">Members</Text>
+          <Text type="supporting" tone="secondary">
             {first ? `${first.total.toLocaleString('en-IN')} found${first.scope.departmentName ? ` · ${first.scope.departmentName} only` : ''} · amounts are loans outstanding` : 'The member master'}
           </Text>
         </View>
-        {first?.canCreate ? <Button text="New" size="sm" leftSlot={UserPlus} onPress={() => router.push('/staff/member/new')} /> : null}
+        {first?.canCreate ? <Button label="New" size="sm" icon={UserPlus} onPress={() => router.push('/staff/member/new')} /> : null}
       </View>
 
       <TileGrid>
@@ -76,7 +76,7 @@ export default function Members() {
       </TileGrid>
 
       <Card padded={false}>
-        <Row icon={FileClock} label="Change requests" hint="Profile changes from the app" right={first?.counts.changeRequests ? <Tag text={String(first.counts.changeRequests)} color="warning" size="xs" /> : undefined} onPress={() => router.push('/staff/change-requests')} />
+        <Row icon={FileClock} label="Change requests" hint="Profile changes from the app" right={first?.counts.changeRequests ? <Token text={String(first.counts.changeRequests)} status="warning" size="xs" /> : undefined} onPress={() => router.push('/staff/change-requests')} />
       </Card>
 
       <FilterBar search={<TextField compact label="Search" value={text} onChangeText={setText} placeholder="Name, General No. or Employee ID" autoCorrect={false} />}>
@@ -86,7 +86,7 @@ export default function Members() {
         <SelectField compact label="Loan" value={loanOnly ? 'yes' : ''} options={[{ value: '', label: 'Any loan' }, { value: 'yes', label: 'Has an active loan' }]} onChange={(v) => setLoanOnly(v === 'yes')} />
         <SelectField compact label="Mandate" value={mandateOnly ? 'yes' : ''} options={[{ value: '', label: 'Any mandate' }, { value: 'yes', label: 'Mandate pending' }]} onChange={(v) => setMandateOnly(v === 'yes')} />
       </FilterBar>
-      {filtersOn ? <Button text="Clear filters" subType="inline" onPress={clear} /> : null}
+      {filtersOn ? <Link label="Clear filters" onPress={clear} /> : null}
 
       <Loaded q={list} what="members">
         {(d) =>
@@ -99,18 +99,18 @@ export default function Members() {
               {items.map((r) => {
                 const soon = retiringLabel(r.leftoverMonths, r.status);
                 return (
-                  <RecordCard key={r.id} title={r.name} subtitle={`No. ${r.generalNo} · ${r.employeeId}`} {...(r.activeLoans ? { amount: formatINR(r.outstanding) } : {})} tag={<StatusTag entity="member" status={r.status} audience="staff" size="xs" />} caption={`${r.departmentName} · ${r.designation}`} onPress={() => router.push(`/staff/member/${r.id}`)}>
+                  <RecordCard key={r.id} title={r.name} subtitle={`No. ${r.generalNo} · ${r.employeeId}`} {...(r.activeLoans ? { amount: formatINR(r.outstanding) } : {})} tag={<StatusToken entity="member" status={r.status} audience="staff" size="xs" />} caption={`${r.departmentName} · ${r.designation}`} onPress={() => router.push(`/staff/member/${r.id}`)}>
                     {soon || r.mandateStatus === 'PENDING_NEW_DDO' || r.pendingChanges > 0 ? (
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[3] }}>
-                        {soon ? <Tag text={soon} color="warning" size="xs" /> : null}
-                        {r.mandateStatus === 'PENDING_NEW_DDO' ? <Tag text="Mandate pending" color="warning" size="xs" /> : null}
-                        {r.pendingChanges > 0 ? <Tag text="Change requested" color="primary" size="xs" /> : null}
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1.5] }}>
+                        {soon ? <Token text={soon} status="warning" size="xs" /> : null}
+                        {r.mandateStatus === 'PENDING_NEW_DDO' ? <Token text="Mandate pending" status="warning" size="xs" /> : null}
+                        {r.pendingChanges > 0 ? <Token text="Change requested" status="info" size="xs" /> : null}
                       </View>
                     ) : null}
                   </RecordCard>
                 );
               })}
-              {list.hasNextPage ? <View style={{ padding: space[6] }}><Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
+              {list.hasNextPage ? <View style={{ padding: spacing[3] }}><Button label="Load more" variant="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
               <ShareCsvButton title="Members" rows={() => csvRows(params)} />
             </Stack2>
           )

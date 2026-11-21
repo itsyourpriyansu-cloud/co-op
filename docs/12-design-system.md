@@ -1,6 +1,6 @@
 # 12 · Design Direction & Design System
 
-> Version 0.7 · 2026-11-20 · Status: **Proposed (D-034)**. Tokens live in `packages/design-tokens` → Tailwind preset (web) + NativeWind preset (app).
+> Version 0.8 · 2026-11-20 · Status: **Proposed (D-034)**. Tokens live in `packages/design-tokens` → Tailwind preset (web). **Member App (phone) since D-138: Astryx tokens in the seal navy and gold, `docs/25-mobile-design-system.md`; the phone sections below describe the earlier Blend look and are superseded there.**
 > Research basis: platform guidelines (Material 3, WCAG 2.2), Google's HEART metrics framework, and fintech/banking UX practice. Sources are listed in §10. Points marked *(practice)* come from industry articles, not standards.
 
 ---

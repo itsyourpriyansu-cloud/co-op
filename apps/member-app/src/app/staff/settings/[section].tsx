@@ -10,8 +10,8 @@ import { CONSOLE_ROLES, ROLE_LABELS, type ConsoleRole, type Permission, type Dem
 import { ActionAlert, ask, Loaded, MoneyField, RecordCard, Stack2, useAction, plain } from '@/components/staff';
 import { api } from '@/lib/api';
 import { AUDIENCE, CHANNELS, ENTITY, fill, isPlaceholder, MONTHS, RECOVERY_LABEL, ROLE_HINT, SECTIONS, vars } from '@/lib/staffSettings';
-import { Alert, Button, Card, Checkbox, EmptyState, Header, KeyValue, Screen, Section, Segmented, SelectField, Tag, Text, TextField } from '@/ui';
-import { color, space } from '@/theme';
+import { Banner, Button, Card, CheckboxInput, EmptyState, Header, MetadataListItem, Screen, Section, SegmentedControl, SelectField, Token, Text, TextField, Link } from '@/ui';
+import { color, spacing } from '@/theme';
 
 const LAKH = toPaise(100000);
 
@@ -29,7 +29,7 @@ function Num({ label, value, onChange, unit, hint, error, decimals, disabled }: 
       value={text}
       editable={!disabled}
       keyboardType={decimals ? 'decimal-pad' : 'number-pad'}
-      {...(unit ? { suffix: <Text role="caption" tone="tertiary">{unit}</Text> } : {})}
+      {...(unit ? { suffix: <Text type="supporting" tone="secondary">{unit}</Text> } : {})}
       {...(hint ? { hint } : {})}
       {...(error ? { error } : {})}
       onChangeText={(raw) => {
@@ -48,13 +48,13 @@ function Num({ label, value, onChange, unit, hint, error, decimals, disabled }: 
 function MonthOptions({ value, onChange, error }: { value: number[]; onChange: (v: number[]) => void; error?: string | undefined }) {
   const rows = value.length ? value : [Number.NaN];
   return (
-    <View style={{ gap: space[4] }}>
-      <Text role="label">Repayment periods</Text>
-      <Text role="caption" tone="tertiary">
+    <View style={{ gap: spacing[2] }}>
+      <Text type="label">Repayment periods</Text>
+      <Text type="supporting" tone="secondary">
         Members and staff can choose only these. A member whose remaining service is shorter sees the longer ones switched off.
       </Text>
       {rows.map((months, i) => (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space[3] }}>
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing[1.5] }}>
           <View style={{ flex: 1 }}>
             <Num label={`Period ${i + 1}`} value={months} onChange={(n) => onChange(rows.map((x, j) => (j === i ? n : x)))} unit="months" />
           </View>
@@ -63,9 +63,9 @@ function MonthOptions({ value, onChange, error }: { value: number[]; onChange: (
           </Pressable>
         </View>
       ))}
-      <Button text="Add another period" buttonType="secondary" size="sm" leftSlot={Plus} onPress={() => onChange([...rows, Number.NaN])} />
+      <Button label="Add another period" variant="secondary" size="sm" icon={Plus} onPress={() => onChange([...rows, Number.NaN])} />
       {error ? (
-        <Text role="caption" tone="danger">
+        <Text type="supporting" tone="error">
           {error}
         </Text>
       ) : null}
@@ -126,21 +126,21 @@ function Lines({ label, value, onChange, split, placeholder, error, disabled }: 
 }
 
 function Toggle({ label, description, checked, onChange, disabled }: { label: string; description?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
-  if (disabled) return <KeyValue label={label} value={checked ? 'On' : 'Off'} />;
-  return <Checkbox checked={checked} onChange={onChange} label={label} {...(description ? { description } : {})} />;
+  if (disabled) return <MetadataListItem label={label} value={checked ? 'On' : 'Off'} />;
+  return <CheckboxInput checked={checked} onChange={onChange} label={label} {...(description ? { description } : {})} />;
 }
 
 function Choose({ label, value, options, onChange, disabled }: { label: string; value: string; options: Array<{ value: string; label: string; hint?: string }>; onChange: (v: string) => void; disabled?: boolean }) {
-  if (disabled) return <KeyValue label={label} value={options.find((o) => o.value === value)?.label ?? value} />;
+  if (disabled) return <MetadataListItem label={label} value={options.find((o) => o.value === value)?.label ?? value} />;
   return <SelectField label={label} value={value} options={options} onChange={onChange} />;
 }
 
-const Placeholder = () => <Tag text="Placeholder" color="warning" size="xs" />;
+const Placeholder = () => <Token text="Placeholder" status="warning" size="xs" />;
 
 function Block({ title, description, tag, children }: { title: string; description?: string; tag?: boolean; children: ReactNode }) {
   return (
     <Section title={title} {...(description ? { description } : {})} {...(tag ? { right: <Placeholder /> } : {})}>
-      <View style={{ gap: space[8] }}>{children}</View>
+      <View style={{ gap: spacing[4] }}>{children}</View>
     </Section>
   );
 }
@@ -168,16 +168,16 @@ function Editor({ title, onBack, canEdit, dirty, a, onSave, onDiscard, saveText 
         ? {
             // Always shown to an editor so Save is easy to find; off until something changes.
             footer: (
-              <View style={{ gap: space[3] }}>
-                <Button text={saveText} size="lg" fullWidth loading={a.busy} disabled={!dirty || a.busy || a.unconfirmed} onPress={() => void save()} />
-                <Button text="Discard" buttonType="secondary" fullWidth disabled={!dirty || a.busy} onPress={onDiscard} />
+              <View style={{ gap: spacing[1.5] }}>
+                <Button label={saveText} size="lg" fullWidth loading={a.busy} disabled={!dirty || a.busy || a.unconfirmed} onPress={() => void save()} />
+                <Button label="Discard" variant="secondary" fullWidth disabled={!dirty || a.busy} onPress={onDiscard} />
               </View>
             ),
           }
         : {})}
     >
-      {!canEdit ? <Alert type="neutral" heading="View only" description="Only the Super Admin can change settings." /> : null}
-      {saved && !dirty ? <Alert type="success" heading="Saved" description="Recorded in the change history." /> : null}
+      {!canEdit ? <Banner status="neutral" heading="View only" description="Only the Super Admin can change settings." /> : null}
+      {saved && !dirty ? <Banner status="success" heading="Saved" description="Recorded in the change history." /> : null}
       {children}
       <ActionAlert action={a} heading="Couldn't save" />
     </Screen>
@@ -284,12 +284,12 @@ function ProductEdit({ product, mode, onClose }: { product: LoanProduct; mode: '
   };
   return (
     <Editor title={adding ? 'Add loan product' : `Edit ${p.name}`} onBack={onClose} canEdit dirty={JSON.stringify(p) !== JSON.stringify(product)} a={a} onSave={save} onDiscard={() => setP(product)} saveText={adding ? 'Add product' : 'Save product'}>
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         {adding ? 'A new product works like an Ordinary loan: sureties, form F2, its own rate and limits. It is open for applications as soon as you save it.' : 'Applies to new applications and calculators. Running loans keep the rate they were sanctioned at.'}
       </Text>
       {adding ? <TextField label="Loan name" required value={p.name} onChangeText={(name) => set({ name })} placeholder="e.g. Festival Advance" error={e.name} /> : null}
       {after ? (
-        <Alert type="primary" heading={`Preview · ₹1,00,000 over ${months} months`} description={before ? `First instalment ${formatINR(before.firstInstalment)} → ${formatINR(after.firstInstalment)} · Interest ${formatINR(before.totalInterest)} → ${formatINR(after.totalInterest)}` : `First instalment ${formatINR(after.firstInstalment)} · Interest ${formatINR(after.totalInterest)}`} />
+        <Banner status="info" heading={`Preview · ₹1,00,000 over ${months} months`} description={before ? `First instalment ${formatINR(before.firstInstalment)} → ${formatINR(after.firstInstalment)} · Interest ${formatINR(before.totalInterest)} → ${formatINR(after.totalInterest)}` : `First instalment ${formatINR(after.firstInstalment)} · Interest ${formatINR(after.totalInterest)}`} />
       ) : null}
       <Num label="Interest rate" value={p.ratePercent} onChange={(ratePercent) => set({ ratePercent })} error={e.ratePercent} unit="% a year" decimals />
       <MonthOptions value={p.instalmentOptions} onChange={(instalmentOptions) => set({ instalmentOptions })} error={e.instalmentOptions} />
@@ -301,11 +301,11 @@ function ProductEdit({ product, mode, onClose }: { product: LoanProduct; mode: '
       {p.code === 'DEPOSIT' ? <Num label="Loan limit" value={p.depositMarginPercent ?? Number.NaN} onChange={(depositMarginPercent) => set({ depositMarginPercent })} error={e.depositMarginPercent} unit="% of the FD" /> : null}
       <Block title="Workflow">
         <Num label="Sureties required" value={p.suretiesRequired} onChange={(suretiesRequired) => set({ suretiesRequired })} error={e.suretiesRequired} unit="members" hint="0 skips the surety stage" />
-        <Checkbox checked={p.ddoCertificationRequired} onChange={(ddoCertificationRequired) => set({ ddoCertificationRequired })} label="Department DDO certifies the application" />
-        <Checkbox checked={p.topupAllowed} onChange={(topupAllowed) => set({ topupAllowed })} label="Members may ask for a top-up" />
-        {adding ? null : <Checkbox checked={p.enabled} onChange={(enabled) => set({ enabled })} label="Open for new applications (running loans are not affected)" />}
-        <Segmented label="Instalment method" value={p.emiMethod} options={[{ value: 'EQUAL_PRINCIPAL', label: 'Equal principal' }, { value: 'AMORTIZED', label: 'Equal EMI' }]} onChange={(v) => set({ emiMethod: v as LoanProduct['emiMethod'] })} />
-        <Text role="caption" tone="tertiary">
+        <CheckboxInput checked={p.ddoCertificationRequired} onChange={(ddoCertificationRequired) => set({ ddoCertificationRequired })} label="Department DDO certifies the application" />
+        <CheckboxInput checked={p.topupAllowed} onChange={(topupAllowed) => set({ topupAllowed })} label="Members may ask for a top-up" />
+        {adding ? null : <CheckboxInput checked={p.enabled} onChange={(enabled) => set({ enabled })} label="Open for new applications (running loans are not affected)" />}
+        <SegmentedControl label="Instalment method" value={p.emiMethod} options={[{ value: 'EQUAL_PRINCIPAL', label: 'Equal principal' }, { value: 'AMORTIZED', label: 'Equal EMI' }]} onChange={(v) => set({ emiMethod: v as LoanProduct['emiMethod'] })} />
+        <Text type="supporting" tone="secondary">
           {p.emiMethod === 'EQUAL_PRINCIPAL' ? 'Principal fixed, interest on the balance (falls every month).' : 'Same amount every month.'}
         </Text>
       </Block>
@@ -316,9 +316,9 @@ function ProductEdit({ product, mode, onClose }: { product: LoanProduct; mode: '
 function Flag({ on, label }: { on: boolean; label: string }) {
   const Icon = on ? Check : Minus;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-      <Icon size={14} color={on ? color.status.success.fg : color.text.tertiary} />
-      <Text role="caption" tone={on ? 'primary' : 'tertiary'}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1] }}>
+      <Icon size={14} color={on ? color.status.success.text : color.text.secondary} />
+      <Text type="supporting" tone={on ? 'primary' : 'secondary'}>
         {label}
       </Text>
     </View>
@@ -332,35 +332,35 @@ function LoanProducts({ b, title }: { b: SettingsBundle; title: string }) {
   if (adding) return <ProductEdit product={BLANK_PRODUCT} mode="add" onClose={() => setAdding(false)} />;
   return (
     <Screen header={<Header title={title} onBack={back} />}>
-      {b.canEdit ? <Button text="Add loan product" leftSlot={Plus} onPress={() => setAdding(true)} /> : null}
+      {b.canEdit ? <Button label="Add loan product" icon={Plus} onPress={() => setAdding(true)} /> : null}
       {b.loanProducts.map((p) => {
         const months = previewMonths(p.instalmentOptions);
         const preview = calculateEmi(LAKH, p.ratePercent, months, p.emiMethod);
         return (
           <Card key={p.code}>
-            <View style={{ gap: space[3] }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-                <Text role="cardTitle" style={{ flex: 1 }}>
+            <View style={{ gap: spacing[1.5] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5] }}>
+                <Text type="h4" style={{ flex: 1 }}>
                   {p.name} · {p.ratePercent}%
                 </Text>
                 {p.placeholder ? <Placeholder /> : null}
-                {p.enabled ? null : <Tag text="Not offered" color="neutral" size="xs" />}
-                {b.canEdit ? <Button text="Edit" size="sm" buttonType="secondary" leftSlot={Pencil} accessibilityLabel={`Edit ${p.name}`} onPress={() => setEditing(p)} /> : null}
+                {p.enabled ? null : <Token text="Not offered" status="neutral" size="xs" />}
+                {b.canEdit ? <Button label="Edit" size="sm" variant="secondary" icon={Pencil} accessibilityLabel={`Edit ${p.name}`} onPress={() => setEditing(p)} /> : null}
               </View>
-              <Text role="caption" tone="tertiary">
+              <Text type="supporting" tone="secondary">
                 {p.emiMethod === 'EQUAL_PRINCIPAL' ? 'Equal principal, interest on balance' : 'Equal monthly instalment'}
               </Text>
-              <KeyValue label="Amount" value={`${formatINR(p.minAmount)} – ${formatINR(p.maxAmount)}`} />
-              <KeyValue label="Repayment periods" value={`${p.instalmentOptions.join(', ')} months`} />
-              <KeyValue label="Share deposit" value={`${p.shareDepositPercent}%`} />
-              <KeyValue label="Running loans allowed" value={String(p.maxConcurrent)} />
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[4] }}>
+              <MetadataListItem label="Amount" value={`${formatINR(p.minAmount)} – ${formatINR(p.maxAmount)}`} />
+              <MetadataListItem label="Repayment periods" value={`${p.instalmentOptions.join(', ')} months`} />
+              <MetadataListItem label="Share deposit" value={`${p.shareDepositPercent}%`} />
+              <MetadataListItem label="Running loans allowed" value={String(p.maxConcurrent)} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
                 <Flag on={p.suretiesRequired > 0} label={p.suretiesRequired ? `${p.suretiesRequired} sureties` : 'No sureties'} />
                 <Flag on={p.ddoCertificationRequired} label="DDO certifies" />
                 <Flag on={p.topupAllowed} label="Top-up" />
                 {p.code === 'DEPOSIT' ? <Flag on label={`Up to ${p.depositMarginPercent}% of FD`} /> : null}
               </View>
-              <Text role="caption" tone="secondary">
+              <Text type="supporting" tone="secondary">
                 ₹1,00,000 over {months} months → first instalment {formatINR(preview.firstInstalment)}, interest {formatINR(preview.totalInterest)}
               </Text>
             </View>
@@ -393,8 +393,8 @@ function Deposits({ b, title }: { b: SettingsBundle; title: string }) {
           const m = Number.isFinite(slab.ratePercent) && slab.ratePercent > 0 && Number.isFinite(slab.fromMonths) ? calculateFdMaturity({ principal: LAKH, ratePercent: slab.ratePercent, tenureMonths: slab.fromMonths, payout: 'ON_MATURITY', openedOn: '2026-01-01' }) : undefined;
           return (
             <Card key={i}>
-              <View style={{ gap: space[6] }}>
-                <View style={{ flexDirection: 'row', gap: space[4] }}>
+              <View style={{ gap: spacing[3] }}>
+                <View style={{ flexDirection: 'row', gap: spacing[2] }}>
                   <View style={{ flex: 1 }}>
                     <Num label="From" value={slab.fromMonths} onChange={(fromMonths) => setSlab(i, { fromMonths })} error={e[`fdSlabs.${i}.fromMonths`]} unit="months" disabled={ro} />
                   </View>
@@ -403,23 +403,23 @@ function Deposits({ b, title }: { b: SettingsBundle; title: string }) {
                   </View>
                 </View>
                 <Num label="Rate" value={slab.ratePercent} onChange={(ratePercent) => setSlab(i, { ratePercent })} error={e[`fdSlabs.${i}.ratePercent`]} unit="%" decimals disabled={ro} />
-                <KeyValue label="₹1,00,000 grows to" value={m ? `${formatINR(m.maturityValue)} in ${slab.fromMonths} m` : '—'} />
-                {!ro && v.fdSlabs.length > 1 ? <Button text="Remove band" subType="inline" buttonType="danger" leftSlot={Trash2} style={{ alignSelf: 'flex-start' }} onPress={() => set({ fdSlabs: v.fdSlabs.filter((_, j) => j !== i) })} /> : null}
+                <MetadataListItem label="₹1,00,000 grows to" value={m ? `${formatINR(m.maturityValue)} in ${slab.fromMonths} m` : '—'} />
+                {!ro && v.fdSlabs.length > 1 ? <Link label="Remove band" destructive icon={Trash2} style={{ alignSelf: 'flex-start' }} onPress={() => set({ fdSlabs: v.fdSlabs.filter((_, j) => j !== i) })} /> : null}
               </View>
             </Card>
           );
         })}
         {e.fdSlabs ? (
-          <Text role="caption" tone="danger">
+          <Text type="supporting" tone="error">
             {e.fdSlabs}
           </Text>
         ) : null}
         {!ro ? (
           <Button
-            text="Add band"
-            buttonType="secondary"
+            label="Add band"
+            variant="secondary"
             fullWidth
-            leftSlot={Plus}
+            icon={Plus}
             onPress={() => {
               const last = v.fdSlabs.at(-1);
               const from = (last?.toMonths ?? 0) + 1;
@@ -493,10 +493,10 @@ function InsuranceDemand({ b, title }: { b: SettingsBundle; title: string }) {
       <Block title="Penal interest" description="Simple interest per day on the unpaid loan instalment only, from the cycle's last day plus these grace days, until paid. The rate is set per loan product." tag={ph('penalGraceDays')}>
         <Num label="Grace days" value={v.penalGraceDays} onChange={(penalGraceDays) => set({ penalGraceDays })} error={e.penalGraceDays} unit="days" disabled={ro} />
       </Block>
-      <Section title="Recovery priority" description="Set by the agreement (§3.6). A short salary deduction is applied top to bottom." right={<Lock size={14} color={color.text.tertiary} accessibilityLabel="Locked" />}>
+      <Section title="Recovery priority" description="Set by the agreement (§3.6). A short salary deduction is applied top to bottom." right={<Lock size={14} color={color.text.secondary} accessibilityLabel="Locked" />}>
         <Card>
           {order.map((h, i) => (
-            <Text key={h} role="body">
+            <Text key={h} type="body">
               {i + 1}. {RECOVERY_LABEL[h]}
             </Text>
           ))}
@@ -528,14 +528,14 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
     };
     return (
       <Editor title={editing.id ? `Edit ${editing.name}` : 'Add department'} onBack={close} canEdit dirty a={a} onSave={save} onDiscard={close} saveText="Save">
-        <Text role="body" tone="secondary">
+        <Text type="body" tone="secondary">
           The DDO certifies applications for members of this office and deducts their dues.
         </Text>
         <TextField label="Code" value={editing.code ?? ''} onChangeText={(code) => set({ code: code.toUpperCase() })} error={e.code} placeholder="e.g. TOUR" autoCapitalize="characters" />
         <TextField label="Name" value={editing.name ?? ''} onChangeText={(name) => set({ name })} error={e.name} placeholder="e.g. Tourism" />
-        <Segmented label="Type" value={editing.kind ?? 'SECRETARY_DEPT'} options={[{ value: 'SECRETARY_DEPT', label: 'Secretariat' }, { value: 'EXTERNAL_OFFICE', label: 'Outside' }]} onChange={(kind) => set({ kind: kind as Department['kind'] })} />
+        <SegmentedControl label="Type" value={editing.kind ?? 'SECRETARY_DEPT'} options={[{ value: 'SECRETARY_DEPT', label: 'Secretariat' }, { value: 'EXTERNAL_OFFICE', label: 'Outside' }]} onChange={(kind) => set({ kind: kind as Department['kind'] })} />
         {editing.kind === 'EXTERNAL_OFFICE' ? (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             For members transferred outside the Secretariat (recovery mandate moves here).
           </Text>
         ) : null}
@@ -545,19 +545,19 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
     );
   }
   return (
-    <Screen header={<Header title={title} onBack={back} />} {...(canEdit ? { footer: <Button text="Add department" size="lg" fullWidth leftSlot={Plus} onPress={() => setEditing({ ...EMPTY_DEPT })} /> } : {})}>
+    <Screen header={<Header title={title} onBack={back} />} {...(canEdit ? { footer: <Button label="Add department" size="lg" fullWidth icon={Plus} onPress={() => setEditing({ ...EMPTY_DEPT })} /> } : {})}>
       <Loaded q={list} what="departments">
         {(rows) => (
           <>
-            <Text role="body" tone="secondary">
+            <Text type="body" tone="secondary">
               {rows.length} offices. DDOs certify membership and loan applications and deduct dues from salary.
             </Text>
             <Stack2>
               {rows.map((r) => (
                 <RecordCard key={r.id} title={r.name} subtitle={`${r.code} · ${r.memberCount} members`} caption={`DDO ${r.ddoName}, ${r.ddoDesignation}`} {...(canEdit ? { onPress: () => setEditing(r) } : {})}>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-                    <Tag text={r.ddoUserId ? `Login: ${loginOf(r.ddoUserId)?.userId ?? 'yes'}` : 'No login yet'} color={r.ddoUserId ? 'success' : 'neutral'} size="xs" />
-                    {r.kind === 'EXTERNAL_OFFICE' ? <Tag text="Outside Secretariat" color="neutral" size="xs" /> : null}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1] }}>
+                    <Token text={r.ddoUserId ? `Login: ${loginOf(r.ddoUserId)?.userId ?? 'yes'}` : 'No login yet'} status={r.ddoUserId ? 'success' : 'neutral'} size="xs" />
+                    {r.kind === 'EXTERNAL_OFFICE' ? <Token text="Outside Secretariat" status="neutral" size="xs" /> : null}
                   </View>
                 </RecordCard>
               ))}
@@ -581,18 +581,18 @@ function SignIn({ user }: { user: BackendUser }) {
   const failure = reset.error ?? resetTotp.error;
   return (
     <Section title="Sign-in">
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
-        <Tag text={user.totpEnabled ? 'Authenticator set up' : 'No authenticator'} color={user.totpEnabled ? 'success' : 'neutral'} size="xs" />
-        {user.locked ? <Tag text="Locked after wrong attempts" color="warning" size="xs" /> : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1] }}>
+        <Token text={user.totpEnabled ? 'Authenticator set up' : 'No authenticator'} status={user.totpEnabled ? 'success' : 'neutral'} size="xs" />
+        {user.locked ? <Token text="Locked after wrong attempts" status="warning" size="xs" /> : null}
       </View>
-      <Text role="caption" tone="secondary">
+      <Text type="supporting" tone="secondary">
         {user.lastLoginAt ? `Last signed in ${formatDisplayDateTime(user.lastLoginAt)}` : 'Has not signed in yet.'}
       </Text>
-      <Button text="Reset password" buttonType="secondary" fullWidth loading={reset.isPending} onPress={() => void ask('Reset password', `${user.name} gets a temporary password that works once.`, 'Reset').then((ok) => ok && reset.mutate())} />
-      {user.totpEnabled ? <Button text="Reset authenticator" buttonType="secondary" fullWidth loading={resetTotp.isPending} onPress={() => void ask('Reset authenticator', `${user.name} sets up a new authenticator app at the next sign-in.`, 'Reset').then((ok) => ok && resetTotp.mutate())} /> : null}
-      {reset.data ? <Alert type="success" heading={`Temporary password for ${reset.data.userId}: ${reset.data.temporaryPassword}`} description="Give it to the user in person. It works once: they choose a new password when they sign in. It is not shown again." /> : null}
-      {resetTotp.isSuccess ? <Alert type="success" heading="Authenticator reset" description="The user sets up a new authenticator app at the next sign-in." /> : null}
-      {failure ? <Alert type="error" heading="That didn't work" description={isApiError(failure) ? failure.message : 'Try again.'} /> : null}
+      <Button label="Reset password" variant="secondary" fullWidth loading={reset.isPending} onPress={() => void ask('Reset password', `${user.name} gets a temporary password that works once.`, 'Reset').then((ok) => ok && reset.mutate())} />
+      {user.totpEnabled ? <Button label="Reset authenticator" variant="secondary" fullWidth loading={resetTotp.isPending} onPress={() => void ask('Reset authenticator', `${user.name} sets up a new authenticator app at the next sign-in.`, 'Reset').then((ok) => ok && resetTotp.mutate())} /> : null}
+      {reset.data ? <Banner status="success" heading={`Temporary password for ${reset.data.userId}: ${reset.data.temporaryPassword}`} description="Give it to the user in person. It works once: they choose a new password when they sign in. It is not shown again." /> : null}
+      {resetTotp.isSuccess ? <Banner status="success" heading="Authenticator reset" description="The user sets up a new authenticator app at the next sign-in." /> : null}
+      {failure ? <Banner status="error" heading="That didn't work" description={isApiError(failure) ? failure.message : 'Try again.'} /> : null}
     </Section>
   );
 }
@@ -615,7 +615,7 @@ function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
     };
     return (
       <Editor title={editing.id ? `Edit ${editing.name}` : 'Add user'} onBack={close} canEdit dirty a={a} onSave={save} onDiscard={close} saveText="Save">
-        <Text role="body" tone="secondary">
+        <Text type="body" tone="secondary">
           New users get a temporary password from Reset password, and choose their own at first sign-in.
         </Text>
         <TextField label="Full name" value={editing.name ?? ''} onChangeText={(name) => set({ name })} error={e.name} />
@@ -624,14 +624,14 @@ function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
         <TextField label="Email (optional)" keyboardType="email-address" autoCapitalize="none" value={editing.email ?? ''} onChangeText={(email) => set({ email })} error={e.email} />
         <SelectField label="Role" value={editing.role ?? ''} options={CONSOLE_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r], hint: ROLE_HINT[r] }))} onChange={(role) => set({ role: role as ConsoleRole })} error={e.role} />
         {editing.role === 'DDO' ? <SelectField label="Department" searchable value={editing.departmentId ?? ''} options={(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))} onChange={(departmentId) => set({ departmentId, ...(editing.name ? {} : { name: depts.data?.find((d) => d.id === departmentId)?.ddoName ?? '' }) })} error={e.departmentId} hint="One active DDO login per department." /> : null}
-        {editing.id ? <Checkbox checked={editing.active !== false} onChange={(active) => set({ active })} label="Can sign in" {...(e.active ? { description: e.active } : {})} /> : null}
+        {editing.id ? <CheckboxInput checked={editing.active !== false} onChange={(active) => set({ active })} label="Can sign in" {...(e.active ? { description: e.active } : {})} /> : null}
         {editing.id && 'totpEnabled' in editing ? <SignIn user={editing as BackendUser} /> : null}
       </Editor>
     );
   }
   return (
-    <Screen header={<Header title={title} onBack={back} />} {...(canEdit ? { footer: <Button text="Add user" size="lg" fullWidth leftSlot={Plus} onPress={() => setEditing({ role: 'ACCOUNTANT', active: true })} /> } : {})}>
-      <Text role="body" tone="secondary">
+    <Screen header={<Header title={title} onBack={back} />} {...(canEdit ? { footer: <Button label="Add user" size="lg" fullWidth icon={Plus} onPress={() => setEditing({ role: 'ACCOUNTANT', active: true })} /> } : {})}>
+      <Text type="body" tone="secondary">
         Staff sign in to the console or to these staff screens. Members never see them.
       </Text>
       <Loaded q={users} what="users">
@@ -639,7 +639,7 @@ function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
           <>
             <Stack2>
               {rows.map((r) => (
-                <RecordCard key={r.id} title={r.name} subtitle={r.userId} caption={[ROLE_LABELS[r.role], deptName(r.departmentId)].filter(Boolean).join(' · ')} tag={<Tag text={r.active === false ? 'Inactive' : 'Active'} color={r.active === false ? 'neutral' : 'success'} size="xs" />} {...(canEdit ? { onPress: () => setEditing(r) } : {})} />
+                <RecordCard key={r.id} title={r.name} subtitle={r.userId} caption={[ROLE_LABELS[r.role], deptName(r.departmentId)].filter(Boolean).join(' · ')} tag={<Token text={r.active === false ? 'Inactive' : 'Active'} status={r.active === false ? 'neutral' : 'success'} size="xs" />} {...(canEdit ? { onPress: () => setEditing(r) } : {})} />
               ))}
             </Stack2>
           </>
@@ -666,7 +666,7 @@ function Permissions({ title, canEdit }: { title: string; canEdit: boolean }) {
           const groups = [...new Set(m.permissions.map((p) => p.group))];
           return (
             <>
-              <Text role="body" tone="secondary">
+              <Text type="body" tone="secondary">
                 {canEdit ? 'Tap a right to switch it on or off for this role; it is saved at once. Locked rights stay with the Super Admin.' : 'Only the Super Admin can change these.'} Approvals are also limited by stage: each person can only act on the step that belongs to their role, and the President must be a different person from the Secretary.
               </Text>
               <SelectField label="Role" value={current} options={m.roles.map((r) => ({ value: r.role, label: r.label }))} onChange={setRole} />
@@ -680,13 +680,13 @@ function Permissions({ title, canEdit }: { title: string; canEdit: boolean }) {
                         const Icon = yes ? Check : Minus;
                         const r = current as ConsoleRole;
                         if (canEdit && !SUPER_ADMIN_ONLY.includes(p.key) && !(r === 'SUPER_ADMIN' && p.key === 'settings.view'))
-                          return <Checkbox key={p.key} checked={yes} label={p.label} onChange={(on) => toggle(r, on ? [...(m.grants[r] ?? []), p.key] : (m.grants[r] ?? []).filter((x) => x !== p.key))} />;
+                          return <CheckboxInput key={p.key} checked={yes} label={p.label} onChange={(on) => toggle(r, on ? [...(m.grants[r] ?? []), p.key] : (m.grants[r] ?? []).filter((x) => x !== p.key))} />;
                         return (
-                          <View key={p.key} style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }} accessible accessibilityLabel={`${p.label}: ${yes ? 'yes' : 'no'}`}>
-                            <Text role="body" tone={yes ? 'primary' : 'tertiary'} style={{ flex: 1 }}>
+                          <View key={p.key} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5] }} accessible accessibilityLabel={`${p.label}: ${yes ? 'yes' : 'no'}`}>
+                            <Text type="body" tone={yes ? 'primary' : 'secondary'} style={{ flex: 1 }}>
                               {p.label}
                             </Text>
-                            <Icon size={16} color={yes ? color.status.success.fg : color.text.tertiary} />
+                            <Icon size={16} color={yes ? color.status.success.text : color.text.secondary} />
                           </View>
                         );
                       })}
@@ -714,30 +714,30 @@ function TemplateEdit({ t, onClose }: { t: NotificationTemplate; onClose: () => 
   };
   return (
     <Editor title={plain(t.event)} onBack={onClose} canEdit dirty={JSON.stringify(x) !== JSON.stringify(t)} a={a} onSave={save} onDiscard={() => setX(t)} saveText="Save template">
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         Use the placeholders listed. They are filled in when the message is sent.
       </Text>
       <TextField label="Title" value={x.title} onChangeText={(title) => setX({ ...x, title })} error={a.fields.title} />
       <TextField label="Message" value={x.body} onChangeText={(body) => setX({ ...x, body })} multiline numberOfLines={4} error={a.fields.body} />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[3] }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1.5] }}>
         {vars(t).map((v) => (
-          <Button key={v} text={`{${v}}`} size="sm" buttonType="secondary" accessibilityLabel={`Add ${v}`} onPress={() => setX({ ...x, body: `${x.body} {${v}}` })} />
+          <Button key={v} label={`{${v}}`} size="sm" variant="secondary" accessibilityLabel={`Add ${v}`} onPress={() => setX({ ...x, body: `${x.body} {${v}}` })} />
         ))}
       </View>
       <Section title="Send by">
         {CHANNELS.map((c) => (
-          <Checkbox key={c.id} checked={x.channels.includes(c.id)} onChange={(on) => setX({ ...x, channels: on ? [...x.channels, c.id] : x.channels.filter((y) => y !== c.id) })} label={c.label} />
+          <CheckboxInput key={c.id} checked={x.channels.includes(c.id)} onChange={(on) => setX({ ...x, channels: on ? [...x.channels, c.id] : x.channels.filter((y) => y !== c.id) })} label={c.label} />
         ))}
         {a.fields.channels ? (
-          <Text role="caption" tone="danger">
+          <Text type="supporting" tone="error">
             {a.fields.channels}
           </Text>
         ) : null}
       </Section>
       <Section title="Preview">
         <Card>
-          <Text role="label">{fill(x.title)}</Text>
-          <Text role="body" tone="secondary">
+          <Text type="label">{fill(x.title)}</Text>
+          <Text type="body" tone="secondary">
             {fill(x.body)}
           </Text>
         </Card>
@@ -758,9 +758,9 @@ function Templates({ canEdit, title }: { canEdit: boolean; title: string }) {
             <Stack2>
               {rows.map((t) => (
                 <RecordCard key={t.key} title={plain(t.event)} subtitle={AUDIENCE[t.audience]} caption={`${fill(t.title)}: ${fill(t.body)}`} {...(canEdit ? { onPress: () => setEditing(t) } : {})}>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1] }}>
                     {CHANNELS.map((c) => (
-                      <Tag key={c.id} text={`${c.label}: ${t.channels.includes(c.id) ? 'on' : 'off'}`} color={t.channels.includes(c.id) ? 'primary' : 'neutral'} size="xs" />
+                      <Token key={c.id} text={`${c.label}: ${t.channels.includes(c.id) ? 'on' : 'off'}`} status={t.channels.includes(c.id) ? 'info' : 'neutral'} size="xs" />
                     ))}
                   </View>
                 </RecordCard>
@@ -786,9 +786,9 @@ function ChangeHistory({ b, title }: { b: SettingsBundle; title: string }) {
       ) : (
         <Stack2>
           {b.recentChanges.map((c) => (
-            <View key={c.id} style={{ gap: space[1], padding: space[8] }}>
-              <Text role="body">{readable(c.summary)}</Text>
-              <Text role="caption" tone="tertiary">
+            <View key={c.id} style={{ gap: spacing[0.5], padding: spacing[4] }}>
+              <Text type="body">{readable(c.summary)}</Text>
+              <Text type="supporting" tone="secondary">
                 {ENTITY[c.entity] ?? c.entity} · {c.actorName} · {formatDisplayDateTime(c.at)}
               </Text>
             </View>
@@ -811,7 +811,7 @@ export default function SettingsSection() {
     return (
       <Screen header={<Header title={title} onBack={back} />}>
         {!meta ? (
-          <Alert type="neutral" heading="Not found" description="Pick a section from Settings." />
+          <Banner status="neutral" heading="Not found" description="Pick a section from Settings." />
         ) : (
           <Loaded q={q} what="settings">
             {() => null}

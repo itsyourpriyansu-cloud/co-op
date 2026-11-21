@@ -12,8 +12,8 @@ import { api } from '@/lib/api';
 import { membershipFormHtml, membershipFromApplication } from '@/lib/staffDocuments';
 import { documentFileName } from '@/lib/documents';
 import { ACTION_HINT, ACTION_LABEL, certItems, EVENT_TITLE, isPrimaryAction, STEPS } from '@/lib/staffJoining';
-import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Tag, Text } from '@/ui';
-import { color, space } from '@/theme';
+import { Banner, Button, Card, Header, MetadataListItem, Screen, Section, StageTracker, StatusToken, Token, Text } from '@/ui';
+import { color, spacing } from '@/theme';
 
 const roleLabel = (r: string) => ROLE_LABELS[r as Role] ?? (r === 'APPLICANT' ? 'Applicant' : r.charAt(0) + r.slice(1).toLowerCase());
 
@@ -73,12 +73,12 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
       {...(d.actions.length
         ? {
             footer: (
-              <View style={{ gap: space[3] }}>
-                {primary ? <Button text={ACTION_LABEL[primary]} size="lg" fullWidth onPress={() => open(primary)} /> : null}
+              <View style={{ gap: spacing[1.5] }}>
+                {primary ? <Button label={ACTION_LABEL[primary]} size="lg" fullWidth onPress={() => open(primary)} /> : null}
                 {secondary.length ? (
-                  <View style={{ flexDirection: 'row', gap: space[4] }}>
+                  <View style={{ flexDirection: 'row', gap: spacing[2] }}>
                     {secondary.map((a) => (
-                      <Button key={a} text={ACTION_LABEL[a]} buttonType="secondary" style={{ flex: 1 }} onPress={() => open(a)} />
+                      <Button key={a} label={ACTION_LABEL[a]} variant="secondary" style={{ flex: 1 }} onPress={() => open(a)} />
                     ))}
                   </View>
                 ) : null}
@@ -87,32 +87,32 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
           }
         : {})}
     >
-      <View style={{ gap: space[2] }}>
-        <Text role="pageTitle">{app.name}</Text>
-        <Text role="caption" tone="secondary">
+      <View style={{ gap: spacing[1] }}>
+        <Text type="h1">{app.name}</Text>
+        <Text type="supporting" tone="secondary">
           {app.applicationNo} · {app.designation} · {d.department?.name}
           {app.submittedOn ? ` · submitted ${formatDisplayDate(app.submittedOn)}` : ''}
         </Text>
-        <StatusTag entity="membership" status={app.status} audience="staff" />
+        <StatusToken entity="membership" status={app.status} audience="staff" />
       </View>
 
-      {app.status === 'INFO_REQUESTED' && app.infoRequest ? <Alert type="warning" heading={`Returned to the applicant by ${app.infoRequest.by === 'DDO' ? 'the DDO' : 'the office'}`} description={app.infoRequest.message} /> : null}
-      {app.status === 'REJECTED' ? <Alert type="error" heading={`Rejected${app.rejection ? ` by ${app.rejection.byName}` : ''}`} description={app.rejection?.remarks ?? 'No reason recorded.'} /> : null}
-      {app.status === 'ACTIVE' ? <Alert type="success" heading={`Member · General No. ${app.allottedGeneralNo ?? ''}`} description={app.shareReceipt ? (app.shareReceipt.mode === 'FIRST_DEMAND' ? 'Shares will be recovered on the first demand sheet.' : `Shares paid · receipt ${app.shareReceipt.receiptNo}`) : 'Member record created.'} /> : null}
+      {app.status === 'INFO_REQUESTED' && app.infoRequest ? <Banner status="warning" heading={`Returned to the applicant by ${app.infoRequest.by === 'DDO' ? 'the DDO' : 'the office'}`} description={app.infoRequest.message} /> : null}
+      {app.status === 'REJECTED' ? <Banner status="error" heading={`Rejected${app.rejection ? ` by ${app.rejection.byName}` : ''}`} description={app.rejection?.remarks ?? 'No reason recorded.'} /> : null}
+      {app.status === 'ACTIVE' ? <Banner status="success" heading={`Member · General No. ${app.allottedGeneralNo ?? ''}`} description={app.shareReceipt ? (app.shareReceipt.mode === 'FIRST_DEMAND' ? 'Shares will be recovered on the first demand sheet.' : `Shares paid · receipt ${app.shareReceipt.receiptNo}`) : 'Member record created.'} /> : null}
 
       <Section title="Next step">
         <Card>
           {d.actions.length ? (
-            <View style={{ gap: space[3] }}>
-              <Tag text="Your turn" color="primary" />
-              <Text role="body" tone="secondary">
+            <View style={{ gap: spacing[1.5] }}>
+              <Token text="Your turn" status="info" />
+              <Text type="body" tone="secondary">
                 {ACTION_HINT[primary ?? d.actions[0]!]}
               </Text>
             </View>
           ) : d.waitingOn ? (
-            <Text role="label">Waiting on {d.waitingOn}</Text>
+            <Text type="label">Waiting on {d.waitingOn}</Text>
           ) : (
-            <Text role="body" tone="secondary">
+            <Text type="body" tone="secondary">
               {app.status === 'ACTIVE' ? 'Done. The applicant is now a member and sees their General No. in the app.' : 'No further steps.'}
             </Text>
           )}
@@ -124,28 +124,28 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
       </Card>
 
       <Expand title="Application" initiallyOpen>
-        <Text role="overline" tone="tertiary">
+        <Text type="overline" tone="secondary">
           Items 1 to 7 · {app.ddoCertification ? `certified by ${app.ddoCertification.byName}` : 'not certified yet'}
         </Text>
         {certItems(app, d.department?.name ?? '').map((r) => (
-          <KeyValue key={r.key} label={`${r.no} · ${r.label}`} value={r.value} />
+          <MetadataListItem key={r.key} label={`${r.no} · ${r.label}`} value={r.value} />
         ))}
-        <KeyValue label="8 · Shares proposed" value={`${app.sharesProposed} · ${formatINR(d.shareAmount)}`} />
-        <KeyValue label="Employee ID" value={f.employment?.employeeId ?? '—'} />
-        <KeyValue label="9 · Nominee" value={f.nominee?.name ? `${f.nominee.name} (${f.nominee.relation ?? ''})` : '—'} />
-        <KeyValue label="Nominee address" value={f.nominee?.address || '—'} />
-        <KeyValue label="Permanent address" value={perm || '—'} />
-        <KeyValue label="Email" value={f.personal?.email || '—'} />
-        <KeyValue label="Gender" value={f.personal?.gender === 'F' ? 'Female' : f.personal?.gender === 'M' ? 'Male' : '—'} />
-        <KeyValue label="Caste" value={f.personal?.caste || '—'} />
+        <MetadataListItem label="8 · Shares proposed" value={`${app.sharesProposed} · ${formatINR(d.shareAmount)}`} />
+        <MetadataListItem label="Employee ID" value={f.employment?.employeeId ?? '—'} />
+        <MetadataListItem label="9 · Nominee" value={f.nominee?.name ? `${f.nominee.name} (${f.nominee.relation ?? ''})` : '—'} />
+        <MetadataListItem label="Nominee address" value={f.nominee?.address || '—'} />
+        <MetadataListItem label="Permanent address" value={perm || '—'} />
+        <MetadataListItem label="Email" value={f.personal?.email || '—'} />
+        <MetadataListItem label="Gender" value={f.personal?.gender === 'F' ? 'Female' : f.personal?.gender === 'M' ? 'Male' : '—'} />
+        <MetadataListItem label="Caste" value={f.personal?.caste || '—'} />
       </Expand>
 
       <Expand title="Documents">
         {d.requiredDocuments.map((req) => {
           const doc = docs.find((x) => x.type === req.type);
           return (
-            <View key={req.type} style={{ gap: space[2] }}>
-              <KeyValue label={req.label} value={doc ? `${doc.fileName} · ${formatDisplayDateTime(doc.uploadedAt)}` : req.required ? 'Missing (required)' : 'Not needed for regular employees'} />
+            <View key={req.type} style={{ gap: spacing[1] }}>
+              <MetadataListItem label={req.label} value={doc ? `${doc.fileName} · ${formatDisplayDateTime(doc.uploadedAt)}` : req.required ? 'Missing (required)' : 'Not needed for regular employees'} />
               {doc?.fileId ? <FileButton fileId={doc.fileId} mime={doc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : undefined} consolePath={`/joining/${app.id}`} /> : null}
             </View>
           );
@@ -153,23 +153,23 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
       </Expand>
 
       <Expand title="Declarations">
-        {app.signature ? <Alert type="primary" heading={`Signed with OTP by ${f.personal?.fullName ?? app.name}`} description={`${formatDisplayDateTime(app.signature.signedAt)} · mobile ${f.personal?.mobile ?? '—'} · text version ${app.signature.textVersion}${app.signature.privacyVersion ? ` · privacy notice ${app.signature.privacyVersion}` : ""}`} /> : null}
+        {app.signature ? <Banner status="info" heading={`Signed with OTP by ${f.personal?.fullName ?? app.name}`} description={`${formatDisplayDateTime(app.signature.signedAt)} · mobile ${f.personal?.mobile ?? '—'} · text version ${app.signature.textVersion}${app.signature.privacyVersion ? ` · privacy notice ${app.signature.privacyVersion}` : ""}`} /> : null}
         {app.signature?.fileId ? <SignatureImage fileId={app.signature.fileId} name={f.personal?.fullName ?? app.name} /> : null}
         {d.agreements.map((a) => (
-          <View key={a.key} style={{ gap: space[2] }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-              <Text role="label" style={{ flex: 1 }}>
+          <View key={a.key} style={{ gap: spacing[1] }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5] }}>
+              <Text type="label" style={{ flex: 1 }}>
                 {a.title}
               </Text>
-              {accepted[a.key] ? <CircleCheck size={16} color={color.status.success.fg} accessibilityLabel="Accepted" /> : <Text role="caption" tone="tertiary">Not accepted</Text>}
+              {accepted[a.key] ? <CircleCheck size={16} color={color.status.success.text} accessibilityLabel="Accepted" /> : <Text type="supporting" tone="secondary">Not accepted</Text>}
             </View>
             {a.summary.map((s) => (
-              <Text key={s} role="caption" tone="secondary">
+              <Text key={s} type="supporting" tone="secondary">
                 • {s}
               </Text>
             ))}
             {a.key === 'recoveryMandate' && app.ddoCertification?.mandateAgreed ? (
-              <Text role="captionStrong" tone="success">
+              <Text type="supporting" weight="medium" tone="success">
                 AGREED by {app.ddoCertification.byName}, {app.ddoCertification.designation}
               </Text>
             ) : null}
@@ -177,13 +177,13 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
         ))}
       </Expand>
 
-      <Expand title="Checks" badge={failing ? <Tag text={String(failing)} color="warning" size="xs" /> : undefined}>
+      <Expand title="Checks" badge={failing ? <Token text={String(failing)} status="warning" size="xs" /> : undefined}>
         <RuleChecks checks={d.checks} />
       </Expand>
 
       <Expand title="Sign-offs">
         {signOffs.map((r) => (
-          <KeyValue key={r.label} label={r.label} value={r.s ? `${r.s.byName} · ${formatDisplayDateTime(r.s.at)}` : 'Pending'} />
+          <MetadataListItem key={r.label} label={r.label} value={r.s ? `${r.s.byName} · ${formatDisplayDateTime(r.s.at)}` : 'Pending'} />
         ))}
       </Expand>
 
@@ -191,7 +191,7 @@ function Body({ d, refetching, refetch }: { d: MembershipDetail; refetching: boo
         {app.events.length ? (
           <StageTracker stages={[...app.events].reverse().map((e, i) => ({ key: `${e.at}-${i}`, title: EVENT_TITLE[e.action] ?? e.action, description: `${e.actorName} · ${roleLabel(e.actorRole)}${e.remarks ? `\n“${e.remarks}”` : ''}`, date: formatDisplayDateTime(e.at), status: eventStatus(e) }))} />
         ) : (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             No activity yet.
           </Text>
         )}

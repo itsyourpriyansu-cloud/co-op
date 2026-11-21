@@ -1,10 +1,12 @@
-// Form fields (native mirrors of Blend TextInputV2 / SingleSelectV2): label above, hint below,
-// error replaces hint, 48 dp targets, required marker (docs/12 §5, docs/18 §7).
-import { useMemo, useState, type ReactNode } from 'react';
-import { FlatList, Modal, Platform, Pressable, StyleSheet, TextInput, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
+// Astryx Field frame (label above, FieldStatus below: error replaces hint) around TextField, DateField,
+// SelectField (opens an Astryx BottomSheet) and OtpInput (docs/25 §5). Names stay *Field: Astryx's
+// "TextInput" would clash with React Native's own. Focus draws the 2 px navy ring; a new error shakes once.
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Animated, FlatList, Modal, Platform, Pressable, StyleSheet, TextInput, useWindowDimensions, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
 import { Check, ChevronDown, Search, X } from 'lucide-react-native';
 import { parseISODate, toISODate } from '@tgs/domain';
-import { color, radius, space, textStyle, touchTarget } from '@/theme';
+import { color, motion, radius, shadow, spacing, textStyle, touchTarget } from '@/theme';
+import { ease, haptic, useMotionMode, useShake } from './motion';
 import { Text } from './Text';
 
 interface FieldFrameProps {
@@ -18,21 +20,26 @@ interface FieldFrameProps {
 }
 
 function FieldFrame({ label, required, hint, error, compact, children }: FieldFrameProps) {
+  const shake = useShake(error);
   return (
-    <View style={{ gap: space[3] }}>
+    <View style={{ gap: spacing[1.5] }}>
       {compact ? null : (
-        <Text role="label">
+        <Text type="label">
           {label}
-          {required ? <Text role="label" tone="danger"> *</Text> : null}
+          {required ? (
+            <Text type="label" tone="error">
+              {' '}*
+            </Text>
+          ) : null}
         </Text>
       )}
-      {children}
+      <Animated.View style={shake}>{children}</Animated.View>
       {error ? (
-        <Text role="caption" tone="danger" accessibilityLiveRegion="polite">
+        <Text type="supporting" tone="error" accessibilityLiveRegion="polite">
           {error}
         </Text>
       ) : hint ? (
-        <Text role="caption" tone="tertiary">
+        <Text type="supporting" tone="secondary">
           {hint}
         </Text>
       ) : null}
@@ -56,9 +63,9 @@ export function TextField({ label, required, hint, error, prefix, suffix, compac
   const [focused, setFocused] = useState(false);
   return (
     <FieldFrame label={label} required={required} hint={hint} error={error} compact={compact}>
-      <View style={[styles.box, focused && styles.focused, !!error && styles.errored, !editable && styles.readonly]}>
+      <View style={[styles.box, !!error && styles.errored, focused && styles.focused, !editable && styles.readonly]}>
         {prefix ? (
-          <Text role="body" tone="tertiary">
+          <Text type="body" tone="secondary">
             {prefix}
           </Text>
         ) : null}
@@ -67,6 +74,8 @@ export function TextField({ label, required, hint, error, prefix, suffix, compac
           editable={editable}
           accessibilityLabel={input.accessibilityLabel ?? label}
           placeholderTextColor={color.text.disabled}
+          selectionColor={color.accent}
+          cursorColor={color.accent}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);
@@ -108,13 +117,60 @@ export function DateField({ label, required, hint, error, value, onChange }: { l
   return <TextField label={label} required={required} {...(hint ? { hint } : {})} error={localError ?? error} value={text} onChangeText={onText} keyboardType="number-pad" placeholder="DD/MM/YYYY" maxLength={10} />;
 }
 
+/**
+ * Astryx BottomSheet: rises on a spring, backdrop fades in; closes downward on the exit curve.
+ * Stays mounted until the exit finishes. Reduce Motion: a short cross-fade. Web: at once.
+ */
+export function BottomSheet({ visible, onClose, title, children }: { visible: boolean; onClose: () => void; title: string; children: ReactNode }) {
+  const mode = useMotionMode();
+  const { height } = useWindowDimensions();
+  const [mounted, setMounted] = useState(visible);
+  const v = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      if (mode === 'none') return v.setValue(1);
+      if (mode === 'fade') return Animated.timing(v, { toValue: 1, duration: motion.duration.reduced, useNativeDriver: true }).start();
+      Animated.spring(v, { toValue: 1, ...motion.spring, useNativeDriver: true }).start();
+      return;
+    }
+    if (mode === 'none') {
+      v.setValue(0);
+      return setMounted(false);
+    }
+    Animated.timing(v, { toValue: 0, duration: mode === 'fade' ? motion.duration.reduced : motion.duration.exit, easing: ease.exit, useNativeDriver: true }).start(({ finished }) => finished && setMounted(false));
+  }, [visible, mode, v]);
+  const move = mode === 'full' ? { transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [height, 0], extrapolate: 'clamp' }) }] } : { opacity: v };
+  return (
+    <Modal visible={mounted} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
+      <View style={styles.sheetRoot}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: v }]}>
+          <Pressable style={styles.fill} onPress={onClose} accessibilityLabel="Close" />
+        </Animated.View>
+        <Animated.View style={[styles.sheet, move]}>
+          <View style={styles.grabber} />
+          <View style={styles.sheetHead}>
+            <Text type="h3" style={{ flex: 1 }}>
+              {title}
+            </Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}>
+              <X size={22} color={color.icon.secondary} />
+            </Pressable>
+          </View>
+          {children}
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
 export interface SelectOption {
   value: string;
   label: string;
   hint?: string;
 }
 
-/** Bottom-sheet picker with optional search (long lists: departments, designations). */
+/** Astryx Selector: a field that opens a bottom-sheet list, with optional search (long lists). */
 export function SelectField({ label, required, hint, error, value, options, onChange, placeholder = 'Select', searchable, compact }: { label: string; required?: boolean; hint?: string; error?: string; value?: string; options: SelectOption[]; onChange: (v: string) => void; placeholder?: string; searchable?: boolean; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -122,59 +178,85 @@ export function SelectField({ label, required, hint, error, value, options, onCh
   const filtered = useMemo(() => (q ? options.filter((o) => o.label.toLowerCase().includes(q.toLowerCase())) : options), [q, options]);
   return (
     <FieldFrame label={label} required={required} hint={hint} error={error} compact={compact}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${selected?.label ?? placeholder}`} onPress={() => setOpen(true)} style={compact ? styles.chip : [styles.box, !!error && styles.errored]}>
-        <Text role={compact ? 'captionStrong' : 'body'} tone={selected ? 'primary' : 'tertiary'} numberOfLines={1} {...(compact ? {} : { style: { flex: 1 } })}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${selected?.label ?? placeholder}`}
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => [compact ? styles.chip : styles.box, !compact && !!error && styles.errored, pressed && styles.boxPressed]}
+      >
+        <Text type={compact ? 'supporting' : 'body'} weight={compact ? 'semibold' : undefined} tone={selected ? 'primary' : 'secondary'} numberOfLines={1} {...(compact ? {} : { style: { flex: 1 } })}>
           {selected?.label ?? placeholder}
         </Text>
-        <ChevronDown size={compact ? 16 : 20} color={color.text.tertiary} />
+        <ChevronDown size={compact ? 16 : 20} color={color.icon.secondary} />
       </Pressable>
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel="Close" />
-        <View style={styles.sheet}>
-          <View style={styles.sheetHead}>
-            <Text role="cardTitle" style={{ flex: 1 }}>
-              {label}
-            </Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={() => setOpen(false)} style={styles.iconBtn}>
-              <X size={22} color={color.text.secondary} />
-            </Pressable>
+      <BottomSheet visible={open} onClose={() => setOpen(false)} title={label}>
+        {searchable ? (
+          <View style={[styles.box, { marginHorizontal: spacing[4], marginBottom: spacing[2] }]}>
+            <Search size={18} color={color.icon.secondary} />
+            <TextInput value={q} onChangeText={setQ} placeholder="Search" placeholderTextColor={color.text.disabled} selectionColor={color.accent} style={[textStyle('body'), styles.input]} accessibilityLabel="Search" />
           </View>
-          {searchable ? (
-            <View style={[styles.box, { marginHorizontal: space[8], marginBottom: space[4] }]}>
-              <Search size={18} color={color.text.tertiary} />
-              <TextInput value={q} onChangeText={setQ} placeholder="Search" placeholderTextColor={color.text.disabled} style={[textStyle('body'), styles.input]} accessibilityLabel="Search" />
-            </View>
-          ) : null}
-          <FlatList
-            data={filtered}
-            keyExtractor={(o) => o.value}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => (
+        ) : null}
+        <FlatList
+          data={filtered}
+          keyExtractor={(o) => o.value}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const on = item.value === value;
+            return (
               <Pressable
                 accessibilityRole="button"
-                accessibilityState={{ selected: item.value === value }}
+                accessibilityState={{ selected: on }}
                 onPress={() => {
+                  haptic.select();
                   onChange(item.value);
                   setOpen(false);
                   setQ('');
                 }}
-                style={({ pressed }) => [styles.option, pressed && { backgroundColor: color.bg.surfaceMuted }]}
+                style={({ pressed }) => [styles.option, on && styles.optionOn, pressed && styles.boxPressed]}
               >
                 <View style={{ flex: 1 }}>
-                  <Text role="body">{item.label}</Text>
+                  <Text type="body" weight={on ? 'semibold' : undefined}>
+                    {item.label}
+                  </Text>
                   {item.hint ? (
-                    <Text role="caption" tone="tertiary">
+                    <Text type="supporting" tone="secondary">
                       {item.hint}
                     </Text>
                   ) : null}
                 </View>
-                {item.value === value ? <Check size={20} color={color.brand.solid} /> : null}
+                {on ? <Check size={20} color={color.accent} strokeWidth={2.25} /> : null}
               </Pressable>
-            )}
-          />
-        </View>
-      </Modal>
+            );
+          }}
+        />
+      </BottomSheet>
     </FieldFrame>
+  );
+}
+
+/** One OTP box: the digit pops in as it lands; the active empty box shows a blinking caret. */
+function OtpBox({ ch, active, error }: { ch: string; active: boolean; error: boolean }) {
+  const mode = useMotionMode();
+  const pop = useRef(new Animated.Value(1)).current;
+  const caret = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!ch || mode !== 'full') return;
+    pop.setValue(1.12);
+    Animated.spring(pop, { toValue: 1, ...motion.spring, useNativeDriver: true }).start();
+  }, [ch, mode, pop]);
+  useEffect(() => {
+    if (!active || ch || mode === 'none') return;
+    const loop = Animated.loop(Animated.sequence([Animated.timing(caret, { toValue: 0, duration: 500, delay: 300, useNativeDriver: true }), Animated.timing(caret, { toValue: 1, duration: 200, useNativeDriver: true })]));
+    loop.start();
+    return () => {
+      loop.stop();
+      caret.setValue(1);
+    };
+  }, [active, ch, mode, caret]);
+  return (
+    <Animated.View pointerEvents="none" style={[styles.otpBox, !!ch && styles.otpFilled, active && styles.focused, error && styles.errored, { transform: [{ scale: pop }] }]}>
+      {ch ? <Text type="h3">{ch}</Text> : active ? <Animated.View style={[styles.caret, { opacity: caret }]} /> : null}
+    </Animated.View>
   );
 }
 
@@ -184,18 +266,13 @@ export function SelectField({ label, required, hint, error, value, options, onCh
  * the input still held focus (calling focus() then does nothing on Android).
  */
 export function OtpInput({ value, onChange, error, length = 6 }: { value: string; onChange: (v: string) => void; error?: string; length?: number }) {
+  const shake = useShake(error);
   return (
-    <View style={{ gap: space[4] }}>
-      <View style={styles.otpRow}>
-        {Array.from({ length }, (_, i) => {
-          const ch = value[i] ?? '';
-          const active = i === Math.min(value.length, length - 1);
-          return (
-            <View key={i} pointerEvents="none" style={[styles.otpBox, active && styles.focused, !!error && styles.errored]}>
-              <Text role="metricSm">{ch}</Text>
-            </View>
-          );
-        })}
+    <View style={{ gap: spacing[2] }}>
+      <Animated.View style={[styles.otpRow, shake]}>
+        {Array.from({ length }, (_, i) => (
+          <OtpBox key={i} ch={value[i] ?? ''} active={i === Math.min(value.length, length - 1)} error={!!error} />
+        ))}
         <TextInput
           accessibilityLabel="One-time password"
           value={value}
@@ -208,9 +285,9 @@ export function OtpInput({ value, onChange, error, length = 6 }: { value: string
           maxLength={length}
           style={styles.otpInput}
         />
-      </View>
+      </Animated.View>
       {error ? (
-        <Text role="caption" tone="danger" accessibilityLiveRegion="polite">
+        <Text type="supporting" tone="error" accessibilityLiveRegion="polite">
           {error}
         </Text>
       ) : null}
@@ -219,30 +296,39 @@ export function OtpInput({ value, onChange, error, length = 6 }: { value: string
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   box: {
     minHeight: touchTarget,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space[4],
-    paddingHorizontal: space[6],
-    borderRadius: radius.control,
+    gap: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.element,
+    borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: color.border.strong,
-    backgroundColor: color.bg.surface,
+    borderColor: color.borderEmphasized,
+    backgroundColor: color.background.surface,
   },
+  boxPressed: { backgroundColor: color.background.muted },
   // The box draws the focus ring, so the browser's own outline is switched off (web preview).
-  // The box already shows focus; the browser would draw a second ring inside it.
-  input: { flex: 1, minWidth: 0, paddingVertical: space[5], outlineWidth: 0,...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : {}) },
-  focused: { borderColor: color.border.focus, borderWidth: 2 },
-  chip: { height: 40, flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[5], borderRadius: 20, borderWidth: 1, borderColor: color.border.strong, backgroundColor: color.bg.surface },
-  errored: { borderColor: color.status.danger.solid },
-  readonly: { backgroundColor: color.bg.surfaceMuted },
-  backdrop: { flex: 1, backgroundColor: color.bg.overlay },
-  sheet: { maxHeight: '75%', backgroundColor: color.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, paddingBottom: space[12] },
-  sheetHead: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[8], paddingTop: space[8], paddingBottom: space[4] },
-  iconBtn: { width: touchTarget, height: touchTarget, alignItems: 'center', justifyContent: 'center' },
-  option: { minHeight: touchTarget + 8, flexDirection: 'row', alignItems: 'center', gap: space[6], paddingHorizontal: space[8] },
-  otpRow: { flexDirection: 'row', gap: space[4], justifyContent: 'space-between' },
-  otpBox: { flex: 1, height: 56, borderRadius: radius.control, borderWidth: 1, borderColor: color.border.strong, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg.surface },
+  input: { flex: 1, minWidth: 0, paddingVertical: spacing[2], outlineWidth: 0, ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : {}) },
+  // Astryx focus: 2 px accent. The border grows inward by 1 px, so padding shrinks by 1 to keep text still.
+  focused: { borderColor: color.accent, borderWidth: 2, paddingHorizontal: spacing[3] - 1 },
+  chip: { height: 40, flexDirection: 'row', alignItems: 'center', gap: spacing[1], paddingHorizontal: spacing[3], borderRadius: radius.full, borderWidth: 1, borderColor: color.borderEmphasized, backgroundColor: color.background.surface },
+  errored: { borderColor: color.status.error.solid },
+  readonly: { backgroundColor: color.background.muted },
+  sheetRoot: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { backgroundColor: color.overlay },
+  sheet: { maxHeight: '80%', backgroundColor: color.background.surface, borderTopLeftRadius: radius.page, borderTopRightRadius: radius.page, borderCurve: 'continuous', paddingBottom: spacing[8], boxShadow: shadow.high },
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: color.borderEmphasized, marginTop: spacing[2] },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', paddingLeft: spacing[4], paddingRight: spacing[2], paddingTop: spacing[2], paddingBottom: spacing[2] },
+  iconBtn: { width: touchTarget, height: touchTarget, alignItems: 'center', justifyContent: 'center', borderRadius: radius.full },
+  iconBtnPressed: { backgroundColor: color.overlayPressed },
+  option: { minHeight: touchTarget + 8, flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[4] },
+  optionOn: { backgroundColor: color.accentMuted },
+  otpRow: { flexDirection: 'row', gap: spacing[2], justifyContent: 'space-between' },
+  otpBox: { flex: 1, height: 56, borderRadius: radius.element, borderCurve: 'continuous', borderWidth: 1, borderColor: color.borderEmphasized, alignItems: 'center', justifyContent: 'center', backgroundColor: color.background.surface },
+  otpFilled: { borderColor: color.text.secondary },
+  caret: { width: 2, height: 24, borderRadius: 1, backgroundColor: color.accent },
   otpInput: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0, color: 'transparent' },
 });

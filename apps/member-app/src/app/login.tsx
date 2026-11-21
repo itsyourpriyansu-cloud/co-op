@@ -11,8 +11,8 @@ import type { OtpStarted, Persona } from '@tgs/types';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { AppMark } from '@/components/AppMark';
-import { Alert, Button, Card, Header, Hero, OtpInput, Screen, Section, Skeleton, Text, TextField } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Card, Header, PageHeader, OtpInput, Screen, Section, Skeleton, Text, TextField, Link } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 const RESEND_SECONDS = 30;
 
@@ -90,9 +90,9 @@ export default function Login() {
     return (
       <Screen
         header={<Header onBack={() => setSent(null)} />}
-        footer={<Button text="Verify and sign in" size="lg" fullWidth loading={pending === 'verify'} disabled={otp.length !== 6 || pending !== null} onPress={() => void verify()} />}
+        footer={<Button label="Verify and sign in" size="lg" fullWidth loading={pending === 'verify'} disabled={otp.length !== 6 || pending !== null} onPress={() => void verify()} />}
       >
-        <Hero icon={MessageSquareText} title="Enter the code" subtitle={`We sent a 6-digit code to +91 ${sent.mobileMasked}. It works for ${Math.round(sent.expiresInSeconds / 60)} minutes.`} />
+        <PageHeader icon={MessageSquareText} title="Enter the code" subtitle={`We sent a 6-digit code to +91 ${sent.mobileMasked}. It works for ${Math.round(sent.expiresInSeconds / 60)} minutes.`} />
         <OtpInput
           value={otp}
           error={errors.otp}
@@ -101,21 +101,21 @@ export default function Login() {
             if (v.length === 6) void verify(v);
           }}
         />
-        {sent.demoOtp ? <Alert type="neutral" heading={`Demo code: ${sent.demoOtp}`} description="This prototype doesn't send WhatsApp messages." /> : null}
-        {notice ? <Alert type="error" heading={notice.heading} description={notice.description} /> : null}
+        {sent.demoOtp ? <Banner status="neutral" heading={`Demo code: ${sent.demoOtp}`} description="This prototype doesn't send WhatsApp messages." /> : null}
+        {notice ? <Banner status="error" heading={notice.heading} description={notice.description} /> : null}
         <View style={styles.resend}>
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             Didn't get it?
           </Text>
           {resendIn > 0 ? (
-            <Text role="captionStrong" tone="tertiary">
+            <Text type="supporting" weight="medium" tone="secondary">
               Resend in {resendIn}s
             </Text>
           ) : (
-            <Button text="Resend code" subType="inline" onPress={() => void sendCode()} />
+            <Link label="Resend code" onPress={() => void sendCode()} />
           )}
           <View style={{ flex: 1 }} />
-          <Button text="Change number" subType="inline" onPress={() => setSent(null)} />
+          <Link label="Change number" onPress={() => setSent(null)} />
         </View>
       </Screen>
     );
@@ -123,10 +123,10 @@ export default function Login() {
 
   return (
     <Screen header={<Header onBack={() => router.back()} />}>
-      <AppMark size={56} />
-      <Hero title="Sign in" subtitle="Use the mobile number registered with the society. We'll send you a one-time code." />
+      <AppMark size={56} intro />
+      <PageHeader title="Sign in" subtitle="Use the mobile number registered with the society. We'll send you a one-time code." />
 
-      <View style={{ gap: space[8] }}>
+      <View style={{ gap: spacing[4] }}>
         <TextField
           label="Mobile number"
           value={mobile}
@@ -139,51 +139,51 @@ export default function Login() {
           onSubmitEditing={() => void sendCode()}
           returnKeyType="send"
         />
-        {notice ? <Alert type={notice.join ? 'warning' : 'error'} heading={notice.heading} description={notice.description} action={notice.join ? { text: 'Become a member', onPress: () => router.push('/join') } : undefined} /> : null}
-        <Button text="Send code" leftSlot={Send} size="lg" fullWidth loading={pending === 'send'} disabled={mobile.length !== 10 || pending !== null} onPress={() => void sendCode()} />
+        {notice ? <Banner status={notice.join ? 'warning' : 'error'} heading={notice.heading} description={notice.description} action={notice.join ? { text: 'Become a member', onPress: () => router.push('/join') } : undefined} /> : null}
+        <Button label="Send code" icon={Send} size="lg" fullWidth loading={pending === 'send'} disabled={mobile.length !== 10 || pending !== null} onPress={() => void sendCode()} />
       </View>
 
       <Card onPress={() => router.push('/join')}>
         <View style={styles.row}>
           <View style={styles.icon}>
-            <UserPlus size={20} color={color.brand.solid} />
+            <UserPlus size={20} color={color.accent} />
           </View>
-          <View style={{ flex: 1, gap: space[1] }}>
-            <Text role="cardTitle">Not a member yet?</Text>
-            <Text role="caption" tone="secondary">
+          <View style={{ flex: 1, gap: spacing[0.5] }}>
+            <Text type="h4">Not a member yet?</Text>
+            <Text type="supporting" tone="secondary">
               Apply to join the society from your phone.
             </Text>
           </View>
-          <ChevronRight size={20} color={color.text.tertiary} />
+          <ChevronRight size={20} color={color.text.secondary} />
         </View>
       </Card>
 
       <Section title="Demo members" description="Fictional people. Tap one to sign in.">
         {personas.isLoading ? (
-          <View style={{ gap: space[6] }}>
+          <View style={{ gap: spacing[3] }}>
             {[0, 1, 2].map((i) => (
-              <Skeleton key={i} height={68} radius={radius.card} />
+              <Skeleton key={i} height={68} radius={radius.container} />
             ))}
           </View>
         ) : null}
-        {personas.isError ? <Alert type="error" heading="Can't reach the society server" action={{ text: 'Check connection', onPress: () => router.push('/offline') }} /> : null}
-        <View style={{ gap: space[4] }}>
+        {personas.isError ? <Banner status="error" heading="Can't reach the society server" action={{ text: 'Check connection', onPress: () => router.push('/offline') }} /> : null}
+        <View style={{ gap: spacing[2] }}>
           {members.map((p) => (
-            <Pressable key={p.id} accessibilityRole="button" disabled={pending !== null} onPress={() => void quick(p)} style={({ pressed }) => [styles.persona, pressed && { backgroundColor: color.brand.subtle, borderColor: color.brand.solid }]}>
+            <Pressable key={p.id} accessibilityRole="button" disabled={pending !== null} onPress={() => void quick(p)} style={({ pressed }) => [styles.persona, pressed && { backgroundColor: color.accentMuted, borderColor: color.accent }]}>
               <View style={styles.avatar}>
-                <Text role="label" tone="link">
+                <Text type="label" tone="link">
                   {p.name.split(' ').map((s) => s[0]).slice(0, 2).join('')}
                 </Text>
               </View>
-              <View style={{ flex: 1, gap: space[1] }}>
-                <Text role="label">
+              <View style={{ flex: 1, gap: spacing[0.5] }}>
+                <Text type="label">
                   {p.name} · {p.id.replace(/^mem-/, '')}
                 </Text>
-                <Text role="caption" tone="secondary">
+                <Text type="supporting" tone="secondary">
                   {p.story}
                 </Text>
               </View>
-              {pending === p.id ? <ActivityIndicator color={color.brand.solid} /> : <ChevronRight size={20} color={color.text.tertiary} />}
+              {pending === p.id ? <ActivityIndicator color={color.accent} /> : <ChevronRight size={20} color={color.text.secondary} />}
             </Pressable>
           ))}
         </View>
@@ -193,9 +193,9 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  resend: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
-  icon: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.brand.subtle, alignItems: 'center', justifyContent: 'center' },
-  persona: { flexDirection: 'row', alignItems: 'center', gap: space[6], padding: space[6], minHeight: 68, borderRadius: radius.card, borderWidth: 1, borderColor: color.border.default, backgroundColor: color.bg.surface },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.brand.subtle, alignItems: 'center', justifyContent: 'center' },
+  resend: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
+  icon: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.accentMuted, alignItems: 'center', justifyContent: 'center' },
+  persona: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], padding: spacing[3], minHeight: 68, borderRadius: radius.container, borderWidth: 1, borderColor: color.border, backgroundColor: color.background.surface },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.accentMuted, alignItems: 'center', justifyContent: 'center' },
 });

@@ -6,7 +6,7 @@ import { formatCycle, toCycle } from '@tgs/domain';
 import type { MemberDetail } from '@tgs/types';
 import { ActionAlert, ask, DoneAlert, Loaded, useAction, useTodayDate } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Alert, Button, DateField, Header, Screen, SelectField, Text, TextField } from '@/ui';
+import { Banner, Button, DateField, Header, Screen, SelectField, Text, TextField } from '@/ui';
 
 const safeCycle = (date: string) => {
   try {
@@ -48,14 +48,14 @@ function Form({ d }: { d: MemberDetail }) {
 
   if (done)
     return (
-      <Screen header={<Header title="Transfer" />} footer={<Button text="Done" size="lg" fullWidth onPress={() => router.back()} />}>
+      <Screen header={<Header title="Transfer" />} footer={<Button label="Done" size="lg" fullWidth onPress={() => router.back()} />}>
         <DoneAlert {...done} />
       </Screen>
     );
 
   return (
-    <Screen header={<Header title="Transfer" onBack={() => router.back()} />} footer={<Button text="Confirm transfer" size="lg" fullWidth disabled={!to || !date || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void save()} />}>
-      <Text role="body" tone="secondary">
+    <Screen header={<Header title="Transfer" onBack={() => router.back()} />} footer={<Button label="Confirm transfer" size="lg" fullWidth disabled={!to || !date || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void save()} />}>
+      <Text type="body" tone="secondary">
         {m.name} · now in {d.department?.name}
       </Text>
       <SelectField
@@ -71,7 +71,7 @@ function Form({ d }: { d: MemberDetail }) {
       <DateField key={today} label="Effective date" required value={date} onChange={setDate} hint="The date in the transfer order" error={a.fields.effectiveDate} />
       <TextField label="Order reference" value={orderRef} onChangeText={setOrderRef} placeholder="e.g. GAD/TR/2026/0123" hint="Optional" />
       <TextField label="Remarks" value={remarks} onChangeText={setRemarks} placeholder="Optional" multiline numberOfLines={2} />
-      {target && date ? <Alert type="primary" heading={`On ${target.name}'s sheet from ${safeCycle(date)}`} description={`Or the next one if ${d.department?.name}'s ${safeCycle(date)} sheet is already generated. ${target.ddoName} (DDO) must then agree the salary recovery mandate. Until then new loans show a warning.`} /> : null}
+      {target && date ? <Banner status="info" heading={`On ${target.name}'s sheet from ${safeCycle(date)}`} description={`Or the next one if ${d.department?.name}'s ${safeCycle(date)} sheet is already generated. ${target.ddoName} (DDO) must then agree the salary recovery mandate. Until then new loans show a warning.`} /> : null}
       <ActionAlert action={a} heading="Not transferred" check={{ text: 'Check the member', href: `/staff/member/${m.id}` }} />
     </Screen>
   );

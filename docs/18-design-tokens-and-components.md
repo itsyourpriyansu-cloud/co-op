@@ -1,6 +1,6 @@
 # 18 · Design tokens and components (as built)
 
-> Version: 1.0 · Last updated: 2026-10-25 · Written from the code in `packages/design-tokens`, `apps/admin-console/src/components` and `apps/member-app/src/ui`.
+> Version: 1.1 · Last updated: 2026-11-20 · Written from the code in `packages/design-tokens`, `apps/admin-console/src/components` and (until D-138) `apps/member-app/src/ui`. **The phone kit now follows `docs/25-mobile-design-system.md` (Astryx, D-138); this doc stays the source for the Admin Console.**
 > Design intent and visual rules live in `docs/12-design-system.md`. This doc describes what was actually built and how to use it.
 > The living version is the console's **Design System** page (`/design`, Super Admin only).
 

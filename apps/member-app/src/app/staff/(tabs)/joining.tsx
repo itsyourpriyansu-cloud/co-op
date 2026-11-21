@@ -8,8 +8,8 @@ import type { MembershipRow } from '@tgs/types';
 import { FilterBar, Loaded, RecordCard, Stack2, StatTile, TileGrid } from '@/components/staff';
 import { api } from '@/lib/api';
 import { FLAG_LABEL, STAGES } from '@/lib/staffJoining';
-import { EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { EmptyState, Screen, SelectField, StatusToken, Token, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 function waiting(r: MembershipRow) {
   if (r.waitingOnMe) return 'Waiting on you';
@@ -32,9 +32,9 @@ export default function Joining() {
 
   return (
     <Screen refreshing={list.isRefetching} onRefresh={() => void list.refetch()}>
-      <View style={{ gap: space[1] }}>
-        <Text role="pageTitle">Joining</Text>
-        <Text role="caption" tone="secondary">
+      <View style={{ gap: spacing[0.5] }}>
+        <Text type="h1">Joining</Text>
+        <Text type="supporting" tone="secondary">
           Applications from the app{data?.scope.departmentName ? ` · ${data.scope.departmentName} only` : ''}
         </Text>
       </View>
@@ -60,9 +60,9 @@ export default function Joining() {
               {rows.map((r) => {
                 const flags = r.flags.filter((f) => f !== 'RETURNED');
                 return (
-                  <RecordCard key={r.id} title={r.name} subtitle={`${r.applicationNo} · ${r.designation}`} tag={<StatusTag entity="membership" status={r.status} audience="staff" size="xs" />} onPress={() => router.push(`/staff/joining/${r.id}`)} caption={[r.departmentName, waiting(r)].filter(Boolean).join(' · ')}>
-                    {flags.length ? <Tag text={flags.map((f) => FLAG_LABEL[f]).join(', ')} color="warning" size="xs" /> : null}
-                    {r.status !== 'ACTIVE' && r.status !== 'REJECTED' ? <Tag text={r.daysInStage === 0 ? 'In stage today' : `In stage ${r.daysInStage} day${r.daysInStage === 1 ? '' : 's'}`} color={r.daysInStage > 10 ? 'error' : r.daysInStage > 5 ? 'warning' : 'neutral'} size="xs" /> : null}
+                  <RecordCard key={r.id} title={r.name} subtitle={`${r.applicationNo} · ${r.designation}`} tag={<StatusToken entity="membership" status={r.status} audience="staff" size="xs" />} onPress={() => router.push(`/staff/joining/${r.id}`)} caption={[r.departmentName, waiting(r)].filter(Boolean).join(' · ')}>
+                    {flags.length ? <Token text={flags.map((f) => FLAG_LABEL[f]).join(', ')} status="warning" size="xs" /> : null}
+                    {r.status !== 'ACTIVE' && r.status !== 'REJECTED' ? <Token text={r.daysInStage === 0 ? 'In stage today' : `In stage ${r.daysInStage} day${r.daysInStage === 1 ? '' : 's'}`} status={r.daysInStage > 10 ? 'error' : r.daysInStage > 5 ? 'warning' : 'neutral'} size="xs" /> : null}
                   </RecordCard>
                 );
               })}

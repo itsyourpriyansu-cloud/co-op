@@ -7,7 +7,7 @@ import type { DemandSheetDetail } from '@tgs/types';
 import { ActionAlert, DoneAlert, Loaded, useAction } from '@/components/staff';
 import { api } from '@/lib/api';
 import { HEAD_COLUMNS } from '@/lib/staffCollections';
-import { Button, Card, Header, KeyValue, Screen, Text, TextField } from '@/ui';
+import { Button, Card, Header, MetadataListItem, Screen, Text, TextField } from '@/ui';
 
 export default function SheetAction() {
   const { id, action } = useLocalSearchParams<{ id: string; action: 'certify' | 'sendToDdo' }>();
@@ -33,21 +33,21 @@ function Decide({ d, action }: { d: DemandSheetDetail; action: 'certify' | 'send
 
   if (done)
     return (
-      <Screen header={<Header title={title} />} footer={<Button text="Done" size="lg" fullWidth onPress={() => router.back()} />}>
+      <Screen header={<Header title={title} />} footer={<Button label="Done" size="lg" fullWidth onPress={() => router.back()} />}>
         <DoneAlert heading={done} description={`${d.department?.name} · ${formatCycle(d.sheet.cycle)}`} />
       </Screen>
     );
 
   return (
-    <Screen header={<Header title={title} onBack={() => router.back()} />} footer={<Button text={certify ? 'Certify correct' : 'Send'} size="lg" fullWidth loading={a.busy} disabled={a.busy || a.unconfirmed} onPress={submit} />}>
-      <Text role="body" tone="secondary">
+    <Screen header={<Header title={title} onBack={() => router.back()} />} footer={<Button label={certify ? 'Certify correct' : 'Send'} size="lg" fullWidth loading={a.busy} disabled={a.busy || a.unconfirmed} onPress={submit} />}>
+      <Text type="body" tone="secondary">
         {certify ? 'You confirm the demand is correct. Your name and the time are stamped on the sheet.' : `To ${d.department?.ddoName}, ${d.department?.ddoDesignation}, ${d.department?.name}. The DDO deducts these amounts from the salaries.`}
       </Text>
       <Card>
-        <KeyValue label="Members" value={String(d.lines.length)} />
-        <KeyValue label="Total demand" value={formatINR(d.totals.demand)} emphasis />
+        <MetadataListItem label="Members" value={String(d.lines.length)} />
+        <MetadataListItem label="Total demand" value={formatINR(d.totals.demand)} emphasis />
         {HEAD_COLUMNS.filter((h) => d.totals.heads[h.head]).map((h) => (
-          <KeyValue key={h.head} label={h.label} value={formatINR(d.totals.heads[h.head] ?? 0)} />
+          <MetadataListItem key={h.head} label={h.label} value={formatINR(d.totals.heads[h.head] ?? 0)} />
         ))}
       </Card>
       <TextField label="Remarks (optional)" placeholder={certify ? 'e.g. Checked against the loan register.' : 'e.g. Please deduct from the October salary.'} value={remarks} onChangeText={setRemarks} multiline numberOfLines={3} error={a.fields.remarks} />

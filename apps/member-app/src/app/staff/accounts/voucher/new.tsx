@@ -8,7 +8,7 @@ import { amountInWords, formatINR } from '@tgs/domain';
 import type { OfficeVoucher, OfficeVoucherInput } from '@tgs/types';
 import { ActionAlert, ask, MoneyField, useAction, useTodayDate } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Button, DateField, Header, Screen, Segmented, SelectField, TextField } from '@/ui';
+import { Button, DateField, Header, Screen, SegmentedControl, SelectField, TextField } from '@/ui';
 
 export default function NewVoucher() {
   const heads = useQuery({ queryKey: ['ledger-heads'], queryFn: api.accounts.heads });
@@ -36,8 +36,8 @@ export default function NewVoucher() {
   };
 
   return (
-    <Screen header={<Header title="New voucher" onBack={() => router.back()} />} footer={<Button text={`Save${amt > 0 ? ` · ${formatINR(amt)}` : ''}`} size="lg" fullWidth disabled={!ready || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void save()} />}>
-      <Segmented
+    <Screen header={<Header title="New voucher" onBack={() => router.back()} />} footer={<Button label={`Save${amt > 0 ? ` · ${formatINR(amt)}` : ''}`} size="lg" fullWidth disabled={!ready || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void save()} />}>
+      <SegmentedControl
         label="Kind"
         value={kind}
         options={[
@@ -48,7 +48,7 @@ export default function NewVoucher() {
       />
       <SelectField label={kind === 'PAYMENT' ? 'Expense head' : 'Income head'} required searchable value={headCode} options={options} onChange={setHeadCode} error={a.fields.headCode} />
       <MoneyField label="Amount" required value={amount} onChange={setAmount} error={a.fields.amount} hint={amt > 0 ? amountInWords(amt) : undefined} />
-      <Segmented
+      <SegmentedControl
         label="Paid by"
         value={mode}
         options={[

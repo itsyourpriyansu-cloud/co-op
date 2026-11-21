@@ -9,7 +9,7 @@ import type { AuditLogParams } from '@tgs/types';
 import { FilterBar, Loaded, RecordCard, Stack2, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { Button, DateField, EmptyState, Header, Screen, SelectField, TextField } from '@/ui';
-import { space } from '@/theme';
+import { spacing } from '@/theme';
 
 export default function AuditLog() {
   const [text, setText] = useState('');
@@ -33,7 +33,7 @@ export default function AuditLog() {
       <FilterBar search={<TextField compact label="Search" value={text} onChangeText={setText} placeholder="Name, record number or what happened" autoCorrect={false} />}>
         <SelectField compact label="Record type" value={entity} options={[{ value: '', label: 'All records' }, ...(first?.entities ?? []).map((x) => ({ value: x, label: x }))]} onChange={setEntity} />
       </FilterBar>
-      <View style={{ flexDirection: 'row', gap: space[4] }}>
+      <View style={{ flexDirection: 'row', gap: spacing[2] }}>
         <View style={{ flex: 1 }}>
           <DateField label="From" value={from} onChange={setFrom} />
         </View>
@@ -51,8 +51,8 @@ export default function AuditLog() {
                 <RecordCard key={r.id} title={r.summary} subtitle={`${r.actorName ?? 'System'} · ${formatDisplayDateTime(r.at)}`} caption={`${r.entity}${r.entityId ? ` · ${r.entityId}` : ''}`} onPress={() => router.push(`/staff/audit/${r.id}`)} />
               ))}
               {list.hasNextPage ? (
-                <View style={{ padding: space[6] }}>
-                  <Button text="Load older" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} />
+                <View style={{ padding: spacing[3] }}>
+                  <Button label="Load older" variant="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} />
                 </View>
               ) : null}
             </Stack2>

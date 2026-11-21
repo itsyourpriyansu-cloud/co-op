@@ -8,8 +8,8 @@ import type { DepositActionInput, DepositDetail } from '@tgs/types';
 import { ActionAlert, ask, CashStatus, countsTotal, DenominationCounter, DoneAlert, Loaded, useAction, useTodayDate, type Counts } from '@/components/staff';
 import { api } from '@/lib/api';
 import { ACTION_LABEL, METHOD, MODE, PAYOUTS } from '@/lib/staffDeposits';
-import { Alert, Button, Card, DateField, Divider, Header, KeyValue, Screen, Segmented, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, DateField, Divider, Header, MetadataListItem, Screen, SegmentedControl, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function DepositAction() {
   const { id, action } = useLocalSearchParams<{ id: string; action: string }>();
@@ -60,7 +60,7 @@ function Decision({ d, action }: { d: DepositDetail; action: string }) {
 
   if (done)
     return (
-      <Screen header={<Header title={title} />} footer={<Button text="Done" size="lg" fullWidth onPress={() => router.back()} />}>
+      <Screen header={<Header title={title} />} footer={<Button label="Done" size="lg" fullWidth onPress={() => router.back()} />}>
         <DoneAlert {...done} />
       </Screen>
     );
@@ -70,30 +70,30 @@ function Decision({ d, action }: { d: DepositDetail; action: string }) {
     <Screen
       header={<Header title={title} onBack={() => router.back()} />}
       footer={
-        <View style={{ gap: space[3] }}>
+        <View style={{ gap: spacing[1.5] }}>
           {action === 'recordPayment' && mode === 'CASH' ? <CashStatus amount={principal} counts={counts} /> : null}
-          <Button text={ACTION_LABEL[action] ?? action} size="lg" fullWidth buttonType={danger ? 'danger' : 'primary'} loading={a.busy} disabled={!ready || a.busy || a.unconfirmed} onPress={() => void submit()} />
+          <Button label={ACTION_LABEL[action] ?? action} size="lg" fullWidth variant={danger ? 'destructive' : 'primary'} loading={a.busy} disabled={!ready || a.busy || a.unconfirmed} onPress={() => void submit()} />
         </View>
       }
     >
       <Card>
-        <Text role="label">
+        <Text type="label">
           {formatINR(principal)} for {dep.tenureMonths} months at {dep.ratePercent}%
         </Text>
-        <Text role="caption" tone="secondary">
+        <Text type="supporting" tone="secondary">
           {d.member.name} · No. {d.member.generalNo} · {dep.accountNo}
         </Text>
-        <Text role="caption" tone="tertiary">
+        <Text type="supporting" tone="secondary">
           {amountInWords(principal)}
         </Text>
       </Card>
 
       {action === 'recordPayment' ? (
-        <View style={{ gap: space[8] }}>
-          <Segmented label="Received as" value={mode} options={[{ value: 'CASH', label: 'Cash' }, { value: 'TRANSFER', label: 'Transfer' }, { value: 'CHEQUE', label: 'Cheque' }]} onChange={(v) => setMode(v as typeof mode)} />
+        <View style={{ gap: spacing[4] }}>
+          <SegmentedControl label="Received as" value={mode} options={[{ value: 'CASH', label: 'Cash' }, { value: 'TRANSFER', label: 'Transfer' }, { value: 'CHEQUE', label: 'Cheque' }]} onChange={(v) => setMode(v as typeof mode)} />
           {mode === 'CASH' ? <DenominationCounter amount={principal} counts={counts} onChange={setCounts} /> : <TextField label={mode === 'CHEQUE' ? 'Cheque number' : 'UTR / reference'} required value={reference} onChangeText={setReference} error={a.fields.reference ?? a.fields['payment.reference']} />}
           {a.fields.denominations ? (
-            <Text role="caption" tone="danger">
+            <Text type="supporting" tone="error">
               {a.fields.denominations}
             </Text>
           ) : null}
@@ -103,42 +103,42 @@ function Decision({ d, action }: { d: DepositDetail; action: string }) {
 
       {action === 'accept' ? (
         <Card>
-          <KeyValue label="Payment" value={dep.payment ? `${MODE[dep.payment.mode]} · ${dep.payment.receiptNo}` : '—'} />
-          <KeyValue label="Received on" value={dep.payment ? formatDisplayDate(dep.payment.date) : '—'} />
-          <KeyValue label="Matures" value={d.maturity ? formatDisplayDate(d.maturity.date) : '—'} />
-          <KeyValue label="Maturity value" value={d.maturity ? formatINR(d.maturity.value) : '—'} />
-          <KeyValue label="Secretary" value={dep.signOffs?.secretary ? `${dep.signOffs.secretary.byName} · ${formatDisplayDateTime(dep.signOffs.secretary.at)}` : 'Pending'} />
-          <KeyValue label="President" value={dep.status === 'ACCEPTANCE_PRESIDENT' ? 'Your signature issues the FDR' : 'Next'} />
+          <MetadataListItem label="Payment" value={dep.payment ? `${MODE[dep.payment.mode]} · ${dep.payment.receiptNo}` : '—'} />
+          <MetadataListItem label="Received on" value={dep.payment ? formatDisplayDate(dep.payment.date) : '—'} />
+          <MetadataListItem label="Matures" value={d.maturity ? formatDisplayDate(d.maturity.date) : '—'} />
+          <MetadataListItem label="Maturity value" value={d.maturity ? formatINR(d.maturity.value) : '—'} />
+          <MetadataListItem label="Secretary" value={dep.signOffs?.secretary ? `${dep.signOffs.secretary.byName} · ${formatDisplayDateTime(dep.signOffs.secretary.at)}` : 'Pending'} />
+          <MetadataListItem label="President" value={dep.status === 'ACCEPTANCE_PRESIDENT' ? 'Your signature issues the FDR' : 'Next'} />
         </Card>
       ) : null}
 
       {action === 'renew' ? (
-        <View style={{ gap: space[6] }}>
-          <Text role="body" tone="secondary">
+        <View style={{ gap: spacing[3] }}>
+          <Text type="body" tone="secondary">
             The matured FD closes and a new FD opens at today's rate. The Secretary and the President accept it before the new FDR is issued.
           </Text>
           <TextField label="New tenure (months)" required keyboardType="number-pad" value={tenure} onChangeText={setTenure} hint={renewRate ? `${renewRate}% a year` : undefined} error={a.fields.tenureMonths ?? (settings.data && !renewRate ? 'No FD rate slab for this tenure' : undefined)} />
-          <Segmented label="Interest payable" value={payout} options={[...PAYOUTS]} onChange={(v) => setPayout(v as typeof payout)} />
-          <Segmented label="Interest earned on the old FD" value={withInterest ? 'ADD' : 'PAY'} options={[{ value: 'ADD', label: 'Add to new FD' }, { value: 'PAY', label: 'Pay to bank' }]} onChange={(v) => setWithInterest(v === 'ADD')} />
+          <SegmentedControl label="Interest payable" value={payout} options={[...PAYOUTS]} onChange={(v) => setPayout(v as typeof payout)} />
+          <SegmentedControl label="Interest earned on the old FD" value={withInterest ? 'ADD' : 'PAY'} options={[{ value: 'ADD', label: 'Add to new FD' }, { value: 'PAY', label: 'Pay to bank' }]} onChange={(v) => setWithInterest(v === 'ADD')} />
           <Card>
-            <KeyValue label="Maturity value" value={formatINR(value)} />
-            <KeyValue label="New FD amount" value={formatINR(withInterest ? value : principal)} emphasis />
-            {!withInterest ? <KeyValue label="Interest paid to the bank" value={formatINR(value - principal)} /> : null}
+            <MetadataListItem label="Maturity value" value={formatINR(value)} />
+            <MetadataListItem label="New FD amount" value={formatINR(withInterest ? value : principal)} emphasis />
+            {!withInterest ? <MetadataListItem label="Interest paid to the bank" value={formatINR(value - principal)} /> : null}
           </Card>
         </View>
       ) : null}
 
-      {action === 'withdraw' && preview.isError ? <Alert type="error" heading="Cannot withdraw" description={preview.error instanceof Error ? preview.error.message : 'Try again.'} /> : null}
+      {action === 'withdraw' && preview.isError ? <Banner status="error" heading="Cannot withdraw" description={preview.error instanceof Error ? preview.error.message : 'Try again.'} /> : null}
       {action === 'withdraw' && p ? (
         <Card>
-          <KeyValue label="Principal (returned in full)" value={formatINR(p.principal)} />
-          <KeyValue label="Held" value={`${p.monthsHeld} completed months at ${p.ratePercent}%`} />
-          <KeyValue label="Interest earned" value={formatINR(p.interestEarned)} />
-          {p.alreadyPaid > 0 ? <KeyValue label="Interest already paid out" value={formatINR(p.alreadyPaid)} /> : null}
-          <KeyValue label={`Penalty (${p.penaltyPercent}${p.method === 'RATE_CUT' ? ' points' : '%'}, ${METHOD[p.method]})`} value={formatINR(p.penalty)} />
-          <KeyValue label="Interest paid" value={formatINR(p.interestPayable)} />
+          <MetadataListItem label="Principal (returned in full)" value={formatINR(p.principal)} />
+          <MetadataListItem label="Held" value={`${p.monthsHeld} completed months at ${p.ratePercent}%`} />
+          <MetadataListItem label="Interest earned" value={formatINR(p.interestEarned)} />
+          {p.alreadyPaid > 0 ? <MetadataListItem label="Interest already paid out" value={formatINR(p.alreadyPaid)} /> : null}
+          <MetadataListItem label={`Penalty (${p.penaltyPercent}${p.method === 'RATE_CUT' ? ' points' : '%'}, ${METHOD[p.method]})`} value={formatINR(p.penalty)} />
+          <MetadataListItem label="Interest paid" value={formatINR(p.interestPayable)} />
           <Divider />
-          <KeyValue label="Paid to the member" value={formatINR(p.payable)} emphasis />
+          <MetadataListItem label="Paid to the member" value={formatINR(p.payable)} emphasis />
         </Card>
       ) : null}
 

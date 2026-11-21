@@ -11,8 +11,8 @@ import { amountInWords, calculateFdMaturity, fdRateFor, formatDisplayDate, forma
 import type { FdHolder, FdRequestInput, Nominee } from '@tgs/types';
 import { api } from '@/lib/api';
 import { PAYOUT_LABEL, depositKeys, useDepositContext } from '@/lib/deposits';
-import { Alert, Button, Card, Checkbox, ChoiceCard, DateField, Divider, Header, KeyValue, OtpInput, Screen, Section, SelectField, Skeleton, Text, TextField, WizardProgress } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Card, CheckboxInput, SelectableCard, DateField, Divider, Header, MetadataListItem, OtpInput, Screen, Section, SelectField, Skeleton, Text, TextField, Stepper, Link } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 type StepKey = 'amount' | 'payout' | 'holders' | 'nominee' | 'review';
 const STEPS: StepKey[] = ['amount', 'payout', 'holders', 'nominee', 'review'];
@@ -123,7 +123,7 @@ export default function OpenFd() {
   if (!ctx)
     return (
       <Screen header={<Header title="Open a fixed deposit" onBack={() => router.back()} />}>
-        {context.isError ? <Alert type="error" heading="Couldn't load" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void context.refetch() }} /> : <Skeleton height={260} radius={radius.card} />}
+        {context.isError ? <Banner status="error" heading="Couldn't load" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void context.refetch() }} /> : <Skeleton height={260} radius={radius.container} />}
       </Screen>
     );
 
@@ -131,25 +131,25 @@ export default function OpenFd() {
 
   return (
     <Screen
-      header={<Header title="Open a fixed deposit" onBack={back} right={busy ? <ActivityIndicator size="small" color={color.text.tertiary} /> : null} />}
+      header={<Header title="Open a fixed deposit" onBack={back} right={busy ? <ActivityIndicator size="small" color={color.text.secondary} /> : null} />}
       footer={
         key === 'review' ? (
           signing ? (
-            <Button text="Confirm & submit" size="lg" fullWidth disabled={otp.length !== 6} loading={busy} onPress={() => void confirm()} />
+            <Button label="Confirm & submit" size="lg" fullWidth disabled={otp.length !== 6} loading={busy} onPress={() => void confirm()} />
           ) : (
-            <Button text="Sign with OTP" leftSlot={PenLine} size="lg" fullWidth disabled={!agreed} loading={busy} onPress={() => void startSigning()} />
+            <Button label="Sign with OTP" icon={PenLine} size="lg" fullWidth disabled={!agreed} loading={busy} onPress={() => void startSigning()} />
           )
         ) : (
-          <Button text="Continue" size="lg" fullWidth onPress={next} />
+          <Button label="Continue" size="lg" fullWidth onPress={next} />
         )
       }
     >
-      <View style={{ gap: space[8] }}>
-        <WizardProgress step={step + 1} total={STEPS.length} title={TITLES[key]} />
-        <Text role="pageTitle">{TITLES[key]}</Text>
+      <View style={{ gap: spacing[4] }}>
+        <Stepper step={step + 1} total={STEPS.length} title={TITLES[key]} />
+        <Text type="h1">{TITLES[key]}</Text>
       </View>
-      {showErrors && Object.keys(stepErrors).length ? <Alert type="error" heading="A few details are missing" description="Fix the highlighted fields to continue." /> : null}
-      {serverError ? <Alert type="error" heading="Something went wrong" description={serverError} /> : null}
+      {showErrors && Object.keys(stepErrors).length ? <Banner status="error" heading="A few details are missing" description="Fix the highlighted fields to continue." /> : null}
+      {serverError ? <Banner status="error" heading="Something went wrong" description={serverError} /> : null}
 
       {key === 'amount' && (
         <>
@@ -158,27 +158,27 @@ export default function OpenFd() {
             <View style={styles.chips}>
               {periods.map((p) => (
                 <Pressable key={p} accessibilityRole="radio" accessibilityState={{ checked: tenure === p }} aria-checked={tenure === p} onPress={() => setTenure(p)} style={[styles.chip, tenure === p && styles.chipOn]}>
-                  <Text role="label" style={{ color: tenure === p ? color.brand.solid : color.text.secondary }}>
+                  <Text type="label" style={{ color: tenure === p ? color.accent : color.text.secondary }}>
                     {p} months
                   </Text>
-                  <Text role="caption" tone="tertiary">
+                  <Text type="supporting" tone="secondary">
                     {fdRateFor(p, ctx.slabs)}%
                   </Text>
                 </Pressable>
               ))}
             </View>
             {err('tenureMonths') ? (
-              <Text role="caption" tone="danger">
+              <Text type="supporting" tone="error">
                 {err('tenureMonths')}
               </Text>
             ) : null}
           </Section>
           {m && rate ? (
             <Card>
-              <KeyValue label="Rate" value={`${rate}% a year`} />
-              <KeyValue label="Matures on" value={formatDisplayDate(m.maturityDate)} />
-              <KeyValue label="At maturity (interest added)" value={formatINR(calculateFdMaturity({ principal, ratePercent: rate, tenureMonths: tenure, payout: 'ON_MATURITY', openedOn: ctx.today }).maturityValue)} emphasis />
-              <Text role="caption" tone="tertiary">
+              <MetadataListItem label="Rate" value={`${rate}% a year`} />
+              <MetadataListItem label="Matures on" value={formatDisplayDate(m.maturityDate)} />
+              <MetadataListItem label="At maturity (interest added)" value={formatINR(calculateFdMaturity({ principal, ratePercent: rate, tenureMonths: tenure, payout: 'ON_MATURITY', openedOn: ctx.today }).maturityValue)} emphasis />
+              <Text type="supporting" tone="secondary">
                 Interest starts from the day the society receives the money.
               </Text>
             </Card>
@@ -190,7 +190,7 @@ export default function OpenFd() {
         PAYOUTS.map((p) => {
           const pv = preview(p);
           return (
-            <ChoiceCard
+            <SelectableCard
               key={p}
               title={PAYOUT_LABEL[p]}
               description={pv ? (p === 'ON_MATURITY' ? `${formatINR(pv.maturityValue)} on ${formatDisplayDate(pv.maturityDate)}` : `${formatINR(pv.periodicInterest)} each time · ${formatINR(pv.totalInterest)} in total`) : undefined}
@@ -202,18 +202,18 @@ export default function OpenFd() {
 
       {key === 'holders' && (
         <>
-          <ChoiceCard icon={User} title="Only me" description="The deposit is in your name." selected={holding === 'SINGLE'} onPress={() => setHolding('SINGLE')} />
-          <ChoiceCard icon={Users} title="Jointly with family" description="Up to two more holders. Either holder or the survivor can operate it." selected={holding === 'JOINT'} onPress={() => setHolding('JOINT')} />
-          <ChoiceCard icon={Baby} title="For a minor" description="You hold it as guardian until they turn 18." selected={holding === 'MINOR'} onPress={() => setHolding('MINOR')} />
+          <SelectableCard icon={User} title="Only me" description="The deposit is in your name." selected={holding === 'SINGLE'} onPress={() => setHolding('SINGLE')} />
+          <SelectableCard icon={Users} title="Jointly with family" description="Up to two more holders. Either holder or the survivor can operate it." selected={holding === 'JOINT'} onPress={() => setHolding('JOINT')} />
+          <SelectableCard icon={Baby} title="For a minor" description="You hold it as guardian until they turn 18." selected={holding === 'MINOR'} onPress={() => setHolding('MINOR')} />
           {holding === 'JOINT' &&
             holders.map((h, i) => (
               <Card key={i}>
-                <View style={{ gap: space[6] }}>
+                <View style={{ gap: spacing[3] }}>
                   <View style={styles.row}>
-                    <Text role="cardTitle" style={{ flex: 1 }}>
+                    <Text type="h4" style={{ flex: 1 }}>
                       Joint holder {i + 1}
                     </Text>
-                    {holders.length > 1 ? <Button text="Remove" size="sm" buttonType="secondary" subType="inline" leftSlot={Trash2} onPress={() => setHolders((hs) => hs.filter((_, j) => j !== i))} /> : null}
+                    {holders.length > 1 ? <Link label="Remove" icon={Trash2} onPress={() => setHolders((hs) => hs.filter((_, j) => j !== i))} /> : null}
                   </View>
                   <TextField label="Full name" value={h.name} onChangeText={(name) => setHolder(i, { name })} error={err(`holders.${i}.name`)} required />
                   <TextField label="Father's / husband's name" value={h.fatherOrHusbandName} onChangeText={(fatherOrHusbandName) => setHolder(i, { fatherOrHusbandName })} error={err(`holders.${i}.fatherOrHusbandName`)} required />
@@ -223,11 +223,11 @@ export default function OpenFd() {
                 </View>
               </Card>
             ))}
-          {holding === 'JOINT' && holders.length < 2 ? <Button text="Add another holder" buttonType="secondary" leftSlot={Plus} fullWidth onPress={() => setHolders((hs) => [...hs, { ...EMPTY_HOLDER }])} /> : null}
-          {holding === 'JOINT' && err('holders') ? <Alert type="error" heading={err('holders')!} /> : null}
+          {holding === 'JOINT' && holders.length < 2 ? <Button label="Add another holder" variant="secondary" icon={Plus} fullWidth onPress={() => setHolders((hs) => [...hs, { ...EMPTY_HOLDER }])} /> : null}
+          {holding === 'JOINT' && err('holders') ? <Banner status="error" heading={err('holders')!} /> : null}
           {holding === 'MINOR' ? (
             <Card>
-              <View style={{ gap: space[6] }}>
+              <View style={{ gap: spacing[3] }}>
                 <TextField label="Minor's name" value={minor.name} onChangeText={(name) => setMinor({ ...minor, name })} error={err('minor.name')} required />
                 <DateField label="Date of birth" value={minor.dob} onChange={(dob) => setMinor({ ...minor, ...(dob ? { dob } : { dob: undefined }) })} error={err('minor.dob')} required />
                 <SelectField label="You are their" value={minor.guardianRelation} options={['Father', 'Mother', 'Guardian'].map((v) => ({ value: v, label: v }))} onChange={(guardianRelation) => setMinor({ ...minor, guardianRelation })} error={err('minor.guardianRelation')} required />
@@ -239,7 +239,7 @@ export default function OpenFd() {
 
       {key === 'nominee' && (
         <>
-          <Text role="body" tone="secondary">
+          <Text type="body" tone="secondary">
             Who receives the deposit if something happens to {holding === 'JOINT' ? 'all holders' : 'you'}. Filled in from your profile; change it for this deposit if you like.
           </Text>
           <TextField label="Nominee's full name" value={nom.name} onChangeText={(name) => setNominee({ ...nom, name })} error={err('nominee.name')} required />
@@ -251,33 +251,33 @@ export default function OpenFd() {
       {key === 'review' && (
         <>
           <Card>
-            <KeyValue label="Amount" value={formatINR(principal)} emphasis />
-            <KeyValue label="Period" value={`${tenure} months at ${rate ?? '—'}%`} />
-            <KeyValue label="Interest" value={PAYOUT_LABEL[payout]} />
-            {m ? <KeyValue label={payout === 'ON_MATURITY' ? 'At maturity' : 'Each payout'} value={formatINR(payout === 'ON_MATURITY' ? m.maturityValue : m.periodicInterest)} /> : null}
-            <KeyValue label="Held by" value={holding === 'SINGLE' ? ctx.member.name : holding === 'JOINT' ? [ctx.member.name, ...holders.map((h) => h.name)].join(', ') : `${ctx.member.name} for ${minor.name}`} />
-            <KeyValue label="Nominee" value={`${nom.name} (${nom.relation})`} />
+            <MetadataListItem label="Amount" value={formatINR(principal)} emphasis />
+            <MetadataListItem label="Period" value={`${tenure} months at ${rate ?? '—'}%`} />
+            <MetadataListItem label="Interest" value={PAYOUT_LABEL[payout]} />
+            {m ? <MetadataListItem label={payout === 'ON_MATURITY' ? 'At maturity' : 'Each payout'} value={formatINR(payout === 'ON_MATURITY' ? m.maturityValue : m.periodicInterest)} /> : null}
+            <MetadataListItem label="Held by" value={holding === 'SINGLE' ? ctx.member.name : holding === 'JOINT' ? [ctx.member.name, ...holders.map((h) => h.name)].join(', ') : `${ctx.member.name} for ${minor.name}`} />
+            <MetadataListItem label="Nominee" value={`${nom.name} (${nom.relation})`} />
           </Card>
           <Section title="Rules of the deposit (form F4)">
             <Card>
-              <View style={{ gap: space[4] }}>
+              <View style={{ gap: spacing[2] }}>
                 {ctx.rules.map((r, i) => (
-                  <Text key={i} role="caption" tone="secondary">
+                  <Text key={i} type="supporting" tone="secondary">
                     {i + 1}. {r}
                   </Text>
                 ))}
                 <Divider />
-                <Checkbox checked={agreed} onChange={setAgreed} label="I have read the rules and request this deposit" description={`Text version ${ctx.textVersion}`} />
+                <CheckboxInput checked={agreed} onChange={setAgreed} label="I have read the rules and request this deposit" description={`Text version ${ctx.textVersion}`} />
               </View>
             </Card>
           </Section>
-          <Alert type="primary" heading="After you sign" description={`Pay ${formatINR(principal)} at the counter (${ctx.payTo.counter}) or by transfer to A/c ${ctx.payTo.accountNo}. The Secretary and President then accept it and you get your FDR here.`} />
+          <Banner status="info" heading="After you sign" description={`Pay ${formatINR(principal)} at the counter (${ctx.payTo.counter}) or by transfer to A/c ${ctx.payTo.accountNo}. The Secretary and President then accept it and you get your FDR here.`} />
           {signing ? (
             <Card>
-              <View style={{ gap: space[6] }}>
-                <Text role="body">Enter the 6-digit code we sent to your mobile to sign.</Text>
+              <View style={{ gap: spacing[3] }}>
+                <Text type="body">Enter the 6-digit code we sent to your mobile to sign.</Text>
                 {signing.demoOtp ? (
-                  <Text role="caption" tone="tertiary">
+                  <Text type="supporting" tone="secondary">
                     Demo code: {signing.demoOtp}
                   </Text>
                 ) : null}
@@ -292,8 +292,8 @@ export default function OpenFd() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[4] },
-  chip: { minWidth: 96, paddingVertical: space[4], paddingHorizontal: space[6], borderRadius: radius.control, borderWidth: 1, borderColor: color.border.default, backgroundColor: color.bg.surface, gap: space[1] },
-  chipOn: { borderColor: color.brand.solid, backgroundColor: color.brand.subtle },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
+  chip: { minWidth: 96, paddingVertical: spacing[2], paddingHorizontal: spacing[3], borderRadius: radius.element, borderWidth: 1, borderColor: color.border, backgroundColor: color.background.surface, gap: spacing[0.5] },
+  chipOn: { borderColor: color.accent, backgroundColor: color.accentMuted },
 });

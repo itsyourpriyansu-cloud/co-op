@@ -7,7 +7,7 @@ import { formatCycle, formatINR } from '@tgs/domain';
 import type { DemandSheetDetail } from '@tgs/types';
 import { ActionAlert, DoneAlert, Loaded, useAction } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Alert, Button, Card, Header, KeyValue, Screen, Section, Text } from '@/ui';
+import { Banner, Button, Card, Header, MetadataListItem, Screen, Section, Text } from '@/ui';
 
 export default function SheetTopUp() {
   const { id, mode } = useLocalSearchParams<{ id: string; mode?: string }>();
@@ -42,7 +42,7 @@ function Decide({ d, mode }: { d: DemandSheetDetail; mode: 'regenerate' | 'suppl
     return (
       <Screen
         header={<Header title={title} />}
-        footer={<Button text={regen ? 'Done' : 'Open the new sheet'} size="lg" fullWidth onPress={() => (regen ? router.back() : router.replace(`/staff/demand/${done.next}`))} />}
+        footer={<Button label={regen ? 'Done' : 'Open the new sheet'} size="lg" fullWidth onPress={() => (regen ? router.back() : router.replace(`/staff/demand/${done.next}`))} />}
       >
         <DoneAlert heading={done.heading} description={`${d.department?.name} · ${formatCycle(sh.cycle)}`} />
       </Screen>
@@ -51,27 +51,27 @@ function Decide({ d, mode }: { d: DemandSheetDetail; mode: 'regenerate' | 'suppl
   return (
     <Screen
       header={<Header title={title} onBack={() => router.back()} />}
-      footer={<Button text={regen ? 'Regenerate' : 'Make supplementary sheet'} size="lg" fullWidth loading={a.busy} disabled={!p || Boolean(p.blocked) || nothing || a.busy || a.unconfirmed} onPress={submit} />}
+      footer={<Button label={regen ? 'Regenerate' : 'Make supplementary sheet'} size="lg" fullWidth loading={a.busy} disabled={!p || Boolean(p.blocked) || nothing || a.busy || a.unconfirmed} onPress={submit} />}
     >
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         {regen
           ? "Rebuilds the member lines from today's records, so members the sheet missed are added. Allowed only before the sheet is certified, and while no payment is recorded on it."
           : "A new numbered sheet for members no sheet of this month has. The month's own sheet is not changed. It goes through Certify, Send to DDO, deductions and Post like any other."}
       </Text>
-      {preview.isLoading ? <Text role="caption" tone="tertiary">Checking who is missing…</Text> : null}
-      {p?.blocked ? <Alert type="warning" heading="Not possible now" description={p.blocked} /> : null}
+      {preview.isLoading ? <Text type="supporting" tone="secondary">Checking who is missing…</Text> : null}
+      {p?.blocked ? <Banner status="warning" heading="Not possible now" description={p.blocked} /> : null}
       {p && !p.blocked ? (
         <>
           <Card>
-            <KeyValue label={regen ? 'Demand now' : 'Added demand'} value={formatINR(regen ? p.oldTotal : p.newTotal)} />
-            {regen ? <KeyValue label="Demand after" value={formatINR(p.newTotal)} emphasis /> : null}
+            <MetadataListItem label={regen ? 'Demand now' : 'Added demand'} value={formatINR(regen ? p.oldTotal : p.newTotal)} />
+            {regen ? <MetadataListItem label="Demand after" value={formatINR(p.newTotal)} emphasis /> : null}
           </Card>
-          {nothing ? <Text role="body">Nobody is missing. The sheet already has everyone.</Text> : null}
+          {nothing ? <Text type="body">Nobody is missing. The sheet already has everyone.</Text> : null}
           {p.added.length ? (
             <Section title={`Will be added (${p.added.length})`}>
               <Card>
                 {p.added.map((m) => (
-                  <KeyValue key={m.memberId} label={`${m.name} · No. ${m.generalNo}`} value={formatINR(m.demand)} />
+                  <MetadataListItem key={m.memberId} label={`${m.name} · No. ${m.generalNo}`} value={formatINR(m.demand)} />
                 ))}
               </Card>
             </Section>
@@ -80,7 +80,7 @@ function Decide({ d, mode }: { d: DemandSheetDetail; mode: 'regenerate' | 'suppl
             <Section title={`Will be removed (${p.removed.length})`}>
               <Card>
                 {p.removed.map((m) => (
-                  <KeyValue key={m.memberId} label={`${m.name} · No. ${m.generalNo}`} value="" />
+                  <MetadataListItem key={m.memberId} label={`${m.name} · No. ${m.generalNo}`} value="" />
                 ))}
               </Card>
             </Section>

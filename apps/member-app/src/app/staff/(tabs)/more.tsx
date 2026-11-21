@@ -32,7 +32,7 @@ export default function More() {
   };
   return (
     <Screen>
-      <Text role="pageTitle">More</Text>
+      <Text type="h1">More</Text>
       {!me ? (
         <Skeleton height={220} radius={16} />
       ) : sections.length ? (

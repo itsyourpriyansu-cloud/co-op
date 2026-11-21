@@ -8,8 +8,8 @@ import { createApiClient, isApiError } from '@tgs/api-client';
 import { formatDisplayDate } from '@tgs/domain';
 import { api } from '@/lib/api';
 import { DEMO_TOOLS, getServerUrl, normaliseServerUrl, saveServerUrl } from '@/lib/serverUrl';
-import { Alert, Button, Card, Header, Screen, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, Header, Screen, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function DemoSettings() {
   return DEMO_TOOLS ? <DemoSettingsScreen /> : <Redirect href="/" />;
@@ -57,22 +57,22 @@ function DemoSettingsScreen() {
   return (
     <Screen header={<Header title="Demo settings" onBack={() => router.back()} />}>
       <Card>
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <TextField label="Server address" value={url} onChangeText={setUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" hint="The laptop address printed by `npm run demo`, e.g. http://192.168.1.10:4000" />
-          <Button text="Test & save" leftSlot={Server} fullWidth loading={busy} onPress={() => void testAndSave()} />
+          <Button label="Test & save" icon={Server} fullWidth loading={busy} onPress={() => void testAndSave()} />
         </View>
       </Card>
-      {status ? <Alert type={status.ok ? 'success' : 'error'} heading={status.text} /> : null}
+      {status ? <Banner status={status.ok ? 'success' : 'error'} heading={status.text} /> : null}
       <Card>
-        <View style={{ gap: space[6] }}>
-          <Text role="cardTitle">Demo data</Text>
-          <Text role="caption" tone="secondary">
+        <View style={{ gap: spacing[3] }}>
+          <Text type="h4">Demo data</Text>
+          <Text type="supporting" tone="secondary">
             Restore the original fictional members, loans and deposits.
           </Text>
-          <Button text="Reset demo data" leftSlot={RotateCcw} buttonType="secondary" fullWidth onPress={reset} />
+          <Button label="Reset demo data" icon={RotateCcw} variant="secondary" fullWidth onPress={reset} />
         </View>
       </Card>
-      <Text role="caption" tone="tertiary">
+      <Text type="supporting" tone="secondary">
         App version {Constants.expoConfig?.version ?? '—'}
       </Text>
     </Screen>

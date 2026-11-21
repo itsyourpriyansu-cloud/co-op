@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts } from '@expo-google-fonts/inter';
+import { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold, useFonts } from '@expo-google-fonts/figtree';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -10,11 +10,11 @@ import { LaunchPoster } from '@/components/LaunchPoster';
 import { AuthProvider } from '@/lib/auth';
 import { color } from '@/theme';
 
-// Keep the splash up until Inter is ready, so text never flashes in the wrong font.
+// Keep the splash up until Figtree is ready, so text never flashes in the wrong font.
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+  const [fontsLoaded, fontError] = useFonts({ Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold });
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -37,7 +37,7 @@ export default function RootLayout() {
           <StatusBar style="dark" />
           <UpdateGate>
             <PushTaps />
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg.canvas }, animation: 'slide_from_right' }} />
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.background.body }, animation: 'ios_from_right' }} />
           </UpdateGate>
           <LaunchPoster />
         </AuthProvider>

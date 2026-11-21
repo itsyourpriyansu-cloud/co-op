@@ -8,8 +8,8 @@ import { formatDisplayDateTime } from '@tgs/domain';
 import { Filter, Loaded, RecordCard, Stack2 } from '@/components/staff';
 import { api } from '@/lib/api';
 import { changeValue, fieldLabel } from '@/lib/staffMembers';
-import { EmptyState, Header, Screen, StatusTag, Tag, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { EmptyState, Header, Screen, StatusToken, Token, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 type Show = 'mine' | 'pending' | 'decided';
 
@@ -34,15 +34,15 @@ export default function ChangeRequests() {
           ) : (
             <Stack2>
               {rows.map((r) => (
-                <RecordCard key={r.id} title={r.memberName} subtitle={`No. ${r.generalNo} · ${r.departmentName}`} tag={<StatusTag entity="changeRequest" status={r.status} audience="staff" size="xs" />} caption={`${r.route === 'DDO_THEN_OFFICE' ? (r.ddoCertified ? 'DDO certified' : 'Needs the DDO first') : 'Office only'}${r.status === 'PENDING' ? (r.waitingOn ? ` · waiting on ${r.waitingOn}` : '') : ` · ${formatDisplayDateTime(r.decidedAt ?? r.createdAt)}`}`} onPress={() => router.push(`/staff/change-request/${r.id}`)}>
-                  <View style={{ gap: space[1] }}>
+                <RecordCard key={r.id} title={r.memberName} subtitle={`No. ${r.generalNo} · ${r.departmentName}`} tag={<StatusToken entity="changeRequest" status={r.status} audience="staff" size="xs" />} caption={`${r.route === 'DDO_THEN_OFFICE' ? (r.ddoCertified ? 'DDO certified' : 'Needs the DDO first') : 'Office only'}${r.status === 'PENDING' ? (r.waitingOn ? ` · waiting on ${r.waitingOn}` : '') : ` · ${formatDisplayDateTime(r.decidedAt ?? r.createdAt)}`}`} onPress={() => router.push(`/staff/change-request/${r.id}`)}>
+                  <View style={{ gap: spacing[0.5] }}>
                     {r.fields.map((f) => (
-                      <Text key={f.field} role="caption" tone="secondary">
+                      <Text key={f.field} type="supporting" tone="secondary">
                         {fieldLabel(f)}: {changeValue(f, f.oldValue)} → {changeValue(f, f.newValue)}
                       </Text>
                     ))}
                   </View>
-                  {r.myAction ? <Tag text={r.myAction === 'certify' ? 'Certify' : 'Decide'} color="primary" type="attentive" size="xs" /> : null}
+                  {r.myAction ? <Token text={r.myAction === 'certify' ? 'Certify' : 'Decide'} status="info" emphasis="strong" size="xs" /> : null}
                 </RecordCard>
               ))}
             </Stack2>

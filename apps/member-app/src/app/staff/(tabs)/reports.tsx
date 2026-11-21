@@ -6,8 +6,8 @@ import { FileText, Lock, ScrollText } from 'lucide-react-native';
 import type { ReportDef } from '@tgs/types';
 import { Loaded, Row, plain } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Card, Screen, Section, Tag, Text } from '@/ui';
-import { color, space } from '@/theme';
+import { Card, Screen, Section, Token, Text } from '@/ui';
+import { color, spacing } from '@/theme';
 
 const GROUPS: Array<ReportDef['group']> = ['Collections', 'Loans', 'Deposits & Shares', 'Members', 'Cash & Accounts'];
 
@@ -29,9 +29,9 @@ export default function Reports() {
   const open = (r: ReportDef) => router.push(`/staff/report/${r.kind === 'print' ? 'defaulters' : r.id}`);
   return (
     <Screen refreshing={q.isRefetching} onRefresh={() => void q.refetch()}>
-      <View style={{ gap: space[1] }}>
-        <Text role="pageTitle">Reports</Text>
-        <Text role="caption" tone="secondary">
+      <View style={{ gap: spacing[0.5] }}>
+        <Text type="h1">Reports</Text>
+        <Text type="supporting" tone="secondary">
           From the live ledgers, with CSV to share
         </Text>
       </View>
@@ -47,16 +47,16 @@ export default function Reports() {
                       r.available ? (
                         <Row key={r.id} label={r.title} hint={plain(r.description)} divider={i > 0} onPress={() => open(r)} />
                       ) : (
-                        <View key={r.id} style={[{ flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[8], paddingVertical: space[6] }, i > 0 && { borderTopWidth: 1, borderTopColor: color.border.subtle }]} accessible accessibilityLabel={`${r.title}, not available yet`}>
-                          <View style={{ flex: 1, gap: space[1] }}>
-                            <Text role="body" tone="tertiary">
+                        <View key={r.id} style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5], paddingHorizontal: spacing[4], paddingVertical: spacing[3] }, i > 0 && { borderTopWidth: 1, borderTopColor: color.border }]} accessible accessibilityLabel={`${r.title}, not available yet`}>
+                          <View style={{ flex: 1, gap: spacing[0.5] }}>
+                            <Text type="body" tone="secondary">
                               {r.title}
                             </Text>
-                            <Text role="caption" tone="tertiary">
+                            <Text type="supporting" tone="secondary">
                               Not available yet
                             </Text>
                           </View>
-                          <Lock size={16} color={color.text.tertiary} />
+                          <Lock size={16} color={color.text.secondary} />
                         </View>
                       ),
                     )}
@@ -67,7 +67,7 @@ export default function Reports() {
             <Section title="Printable forms & letters" description="On the society letterhead, with signatures. Open the record, then Download PDF or Print.">
               <Card padded={false}>
                 {PRINTABLES.map((p, i) => (
-                  <Row key={p.key} icon={p.form ? ScrollText : FileText} label={p.title} hint={p.hint} divider={i > 0} {...(p.form ? { right: <Tag text={p.form} color="neutral" size="xs" /> } : {})} onPress={() => router.push(p.href)} />
+                  <Row key={p.key} icon={p.form ? ScrollText : FileText} label={p.title} hint={p.hint} divider={i > 0} {...(p.form ? { right: <Token text={p.form} status="neutral" size="xs" /> } : {})} onPress={() => router.push(p.href)} />
                 ))}
               </Card>
             </Section>

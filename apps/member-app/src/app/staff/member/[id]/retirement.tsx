@@ -7,7 +7,7 @@ import { formatDisplayDate } from '@tgs/domain';
 import type { MemberDetail } from '@tgs/types';
 import { ActionAlert, DoneAlert, Loaded, useAction } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Alert, Button, DateField, Header, Screen, Text, TextField } from '@/ui';
+import { Banner, Button, DateField, Header, Screen, Text, TextField } from '@/ui';
 
 export default function RetirementChange() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,7 +28,7 @@ function Form({ d }: { d: MemberDetail }) {
 
   if (done)
     return (
-      <Screen header={<Header title="Date of retirement" />} footer={<Button text="Done" size="lg" fullWidth onPress={() => router.back()} />}>
+      <Screen header={<Header title="Date of retirement" />} footer={<Button label="Done" size="lg" fullWidth onPress={() => router.back()} />}>
         <DoneAlert heading="Sent for approval" description="The Accountant approves first, then the Secretary and the President. The date changes after the President approves." />
       </Screen>
     );
@@ -36,15 +36,15 @@ function Form({ d }: { d: MemberDetail }) {
   return (
     <Screen
       header={<Header title="Date of retirement" onBack={() => router.back()} />}
-      footer={<Button text="Send for approval" size="lg" fullWidth disabled={!newDor || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void a.run(() => api.members.proposeRetirementChange(m.id, { newDor, reason: reason.trim() }), () => setDone(true))} />}
+      footer={<Button label="Send for approval" size="lg" fullWidth disabled={!newDor || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void a.run(() => api.members.proposeRetirementChange(m.id, { newDor, reason: reason.trim() }), () => setDone(true))} />}
     >
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         {m.name} · now {formatDisplayDate(m.dor)}
       </Text>
-      {d.dorWarning ? <Alert type="warning" heading="Expected date" description={d.dorWarning} /> : null}
+      {d.dorWarning ? <Banner status="warning" heading="Expected date" description={d.dorWarning} /> : null}
       <DateField label="New date of retirement" required value={newDor} onChange={(x) => setNewDor(x ?? '')} error={a.fields.newDor} />
       <TextField label="Reason" required value={reason} onChangeText={setReason} placeholder="e.g. Service register entry, G.O. reference" multiline numberOfLines={3} error={a.fields.reason} />
-      <Text role="caption" tone="tertiary">
+      <Text type="supporting" tone="secondary">
         The date changes only after the Accountant, the Secretary and the President have each approved.
       </Text>
       <ActionAlert action={a} heading="Not sent" check={{ text: 'Check the member', href: `/staff/member/${m.id}` }} />

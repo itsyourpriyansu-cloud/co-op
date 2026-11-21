@@ -1,11 +1,13 @@
-// TGSECCSL native kit: React Native mirrors of Juspay Blend V2 components, driven by
-// @tgs/design-tokens (docs/18 §7). Same prop contracts as Blend web (buttonType, size, subType,
-// Tag color/type…) so @juspay/blend-native can replace it mechanically if it is ever published.
+// TGSECCSL mobile kit: Astryx components (astryx.atmeta.com) in the seal's navy and gold, driven only by
+// `@/theme` (D-138, docs/25). Motion and haptics live in ./motion.
 export * from './Text';
 export * from './Button';
-export * from './Tag';
+export * from './Token';
 export * from './Surfaces';
 export * from './Fields';
 export * from './Choice';
 export * from './Progress';
 export * from './Layout';
+export * from './TabBar';
+export * from './CountUp';
+export { ease, haptic, useEnter, useMotionMode, usePressScale, useToggle } from './motion';

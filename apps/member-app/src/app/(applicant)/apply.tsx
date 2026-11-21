@@ -10,8 +10,8 @@ import { api } from '@/lib/api';
 import { pickDocumentImage } from '@/lib/files';
 import { SignatureCard } from '@/components/SignatureCard';
 import { errorsForStep, firstIncompleteStep, STEPS, useJoiningReference, useMyApplication, useSaveDraft } from '@/lib/joining';
-import { Alert, Button, Card, Checkbox, ChoiceCard, DateField, Divider, Header, KeyValue, NumberStepper, OtpInput, Screen, Segmented, SelectField, Skeleton, Text, TextField, WizardProgress } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Card, CheckboxInput, SelectableCard, DateField, Divider, Header, MetadataListItem, NumberInput, OtpInput, Screen, SegmentedControl, SelectField, Skeleton, Text, TextField, Stepper, Link } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 type Update = (patch: MembershipForm) => void;
 type StepProps = { form: MembershipForm; update: Update; errors: Record<string, string>; reference: JoiningReference };
@@ -64,7 +64,7 @@ export default function Apply() {
         <Skeleton height={8} />
         <Skeleton height={32} width="70%" />
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} height={56} radius={radius.control} />
+          <Skeleton key={i} height={56} radius={radius.element} />
         ))}
       </Screen>
     );
@@ -130,25 +130,25 @@ export default function Apply() {
 
   return (
     <Screen
-      header={<Header title="Membership application" onBack={back} right={save.isPending ? <ActivityIndicator size="small" color={color.text.tertiary} /> : null} />}
+      header={<Header title="Membership application" onBack={back} right={save.isPending ? <ActivityIndicator size="small" color={color.text.secondary} /> : null} />}
       footer={
         isReview ? (
-          <Button text="Sign & submit" leftSlot={PenLine} size="lg" fullWidth loading={busy} onPress={() => void startSigning()} />
+          <Button label="Sign & submit" icon={PenLine} size="lg" fullWidth loading={busy} onPress={() => void startSigning()} />
         ) : (
-          <Button text="Save & continue" size="lg" fullWidth loading={busy} onPress={() => void next()} />
+          <Button label="Save & continue" size="lg" fullWidth loading={busy} onPress={() => void next()} />
         )
       }
     >
-      <View style={{ gap: space[8] }}>
-        <WizardProgress step={step + 1} total={STEPS.length} title={current?.title ?? ''} />
-        <Text role="pageTitle">{current?.title}</Text>
+      <View style={{ gap: spacing[4] }}>
+        <Stepper step={step + 1} total={STEPS.length} title={current?.title ?? ''} />
+        <Text type="h1">{current?.title}</Text>
       </View>
 
       {app.status === 'INFO_REQUESTED' && app.infoRequest ? (
-        <Alert type="warning" heading={`${app.infoRequest.by === 'DDO' ? 'Your department' : 'The society office'} needs a correction`} description={app.infoRequest.message} />
+        <Banner status="warning" heading={`${app.infoRequest.by === 'DDO' ? 'Your department' : 'The society office'} needs a correction`} description={app.infoRequest.message} />
       ) : null}
-      {showErrors && Object.keys(stepErrors).length ? <Alert type="error" heading="A few details are missing" description="Fill the highlighted fields to continue." /> : null}
-      {serverError ? <Alert type="error" heading="Something went wrong" description={serverError} /> : null}
+      {showErrors && Object.keys(stepErrors).length ? <Banner status="error" heading="A few details are missing" description="Fill the highlighted fields to continue." /> : null}
+      {serverError ? <Banner status="error" heading="Something went wrong" description={serverError} /> : null}
 
       {step === 0 && <PersonalStep {...props} />}
       {step === 1 && <AddressStep {...props} />}
@@ -179,8 +179,8 @@ function PersonalStep({ form, update, errors, reference }: StepProps) {
       <TextField label="Full name" required value={p.fullName ?? ''} onChangeText={(v) => update({ personal: { fullName: v } })} autoCapitalize="words" hint="As in your service records" error={errors['personal.fullName']} />
       <TextField label="Father's name" required value={p.fatherName ?? ''} onChangeText={(v) => update({ personal: { fatherName: v } })} autoCapitalize="words" error={errors['personal.fatherName']} />
       <DateField label="Date of birth" required value={p.dob} onChange={(iso) => update({ personal: { dob: iso } })} error={errors['personal.dob']} />
-      <Segmented label="Gender" value={p.gender} options={[{ value: 'F', label: 'Female' }, { value: 'M', label: 'Male' }]} onChange={(v) => update({ personal: { gender: v } })} error={errors['personal.gender']} />
-      <Segmented label="Caste" value={p.caste} options={reference.casteCategories.map((c) => ({ value: c, label: c }))} onChange={(v) => update({ personal: { caste: v } })} error={errors['personal.caste']} />
+      <SegmentedControl label="Gender" value={p.gender} options={[{ value: 'F', label: 'Female' }, { value: 'M', label: 'Male' }]} onChange={(v) => update({ personal: { gender: v } })} error={errors['personal.gender']} />
+      <SegmentedControl label="Caste" value={p.caste} options={reference.casteCategories.map((c) => ({ value: c, label: c }))} onChange={(v) => update({ personal: { caste: v } })} error={errors['personal.caste']} />
       <TextField label="Mobile number" value={p.mobile ? `+91 ${p.mobile}` : ''} editable={false} hint="Verified with OTP" />
       <TextField label="Email (optional)" value={p.email ?? ''} onChangeText={(v) => update({ personal: { email: v } })} keyboardType="email-address" autoCapitalize="none" error={errors['personal.email']} />
     </View>
@@ -212,16 +212,16 @@ function AddressFields({ prefix, value, onChange, errors }: { prefix: 'present' 
 function AddressStep({ form, update, errors }: StepProps) {
   const a = form.address ?? {};
   return (
-    <View style={{ gap: space[12] }}>
-      <View style={{ gap: space[6] }}>
-        <Text role="cardTitle">Present address</Text>
+    <View style={{ gap: spacing[6] }}>
+      <View style={{ gap: spacing[3] }}>
+        <Text type="h4">Present address</Text>
         <AddressFields prefix="present" value={a.present ?? {}} onChange={(v) => update({ address: { present: { ...a.present, ...v } } })} errors={errors} />
       </View>
       <Divider />
-      <Checkbox checked={!!a.sameAsPresent} onChange={(v) => update({ address: { sameAsPresent: v } })} label="Permanent address is the same" />
+      <CheckboxInput checked={!!a.sameAsPresent} onChange={(v) => update({ address: { sameAsPresent: v } })} label="Permanent address is the same" />
       {!a.sameAsPresent ? (
-        <View style={{ gap: space[6] }}>
-          <Text role="cardTitle">Permanent address</Text>
+        <View style={{ gap: spacing[3] }}>
+          <Text type="h4">Permanent address</Text>
           <AddressFields prefix="permanent" value={a.permanent ?? {}} onChange={(v) => update({ address: { permanent: { ...a.permanent, ...v } } })} errors={errors} />
         </View>
       ) : null}
@@ -238,14 +238,14 @@ function EmploymentStep({ form, update, errors, reference }: StepProps) {
       <SelectField label="Department" required searchable value={e.departmentId} options={reference.departments.map((d) => ({ value: d.id, label: d.name }))} onChange={(v) => update({ employment: { departmentId: v } })} hint="Your department officer (DDO) will verify this" error={errors['employment.departmentId']} />
       <SelectField label="Designation" required value={e.designation} options={reference.designations.map((d) => ({ value: d, label: d }))} onChange={(v) => update({ employment: { designation: v } })} error={errors['employment.designation']} />
       <TextField label="Employee ID" required value={e.employeeId ?? ''} onChangeText={(v) => update({ employment: { employeeId: v.toUpperCase() } })} autoCapitalize="characters" hint="As in your pay slip" error={errors['employment.employeeId']} />
-      <View style={{ gap: space[4] }}>
-        <Text role="label">
-          Appointment type<Text role="label" tone="danger"> *</Text>
+      <View style={{ gap: spacing[2] }}>
+        <Text type="label">
+          Appointment type<Text type="label" tone="error"> *</Text>
         </Text>
-        <ChoiceCard title="Regular appointment" description="Appointed regularly in a Secretariat department" selected={e.employmentType === 'REGULAR'} onPress={() => update({ employment: { employmentType: 'REGULAR' } })} />
-        <ChoiceCard title="Approved probationer" description="Completed probation; service is counted" selected={probationer} onPress={() => update({ employment: { employmentType: 'APPROVED_PROBATIONER' } })} />
+        <SelectableCard title="Regular appointment" description="Appointed regularly in a Secretariat department" selected={e.employmentType === 'REGULAR'} onPress={() => update({ employment: { employmentType: 'REGULAR' } })} />
+        <SelectableCard title="Approved probationer" description="Completed probation; service is counted" selected={probationer} onPress={() => update({ employment: { employmentType: 'APPROVED_PROBATIONER' } })} />
         {errors['employment.employmentType'] ? (
-          <Text role="caption" tone="danger">
+          <Text type="supporting" tone="error">
             Choose your appointment type
           </Text>
         ) : null}
@@ -267,25 +267,25 @@ function SharesStep({ form, update, errors, reference }: StepProps) {
     if (form.shares?.sharesProposed === undefined) update({ shares: { sharesProposed: reference.minShares } });
   }, [form.shares?.sharesProposed, reference.minShares, update]);
   return (
-    <View style={{ gap: space[12] }}>
+    <View style={{ gap: spacing[6] }}>
       <Card>
-        <View style={{ gap: space[6] }}>
-          <Text role="cardTitle">Shares</Text>
-          <Text role="caption" tone="secondary">
+        <View style={{ gap: spacing[3] }}>
+          <Text type="h4">Shares</Text>
+          <Text type="supporting" tone="secondary">
             Each share is {formatINR(reference.shareValue)}. Choose between {reference.minShares} and {reference.maxShares}.
           </Text>
-          <NumberStepper value={shares} min={reference.minShares} max={reference.maxShares} step={5} onChange={(v) => update({ shares: { sharesProposed: v } })} accessibilityLabel="Number of shares" />
+          <NumberInput value={shares} min={reference.minShares} max={reference.maxShares} step={5} onChange={(v) => update({ shares: { sharesProposed: v } })} accessibilityLabel="Number of shares" />
           <View>
-            <Text role="metric">{formatINR(amount)}</Text>
-            <Text role="caption" tone="tertiary">
+            <Text type="display-3">{formatINR(amount)}</Text>
+            <Text type="supporting" tone="secondary">
               {amountInWords(amount)}
             </Text>
           </View>
         </View>
       </Card>
       <View style={styles.fields}>
-        <Text role="cardTitle">Nominee</Text>
-        <Text role="caption" tone="secondary">
+        <Text type="h4">Nominee</Text>
+        <Text type="supporting" tone="secondary">
           The person who receives your share and deposits in the event of your death.
         </Text>
         <TextField label="Nominee's full name" required value={n.name ?? ''} onChangeText={(v) => update({ nominee: { name: v } })} autoCapitalize="words" error={errors['nominee.name']} />
@@ -316,27 +316,27 @@ function DocumentsStep({ form, update, errors, reference }: StepProps) {
     }
   };
   return (
-    <View style={{ gap: space[6] }}>
-      <Alert type="neutral" heading="Clear photos" description="Photograph each document flat, in good light, so every word can be read. JPG, PNG or PDF. Photos are shrunk automatically; a PDF must be under 2 MB." />
+    <View style={{ gap: spacing[3] }}>
+      <Banner status="neutral" heading="Clear photos" description="Photograph each document flat, in good light, so every word can be read. JPG, PNG or PDF. Photos are shrunk automatically; a PDF must be under 2 MB." />
       {reference.requiredDocuments.map((d) => {
         const done = docs.find((x) => x.type === d.type);
         const err = failed[d.type] || errors[`documents.${d.type}`];
         return (
-          <Card key={d.type} style={err ? { borderColor: color.status.danger.solid } : undefined}>
+          <Card key={d.type} style={err ? { borderColor: color.status.error.solid } : undefined}>
             <View style={styles.docRow}>
-              <View style={[styles.docIcon, done && { backgroundColor: color.status.success.bg }]}>
-                {done ? <CircleCheck size={22} color={color.status.success.fg} /> : d.type === 'PHOTO' ? <Camera size={22} color={color.brand.solid} /> : <FileText size={22} color={color.brand.solid} />}
+              <View style={[styles.docIcon, done && { backgroundColor: color.status.success.tint }]}>
+                {done ? <CircleCheck size={22} color={color.status.success.text} /> : d.type === 'PHOTO' ? <Camera size={22} color={color.accent} /> : <FileText size={22} color={color.accent} />}
               </View>
-              <View style={{ flex: 1, gap: space[1] }}>
-                <Text role="bodyStrong">
+              <View style={{ flex: 1, gap: spacing[0.5] }}>
+                <Text type="body" weight="medium">
                   {d.label}
-                  {d.required ? <Text role="bodyStrong" tone="danger"> *</Text> : <Text role="caption" tone="tertiary"> (optional)</Text>}
+                  {d.required ? <Text type="body" weight="medium" tone="error"> *</Text> : <Text type="supporting" tone="secondary"> (optional)</Text>}
                 </Text>
-                <Text role="caption" tone={err ? 'danger' : done ? 'success' : 'tertiary'}>
+                <Text type="supporting" tone={err ? 'error' : done ? 'success' : 'secondary'}>
                   {err ?? (done ? done.fileName : d.hint)}
                 </Text>
               </View>
-              <Button text={done ? 'Replace' : 'Upload'} buttonType="secondary" size="sm" leftSlot={done ? undefined : FileUp} loading={uploading === d.type} onPress={() => void upload(d.type as MembershipDocumentType)} />
+              <Button label={done ? 'Replace' : 'Upload'} variant="secondary" size="sm" icon={done ? undefined : FileUp} loading={uploading === d.type} onPress={() => void upload(d.type as MembershipDocumentType)} />
             </View>
           </Card>
         );
@@ -352,39 +352,39 @@ function AgreementsStep({ form, update, errors, reference }: StepProps) {
   const [open, setOpen] = useState<string | null>(null);
   const d = form.declarations ?? {};
   return (
-    <View style={{ gap: space[8] }}>
-      <Text role="body" tone="secondary">
+    <View style={{ gap: spacing[4] }}>
+      <Text type="body" tone="secondary">
         Read the key points. You sign all four together with an OTP at the end.
       </Text>
       {reference.agreements.map((a) => {
         const field = DECL_FIELD[a.key];
         const err = errors[`declarations.${field}`];
         return (
-          <Card key={a.key} style={err ? { borderColor: color.status.danger.solid } : undefined}>
-            <View style={{ gap: space[6] }}>
-              <Text role="cardTitle">{a.title}</Text>
-              <View style={{ gap: space[3] }}>
+          <Card key={a.key} style={err ? { borderColor: color.status.error.solid } : undefined}>
+            <View style={{ gap: spacing[3] }}>
+              <Text type="h4">{a.title}</Text>
+              <View style={{ gap: spacing[1.5] }}>
                 {a.summary.map((s) => (
-                  <View key={s} style={{ flexDirection: 'row', gap: space[4] }}>
-                    <Text role="body" tone="tertiary">
+                  <View key={s} style={{ flexDirection: 'row', gap: spacing[2] }}>
+                    <Text type="body" tone="secondary">
                       •
                     </Text>
-                    <Text role="body" tone="secondary" style={{ flex: 1 }}>
+                    <Text type="body" tone="secondary" style={{ flex: 1 }}>
                       {s}
                     </Text>
                   </View>
                 ))}
               </View>
-              <Button text={open === a.key ? 'Hide full text' : 'Read full text'} subType="inline" onPress={() => setOpen(open === a.key ? null : a.key)} />
+              <Link label={open === a.key ? 'Hide full text' : 'Read full text'} onPress={() => setOpen(open === a.key ? null : a.key)} />
               {open === a.key ? (
                 <View style={styles.legal}>
-                  <Text role="caption" tone="secondary">
+                  <Text type="supporting" tone="secondary">
                     {a.text}
                   </Text>
                 </View>
               ) : null}
               <Divider />
-              <Checkbox checked={!!d[field]} onChange={(v) => update({ declarations: { [field]: v } })} label="I agree" description={err} />
+              <CheckboxInput checked={!!d[field]} onChange={(v) => update({ declarations: { [field]: v } })} label="I agree" description={err} />
             </View>
           </Card>
         );
@@ -400,20 +400,20 @@ function ReviewStep({ form, errors, reference, goTo }: StepProps & { goTo: (step
   const block = (title: string, step: number, rows: Array<[string, string | undefined]>) => (
     <Card key={title}>
       <View style={styles.reviewHead}>
-        <Text role="cardTitle" style={{ flex: 1 }}>
+        <Text type="h4" style={{ flex: 1 }}>
           {title}
         </Text>
-        <Button text="Edit" subType="inline" onPress={() => goTo(step)} />
+        <Link label="Edit" onPress={() => goTo(step)} />
       </View>
       {rows.map(([k, v]) => (
-        <KeyValue key={k} label={k} value={v || '—'} />
+        <MetadataListItem key={k} label={k} value={v || '—'} />
       ))}
     </Card>
   );
   const a = form.address?.present;
   return (
-    <View style={{ gap: space[8] }}>
-      {missing ? <Alert type="warning" heading={`${missing} detail${missing === 1 ? '' : 's'} still missing`} description="Tap Edit on the section, or Sign & submit to jump to the first one." /> : <Alert type="success" heading="Everything looks complete" description="Check your details, then sign with OTP." />}
+    <View style={{ gap: spacing[4] }}>
+      {missing ? <Banner status="warning" heading={`${missing} detail${missing === 1 ? '' : 's'} still missing`} description="Tap Edit on the section, or Sign & submit to jump to the first one." /> : <Banner status="success" heading="Everything looks complete" description="Check your details, then sign with OTP." />}
       {block('About you', 0, [
         ['Full name', form.personal?.fullName],
         ["Father's name", form.personal?.fatherName],
@@ -463,9 +463,9 @@ function SignSheet({ signing, onClose, onSigned }: { signing: { otpRef: string; 
     <Modal visible={!!signing} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Cancel signing" />
       <View style={styles.sheet}>
-        <View style={{ gap: space[3] }}>
-          <Text role="sectionTitle">Sign with OTP</Text>
-          <Text role="body" tone="secondary">
+        <View style={{ gap: spacing[1.5] }}>
+          <Text type="h3">Sign with OTP</Text>
+          <Text type="body" tone="secondary">
             Entering the code signs your application, the declarations and the salary recovery agreement.
           </Text>
         </View>
@@ -477,21 +477,21 @@ function SignSheet({ signing, onClose, onSigned }: { signing: { otpRef: string; 
             if (v.length === 6) void confirm(v);
           }}
         />
-        {signing?.demoOtp ? <Alert type="neutral" heading={`Demo code: ${signing.demoOtp}`} /> : null}
-        <Button text="Sign & submit" size="lg" fullWidth loading={busy} disabled={otp.length !== 6} onPress={() => void confirm()} />
-        <Button text="Cancel" subType="inline" onPress={onClose} style={{ alignSelf: 'center' }} />
+        {signing?.demoOtp ? <Banner status="neutral" heading={`Demo code: ${signing.demoOtp}`} /> : null}
+        <Button label="Sign & submit" size="lg" fullWidth loading={busy} disabled={otp.length !== 6} onPress={() => void confirm()} />
+        <Link label="Cancel" onPress={onClose} style={{ alignSelf: 'center' }} />
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  fields: { gap: space[10] },
-  row2: { flexDirection: 'row', gap: space[6] },
-  docRow: { flexDirection: 'row', alignItems: 'center', gap: space[6] },
-  docIcon: { width: 44, height: 44, borderRadius: radius.control, backgroundColor: color.brand.subtle, alignItems: 'center', justifyContent: 'center' },
-  legal: { padding: space[6], borderRadius: radius.control, backgroundColor: color.bg.surfaceMuted },
-  reviewHead: { flexDirection: 'row', alignItems: 'center', marginBottom: space[2] },
-  backdrop: { flex: 1, backgroundColor: color.bg.overlay },
-  sheet: { backgroundColor: color.bg.surface, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, padding: space[12], gap: space[8] },
+  fields: { gap: spacing[5] },
+  row2: { flexDirection: 'row', gap: spacing[3] },
+  docRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
+  docIcon: { width: 44, height: 44, borderRadius: radius.element, backgroundColor: color.accentMuted, alignItems: 'center', justifyContent: 'center' },
+  legal: { padding: spacing[3], borderRadius: radius.element, backgroundColor: color.background.muted },
+  reviewHead: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing[1] },
+  backdrop: { flex: 1, backgroundColor: color.overlay },
+  sheet: { backgroundColor: color.background.surface, borderTopLeftRadius: radius.page, borderTopRightRadius: radius.page, padding: spacing[6], gap: spacing[4] },
 });

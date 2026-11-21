@@ -10,23 +10,23 @@ import { AppMark } from '@/components/AppMark';
 import { Loaded, Meter, StatTile, staffHref, TileGrid, WaitTag } from '@/components/staff';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Button, Card, EmptyState, Screen, Section, StatusTag, Tag, Text } from '@/ui';
-import { color, onBrandMuted, radius, space } from '@/theme';
+import { Card, CountUp, EmptyState, Screen, Section, StatusToken, Token, Text, Link } from '@/ui';
+import { color, radius, shadow, spacing } from '@/theme';
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 const hour = new Date().getHours();
 const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 function ListRow({ title, subtitle, right, tag, onPress, divider }: { title: string; subtitle: string; right?: React.ReactNode; tag?: React.ReactNode; onPress?: () => void; divider?: boolean }) {
   return (
-    <Pressable accessibilityRole="button" disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.listRow, divider && styles.divider, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
-      <View style={{ flex: 1, gap: space[1] }}>
-        <Text role="label">{title}</Text>
+    <Pressable accessibilityRole="button" disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.listRow, divider && styles.divider, pressed && { backgroundColor: color.background.muted }]}>
+      <View style={{ flex: 1, gap: spacing[0.5] }}>
+        <Text type="label">{title}</Text>
         {tag}
-        <Text role="caption" tone="tertiary">
+        <Text type="supporting" tone="secondary">
           {subtitle}
         </Text>
       </View>
-      <View style={{ alignItems: 'flex-end', gap: space[1] }}>{right}</View>
+      <View style={{ alignItems: 'flex-end', gap: spacing[0.5] }}>{right}</View>
     </Pressable>
   );
 }
@@ -38,16 +38,16 @@ function CaughtUp() {
 function Trend({ s }: { s: DashboardSummary }) {
   return (
     <Card>
-      <View style={{ gap: space[6] }}>
+      <View style={{ gap: spacing[3] }}>
         {s.collectionsTrend.map((t) => {
           const rate = t.demand ? t.recovered / t.demand : 0;
           return (
-            <View key={t.cycle} style={{ gap: space[2] }} accessible accessibilityLabel={`${formatCycle(t.cycle)}: ${pct(rate)} collected`}>
+            <View key={t.cycle} style={{ gap: spacing[1] }} accessible accessibilityLabel={`${formatCycle(t.cycle)}: ${pct(rate)} collected`}>
               <View style={styles.between}>
-                <Text role="caption" tone="secondary">
+                <Text type="supporting" tone="secondary">
                   {formatCycle(t.cycle)}
                 </Text>
-                <Text role="captionStrong">
+                <Text type="supporting" weight="medium">
                   {formatINRCompact(t.recovered)} / {formatINRCompact(t.demand)} · {pct(rate)}
                 </Text>
               </View>
@@ -73,7 +73,7 @@ function AdminView({ s }: { s: DashboardSummary }) {
         <StatTile label={`Collection · ${formatCycle(s.lastPostedCycle)}`} value={pct(s.collectionRate)} sub={`${delta >= 0 ? 'Up' : 'Down'} ${Math.abs(delta * 100).toFixed(1)} pts on previous cycle`} tone={delta >= 0 ? 'success' : 'danger'} />
       </TileGrid>
 
-      <Section title="Needs your attention" right={<Button text="Open queue" subType="inline" onPress={() => router.push('/staff/queue')} />}>
+      <Section title="Needs your attention" right={<Link label="Open queue" onPress={() => router.push('/staff/queue')} />}>
         {s.needsAction.length === 0 ? (
           <CaughtUp />
         ) : (
@@ -86,10 +86,10 @@ function AdminView({ s }: { s: DashboardSummary }) {
                   divider={i > 0}
                   title={item.title}
                   subtitle={`${item.ref} · ${item.subtitle}`}
-                  tag={item.kind === 'loan' ? <StatusTag entity="loan" status={item.status as LoanStatus} audience="staff" size="xs" /> : <StatusTag entity="membership" status={item.status as MembershipStatus} audience="staff" size="xs" />}
+                  tag={item.kind === 'loan' ? <StatusToken entity="loan" status={item.status as LoanStatus} audience="staff" size="xs" /> : <StatusToken entity="membership" status={item.status as MembershipStatus} audience="staff" size="xs" />}
                   right={
                     <>
-                      {item.amount !== undefined ? <Text role="label">{formatINR(item.amount)}</Text> : null}
+                      {item.amount !== undefined ? <Text type="label">{formatINR(item.amount)}</Text> : null}
                       <WaitTag days={waited} />
                     </>
                   }
@@ -107,12 +107,12 @@ function AdminView({ s }: { s: DashboardSummary }) {
 
       <Section title="Loan pipeline" description={`${inFlight} applications in flight · ${formatINRCompact(s.pipeline.reduce((a, r) => a + r.amount, 0))}`}>
         <Card>
-          <View style={{ gap: space[6] }}>
+          <View style={{ gap: spacing[3] }}>
             {s.pipeline.map((row) => (
-              <View key={row.status} style={{ gap: space[2] }}>
+              <View key={row.status} style={{ gap: spacing[1] }}>
                 <View style={styles.between}>
-                  <StatusTag entity="loan" status={row.status as LoanStatus} audience="staff" size="xs" />
-                  <Text role="captionStrong">
+                  <StatusToken entity="loan" status={row.status as LoanStatus} audience="staff" size="xs" />
+                  <Text type="supporting" weight="medium">
                     {row.count} · {formatINRCompact(row.amount)}
                   </Text>
                 </View>
@@ -125,13 +125,13 @@ function AdminView({ s }: { s: DashboardSummary }) {
 
       <Section title="Short collections" description={`By department · ${formatCycle(s.lastPostedCycle)}`}>
         {s.shortByDepartment.length === 0 ? (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             Every department recovered in full.
           </Text>
         ) : (
           <Card padded={false}>
             {s.shortByDepartment.map((d, i) => (
-              <ListRow key={d.departmentId} divider={i > 0} title={d.department} subtitle={`${d.shortMembers} member${d.shortMembers === 1 ? '' : 's'} short`} right={<Text role="label" tone="debit">{formatINR(d.short)}</Text>} />
+              <ListRow key={d.departmentId} divider={i > 0} title={d.department} subtitle={`${d.shortMembers} member${d.shortMembers === 1 ? '' : 's'} short`} right={<Text type="label" tone="debit">{formatINR(d.short)}</Text>} />
             ))}
           </Card>
         )}
@@ -139,7 +139,7 @@ function AdminView({ s }: { s: DashboardSummary }) {
 
       <Section title="Retiring in the next 6 months" description={`${s.retiringSoon.count} members · ${formatINRCompact(s.retiringSoon.outstanding)} still outstanding`}>
         {s.retiringSoon.members.length === 0 ? (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             No retirements in the next 6 months.
           </Text>
         ) : (
@@ -155,8 +155,8 @@ function AdminView({ s }: { s: DashboardSummary }) {
                   onPress={() => router.push(`/staff/member/${m.id}`)}
                   right={
                     <>
-                      <Tag text={left === 0 ? 'This month' : `${left} month${left === 1 ? '' : 's'}`} color={left <= 2 ? 'error' : 'warning'} size="xs" />
-                      <Text role="caption" tone="secondary">
+                      <Token text={left === 0 ? 'This month' : `${left} month${left === 1 ? '' : 's'}`} status={left <= 2 ? 'error' : 'warning'} size="xs" />
+                      <Text type="supporting" tone="secondary">
                         {m.outstanding > 0 ? formatINR(m.outstanding) : 'No loans'}
                       </Text>
                     </>
@@ -179,9 +179,9 @@ function tileValue(t: RoleDashboard['tiles'][number]) {
 
 function entityTag(entity: string, status?: string) {
   if (!status) return undefined;
-  if (entity === 'loan') return <StatusTag entity="loan" status={status as LoanStatus} audience="staff" size="xs" />;
-  if (entity === 'membership') return <StatusTag entity="membership" status={status as MembershipStatus} audience="staff" size="xs" />;
-  if (entity === 'deposit') return <StatusTag entity="deposit" status={status as DepositStatus} audience="staff" size="xs" />;
+  if (entity === 'loan') return <StatusToken entity="loan" status={status as LoanStatus} audience="staff" size="xs" />;
+  if (entity === 'membership') return <StatusToken entity="membership" status={status as MembershipStatus} audience="staff" size="xs" />;
+  if (entity === 'deposit') return <StatusToken entity="deposit" status={status as DepositStatus} audience="staff" size="xs" />;
   return undefined;
 }
 
@@ -192,21 +192,19 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
   return (
     <>
       {total > 0 ? (
-        <Pressable accessibilityRole="button" onPress={() => router.push('/staff/queue')} style={({ pressed }) => [styles.hero, pressed && { opacity: 0.92 }]}>
-          <View style={{ flex: 1, gap: space[1] }}>
-            <Text role="pageTitle" tone="onBrand" style={styles.heroFigure}>
-              {total}
-            </Text>
-            <Text role="label" tone="onBrand">
+        <Card onPress={() => router.push('/staff/queue')} padded={false} style={styles.hero}>
+          <View style={{ flex: 1, gap: spacing[0.5] }}>
+            <CountUp type="h1" tone="onAccent" style={styles.heroFigure} value={total} format={String} />
+            <Text type="label" tone="onAccent">
               waiting on you
             </Text>
-            <Text role="caption" style={{ color: onBrandMuted }}>
+            <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
               {d.oldest[0] ? `Oldest ${d.oldest[0].days} day${d.oldest[0].days === 1 ? '' : 's'}` : ''}
               {d.overTarget ? ` · ${d.overTarget} over the service target` : ''}
             </Text>
           </View>
-          <ChevronRight size={24} color={onBrandMuted} />
-        </Pressable>
+          <ChevronRight size={24} color={color.text.onAccentMuted} />
+        </Card>
       ) : null}
 
       <TileGrid>
@@ -218,7 +216,7 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
       <Section
         title={d.variant === 'SIGNER' ? 'Awaiting your signature' : d.variant === 'CASHIER' ? 'Waiting on you' : d.variant === 'DDO' ? 'Pending validations' : 'Your queue'}
         description={total ? 'Oldest first' : 'Nothing waiting'}
-        right={<Button text="Open queue" subType="inline" onPress={() => router.push('/staff/queue')} />}
+        right={<Link label="Open queue" onPress={() => router.push('/staff/queue')} />}
       >
         {d.oldest.length === 0 ? (
           <CaughtUp />
@@ -233,7 +231,7 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
                 onPress={() => router.push(staffHref(i.link))}
                 right={
                   <>
-                    {i.amount ? <Text role="label">{formatINR(i.amount)}</Text> : null}
+                    {i.amount ? <Text type="label">{formatINR(i.amount)}</Text> : null}
                     <WaitTag days={i.days} />
                   </>
                 }
@@ -245,7 +243,7 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
 
       <Section title="By stage" description={d.done.count ? `${d.done.label}: ${d.done.count}${d.done.amount ? ` · ${formatINR(d.done.amount)}` : ''}` : `${d.done.label}: none yet`}>
         {d.queue.length === 0 ? (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             No stage has work for you.
           </Text>
         ) : (
@@ -253,14 +251,14 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
             {d.queue.map((q, i) => (
               <Pressable key={q.key} accessibilityRole="button" onPress={() => router.push(staffHref(q.link))} style={[styles.stage, i > 0 && styles.divider]}>
                 <View style={styles.between}>
-                  <Text role="label" style={{ flex: 1 }}>
+                  <Text type="label" style={{ flex: 1 }}>
                     {q.label}
                   </Text>
-                  <Text role="captionStrong">
+                  <Text type="supporting" weight="medium">
                     {q.count}
                     {q.amount ? ` · ${formatINRCompact(q.amount)}` : ''} · oldest {q.oldestDays}d
                   </Text>
-                  <ChevronRight size={16} color={color.text.tertiary} />
+                  <ChevronRight size={16} color={color.text.secondary} />
                 </View>
                 <Meter rate={q.count / maxQueue} />
               </Pressable>
@@ -270,19 +268,19 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
       </Section>
 
       {d.demand ? (
-        <Section title={`Demand sheets · ${formatCycle(d.demand.cycle)}`} description={`${formatINR(d.demand.demand)} demand${d.demand.toPost ? ` · ${d.demand.toPost} waiting for recovery` : ''}`} right={<Button text="Open" subType="inline" onPress={() => router.push(`/staff/demand?cycle=${d.demand!.cycle}`)} />}>
+        <Section title={`Demand sheets · ${formatCycle(d.demand.cycle)}`} description={`${formatINR(d.demand.demand)} demand${d.demand.toPost ? ` · ${d.demand.toPost} waiting for recovery` : ''}`} right={<Link label="Open" onPress={() => router.push(`/staff/demand?cycle=${d.demand!.cycle}`)} />}>
           <Card>
-            <View style={{ gap: space[4] }}>
+            <View style={{ gap: spacing[2] }}>
               {d.demand.byStatus.map((s) => (
                 <View key={s.status} style={styles.between}>
                   {s.status === 'NOT_GENERATED' ? (
-                    <Text role="body" tone="secondary">
+                    <Text type="body" tone="secondary">
                       {DEMAND_LABEL[s.status]}
                     </Text>
                   ) : (
-                    <StatusTag entity="demandSheet" status={s.status} audience="staff" size="xs" />
+                    <StatusToken entity="demandSheet" status={s.status} audience="staff" size="xs" />
                   )}
-                  <Text role="amount" tone={s.count ? 'primary' : 'tertiary'}>
+                  <Text type="amount" tone={s.count ? 'primary' : 'secondary'}>
                     {s.count}
                   </Text>
                 </View>
@@ -294,13 +292,13 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
 
       <Section title={d.variant === 'CASHIER' ? 'Latest disbursements' : d.variant === 'SIGNER' ? 'Signed recently' : d.variant === 'DDO' ? 'From your department' : 'Latest applications'}>
         {d.recent.length === 0 ? (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             Nothing yet this month.
           </Text>
         ) : (
           <Card padded={false}>
             {d.recent.map((r, i) => (
-              <ListRow key={`${r.entity}-${r.id}`} divider={i > 0} title={r.title} tag={entityTag(r.entity, r.status)} subtitle={`${r.ref} · ${r.subtitle} · ${formatDisplayDate(r.at)}`} onPress={() => router.push(staffHref(r.link))} right={r.amount ? <Text role="label">{formatINR(r.amount)}</Text> : undefined} />
+              <ListRow key={`${r.entity}-${r.id}`} divider={i > 0} title={r.title} tag={entityTag(r.entity, r.status)} subtitle={`${r.ref} · ${r.subtitle} · ${formatDisplayDate(r.at)}`} onPress={() => router.push(staffHref(r.link))} right={r.amount ? <Text type="label">{formatINR(r.amount)}</Text> : undefined} />
             ))}
           </Card>
         )}
@@ -330,11 +328,11 @@ export default function StaffHome() {
     <Screen refreshing={summary.isRefetching || role.isRefetching} onRefresh={refresh}>
       <View style={styles.greeting}>
         <AppMark size={40} />
-        <View style={{ flex: 1, gap: space[1] }}>
-          <Text role="pageTitle">
+        <View style={{ flex: 1, gap: spacing[0.5] }}>
+          <Text type="h1">
             {session.user.name.split(' ')[0]}
           </Text>
-          <Text role="caption" tone="secondary">
+          <Text type="supporting" tone="secondary">
             {greeting} · {ROLE_LABELS[session.user.role]}
             {session.user.departmentId ? ' · your department only' : ''}
           </Text>
@@ -346,7 +344,7 @@ export default function StaffHome() {
           <Bell size={20} color={color.text.primary} strokeWidth={1.75} />
           {unread ? (
             <View style={styles.badge}>
-              <Text role="captionStrong" tone="onBrand" style={{ fontSize: 10, lineHeight: 14 }}>
+              <Text type="supporting" weight="medium" tone="onAccent" style={{ fontSize: 10, lineHeight: 14 }}>
                 {unread > 9 ? '9+' : unread}
               </Text>
             </View>
@@ -354,8 +352,8 @@ export default function StaffHome() {
         </Pressable>
       </View>
       {s ? (
-        <View style={{ gap: space[2] }}>
-          <Text role="caption" tone="tertiary">
+        <View style={{ gap: spacing[1] }}>
+          <Text type="supporting" tone="secondary">
             Data as of {formatDisplayDate(s.asOf)} · cycle {formatCycle(s.currentCycle)}
             {waiting > 0 && role.data?.variant === 'ADMIN' ? ` · ${waiting} waiting on you` : ''}
           </Text>
@@ -377,13 +375,14 @@ export default function StaffHome() {
 }
 
 const styles = StyleSheet.create({
-  greeting: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  hero: { flexDirection: 'row', alignItems: 'center', gap: space[4], padding: space[8], borderRadius: radius.card, backgroundColor: color.brand.solid },
+  greeting: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  // The screen's one gold moment: a hairline ring on the raised navy card.
+  hero: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], padding: spacing[4], backgroundColor: color.accent, borderColor: color.gold, boxShadow: shadow.med },
   heroFigure: { fontSize: 44, lineHeight: 50, fontVariant: ['tabular-nums'] },
-  bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.default },
-  badge: { position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: color.status.danger.solid, alignItems: 'center', justifyContent: 'center' },
-  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[4] },
-  listRow: { flexDirection: 'row', alignItems: 'center', gap: space[6], paddingHorizontal: space[8], paddingVertical: space[6] },
-  divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
-  stage: { gap: space[2], paddingHorizontal: space[8], paddingVertical: space[6] },
+  bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.background.surface, borderWidth: 1, borderColor: color.border },
+  badge: { position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: color.status.error.solid, alignItems: 'center', justifyContent: 'center' },
+  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[2] },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
+  divider: { borderTopWidth: 1, borderTopColor: color.border },
+  stage: { gap: spacing[1], paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
 });

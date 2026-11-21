@@ -6,8 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import { formatDisplayDateTime } from '@tgs/domain';
 import { ActionAlert, Loaded, TICKET_TAG, useAction } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Alert, Button, Header, Screen, Tag, Text, TextField } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Header, Screen, Token, Text, TextField } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 export default function Question() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,39 +23,39 @@ export default function Question() {
       <Loaded q={q} what="this question">
         {() =>
           !t ? (
-            <Alert type="neutral" heading="Not found" description="This question may have been removed." />
+            <Banner status="neutral" heading="Not found" description="This question may have been removed." />
           ) : (
             <>
-              <View style={{ gap: space[2] }}>
-                <Text role="sectionTitle">{t.subject}</Text>
-                <Text role="caption" tone="tertiary">
+              <View style={{ gap: spacing[1] }}>
+                <Text type="h3">{t.subject}</Text>
+                <Text type="supporting" tone="secondary">
                   {t.member.name} · General No. {t.member.generalNo} · {t.member.departmentName}
                 </Text>
-                <Tag text={TICKET_TAG[t.status].text} color={TICKET_TAG[t.status].color} size="xs" />
+                <Token text={TICKET_TAG[t.status].text} status={TICKET_TAG[t.status].color} size="xs" />
               </View>
-              <View style={{ gap: space[4] }}>
+              <View style={{ gap: spacing[2] }}>
                 {(t.messages ?? []).map((m, i) => (
                   <View key={i} style={[styles.bubble, m.from === 'MEMBER' ? styles.them : styles.us]}>
-                    <Text role="captionStrong" tone="secondary">
+                    <Text type="supporting" weight="medium" tone="secondary">
                       {m.from === 'MEMBER' ? t.member.name : m.byName}
                     </Text>
-                    <Text role="body">{m.text}</Text>
-                    <Text role="caption" tone="tertiary">
+                    <Text type="body">{m.text}</Text>
+                    <Text type="supporting" tone="secondary">
                       {formatDisplayDateTime(m.at)}
                     </Text>
                   </View>
                 ))}
               </View>
-              {sent ? <Alert type="success" heading={sent} description={sent === 'Reply sent' ? `${t.member.name} sees it in the app (Help & support).` : undefined} /> : null}
+              {sent ? <Banner status="success" heading={sent} description={sent === 'Reply sent' ? `${t.member.name} sees it in the app (Help & support).` : undefined} /> : null}
               <ActionAlert action={a} heading="Could not send" />
               {t.status !== 'CLOSED' ? (
-                <View style={{ gap: space[6] }}>
+                <View style={{ gap: spacing[3] }}>
                   <TextField label="Reply" placeholder="Write the answer the member will see in the app" value={text} onChangeText={setText} multiline numberOfLines={3} />
-                  <Button text="Send reply" size="lg" fullWidth loading={a.busy} disabled={!text.trim() || a.busy} onPress={() => reply(false)} />
-                  <Button text="Close question" buttonType="secondary" fullWidth disabled={a.busy} onPress={() => reply(true)} />
+                  <Button label="Send reply" size="lg" fullWidth loading={a.busy} disabled={!text.trim() || a.busy} onPress={() => reply(false)} />
+                  <Button label="Close question" variant="secondary" fullWidth disabled={a.busy} onPress={() => reply(true)} />
                 </View>
               ) : (
-                <Text role="caption" tone="tertiary">
+                <Text type="supporting" tone="secondary">
                   This question is closed.
                 </Text>
               )}
@@ -68,7 +68,7 @@ export default function Question() {
 }
 
 const styles = StyleSheet.create({
-  bubble: { maxWidth: '88%', gap: space[1], padding: space[6], borderRadius: radius.card },
-  them: { alignSelf: 'flex-start', backgroundColor: color.bg.surfaceSunken },
-  us: { alignSelf: 'flex-end', backgroundColor: color.brand.subtle },
+  bubble: { maxWidth: '88%', gap: spacing[0.5], padding: spacing[3], borderRadius: radius.container },
+  them: { alignSelf: 'flex-start', backgroundColor: color.background.muted },
+  us: { alignSelf: 'flex-end', backgroundColor: color.accentMuted },
 });

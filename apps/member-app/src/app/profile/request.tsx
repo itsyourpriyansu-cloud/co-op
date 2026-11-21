@@ -10,8 +10,8 @@ import type { ProfileField } from '@tgs/types';
 import { api } from '@/lib/api';
 import { pickDocumentImage } from '@/lib/files';
 import { useMyProfile, useRequestChange } from '@/lib/profile';
-import { Alert, Button, Card, Checkbox, DateField, Header, Screen, Section, SelectField, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, CheckboxInput, DateField, Header, Screen, Section, SelectField, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 const GROUPS: Array<{ title: string; fields: ProfileField[] }> = [
   { title: 'Personal', fields: ['name', 'fatherName', 'dob'] },
@@ -59,12 +59,12 @@ export default function RequestChange() {
   if (send.isSuccess) {
     return (
       <Screen header={<Header title="Request a change" onBack={() => router.back()} />}>
-        <Alert
-          type="success"
+        <Banner
+          status="success"
           heading="Request sent"
           description={send.data.route === 'DDO_THEN_OFFICE' ? 'Your department (DDO) confirms the employment / pay details first, then the society office updates your profile.' : 'The society office will review it. You can follow it on your profile.'}
         />
-        <Button text="Back to my profile" fullWidth onPress={() => router.back()} />
+        <Button label="Back to my profile" fullWidth onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -74,8 +74,8 @@ export default function RequestChange() {
       header={<Header title="Request a change" onBack={() => router.back()} />}
       footer={
         <Button
-          text="Send request"
-          leftSlot={Send}
+          label="Send request"
+          icon={Send}
           size="lg"
           fullWidth
           disabled={!picked.length}
@@ -84,21 +84,21 @@ export default function RequestChange() {
         />
       }
     >
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         Choose what is wrong in your records and give the correct value. The society checks it before your profile changes.
       </Text>
-      {errors.fields ? <Alert type="error" heading={errors.fields} /> : null}
+      {errors.fields ? <Banner status="error" heading={errors.fields} /> : null}
       {GROUPS.map((g) => (
         <Section key={g.title} title={g.title}>
           <Card>
-            <View style={{ gap: space[4] }}>
+            <View style={{ gap: spacing[2] }}>
               {g.fields.map((f) => {
                 const pending = p?.pendingFields.includes(f);
                 const on = picked.includes(f);
                 const meta = PROFILE_FIELDS[f];
                 return (
-                  <View key={f} style={{ gap: space[4] }}>
-                    <Checkbox checked={on} onChange={() => !pending && toggle(f)} label={meta.label} description={pending ? 'A request is already pending' : `Now: ${current(f) || '—'}`} />
+                  <View key={f} style={{ gap: spacing[2] }}>
+                    <CheckboxInput checked={on} onChange={() => !pending && toggle(f)} label={meta.label} description={pending ? 'A request is already pending' : `Now: ${current(f) || '—'}`} />
                     {on ? (
                       meta.kind === 'date' ? (
                         <DateField label={`Correct ${meta.label.toLowerCase()}`} value={values[f]} onChange={(v) => setValues((x) => ({ ...x, [f]: v ?? '' }))} error={errors[`fields.${f}`]} />
@@ -125,11 +125,11 @@ export default function RequestChange() {
       {picked.length ? (
         <Section title="Why and proof">
           <Card>
-            <View style={{ gap: space[8] }}>
+            <View style={{ gap: spacing[4] }}>
               <TextField label="Reason" value={reason} onChangeText={setReason} placeholder="e.g. Promoted from 01 Oct 2026" error={errors.reason} required multiline />
-              <Button text={doc ? `Attached: ${doc.name} (tap to replace)` : 'Attach a photo of the proof (order, ID, certificate)'} buttonType="secondary" leftSlot={Paperclip} fullWidth loading={attaching} onPress={() => void attach()} />
-              {attachError ? <Alert type="error" heading="Not attached" description={attachError} /> : null}
-              {route === 'DDO_THEN_OFFICE' ? <Alert type="primary" heading="Your DDO confirms this first" description="Employment and pay details are checked by your department before the office updates them." /> : <Alert type="neutral" heading="The society office reviews this" />}
+              <Button label={doc ? `Attached: ${doc.name} (tap to replace)` : 'Attach a photo of the proof (order, ID, certificate)'} variant="secondary" icon={Paperclip} fullWidth loading={attaching} onPress={() => void attach()} />
+              {attachError ? <Banner status="error" heading="Not attached" description={attachError} /> : null}
+              {route === 'DDO_THEN_OFFICE' ? <Banner status="info" heading="Your DDO confirms this first" description="Employment and pay details are checked by your department before the office updates them." /> : <Banner status="neutral" heading="The society office reviews this" />}
             </View>
           </Card>
         </Section>

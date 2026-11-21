@@ -9,8 +9,8 @@ import { ActionAlert, ask, Loaded, MoneyField, useAction, StaffDocument } from '
 import { api } from '@/lib/api';
 import { settlementHtml } from '@/lib/staffDocuments';
 import { documentFileName } from '@/lib/documents';
-import { Alert, Button, Card, DateField, Divider, Header, KeyValue, Screen, Section, Segmented, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, DateField, Divider, Header, MetadataListItem, Screen, Section, SegmentedControl, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 type ExitStatus = 'RETIRED' | 'RESIGNED' | 'DECEASED';
 const EXIT_LABEL: Record<ExitStatus, string> = { RETIRED: 'Retired', RESIGNED: 'Resigned', DECEASED: 'Deceased' };
@@ -20,14 +20,14 @@ function Lines({ title, lines, total }: { title: string; lines: SettlementLine[]
     <Section title={title}>
       <Card>
         {lines.length ? (
-          lines.map((l) => <KeyValue key={l.key} label={l.label} value={formatINR(l.amount)} />)
+          lines.map((l) => <MetadataListItem key={l.key} label={l.label} value={formatINR(l.amount)} />)
         ) : (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             Nil
           </Text>
         )}
         <Divider />
-        <KeyValue label="Total" value={formatINR(total)} emphasis />
+        <MetadataListItem label="Total" value={formatINR(total)} emphasis />
       </Card>
     </Section>
   );
@@ -44,12 +44,12 @@ function ExitForm({ memberId }: { memberId: string }) {
   };
   return (
     <Section title="Member leaves" description="Demand stops and the final settlement opens. This cannot be undone here.">
-      <View style={{ gap: space[8] }}>
-        <Segmented label="Reason" value={status} options={(['RETIRED', 'RESIGNED', 'DECEASED'] as const).map((s) => ({ value: s, label: EXIT_LABEL[s] }))} onChange={(v) => setStatus(v as ExitStatus)} error={a.fields.status} />
+      <View style={{ gap: spacing[4] }}>
+        <SegmentedControl label="Reason" value={status} options={(['RETIRED', 'RESIGNED', 'DECEASED'] as const).map((s) => ({ value: s, label: EXIT_LABEL[s] }))} onChange={(v) => setStatus(v as ExitStatus)} error={a.fields.status} />
         <DateField label="Date" required value={date} onChange={setDate} error={a.fields.date} />
         <TextField label="Remarks" value={remarks} onChangeText={setRemarks} hint="e.g. retirement order or death certificate number" error={a.fields.remarks} />
         <ActionAlert action={a} heading="Not saved" />
-        <Button text="Mark as left" size="lg" fullWidth disabled={!status || !date || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void save()} />
+        <Button label="Mark as left" size="lg" fullWidth disabled={!status || !date || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void save()} />
       </View>
     </Section>
   );
@@ -70,8 +70,8 @@ function PostForm({ view }: { view: SettlementView }) {
   };
   return (
     <Section title="Post the settlement" description="Once the money has moved: one ledger entry closes the loans, deposits and shares.">
-      <View style={{ gap: space[8] }}>
-        <Segmented
+      <View style={{ gap: spacing[4] }}>
+        <SegmentedControl
           label="How the money moves"
           value={offset ? 'NET' : 'GROSS'}
           options={[{ value: 'NET', label: 'Offset (net only)' }, { value: 'GROSS', label: 'Both in full' }]}
@@ -80,15 +80,15 @@ function PostForm({ view }: { view: SettlementView }) {
             setReceived(v === 'NET' ? Math.max(0, -st.net) : st.totalOwed);
           }}
         />
-        {!deceased ? <Segmented label="Pay to" value={payTo} options={[{ value: 'MEMBER', label: 'Member' }, { value: 'NOMINEE', label: 'Nominee' }]} onChange={(v) => setPayTo(v as 'MEMBER' | 'NOMINEE')} /> : null}
+        {!deceased ? <SegmentedControl label="Pay to" value={payTo} options={[{ value: 'MEMBER', label: 'Member' }, { value: 'NOMINEE', label: 'Nominee' }]} onChange={(v) => setPayTo(v as 'MEMBER' | 'NOMINEE')} /> : null}
         <MoneyField label="Received from the pay office (gratuity)" value={received} onChange={setReceived} error={a.fields.received} hint={required ? `${formatINR(required)} expected` : 'Nothing to receive'} />
         <Card>
-          <KeyValue label="To pay" value={formatINR(paid)} emphasis />
-          <KeyValue label="Paid to" value={payTo === 'NOMINEE' ? `Nominee, ${view.member.nominee?.name ?? ''}` : view.member.name} />
+          <MetadataListItem label="To pay" value={formatINR(paid)} emphasis />
+          <MetadataListItem label="Paid to" value={payTo === 'NOMINEE' ? `Nominee, ${view.member.nominee?.name ?? ''}` : view.member.name} />
         </Card>
         <TextField label="Cheque / transfer reference" required value={reference} onChangeText={setReference} error={a.fields.reference} />
         <ActionAlert action={a} heading="Not posted" check={{ text: 'Check the member', href: `/staff/member/${view.member.id}` }} />
-        <Button text="Post the settlement" size="lg" fullWidth disabled={a.busy || a.unconfirmed} loading={a.busy} onPress={() => void post()} />
+        <Button label="Post the settlement" size="lg" fullWidth disabled={a.busy || a.unconfirmed} loading={a.busy} onPress={() => void post()} />
       </View>
     </Section>
   );
@@ -108,15 +108,15 @@ export default function Settlement() {
             return v.canExit ? (
               <ExitForm memberId={id} />
             ) : (
-              <Text role="body" tone="secondary">
+              <Text type="body" tone="secondary">
                 {v.member.name} has not left the society.
               </Text>
             );
           return (
             <>
               <Card>
-                <Text role="cardTitle">{v.member.name}</Text>
-                <Text role="caption" tone="secondary">
+                <Text type="h4">{v.member.name}</Text>
+                <Text type="supporting" tone="secondary">
                   General No. {v.member.generalNo} · {EXIT_LABEL[s.exit.status as ExitStatus]} on {formatDisplayDate(s.exit.date)}
                 </Text>
               </Card>
@@ -124,11 +124,11 @@ export default function Settlement() {
                 <>
                   <Lines title="Due to the society" lines={st.owes} total={st.totalOwed} />
                   <Lines title="Held by the society for the member" lines={st.holds} total={st.totalHeld} />
-                  <Alert type={st.net < 0 ? 'warning' : st.net > 0 ? 'primary' : 'success'} heading={st.net < 0 ? `Recover ${formatINR(-st.net)} from the gratuity` : st.net > 0 ? `Pay ${formatINR(st.net)} to ${deceased ? `the nominee, ${v.member.nominee?.name ?? ''}` : 'the member'}` : 'Settled in full'} description={st.net < 0 ? 'As agreed in the salary recovery agreement, the pay office remits it to the society.' : st.net > 0 ? 'Nothing is due to the society.' : 'Nothing is due either way.'} />
+                  <Banner status={st.net < 0 ? 'warning' : st.net > 0 ? 'info' : 'success'} heading={st.net < 0 ? `Recover ${formatINR(-st.net)} from the gratuity` : st.net > 0 ? `Pay ${formatINR(st.net)} to ${deceased ? `the nominee, ${v.member.nominee?.name ?? ''}` : 'the member'}` : 'Settled in full'} description={st.net < 0 ? 'As agreed in the salary recovery agreement, the pay office remits it to the society.' : st.net > 0 ? 'Nothing is due to the society.' : 'Nothing is due either way.'} />
                   <StaffDocument title="Settlement letter" fileName={documentFileName('Settlement', v.member.generalNo)} build={(o) => settlementHtml(v, o)} />
                 </>
               ) : null}
-              {s.posted ? <Alert type="success" heading="Posted" description={`${formatDisplayDateTime(s.posted.at)} by ${s.posted.byName}: received ${formatINR(s.posted.received)}, paid ${formatINR(s.posted.paid)} to ${s.posted.payeeName}, ref ${s.posted.reference}${s.posted.journalNo ? `, ${s.posted.journalNo}` : ''}.`} /> : null}
+              {s.posted ? <Banner status="success" heading="Posted" description={`${formatDisplayDateTime(s.posted.at)} by ${s.posted.byName}: received ${formatINR(s.posted.received)}, paid ${formatINR(s.posted.paid)} to ${s.posted.payeeName}, ref ${s.posted.reference}${s.posted.journalNo ? `, ${s.posted.journalNo}` : ''}.`} /> : null}
               {s.status === 'OPEN' && v.canPost && st ? <PostForm view={v} /> : null}
             </>
           );

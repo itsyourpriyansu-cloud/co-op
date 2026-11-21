@@ -9,8 +9,8 @@ import type { DemandSheetDetail } from '@tgs/types';
 import { ActionAlert, ask, Loaded, useAction, FilterBar } from '@/components/staff';
 import { api } from '@/lib/api';
 import { ENTRY_LABEL, LINE_FILTERS } from '@/lib/staffCollections';
-import { Alert, Button, Card, Divider, Header, KeyValue, Screen, Section, SelectField, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, Divider, Header, MetadataListItem, Screen, Section, SelectField, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function Recovery() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -91,29 +91,29 @@ function Entry({ d }: { d: DemandSheetDetail }) {
     <Screen
       header={<Header title={title} onBack={() => router.back()} />}
       footer={
-        <View style={{ gap: space[3] }}>
-          <Text role="captionStrong">
+        <View style={{ gap: spacing[1.5] }}>
+          <Text type="supporting" weight="medium">
             Demand {formatINR(totals.demand)} · deducted {formatINR(totals.recovered)}
           </Text>
-          <Text role="caption" tone={totals.invalid ? 'danger' : 'secondary'}>
+          <Text type="supporting" tone={totals.invalid ? 'error' : 'secondary'}>
             {totals.invalid ? `${totals.invalid} member${totals.invalid === 1 ? '' : 's'} above the limit` : `Unpaid ${formatINR(unpaid)} · ${totals.shortMembers} short`}
           </Text>
           {rejecting ? (
-            <Button text="Send back" size="lg" fullWidth buttonType="danger" loading={a.busy} disabled={reason.trim().length < 10 || a.busy} onPress={() => void sendBack()} />
+            <Button label="Send back" size="lg" fullWidth variant="destructive" loading={a.busy} disabled={reason.trim().length < 10 || a.busy} onPress={() => void sendBack()} />
           ) : (
             <>
-              {isDdo ? <Button text="Submit to the Accountant" size="lg" fullWidth loading={a.busy} disabled={invalid} onPress={() => void submit()} /> : null}
-              {canPost ? <Button text="Approve and post" size="lg" fullWidth loading={a.busy} disabled={invalid} onPress={() => void post()} /> : null}
+              {isDdo ? <Button label="Submit to the Accountant" size="lg" fullWidth loading={a.busy} disabled={invalid} onPress={() => void submit()} /> : null}
+              {canPost ? <Button label="Approve and post" size="lg" fullWidth loading={a.busy} disabled={invalid} onPress={() => void post()} /> : null}
             </>
           )}
         </View>
       }
     >
-      <Text role="caption" tone="secondary">
+      <Text type="supporting" tone="secondary">
         {d.department?.name} · {formatCycle(d.sheet.cycle)}. A deduction can never be more than the demand or the salary available.
       </Text>
-      {entry ? <Alert type={entry.status === 'REJECTED' ? 'warning' : 'primary'} heading={`Deductions ${ENTRY_LABEL[entry.status]}${entry.source === 'PHYSICAL_SHEET' ? ' (paper sheet)' : ' (entered online by the DDO)'}`} description={entry.status === 'REJECTED' ? `${entry.rejection?.byName}: ${entry.rejection?.remarks ?? ''}` : entry.submitted ? `Submitted by ${entry.submitted.byName}.` : entry.savedBy ? `Last saved by ${entry.savedBy.byName}.` : ''} /> : null}
-      {!editable ? <Alert type="warning" heading="Nothing to enter now" description={d.sheet.status === 'RECOVERY_POSTED' ? 'Recovery is already posted.' : d.sheet.status !== 'SENT_TO_DDO' ? 'The Accountant certifies and sends the sheet to the DDO first.' : 'The deductions are with the Accountant for review.'} /> : null}
+      {entry ? <Banner status={entry.status === 'REJECTED' ? 'warning' : 'info'} heading={`Deductions ${ENTRY_LABEL[entry.status]}${entry.source === 'PHYSICAL_SHEET' ? ' (paper sheet)' : ' (entered online by the DDO)'}`} description={entry.status === 'REJECTED' ? `${entry.rejection?.byName}: ${entry.rejection?.remarks ?? ''}` : entry.submitted ? `Submitted by ${entry.submitted.byName}.` : entry.savedBy ? `Last saved by ${entry.savedBy.byName}.` : ''} /> : null}
+      {!editable ? <Banner status="warning" heading="Nothing to enter now" description={d.sheet.status === 'RECOVERY_POSTED' ? 'Recovery is already posted.' : d.sheet.status !== 'SENT_TO_DDO' ? 'The Accountant certifies and sends the sheet to the DDO first.' : 'The deductions are with the Accountant for review.'} /> : null}
 
       <FilterBar>
         <SelectField compact label="Show" value={filter} options={LINE_FILTERS} onChange={(v) => (setFilter(v), setIndex(0))} />
@@ -122,40 +122,40 @@ function Entry({ d }: { d: DemandSheetDetail }) {
 
       {sel ? (
         <>
-          <Text role="captionStrong" tone="secondary">
+          <Text type="supporting" weight="medium" tone="secondary">
             {sel.name} · {at + 1} of {visible.length}
           </Text>
           <Card>
-            <Text role="caption" tone="tertiary">
+            <Text type="supporting" tone="secondary">
               No. {sel.generalNo}
               {sel.enteredByName ? ` · ${sel.entrySource === 'PHYSICAL_SHEET' ? 'paper' : 'online'}, ${sel.enteredByName}` : ''}
             </Text>
             {sel.note ? (
-              <Text role="caption" tone="warning">
+              <Text type="supporting" tone="warning">
                 {sel.note}
               </Text>
             ) : null}
-            <KeyValue label="Demand" value={formatINR(sel.totalDemand)} emphasis />
-            <KeyValue label="Earlier dues" value={sel.previousOutstanding ? formatINR(sel.previousOutstanding) : '—'} />
-            <KeyValue label="Salary available" value={sel.availableSalary !== undefined ? formatINR(sel.availableSalary) : 'Pay not certified'} />
-            {sel.salaryLeft !== undefined ? <KeyValue label="Salary left" value={formatINR(Math.max(0, sel.salaryLeft))} /> : null}
-            <KeyValue label="Unpaid" value={sel.unpaid ? formatINR(sel.unpaid) : 'None'} />
+            <MetadataListItem label="Demand" value={formatINR(sel.totalDemand)} emphasis />
+            <MetadataListItem label="Earlier dues" value={sel.previousOutstanding ? formatINR(sel.previousOutstanding) : '—'} />
+            <MetadataListItem label="Salary available" value={sel.availableSalary !== undefined ? formatINR(sel.availableSalary) : 'Pay not certified'} />
+            {sel.salaryLeft !== undefined ? <MetadataListItem label="Salary left" value={formatINR(Math.max(0, sel.salaryLeft))} /> : null}
+            <MetadataListItem label="Unpaid" value={sel.unpaid ? formatINR(sel.unpaid) : 'None'} />
           </Card>
           <TextField key={sel.memberId} label="Deducted" prefix="₹" keyboardType="decimal-pad" editable={editable} accessibilityLabel={`Deducted from ${sel.name}`} value={entered[sel.memberId] ?? ''} onChangeText={(t) => setEntered((s) => ({ ...s, [sel.memberId]: t.replace(/[^0-9.]/g, '') }))} error={err} />
-          <View style={{ flexDirection: 'row', gap: space[4] }}>
-            <Button text="Previous" buttonType="secondary" style={{ flex: 1 }} disabled={at === 0} onPress={() => setIndex(at - 1)} />
-            <Button text="Next member" buttonType="secondary" style={{ flex: 1 }} disabled={at >= visible.length - 1} onPress={() => setIndex(at + 1)} />
+          <View style={{ flexDirection: 'row', gap: spacing[2] }}>
+            <Button label="Previous" variant="secondary" style={{ flex: 1 }} disabled={at === 0} onPress={() => setIndex(at - 1)} />
+            <Button label="Next member" variant="secondary" style={{ flex: 1 }} disabled={at >= visible.length - 1} onPress={() => setIndex(at + 1)} />
           </View>
           <Section title={`How ${formatINR(Math.min(sel.amount, sel.totalDemand))} is applied`}>
             <Card>
               {(preview?.components ?? []).map((c, i) => {
                 const comp = sel.components[i]!;
-                return <KeyValue key={i} label={`${i + 1}. ${comp.label}${comp.loanNo ? ` · ${comp.loanNo}` : ''}`} value={`${formatINR(c.allocated)} / ${formatINR(c.amount)}`} />;
+                return <MetadataListItem key={i} label={`${i + 1}. ${comp.label}${comp.loanNo ? ` · ${comp.loanNo}` : ''}`} value={`${formatINR(c.allocated)} / ${formatINR(c.amount)}`} />;
               })}
               {sel.unpaid > 0 ? (
                 <>
                   <Divider />
-                  <Text role="caption" tone="danger">
+                  <Text type="supporting" tone="error">
                     Unpaid {formatINR(sel.unpaid)} stays as the member's dues. It is not added to next month's sheet.
                   </Text>
                 </>
@@ -164,16 +164,16 @@ function Entry({ d }: { d: DemandSheetDetail }) {
           </Section>
         </>
       ) : (
-        <Text role="body" tone="secondary">
+        <Text type="body" tone="secondary">
           No member matches this filter.
         </Text>
       )}
 
       {editable ? (
-        <View style={{ gap: space[3] }}>
-          <Button text="Mark all fully recovered" buttonType="secondary" fullWidth onPress={() => setEntered(Object.fromEntries(d.lines.map((l) => [l.memberId, String(l.totalDemand / 100)])))} />
-          {can('saveEntry') ? <Button text="Save draft" buttonType="secondary" fullWidth loading={a.busy} disabled={invalid} onPress={save} /> : null}
-          {can('rejectEntry') ? <Button text={rejecting ? 'Keep the deductions' : 'Send back to the DDO'} buttonType="secondary" fullWidth onPress={() => setRejecting((r) => !r)} /> : null}
+        <View style={{ gap: spacing[1.5] }}>
+          <Button label="Mark all fully recovered" variant="secondary" fullWidth onPress={() => setEntered(Object.fromEntries(d.lines.map((l) => [l.memberId, String(l.totalDemand / 100)])))} />
+          {can('saveEntry') ? <Button label="Save draft" variant="secondary" fullWidth loading={a.busy} disabled={invalid} onPress={save} /> : null}
+          {can('rejectEntry') ? <Button label={rejecting ? 'Keep the deductions' : 'Send back to the DDO'} variant="secondary" fullWidth onPress={() => setRejecting((r) => !r)} /> : null}
         </View>
       ) : null}
       {rejecting ? <TextField label="What to correct" required value={reason} onChangeText={setReason} multiline numberOfLines={3} placeholder="e.g. Check the deduction for No. 1103 against the pay bill" hint="At least 10 characters." error={a.fields.reason} /> : null}

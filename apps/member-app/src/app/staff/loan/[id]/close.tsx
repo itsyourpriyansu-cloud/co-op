@@ -9,8 +9,8 @@ import { amountInWords, formatDisplayDate, formatINR } from '@tgs/domain';
 import type { LoanClosureInput, LoanClosureQuote, ReceiptDetail } from '@tgs/types';
 import { ActionAlert, ask, CashStatus, countsTotal, DenominationCounter, Loaded, useAction, type Counts } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Button, Card, Header, KeyValue, Screen, Section, Segmented, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Button, Card, Header, MetadataListItem, Screen, Section, SegmentedControl, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function CloseLoan() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,53 +48,53 @@ function Body({ p }: { p: LoanClosureQuote }) {
       {...(p.canClose
         ? {
             footer: (
-              <View style={{ gap: space[3] }}>
+              <View style={{ gap: spacing[1.5] }}>
                 {mode === 'CASH' ? <CashStatus amount={notes} counts={counts} /> : null}
-                <Button text={`Save receipt · ${formatINR(p.total)}`} size="lg" fullWidth disabled={!ready || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void save()} />
+                <Button label={`Save receipt · ${formatINR(p.total)}`} size="lg" fullWidth disabled={!ready || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void save()} />
               </View>
             ),
           }
         : {})}
     >
-      <View style={{ gap: space[2] }}>
-        <Text role="pageTitle">{p.loanNo}</Text>
-        <Text role="caption" tone="secondary">
+      <View style={{ gap: spacing[1] }}>
+        <Text type="h1">{p.loanNo}</Text>
+        <Text type="supporting" tone="secondary">
           {p.memberName} · No. {p.generalNo}
         </Text>
       </View>
       <Section title="To close today" description={`As of ${formatDisplayDate(p.asOf)}`}>
         <Card>
-          <KeyValue label="Principal outstanding" value={formatINR(p.principal)} />
-          <KeyValue label={`Interest from ${formatDisplayDate(p.interestFrom)} · ${p.ratePercent}% a year`} value={formatINR(p.interest)} />
-          <KeyValue label="Total" value={formatINR(p.total)} emphasis />
-          <Text role="caption" tone="tertiary">
+          <MetadataListItem label="Principal outstanding" value={formatINR(p.principal)} />
+          <MetadataListItem label={`Interest from ${formatDisplayDate(p.interestFrom)} · ${p.ratePercent}% a year`} value={formatINR(p.interest)} />
+          <MetadataListItem label="Total" value={formatINR(p.total)} emphasis />
+          <Text type="supporting" tone="secondary">
             {amountInWords(p.total)}
           </Text>
         </Card>
       </Section>
       {p.blockers.map((b) => (
-        <Text key={b} role="body" tone="warning">
+        <Text key={b} type="body" tone="warning">
           {b}
         </Text>
       ))}
       {p.canClose ? (
         <>
           {p.draftCycles.length ? (
-            <Text role="caption" tone="tertiary">
+            <Text type="supporting" tone="secondary">
               The instalment comes off the draft demand for {p.draftCycles.join(', ')}.
             </Text>
           ) : null}
-          <Segmented label="Received as" value={mode} options={[{ value: 'CASH', label: 'Cash' }, { value: 'BANK_TRANSFER', label: 'Bank' }]} onChange={(v) => setMode(v as LoanClosureInput['mode'])} error={a.fields.mode} />
+          <SegmentedControl label="Received as" value={mode} options={[{ value: 'CASH', label: 'Cash' }, { value: 'BANK_TRANSFER', label: 'Bank' }]} onChange={(v) => setMode(v as LoanClosureInput['mode'])} error={a.fields.mode} />
           {mode === 'CASH' ? (
             <>
               <DenominationCounter amount={notes} counts={counts} onChange={setCounts} />
               {coins ? (
-                <Text role="caption" tone="secondary">
+                <Text type="supporting" tone="secondary">
                   Plus {formatINR(coins)} in coins, which notes cannot make.
                 </Text>
               ) : null}
               {a.fields.denominations ? (
-                <Text role="caption" tone="danger">
+                <Text type="supporting" tone="error">
                   {a.fields.denominations}
                 </Text>
               ) : null}

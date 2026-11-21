@@ -7,8 +7,8 @@ import { File, Paths } from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Download, Printer } from 'lucide-react-native';
-import { Alert, Button } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button } from '@/ui';
+import { spacing } from '@/theme';
 
 /** Web (used only for testing): open the document on its own and print that, not the whole app. The tab opens before the HTML is ready, so the browser counts it as the tap's pop-up. */
 async function printOnWeb(html: string | Promise<string>) {
@@ -51,12 +51,12 @@ export function DocumentActions({ html, fileName, title }: { html: () => string 
   const print = () => run('print', async () => (Platform.OS === 'web' ? printOnWeb(html()) : Print.printAsync({ html: await html() })));
 
   return (
-    <View style={{ gap: space[3] }}>
-      <View style={{ flexDirection: 'row', gap: space[4] }}>
-        <Button text="Download PDF" buttonType="secondary" leftSlot={Download} loading={busy === 'download'} disabled={Boolean(busy)} onPress={() => void download()} style={{ flex: 1 }} accessibilityLabel={`Download PDF of ${title}`} />
-        <Button text="Print" buttonType="secondary" leftSlot={Printer} loading={busy === 'print'} disabled={Boolean(busy)} onPress={() => void print()} style={{ flex: 1 }} accessibilityLabel={`Print ${title}`} />
+    <View style={{ gap: spacing[1.5] }}>
+      <View style={{ flexDirection: 'row', gap: spacing[2] }}>
+        <Button label="Download PDF" variant="secondary" icon={Download} loading={busy === 'download'} disabled={Boolean(busy)} onPress={() => void download()} style={{ flex: 1 }} accessibilityLabel={`Download PDF of ${title}`} />
+        <Button label="Print" variant="secondary" icon={Printer} loading={busy === 'print'} disabled={Boolean(busy)} onPress={() => void print()} style={{ flex: 1 }} accessibilityLabel={`Print ${title}`} />
       </View>
-      {error ? <Alert type="error" heading="Couldn't make the document" description={error} /> : null}
+      {error ? <Banner status="error" heading="Couldn't make the document" description={error} /> : null}
     </View>
   );
 }

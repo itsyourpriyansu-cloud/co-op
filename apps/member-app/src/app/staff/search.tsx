@@ -9,7 +9,7 @@ import { isSearchable } from '@tgs/domain';
 import { Loaded, Row, staffHref, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { Card, EmptyState, Header, Screen, Section, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { spacing } from '@/theme';
 
 const KIND: Record<SearchHit['kind'], string> = { member: 'Members', loan: 'Loans', deposit: 'Deposits', application: 'Joining', receipt: 'Receipts' };
 
@@ -21,14 +21,14 @@ export default function Search() {
     <Screen header={<Header title="Search" onBack={() => router.back()} />}>
       <TextField compact label="Search" value={text} onChangeText={setText} placeholder="Members, loans, FDs, receipts" autoFocus autoCorrect={false} />
       {!isSearchable(dq) ? (
-        <Text role="caption" tone="tertiary">
+        <Text type="supporting" tone="secondary">
           Type a General No., or at least two letters of a name, Employee ID, loan or FDR number.
         </Text>
       ) : (
         <Loaded q={q} what="search results" height={68}>
           {(hits) =>
             hits.length ? (
-              <View style={{ gap: space[8] }}>
+              <View style={{ gap: spacing[4] }}>
                 {(Object.keys(KIND) as SearchHit['kind'][])
                   .filter((k) => hits.some((h) => h.kind === k))
                   .map((k) => (

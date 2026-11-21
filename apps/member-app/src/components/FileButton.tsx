@@ -6,8 +6,8 @@ import type { FileContent } from '@tgs/types';
 import { isApiError } from '@tgs/api-client';
 import { consoleUrl } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Alert, Button } from '@/ui';
-import { color, space } from '@/theme';
+import { Banner, Button } from '@/ui';
+import { color, spacing } from '@/theme';
 
 export function FileButton({ fileId, mime, consolePath }: { fileId: string; mime?: string; consolePath: string }) {
   const [busy, setBusy] = useState(false);
@@ -29,13 +29,13 @@ export function FileButton({ fileId, mime, consolePath }: { fileId: string; mime
     }
   };
   return (
-    <View style={{ gap: space[2] }}>
-      <Button text={image ? 'View' : 'Open PDF'} buttonType="secondary" size="sm" loading={busy} onPress={() => void view()} />
-      {error ? <Alert type="error" heading="Not opened" description={error} /> : null}
+    <View style={{ gap: spacing[1] }}>
+      <Button label={image ? 'View' : 'Open PDF'} variant="secondary" size="sm" loading={busy} onPress={() => void view()} />
+      {error ? <Banner status="error" heading="Not opened" description={error} /> : null}
       <Modal visible={Boolean(open)} animationType="fade" onRequestClose={() => setOpen(undefined)}>
-        <View style={{ flex: 1, backgroundColor: color.bg.inverse, padding: space[6], gap: space[4] }}>
+        <View style={{ flex: 1, backgroundColor: color.background.inverted, padding: spacing[3], gap: spacing[2] }}>
           {open && <Image source={{ uri: open.dataUrl }} accessibilityLabel={open.fileName} resizeMode="contain" style={{ flex: 1 }} />}
-          <Button text="Close" buttonType="secondary" fullWidth onPress={() => setOpen(undefined)} />
+          <Button label="Close" variant="secondary" fullWidth onPress={() => setOpen(undefined)} />
         </View>
       </Modal>
     </View>

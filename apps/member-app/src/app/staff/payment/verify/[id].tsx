@@ -8,8 +8,8 @@ import type { PaymentReportRow, ReceiptDetail } from '@tgs/types';
 import { ActionAlert, ask, DoneAlert, Loaded, useAction } from '@/components/staff';
 import { api } from '@/lib/api';
 import { REPORT_MODE_LABEL } from '@/lib/staffCollections';
-import { Alert, Button, Card, Checkbox, Header, KeyValue, Screen, Section, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, CheckboxInput, Header, MetadataListItem, Screen, Section, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function VerifyPayment() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,7 +22,7 @@ export default function VerifyPayment() {
           <Verify r={r} />
         ) : (
           <Screen header={<Header title="Verify payment" onBack={() => router.back()} />}>
-            <Alert type="neutral" heading="Not found" description="This report may have been handled already." />
+            <Banner status="neutral" heading="Not found" description="This report may have been handled already." />
           </Screen>
         );
       }}
@@ -56,7 +56,7 @@ function Verify({ r }: { r: PaymentReportRow }) {
 
   if (done)
     return (
-      <Screen header={<Header title="Verify payment" />} footer={<Button text="Done" size="lg" fullWidth onPress={() => router.back()} />}>
+      <Screen header={<Header title="Verify payment" />} footer={<Button label="Done" size="lg" fullWidth onPress={() => router.back()} />}>
         <DoneAlert heading={done} description={`${r.memberName} · ${formatINR(r.amount)}`} />
       </Screen>
     );
@@ -65,54 +65,54 @@ function Verify({ r }: { r: PaymentReportRow }) {
     <Screen
       header={<Header title="Verify payment" onBack={() => router.back()} />}
       footer={
-        <View style={{ gap: space[3] }}>
+        <View style={{ gap: spacing[1.5] }}>
           {rejecting ? (
             <>
-              <Button text="Reject payment" size="lg" fullWidth buttonType="danger" loading={a.busy} disabled={reason.trim().length < 10 || a.busy || a.unconfirmed} onPress={reject} />
-              <Button text="Back" buttonType="secondary" fullWidth disabled={a.busy} onPress={() => setRejecting(false)} />
+              <Button label="Reject payment" size="lg" fullWidth variant="destructive" loading={a.busy} disabled={reason.trim().length < 10 || a.busy || a.unconfirmed} onPress={reject} />
+              <Button label="Back" variant="secondary" fullWidth disabled={a.busy} onPress={() => setRejecting(false)} />
             </>
           ) : (
             <>
-              <Button text="Verify & create receipt" size="lg" fullWidth loading={a.busy} disabled={!matched || a.busy || a.unconfirmed} onPress={() => void verify()} />
-              <Button text="Reject" buttonType="secondary" fullWidth disabled={a.busy} onPress={() => setRejecting(true)} />
+              <Button label="Verify & create receipt" size="lg" fullWidth loading={a.busy} disabled={!matched || a.busy || a.unconfirmed} onPress={() => void verify()} />
+              <Button label="Reject" variant="secondary" fullWidth disabled={a.busy} onPress={() => setRejecting(true)} />
             </>
           )}
         </View>
       }
     >
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         Find the credit in the bank statement, then verify to create the receipt, or reject with a reason the member sees.
       </Text>
       <Card>
-        <Text role="label">{r.memberName}</Text>
-        <Text role="caption" tone="secondary">
+        <Text type="label">{r.memberName}</Text>
+        <Text type="supporting" tone="secondary">
           No. {r.generalNo} · {r.departmentName}
         </Text>
-        <KeyValue label="Amount" value={formatINR(r.amount)} emphasis />
-        <KeyValue label="Paid on" value={formatDisplayDate(r.paidOn)} />
-        <KeyValue label="Mode" value={REPORT_MODE_LABEL[r.mode]} />
-        <KeyValue label="Reference" value={r.reference} />
-        <KeyValue label="Towards" value={share ? 'Share capital' : 'Dues'} />
-        <KeyValue label="Reported" value={r.reportedAt ? formatDisplayDateTime(r.reportedAt) : '—'} />
-        {r.screenshotName ? <KeyValue label="Screenshot" value={r.screenshotName} /> : null}
+        <MetadataListItem label="Amount" value={formatINR(r.amount)} emphasis />
+        <MetadataListItem label="Paid on" value={formatDisplayDate(r.paidOn)} />
+        <MetadataListItem label="Mode" value={REPORT_MODE_LABEL[r.mode]} />
+        <MetadataListItem label="Reference" value={r.reference} />
+        <MetadataListItem label="Towards" value={share ? 'Share capital' : 'Dues'} />
+        <MetadataListItem label="Reported" value={r.reportedAt ? formatDisplayDateTime(r.reportedAt) : '—'} />
+        {r.screenshotName ? <MetadataListItem label="Screenshot" value={r.screenshotName} /> : null}
       </Card>
       {dues.data ? (
         <Section title="Applied to, oldest month first">
           <Card>
             {share ? (
-              <Text role="body">
+              <Text type="body">
                 Share capital · {formatINR(r.amount)} of {formatINR(dues.data.shareCapitalDue)} due
               </Text>
             ) : (
-              preview.map((p, i) => <KeyValue key={i} label={`${formatCycle(p.cycle)} · ${p.label}`} value={formatINR(p.delta)} />)
+              preview.map((p, i) => <MetadataListItem key={i} label={`${formatCycle(p.cycle)} · ${p.label}`} value={formatINR(p.delta)} />)
             )}
           </Card>
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             Dues before: {formatINR(dues.data.totalArrears)} · after: {formatINR(Math.max(0, dues.data.totalArrears - (share ? 0 : r.amount)))}
           </Text>
         </Section>
       ) : null}
-      {rejecting ? <TextField label="Reason" required placeholder="e.g. No matching credit found in the bank statement." value={reason} onChangeText={setReason} multiline numberOfLines={3} hint="The member sees this in the app. At least 10 characters." error={a.fields.reason} /> : <Checkbox checked={matched} onChange={setMatched} label="I found this credit in the society's bank statement" description={`Reference ${r.reference} for ${formatINR(r.amount)} on ${formatDisplayDate(r.paidOn)}`} />}
+      {rejecting ? <TextField label="Reason" required placeholder="e.g. No matching credit found in the bank statement." value={reason} onChangeText={setReason} multiline numberOfLines={3} hint="The member sees this in the app. At least 10 characters." error={a.fields.reason} /> : <CheckboxInput checked={matched} onChange={setMatched} label="I found this credit in the society's bank statement" description={`Reference ${r.reference} for ${formatINR(r.amount)} on ${formatDisplayDate(r.paidOn)}`} />}
       <ActionAlert action={a} heading="Couldn't save" check={{ text: 'Check Payments', href: '/staff/payments?tab=REPORTED' }} />
     </Screen>
   );

@@ -7,8 +7,8 @@ import { Loaded, StaffDocument } from '@/components/staff';
 import { api } from '@/lib/api';
 import { officeVoucherHtml } from '@/lib/staffDocuments';
 import { documentFileName } from '@/lib/documents';
-import { Alert, Card, Header, KeyValue, Screen, Text } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Card, Header, MetadataListItem, Screen, Text } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function Voucher() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,22 +17,22 @@ export default function Voucher() {
     <Loaded page q={q} what="this voucher">
       {(v) => (
         <Screen header={<Header title={v.kind === 'PAYMENT' ? 'Payment voucher' : 'Receipt voucher'} onBack={() => router.back()} />} footer={<StaffDocument title={`Voucher ${v.voucherNo}`} fileName={documentFileName('Voucher', v.voucherNo)} build={(o) => officeVoucherHtml(v, o)} />}>
-          <View style={{ gap: space[2] }}>
-            <Text role="metric">{formatINR(v.amount)}</Text>
-            <Text role="caption" tone="tertiary">
+          <View style={{ gap: spacing[1] }}>
+            <Text type="display-3">{formatINR(v.amount)}</Text>
+            <Text type="supporting" tone="secondary">
               Rupees {amountInWords(v.amount)} only
             </Text>
           </View>
-          {v.reversed ? <Alert type="warning" heading="Cancelled" description="Its entry in the books was reversed." /> : null}
+          {v.reversed ? <Banner status="warning" heading="Cancelled" description="Its entry in the books was reversed." /> : null}
           <Card>
-            <KeyValue label="Voucher" value={v.voucherNo} />
-            <KeyValue label="Date" value={formatDisplayDate(v.date)} />
-            <KeyValue label={v.kind === 'PAYMENT' ? 'Paid to' : 'Received from'} value={v.party} />
-            <KeyValue label="For" value={v.narration} />
-            <KeyValue label="Head" value={`${v.headCode} ${v.headName}`} />
-            <KeyValue label={v.kind === 'PAYMENT' ? 'Paid by' : 'Received by'} value={v.mode === 'CASH' ? 'Cash' : `Bank · ${v.reference ?? ''}`} />
-            <KeyValue label="Entry" value={v.entryNo} />
-            <KeyValue label="Entered by" value={`${v.createdByName} · ${formatDisplayDateTime(v.createdAt)}`} />
+            <MetadataListItem label="Voucher" value={v.voucherNo} />
+            <MetadataListItem label="Date" value={formatDisplayDate(v.date)} />
+            <MetadataListItem label={v.kind === 'PAYMENT' ? 'Paid to' : 'Received from'} value={v.party} />
+            <MetadataListItem label="For" value={v.narration} />
+            <MetadataListItem label="Head" value={`${v.headCode} ${v.headName}`} />
+            <MetadataListItem label={v.kind === 'PAYMENT' ? 'Paid by' : 'Received by'} value={v.mode === 'CASH' ? 'Cash' : `Bank · ${v.reference ?? ''}`} />
+            <MetadataListItem label="Entry" value={v.entryNo} />
+            <MetadataListItem label="Entered by" value={`${v.createdByName} · ${formatDisplayDateTime(v.createdAt)}`} />
           </Card>
         </Screen>
       )}

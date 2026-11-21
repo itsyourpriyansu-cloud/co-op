@@ -9,8 +9,8 @@ import { ActionAlert, DoneAlert, Loaded, useAction } from '@/components/staff';
 import { api } from '@/lib/api';
 import { FileButton } from '@/components/FileButton';
 import { changeValue, fieldLabel } from '@/lib/staffMembers';
-import { Alert, Button, Card, Header, KeyValue, Screen, Section, StatusTag, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, Header, MetadataListItem, Screen, Section, StatusToken, Text, TextField, Link } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function ChangeRequest() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,7 +24,7 @@ export default function ChangeRequest() {
           <Decide r={r} onSaved={setRow} />
         ) : (
           <Screen header={<Header title="Change request" onBack={() => router.back()} />}>
-            <Alert type="neutral" heading="Not found" description="This request may have been removed." />
+            <Banner status="neutral" heading="Not found" description="This request may have been removed." />
           </Screen>
         );
       }}
@@ -48,76 +48,76 @@ function Decide({ r, onSaved }: { r: ChangeRequestRow; onSaved: (r: ChangeReques
     });
 
   const footer = done ? (
-    <Button text="Done" size="lg" fullWidth onPress={() => router.back()} />
+    <Button label="Done" size="lg" fullWidth onPress={() => router.back()} />
   ) : !canAct ? undefined : rejecting ? (
-    <View style={{ gap: space[3] }}>
-      <Button text={certifying ? 'Do not certify' : 'Reject request'} buttonType="danger" size="lg" fullWidth disabled={!remarks.trim() || a.busy} loading={a.busy} onPress={() => act(false)} />
-      <Button text="Back" buttonType="secondary" fullWidth disabled={a.busy} onPress={() => setRejecting(false)} />
+    <View style={{ gap: spacing[1.5] }}>
+      <Button label={certifying ? 'Do not certify' : 'Reject request'} variant="destructive" size="lg" fullWidth disabled={!remarks.trim() || a.busy} loading={a.busy} onPress={() => act(false)} />
+      <Button label="Back" variant="secondary" fullWidth disabled={a.busy} onPress={() => setRejecting(false)} />
     </View>
   ) : (
-    <View style={{ gap: space[3] }}>
-      <Button text={certifying ? 'Certify' : 'Approve & update profile'} size="lg" fullWidth loading={a.busy} disabled={a.busy} onPress={() => act(true)} />
-      <Button text={certifying ? 'Not correct' : 'Reject'} buttonType="secondary" fullWidth disabled={a.busy} onPress={() => setRejecting(true)} />
+    <View style={{ gap: spacing[1.5] }}>
+      <Button label={certifying ? 'Certify' : 'Approve & update profile'} size="lg" fullWidth loading={a.busy} disabled={a.busy} onPress={() => act(true)} />
+      <Button label={certifying ? 'Not correct' : 'Reject'} variant="secondary" fullWidth disabled={a.busy} onPress={() => setRejecting(true)} />
     </View>
   );
 
   return (
     <Screen header={<Header title={certifying ? 'Certify details' : 'Change request'} onBack={() => router.back()} />} {...(footer ? { footer } : {})}>
       {done ? <DoneAlert heading={done} description={`${r.memberName} · General No. ${r.generalNo}`} /> : null}
-      <View style={{ gap: space[2] }}>
-        <Text role="pageTitle">{r.memberName}</Text>
-        <Text role="caption" tone="secondary">
+      <View style={{ gap: spacing[1] }}>
+        <Text type="h1">{r.memberName}</Text>
+        <Text type="supporting" tone="secondary">
           General No. {r.generalNo} · {r.departmentName}
         </Text>
-        <StatusTag entity="changeRequest" status={r.status} audience="staff" />
+        <StatusToken entity="changeRequest" status={r.status} audience="staff" />
       </View>
       <Section title="What changes">
         <Card>
           {r.fields.map((f) => (
-            <View key={f.field} style={{ gap: space[1], paddingVertical: space[2] }}>
-              <Text role="caption" tone="tertiary">
+            <View key={f.field} style={{ gap: spacing[0.5], paddingVertical: spacing[1] }}>
+              <Text type="supporting" tone="secondary">
                 {fieldLabel(f)}
               </Text>
-              <Text role="body" tone="secondary" style={{ textDecorationLine: 'line-through' }}>
+              <Text type="body" tone="secondary" style={{ textDecorationLine: 'line-through' }}>
                 {changeValue(f, f.oldValue)}
               </Text>
-              <Text role="bodyStrong">{changeValue(f, f.newValue)}</Text>
+              <Text type="body" weight="medium">{changeValue(f, f.newValue)}</Text>
             </View>
           ))}
         </Card>
       </Section>
       <Section title="Member's reason">
-        <Text role="body">“{r.reason}”</Text>
-        <Text role="caption" tone="tertiary">
+        <Text type="body">“{r.reason}”</Text>
+        <Text type="supporting" tone="secondary">
           Sent from the app · {formatDisplayDateTime(r.createdAt)}
         </Text>
       </Section>
       {r.documentName ? (
         <Card>
-          <KeyValue label="Supporting document" value={r.documentName} />
+          <MetadataListItem label="Supporting document" value={r.documentName} />
           {r.documentFileId ? <FileButton fileId={r.documentFileId} consolePath="/members/change-requests" /> : null}
         </Card>
       ) : null}
       <Section title="Route">
         <Card>
-          {r.route === 'DDO_THEN_OFFICE' ? <KeyValue label="DDO certifies" value={r.ddoCertified ? `${r.ddoCertified.byName} · ${formatDisplayDateTime(r.ddoCertified.at)}` : 'Pending'} /> : null}
-          <KeyValue label="Accountant decides" value={r.decidedByName ? `${r.decidedByName}${r.decidedAt ? ` · ${formatDisplayDateTime(r.decidedAt)}` : ''}` : 'Pending'} />
+          {r.route === 'DDO_THEN_OFFICE' ? <MetadataListItem label="DDO certifies" value={r.ddoCertified ? `${r.ddoCertified.byName} · ${formatDisplayDateTime(r.ddoCertified.at)}` : 'Pending'} /> : null}
+          <MetadataListItem label="Accountant decides" value={r.decidedByName ? `${r.decidedByName}${r.decidedAt ? ` · ${formatDisplayDateTime(r.decidedAt)}` : ''}` : 'Pending'} />
         </Card>
       </Section>
-      {r.remarks ? <Alert type={r.status === 'REJECTED' ? 'error' : 'neutral'} heading="Remarks" description={r.remarks} /> : null}
+      {r.remarks ? <Banner status={r.status === 'REJECTED' ? 'error' : 'neutral'} heading="Remarks" description={r.remarks} /> : null}
       {canAct && !certifying && !done ? (
-        <Text role="caption" tone="secondary">
+        <Text type="supporting" tone="secondary">
           Approving writes the new values to the member master, adds a service-history entry and tells the member in the app.
         </Text>
       ) : null}
       {canAct && rejecting && !done ? <TextField label="Reason (the member sees this)" required value={remarks} onChangeText={setRemarks} placeholder="e.g. Send the service register extract" multiline numberOfLines={3} error={a.fields.remarks} /> : null}
       {!canAct && r.status === 'PENDING' && r.waitingOn ? (
-        <Text role="body" tone="secondary">
+        <Text type="body" tone="secondary">
           Waiting on {r.waitingOn}.
         </Text>
       ) : null}
       <ActionAlert action={a} heading="Not saved" />
-      <Button text="Open member profile" subType="inline" onPress={() => router.push(`/staff/member/${r.memberId}`)} />
+      <Link label="Open member profile" onPress={() => router.push(`/staff/member/${r.memberId}`)} />
     </Screen>
   );
 }

@@ -11,8 +11,8 @@ import { amountInWords, formatINR } from '@tgs/domain';
 import type { ReportPaymentInput } from '@tgs/types';
 import { api } from '@/lib/api';
 import { paymentKeys, useMyPayments } from '@/lib/payments';
-import { Alert, Button, Card, ChoiceCard, DateField, Header, KeyValue, Screen, Section, Segmented, Skeleton, Text, TextField } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Card, SelectableCard, DateField, Header, MetadataListItem, Screen, Section, SegmentedControl, Skeleton, Text, TextField, Link } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 const paise = (t: string) => Math.round(Number(t.replace(/[^0-9]/g, '') || 0) * 100);
 
@@ -53,27 +53,27 @@ export default function ReportPayment() {
   const nothingDue = Boolean(d && !d.dues.totalArrears && !d.dues.shareCapitalDue);
   if (nothingDue)
     return (
-      <Screen header={<Header title="Report a payment" onBack={() => router.back()} />} footer={<Button text="Back to payments" buttonType="secondary" size="lg" fullWidth onPress={() => router.back()} />}>
-        <Alert type="success" heading="Nothing unpaid" description="Every month was deducted from your salary in full, so there is nothing to report. If a deduction comes short, it shows on the Payments tab and you can report a bank or UPI payment here." />
+      <Screen header={<Header title="Report a payment" onBack={() => router.back()} />} footer={<Button label="Back to payments" variant="secondary" size="lg" fullWidth onPress={() => router.back()} />}>
+        <Banner status="success" heading="Nothing unpaid" description="Every month was deducted from your salary in full, so there is nothing to report. If a deduction comes short, it shows on the Payments tab and you can report a bank or UPI payment here." />
       </Screen>
     );
 
   return (
-    <Screen header={<Header title="Report a payment" onBack={() => router.back()} />} footer={<Button text="Send for verification" leftSlot={Send} size="lg" fullWidth loading={busy} disabled={!d || !owed} onPress={() => void submit()} />}>
+    <Screen header={<Header title="Report a payment" onBack={() => router.back()} />} footer={<Button label="Send for verification" icon={Send} size="lg" fullWidth loading={busy} disabled={!d || !owed} onPress={() => void submit()} />}>
       {!d ? (
-        <Skeleton height={240} radius={radius.card} />
+        <Skeleton height={240} radius={radius.container} />
       ) : (
         <>
-          <Text role="body" tone="secondary">
+          <Text type="body" tone="secondary">
             Paid the society by bank transfer, UPI or a cheque deposit? Tell us here. The cashier matches it with the bank statement and you get a receipt.
           </Text>
-          {serverError ? <Alert type="error" heading="Not sent" description={serverError} /> : null}
+          {serverError ? <Banner status="error" heading="Not sent" description={serverError} /> : null}
 
           <Section title="What was it for">
-            <ChoiceCard title="Unpaid dues" description={d.dues.totalArrears ? `${formatINR(d.dues.totalArrears)} from short months` : 'Nothing unpaid'} selected={pick === 'DUES'} onPress={() => d.dues.totalArrears && setTowards('DUES')} />
-            {d.dues.shareCapitalDue ? <ChoiceCard title="Share capital" description={`${formatINR(d.dues.shareCapitalDue)} due`} selected={pick === 'SHARE_CAPITAL'} onPress={() => setTowards('SHARE_CAPITAL')} /> : null}
+            <SelectableCard title="Unpaid dues" description={d.dues.totalArrears ? `${formatINR(d.dues.totalArrears)} from short months` : 'Nothing unpaid'} selected={pick === 'DUES'} onPress={() => d.dues.totalArrears && setTowards('DUES')} />
+            {d.dues.shareCapitalDue ? <SelectableCard title="Share capital" description={`${formatINR(d.dues.shareCapitalDue)} due`} selected={pick === 'SHARE_CAPITAL'} onPress={() => setTowards('SHARE_CAPITAL')} /> : null}
             {errors.towards ? (
-              <Text role="caption" tone="danger">
+              <Text type="supporting" tone="error">
                 {errors.towards}
               </Text>
             ) : null}
@@ -81,28 +81,28 @@ export default function ReportPayment() {
 
           <TextField label="Amount paid" prefix="₹" keyboardType="number-pad" value={amountText || (owed ? String(owed / 100) : '')} onChangeText={(t) => setAmountText(t.replace(/[^0-9]/g, ''))} error={errors.amount} hint={amount > 0 ? amountInWords(amount) : undefined} required />
           <DateField label="Paid on" value={paidOn} onChange={setPaidOn} error={errors.paidOn} hint="DD/MM/YYYY, today or earlier" required />
-          <Segmented label="Paid by" value={mode} options={[{ value: 'UPI', label: 'UPI' }, { value: 'BANK_TRANSFER', label: 'Bank' }, { value: 'CHEQUE_DEPOSIT', label: 'Cheque' }]} onChange={setMode} error={errors.mode} />
+          <SegmentedControl label="Paid by" value={mode} options={[{ value: 'UPI', label: 'UPI' }, { value: 'BANK_TRANSFER', label: 'Bank' }, { value: 'CHEQUE_DEPOSIT', label: 'Cheque' }]} onChange={setMode} error={errors.mode} />
           <TextField label={mode === 'CHEQUE_DEPOSIT' ? 'Cheque number' : 'UTR / transaction ID'} autoCapitalize="characters" value={reference} onChangeText={setReference} error={errors.reference} hint="As shown in your bank app or on the slip" required />
 
           {screenshot ? (
             <View style={styles.file}>
-              <ImagePlus size={18} color={color.brand.solid} />
-              <Text role="caption" style={{ flex: 1 }}>
+              <ImagePlus size={18} color={color.accent} />
+              <Text type="supporting" style={{ flex: 1 }}>
                 {screenshot}
               </Text>
-              <Button text="Remove" size="sm" buttonType="secondary" subType="inline" leftSlot={X} onPress={() => setScreenshot(undefined)} />
+              <Link label="Remove" icon={X} onPress={() => setScreenshot(undefined)} />
             </View>
           ) : (
-            <Button text="Attach a screenshot (optional)" buttonType="secondary" leftSlot={ImagePlus} fullWidth onPress={() => setScreenshot('payment-screenshot.jpg')} />
+            <Button label="Attach a screenshot (optional)" variant="secondary" icon={ImagePlus} fullWidth onPress={() => setScreenshot('payment-screenshot.jpg')} />
           )}
 
           <Section title="Where to pay">
             <Card>
-              <KeyValue label="Account name" value={d.payTo.accountName} />
-              <KeyValue label="Account no." value={d.payTo.accountNo} />
-              <KeyValue label="IFSC" value={d.payTo.ifsc} />
-              <KeyValue label="UPI" value={d.payTo.upi} />
-              <Text role="caption" tone="tertiary">
+              <MetadataListItem label="Account name" value={d.payTo.accountName} />
+              <MetadataListItem label="Account no." value={d.payTo.accountNo} />
+              <MetadataListItem label="IFSC" value={d.payTo.ifsc} />
+              <MetadataListItem label="UPI" value={d.payTo.upi} />
+              <Text type="supporting" tone="secondary">
                 Or pay in cash at the {d.payTo.counter}.
               </Text>
             </Card>
@@ -114,5 +114,5 @@ export default function ReportPayment() {
 }
 
 const styles = StyleSheet.create({
-  file: { flexDirection: 'row', alignItems: 'center', gap: space[4], padding: space[6], borderRadius: radius.control, borderWidth: 1, borderColor: color.brand.border, backgroundColor: color.brand.subtle },
+  file: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], padding: spacing[3], borderRadius: radius.element, borderWidth: 1, borderColor: color.accent, backgroundColor: color.accentMuted },
 });

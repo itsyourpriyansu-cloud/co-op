@@ -7,8 +7,8 @@ import { ChevronRight, PiggyBank, Plus } from 'lucide-react-native';
 import { formatDisplayDate, formatINR } from '@tgs/domain';
 import type { DepositRow } from '@tgs/types';
 import { SCHEME_LABEL, segmentOf, useMyDeposits, type DepositSegment } from '@/lib/deposits';
-import { Alert, Button, Card, EmptyState, Screen, Segmented, Skeleton, StatusTag, Tag, Text } from '@/ui';
-import { color, radius, space, onBrandMuted } from '@/theme';
+import { Banner, Button, Card, EmptyState, Screen, SegmentedControl, Skeleton, StatusToken, Token, Text } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 const SEGMENTS: Array<{ value: DepositSegment; label: string }> = [
   { value: 'FD', label: 'Fixed' },
@@ -20,35 +20,35 @@ function DepositCard({ row }: { row: DepositRow }) {
   const isFd = row.scheme === 'FD';
   return (
     <Card onPress={() => router.push({ pathname: '/deposit/[id]', params: { id: row.id } })}>
-      <View style={{ gap: space[4] }}>
+      <View style={{ gap: spacing[2] }}>
         <View style={styles.row}>
-          <View style={{ flex: 1, gap: space[1] }}>
-            <Text role="cardTitle">{isFd ? `${row.tenureMonths ?? ''} months at ${row.ratePercent}%` : SCHEME_LABEL[row.scheme]}</Text>
-            <Text role="caption" tone="tertiary">
+          <View style={{ flex: 1, gap: spacing[0.5] }}>
+            <Text type="h4">{isFd ? `${row.tenureMonths ?? ''} months at ${row.ratePercent}%` : SCHEME_LABEL[row.scheme]}</Text>
+            <Text type="supporting" tone="secondary">
               {row.fdrNo ?? row.accountNo} · since {formatDisplayDate(row.openedOn)}
             </Text>
           </View>
-          <ChevronRight size={20} color={color.text.tertiary} />
+          <ChevronRight size={20} color={color.text.secondary} />
         </View>
         <View style={styles.row}>
-          <Text role="amount" style={{ flex: 1 }}>
+          <Text type="amount" style={{ flex: 1 }}>
             {formatINR(row.amount)}
           </Text>
-          {row.pledged ? <Tag text="Pledged" size="xs" color="purple" /> : null}
-          <StatusTag entity="deposit" status={row.status} size="xs" />
+          {row.pledged ? <Token text="Pledged" size="xs" status="approval" /> : null}
+          <StatusToken entity="deposit" status={row.status} size="xs" />
         </View>
         {isFd && row.maturityDate && row.status === 'ACTIVE' ? (
-          <Text role="caption" tone="secondary">
+          <Text type="supporting" tone="secondary">
             Matures {formatDisplayDate(row.maturityDate)}
             {row.maturityValue ? ` · ${formatINR(row.maturityValue)}` : ''}
             {row.daysToMaturity !== undefined && row.daysToMaturity <= 30 ? ` · in ${row.daysToMaturity} days` : ''}
           </Text>
         ) : row.waitingOn ? (
-          <Text role="caption" tone="secondary">
+          <Text type="supporting" tone="secondary">
             Now with {row.waitingOn}
           </Text>
         ) : !isFd && row.monthlyAmount ? (
-          <Text role="caption" tone="secondary">
+          <Text type="supporting" tone="secondary">
             {formatINR(row.monthlyAmount)} a month from your salary · {row.ratePercent}% a year
           </Text>
         ) : null}
@@ -69,34 +69,34 @@ export default function Deposits() {
   return (
     <Screen refreshing={deposits.isRefetching} onRefresh={() => void deposits.refetch()}>
       <View style={styles.row}>
-        <Text role="pageTitle" style={{ flex: 1 }}>
+        <Text type="h1" style={{ flex: 1 }}>
           Deposits
         </Text>
-        <Button text="Open FD" size="sm" leftSlot={Plus} onPress={() => router.push('/deposit/open')} />
+        <Button label="Open FD" size="sm" icon={Plus} onPress={() => router.push('/deposit/open')} />
       </View>
 
       {deposits.data ? (
         <View style={styles.hero}>
-          <Text role="caption" style={{ color: onBrandMuted }}>
+          <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
             Saved with the society
           </Text>
-          <Text role="display" tone="onBrand">
+          <Text type="display-2" tone="onAccent">
             {formatINR(fdTotal + otherTotal)}
           </Text>
           <View style={styles.heroRow}>
             <View style={{ flex: 1 }}>
-              <Text role="caption" style={{ color: onBrandMuted }}>
+              <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
                 Fixed deposits
               </Text>
-              <Text role="bodyStrong" tone="onBrand">
+              <Text type="body" weight="medium" tone="onAccent">
                 {formatINR(fdTotal)}
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text role="caption" style={{ color: onBrandMuted }}>
+              <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
                 CRD, SRDS & savings
               </Text>
-              <Text role="bodyStrong" tone="onBrand">
+              <Text type="body" weight="medium" tone="onAccent">
                 {formatINR(otherTotal)}
               </Text>
             </View>
@@ -104,17 +104,17 @@ export default function Deposits() {
         </View>
       ) : null}
 
-      <Segmented label="Show" value={segment} options={SEGMENTS.map((s) => ({ value: s.value, label: `${s.label} ${count(s.value) || ''}`.trim() }))} onChange={setSegment} />
+      <SegmentedControl label="Show" value={segment} options={SEGMENTS.map((s) => ({ value: s.value, label: `${s.label} ${count(s.value) || ''}`.trim() }))} onChange={setSegment} />
 
       {deposits.isLoading ? (
-        <View style={{ gap: space[6] }}>
-          <Skeleton height={140} radius={radius.card} />
-          <Skeleton height={120} radius={radius.card} />
+        <View style={{ gap: spacing[3] }}>
+          <Skeleton height={140} radius={radius.container} />
+          <Skeleton height={120} radius={radius.container} />
         </View>
       ) : deposits.isError ? (
-        <Alert type="error" heading="Couldn't load your deposits" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void deposits.refetch() }} />
+        <Banner status="error" heading="Couldn't load your deposits" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void deposits.refetch() }} />
       ) : rows.length ? (
-        <View style={{ gap: space[6] }}>
+        <View style={{ gap: spacing[3] }}>
           {rows.map((r) => (
             <DepositCard key={r.id} row={r} />
           ))}
@@ -132,7 +132,7 @@ export default function Deposits() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  hero: { backgroundColor: color.brand.solid, borderRadius: radius.card, padding: space[10], gap: space[3] },
-  heroRow: { flexDirection: 'row', gap: space[6], marginTop: space[4] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  hero: { backgroundColor: color.accent, borderRadius: radius.container, padding: spacing[5], gap: spacing[1.5] },
+  heroRow: { flexDirection: 'row', gap: spacing[3], marginTop: spacing[2] },
 });

@@ -5,7 +5,7 @@ import { ROLE_LABELS } from '@tgs/types';
 import { SignatureCard } from '@/components/SignatureCard';
 import { Row } from '@/components/staff';
 import { useAuth } from '@/lib/auth';
-import { Card, Header, KeyValue, Screen, Section } from '@/ui';
+import { Card, Header, MetadataListItem, Screen, Section } from '@/ui';
 
 export default function Account() {
   const { session } = useAuth();
@@ -13,8 +13,8 @@ export default function Account() {
   return (
     <Screen header={<Header title="My account" onBack={() => router.back()} />}>
       <Card>
-        <KeyValue label="Name" value={session.user.name} />
-        <KeyValue label="Role" value={ROLE_LABELS[session.user.role]} />
+        <MetadataListItem label="Name" value={session.user.name} />
+        <MetadataListItem label="Role" value={ROLE_LABELS[session.user.role]} />
       </Card>
       <Section title="My signature" description="Printed on what you sign, such as the sanction letter and the DDO certificate.">
         <SignatureCard />

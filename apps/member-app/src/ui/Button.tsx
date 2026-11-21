@@ -1,79 +1,146 @@
-// Native mirror of Blend ButtonV2 (same prop contract: buttonType, size, subType, loading, slots).
-import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+// Astryx Button / IconButton / Link (docs/25 §5). Press = spring scale + pressed fill; primary press taps
+// a light haptic; loading swaps the label for a spinner without changing the button's size.
+import { useState } from 'react';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import { color, radius, space } from '@/theme';
+import { color, radius, spacing, touchTarget } from '@/theme';
+import { haptic, usePressScale } from './motion';
 import { Text } from './Text';
 
-export type ButtonType = 'primary' | 'secondary' | 'danger' | 'success';
-export type ButtonSize = 'sm' | 'md' | 'lg';
-export type ButtonSubType = 'default' | 'iconOnly' | 'inline';
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export interface ButtonProps {
-  text?: string;
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
+export type ButtonSize = 'sm' | 'md' | 'lg';
+
+/** Touch heights beat Astryx's desktop 28–36: 40 / 48 / 56. */
+const HEIGHT: Record<ButtonSize, number> = { sm: 40, md: touchTarget, lg: 56 };
+
+const FILL: Record<ButtonVariant, { bg: string; pressed: string; fg: string; border?: string }> = {
+  primary: { bg: color.accent, pressed: color.accentPressed, fg: color.text.onAccent },
+  secondary: { bg: color.background.surface, pressed: color.background.muted, fg: color.text.primary, border: color.borderEmphasized },
+  ghost: { bg: 'transparent', pressed: color.overlayPressed, fg: color.accent },
+  destructive: { bg: color.status.error.solid, pressed: color.status.error.text, fg: color.status.error.onSolid },
+};
+
+interface CommonProps {
   onPress?: () => void;
-  buttonType?: ButtonType;
-  size?: ButtonSize;
-  subType?: ButtonSubType;
   loading?: boolean;
   disabled?: boolean;
-  leftSlot?: LucideIcon;
-  rightSlot?: LucideIcon;
-  fullWidth?: boolean;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-const HEIGHT: Record<ButtonSize, number> = { sm: 40, md: 48, lg: 56 };
+function useButtonPress(onPress: (() => void) | undefined, tap: boolean, scaleTo = 0.97) {
+  const [pressed, setPressed] = useState(false);
+  const { scaleStyle, pressHandlers } = usePressScale(scaleTo);
+  return {
+    pressed,
+    scaleStyle,
+    handlers: {
+      onPressIn: () => {
+        setPressed(true);
+        pressHandlers.onPressIn();
+      },
+      onPressOut: () => {
+        setPressed(false);
+        pressHandlers.onPressOut();
+      },
+      onPress: () => {
+        if (tap) haptic.tap();
+        onPress?.();
+      },
+    },
+  };
+}
 
-const FILL: Record<ButtonType, { bg: string; pressed: string; fg: string; border?: string }> = {
-  primary: { bg: color.brand.solid, pressed: color.brand.hover, fg: color.text.onBrand },
-  secondary: { bg: color.bg.surface, pressed: color.bg.surfaceMuted, fg: color.text.primary, border: color.border.strong },
-  danger: { bg: color.status.danger.solid, pressed: color.status.danger.fg, fg: color.text.onBrand },
-  success: { bg: color.status.success.solid, pressed: color.status.success.fg, fg: color.text.onBrand },
-};
-
-export function Button({ text, onPress, buttonType = 'primary', size = 'md', subType = 'default', loading, disabled, leftSlot: Left, rightSlot: Right, fullWidth, accessibilityLabel, style }: ButtonProps) {
-  const f = FILL[buttonType];
-  const inline = subType === 'inline';
-  const iconOnly = subType === 'iconOnly';
-  const fg = inline ? (buttonType === 'danger' ? color.status.danger.fg : color.text.link) : f.fg;
+export function Button({ label, variant = 'primary', size = 'md', icon: Icon, iconEnd: IconEnd, fullWidth, onPress, loading, disabled, accessibilityLabel, style }: CommonProps & { label: string; variant?: ButtonVariant; size?: ButtonSize; icon?: LucideIcon; iconEnd?: LucideIcon; fullWidth?: boolean }) {
+  const f = FILL[variant];
   const inactive = disabled || loading;
+  const { pressed, scaleStyle, handlers } = useButtonPress(onPress, variant === 'primary');
+  const iconSize = size === 'lg' ? 20 : 18;
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? text}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
-      onPress={onPress}
       disabled={inactive}
       hitSlop={size === 'sm' ? 4 : 0}
-      style={({ pressed }) => [
+      {...handlers}
+      style={[
         styles.base,
-        inline
-          ? styles.inline
-          : {
-              height: HEIGHT[size],
-              minWidth: iconOnly ? HEIGHT[size] : undefined,
-              paddingHorizontal: iconOnly ? 0 : size === 'sm' ? space[6] : space[8],
-              backgroundColor: pressed ? f.pressed : f.bg,
-              borderColor: f.border ?? 'transparent',
-              borderWidth: f.border ? 1 : 0,
-            },
+        {
+          height: HEIGHT[size],
+          paddingHorizontal: size === 'sm' ? spacing[3] : spacing[5],
+          backgroundColor: pressed ? f.pressed : f.bg,
+          borderColor: f.border ?? 'transparent',
+          borderWidth: f.border ? 1 : 0,
+        },
         fullWidth && styles.full,
         inactive && styles.inactive,
         style,
+        scaleStyle,
       ]}
+    >
+      {/* The label keeps its space while loading, so the button never changes width. */}
+      <View style={[styles.row, loading && styles.hidden]}>
+        {Icon && <Icon size={iconSize} color={f.fg} strokeWidth={1.75} />}
+        <Text type="label" weight="semibold" style={{ color: f.fg }} numberOfLines={1}>
+          {label}
+        </Text>
+        {IconEnd && <IconEnd size={iconSize} color={f.fg} strokeWidth={1.75} />}
+      </View>
+      {loading ? <ActivityIndicator color={f.fg} style={StyleSheet.absoluteFill} /> : null}
+    </AnimatedPressable>
+  );
+}
+
+/** Square icon-only action. `accessibilityLabel` is required: there is no visible text. */
+export function IconButton({ icon: Icon, variant = 'ghost', size = 'md', onPress, loading, disabled, accessibilityLabel, style }: CommonProps & { icon: LucideIcon; variant?: ButtonVariant; size?: ButtonSize; accessibilityLabel: string }) {
+  const f = FILL[variant];
+  const inactive = disabled || loading;
+  const { pressed, scaleStyle, handlers } = useButtonPress(onPress, false, 0.92);
+  const s = HEIGHT[size];
+  return (
+    <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: !!inactive, busy: !!loading }}
+      disabled={inactive}
+      hitSlop={size === 'sm' ? 4 : 0}
+      {...handlers}
+      style={[styles.base, { width: s, height: s, backgroundColor: pressed ? f.pressed : f.bg, borderColor: f.border ?? 'transparent', borderWidth: f.border ? 1 : 0 }, inactive && styles.inactive, style, scaleStyle]}
+    >
+      {loading ? <ActivityIndicator color={f.fg} /> : <Icon size={size === 'lg' ? 22 : 20} color={f.fg} strokeWidth={1.75} />}
+    </AnimatedPressable>
+  );
+}
+
+/** Inline text action inside content ("Show all", "Remove"). Keeps the button role the e2e suite finds. */
+export function Link({ label, destructive, icon: Icon, iconEnd: IconEnd, onPress, loading, disabled, accessibilityLabel, style }: CommonProps & { label: string; destructive?: boolean; icon?: LucideIcon; iconEnd?: LucideIcon }) {
+  const fg = destructive ? color.status.error.text : color.text.link;
+  const inactive = disabled || loading;
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled: !!inactive, busy: !!loading }}
+      disabled={inactive}
+      hitSlop={8}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      onPress={onPress}
+      style={[styles.link, pressed && styles.linkPressed, inactive && styles.inactive, style]}
     >
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
         <View style={styles.row}>
-          {Left && <Left size={size === 'lg' ? 20 : 18} color={fg} strokeWidth={1.75} />}
-          {!iconOnly && text ? (
-            <Text role={size === 'lg' ? 'bodyStrong' : 'label'} style={{ color: fg }}>
-              {text}
-            </Text>
-          ) : null}
-          {Right && <Right size={size === 'lg' ? 20 : 18} color={fg} strokeWidth={1.75} />}
+          {Icon && <Icon size={18} color={fg} strokeWidth={1.75} />}
+          <Text type="label" weight="semibold" style={{ color: fg }}>
+            {label}
+          </Text>
+          {IconEnd && <IconEnd size={18} color={fg} strokeWidth={1.75} />}
         </View>
       )}
     </Pressable>
@@ -81,9 +148,11 @@ export function Button({ text, onPress, buttonType = 'primary', size = 'md', sub
 }
 
 const styles = StyleSheet.create({
-  base: { borderRadius: radius.control, alignItems: 'center', justifyContent: 'center' },
-  inline: { minHeight: 32, paddingHorizontal: 0, alignSelf: 'flex-start' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  base: { borderRadius: radius.element, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  hidden: { opacity: 0 },
   full: { alignSelf: 'stretch' },
-  inactive: { opacity: 0.5 },
+  inactive: { opacity: 0.45 },
+  link: { minHeight: 32, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: radius.inner },
+  linkPressed: { opacity: 0.6 },
 });

@@ -7,8 +7,8 @@ import { Logo } from '@/components/Logo';
 import { DEFAULT_SOCIETY, documentFileName, localDate, receiptHtml } from '@/lib/documents';
 import { useJoiningReference } from '@/lib/joining';
 import { SOURCE_LABEL, useMyReceipt } from '@/lib/payments';
-import { Alert, Card, Divider, Header, KeyValue, Screen, Section, Skeleton, Text } from '@/ui';
-import { radius, space } from '@/theme';
+import { Banner, Card, Divider, Header, MetadataListItem, Screen, Section, Skeleton, Text } from '@/ui';
+import { radius, spacing } from '@/theme';
 
 export default function ReceiptView() {
   const { id = '' } = useLocalSearchParams<{ id: string }>();
@@ -19,45 +19,45 @@ export default function ReceiptView() {
   return (
     <Screen header={<Header title="Receipt" onBack={() => router.back()} />}>
       {q.isLoading ? (
-        <Skeleton height={300} radius={radius.card} />
+        <Skeleton height={300} radius={radius.container} />
       ) : !d || !r ? (
-        <Alert type="error" heading="Couldn't load this receipt" description="Go back and try again." />
+        <Banner status="error" heading="Couldn't load this receipt" description="Go back and try again." />
       ) : (
         <>
-          {r.cancelled ? <Alert type="error" heading="This receipt was cancelled" description={`${formatDisplayDate(r.cancelled.at.slice(0, 10))}: ${r.cancelled.reason}. The amount is back on your dues.`} /> : null}
+          {r.cancelled ? <Banner status="error" heading="This receipt was cancelled" description={`${formatDisplayDate(r.cancelled.at.slice(0, 10))}: ${r.cancelled.reason}. The amount is back on your dues.`} /> : null}
           <Card>
-            <View style={{ gap: space[4] }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
+            <View style={{ gap: spacing[2] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
                 <Logo size={40} />
                 <View style={{ flex: 1 }}>
-                  <Text role="label">TGSECCSL · Regd. No. P-929</Text>
-                  <Text role="caption" tone="tertiary">
+                  <Text type="label">TGSECCSL · Regd. No. P-929</Text>
+                  <Text type="supporting" tone="secondary">
                     Receipt {r.receiptNo}
                   </Text>
                 </View>
               </View>
               <Divider />
-              <Text role="display">{formatINR(r.amount)}</Text>
-              <Text role="caption" tone="secondary">
+              <Text type="display-2">{formatINR(r.amount)}</Text>
+              <Text type="supporting" tone="secondary">
                 {d.amountInWords}
               </Text>
-              <KeyValue label="Date" value={formatDisplayDate(r.date)} />
-              <KeyValue label="Paid by" value={`${SOURCE_LABEL[r.source]}${r.reference ? ` · ${r.reference}` : ''}`} />
-              {r.byName ? <KeyValue label="Received by" value={r.byName} /> : null}
+              <MetadataListItem label="Date" value={formatDisplayDate(r.date)} />
+              <MetadataListItem label="Paid by" value={`${SOURCE_LABEL[r.source]}${r.reference ? ` · ${r.reference}` : ''}`} />
+              {r.byName ? <MetadataListItem label="Received by" value={r.byName} /> : null}
             </View>
           </Card>
           {d.lines.length ? (
             <Section title="What it paid">
               <Card>
-                <View style={{ gap: space[3] }}>
+                <View style={{ gap: spacing[1.5] }}>
                   {d.lines.map((l, i) => (
-                    <View key={i} style={{ flexDirection: 'row', gap: space[4] }}>
-                      <Text role="caption" style={{ flex: 1 }}>
+                    <View key={i} style={{ flexDirection: 'row', gap: spacing[2] }}>
+                      <Text type="supporting" style={{ flex: 1 }}>
                         {l.cycle ? `${formatCycle(l.cycle)} · ` : ''}
                         {l.label}
                         {l.loanNo ? ` · ${l.loanNo}` : ''}
                       </Text>
-                      <Text role="caption">{formatINR(l.amount)}</Text>
+                      <Text type="supporting">{formatINR(l.amount)}</Text>
                     </View>
                   ))}
                 </View>

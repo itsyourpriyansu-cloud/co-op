@@ -7,31 +7,31 @@ import { ChevronRight, Handshake } from 'lucide-react-native';
 import { formatDisplayDate, formatINR } from '@tgs/domain';
 import type { SuretyRequest } from '@tgs/types';
 import { api } from '@/lib/api';
-import { Alert, Card, EmptyState, Header, Screen, Segmented, Skeleton, StatusTag, Text } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Card, EmptyState, Header, Screen, SegmentedControl, Skeleton, StatusToken, Text } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 const suretyKey = ['surety-requests'] as const;
 
 function RequestCard({ r }: { r: SuretyRequest }) {
   return (
     <Card onPress={() => router.push({ pathname: '/surety/[loanId]', params: { loanId: r.loanId } })}>
-      <View style={{ gap: space[4] }}>
+      <View style={{ gap: spacing[2] }}>
         <View style={styles.row}>
-          <View style={{ flex: 1, gap: space[1] }}>
-            <Text role="cardTitle">{r.borrower.name}</Text>
-            <Text role="caption" tone="tertiary">
+          <View style={{ flex: 1, gap: spacing[0.5] }}>
+            <Text type="h4">{r.borrower.name}</Text>
+            <Text type="supporting" tone="secondary">
               No. {r.borrower.generalNo} · {r.borrower.departmentName}
             </Text>
           </View>
-          <ChevronRight size={20} color={color.text.tertiary} />
+          <ChevronRight size={20} color={color.text.secondary} />
         </View>
         <View style={styles.row}>
-          <Text role="amount" style={{ flex: 1 }}>
+          <Text type="amount" style={{ flex: 1 }}>
             {formatINR(r.amount)}
           </Text>
-          <StatusTag entity="surety" status={r.myStatus} size="xs" />
+          <StatusToken entity="surety" status={r.myStatus} size="xs" />
         </View>
-        <Text role="caption" tone="secondary">
+        <Text type="supporting" tone="secondary">
           {r.productName} · {r.instalments} months · EMI {formatINR(r.emi)}
           {r.status === 'ACTIVE' ? ` · outstanding ${formatINR(r.outstanding)}` : ` · asked ${formatDisplayDate(r.appliedOn)}`}
         </Text>
@@ -46,7 +46,7 @@ export default function SuretyRequests() {
   const rows = q.data?.[tab] ?? [];
   return (
     <Screen header={<Header title="Surety requests" onBack={() => router.back()} />} refreshing={q.isRefetching} onRefresh={() => void q.refetch()}>
-      <Segmented
+      <SegmentedControl
         label="Show"
         value={tab}
         options={[
@@ -56,11 +56,11 @@ export default function SuretyRequests() {
         onChange={setTab}
       />
       {q.isLoading ? (
-        <Skeleton height={140} radius={radius.card} />
+        <Skeleton height={140} radius={radius.container} />
       ) : q.isError ? (
-        <Alert type="error" heading="Couldn't load your requests" action={{ text: 'Try again', onPress: () => void q.refetch() }} />
+        <Banner status="error" heading="Couldn't load your requests" action={{ text: 'Try again', onPress: () => void q.refetch() }} />
       ) : rows.length ? (
-        <View style={{ gap: space[6] }}>
+        <View style={{ gap: spacing[3] }}>
           {rows.map((r) => (
             <RequestCard key={r.loanId} r={r} />
           ))}
@@ -73,5 +73,5 @@ export default function SuretyRequests() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
 });

@@ -11,8 +11,8 @@ import { calculateEmi, calculateFdMaturity, calculateNetSalary, calculateShareDe
 import type { LoanContext, PayoutFrequency, RatesReference } from '@tgs/types';
 import { api } from '@/lib/api';
 import { useLoanContext } from '@/lib/loans';
-import { Alert, Button, Card, Divider, Header, KeyValue, MonthPicker, NumberStepper, Screen, Segmented, SelectField, Skeleton, Tag, Text, TextField } from '@/ui';
-import { color, radius, space, onBrandMuted } from '@/theme';
+import { Banner, Button, Card, Divider, Header, MetadataListItem, MonthPicker, NumberInput, Screen, SegmentedControl, SelectField, Skeleton, Token, Text, TextField } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 const rupees = (t: string) => Number(t.replace(/[^0-9]/g, '')) || 0;
 
@@ -27,11 +27,11 @@ export default function Calculators() {
 
   return (
     <Screen header={<Header title="Calculators" onBack={() => router.back()} />}>
-      <Segmented label="Calculate" value={tab} options={[{ value: 'loan', label: 'Loan instalment' }, { value: 'fd', label: 'Fixed deposit' }]} onChange={setTab} />
+      <SegmentedControl label="Calculate" value={tab} options={[{ value: 'loan', label: 'Loan instalment' }, { value: 'fd', label: 'Fixed deposit' }]} onChange={setTab} />
       {loading ? (
-        <Skeleton height={360} radius={radius.card} />
+        <Skeleton height={360} radius={radius.container} />
       ) : failed ? (
-        <Alert type="error" heading="Couldn't load the rates" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void Promise.all([ctx.refetch(), rates.refetch()]) }} />
+        <Banner status="error" heading="Couldn't load the rates" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void Promise.all([ctx.refetch(), rates.refetch()]) }} />
       ) : tab === 'loan' ? (
         <LoanCalc ctx={ctx.data!} />
       ) : (
@@ -69,7 +69,7 @@ function LoanCalc({ ctx }: { ctx: LoanContext }) {
   return (
     <>
       <Card>
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <SelectField label="Loan" value={code} options={products.map((p) => ({ value: p.code, label: p.name, hint: `${p.ratePercent}%` }))} onChange={(v) => setCode(v as typeof code)} />
           <TextField
             label="Amount"
@@ -86,13 +86,13 @@ function LoanCalc({ ctx }: { ctx: LoanContext }) {
 
       {r && !tooMuch ? (
         <View style={styles.result}>
-          <Text role="caption" style={{ color: onBrandMuted }}>
+          <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
             {r.emi.constant ? 'Monthly instalment' : 'First instalment (gets smaller every month)'}
           </Text>
-          <Text role="display" tone="onBrand" accessibilityLiveRegion="polite">
+          <Text type="display-2" tone="onAccent" accessibilityLiveRegion="polite">
             {formatINR(r.emi.firstInstalment)}
           </Text>
-          <Text role="caption" style={{ color: onBrandMuted }}>
+          <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
             {months} months at {product.ratePercent}% a year{!r.emi.constant ? ` · last ${formatINR(r.emi.lastInstalment)}` : ''}
           </Text>
         </View>
@@ -100,10 +100,10 @@ function LoanCalc({ ctx }: { ctx: LoanContext }) {
 
       {r && !tooMuch ? (
         <Card>
-          <KeyValue label="Total interest" value={formatINR(r.emi.totalInterest)} />
-          <KeyValue label="Total you repay" value={formatINR(r.emi.totalPayable)} emphasis />
-          {product.shareDepositPercent ? <KeyValue label={`Share deposit kept (${product.shareDepositPercent}%)`} value={r.share.deduction ? formatINR(r.share.deduction) : 'Already covered'} /> : null}
-          {product.shareDepositPercent ? <KeyValue label="You would receive about" value={formatINR(amount - r.share.deduction)} /> : null}
+          <MetadataListItem label="Total interest" value={formatINR(r.emi.totalInterest)} />
+          <MetadataListItem label="Total you repay" value={formatINR(r.emi.totalPayable)} emphasis />
+          {product.shareDepositPercent ? <MetadataListItem label={`Share deposit kept (${product.shareDepositPercent}%)`} value={r.share.deduction ? formatINR(r.share.deduction) : 'Already covered'} /> : null}
+          {product.shareDepositPercent ? <MetadataListItem label="You would receive about" value={formatINR(amount - r.share.deduction)} /> : null}
           <Divider />
           <Check ok={!noRoom} text={noRoom ? 'You are too close to retirement for a new loan.' : `Repaid before you retire (${ctx.member.leftoverLabel} left).`} />
           <Check ok={r.emi.firstInstalment <= r.capacity} warn text={r.emi.firstInstalment <= r.capacity ? `Within ${ctx.settings.emiToNetSalaryMaxPercent}% of your net salary (${formatINR(r.capacity)}).` : `More than ${ctx.settings.emiToNetSalaryMaxPercent}% of your net salary (${formatINR(r.capacity)}). The office may ask for a smaller amount.`} />
@@ -112,12 +112,12 @@ function LoanCalc({ ctx }: { ctx: LoanContext }) {
         </Card>
       ) : null}
 
-      <Text role="caption" tone="tertiary">
+      <Text type="supporting" tone="secondary">
         An estimate from today&apos;s rates and your record. The society confirms the amount when you apply.
       </Text>
       <Button
-        text="Apply with these numbers"
-        rightSlot={ArrowRight}
+        label="Apply with these numbers"
+        iconEnd={ArrowRight}
         size="lg"
         fullWidth
         disabled={!r || tooMuch || tooLittle || noRoom}
@@ -131,8 +131,8 @@ function Check({ ok, warn, text }: { ok: boolean; warn?: boolean; text: string }
   const Icon = ok ? CircleCheck : TriangleAlert;
   return (
     <View style={styles.check}>
-      <Icon size={18} color={ok ? color.status.success.fg : warn ? color.status.warning.fg : color.status.danger.fg} />
-      <Text role="caption" tone={ok ? 'secondary' : warn ? 'warning' : 'danger'} style={{ flex: 1 }}>
+      <Icon size={18} color={ok ? color.status.success.text : warn ? color.status.warning.text : color.status.error.text} />
+      <Text type="supporting" tone={ok ? 'secondary' : warn ? 'warning' : 'error'} style={{ flex: 1 }}>
         {text}
       </Text>
     </View>
@@ -159,51 +159,51 @@ function FdCalc({ rates, today }: { rates: RatesReference; today: string }) {
   return (
     <>
       <Card>
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <TextField label="Deposit amount" prefix="₹" keyboardType="number-pad" value={amountText} onChangeText={(t) => setAmountText(t.replace(/[^0-9]/g, ''))} />
-          <View style={{ gap: space[3] }}>
+          <View style={{ gap: spacing[1.5] }}>
             <View style={styles.head}>
-              <Text role="label" style={{ flex: 1 }}>
+              <Text type="label" style={{ flex: 1 }}>
                 For how long
               </Text>
-              {rate !== undefined ? <Tag text={`${rate}% a year`} color="primary" size="xs" /> : null}
+              {rate !== undefined ? <Token text={`${rate}% a year`} status="info" size="xs" /> : null}
             </View>
-            <NumberStepper value={months} min={minMonths} max={maxMonths} step={months >= 12 ? 3 : 1} onChange={setMonths} accessibilityLabel="Months" />
+            <NumberInput value={months} min={minMonths} max={maxMonths} step={months >= 12 ? 3 : 1} onChange={setMonths} accessibilityLabel="Months" />
           </View>
-          <Segmented label="Interest paid" value={payout} options={PAYOUTS} onChange={setPayout} />
+          <SegmentedControl label="Interest paid" value={payout} options={PAYOUTS} onChange={setPayout} />
         </View>
       </Card>
-      {rate === undefined ? <Alert type="warning" heading="No rate for this period" description="Choose a period in one of the society's FD slabs." /> : null}
+      {rate === undefined ? <Banner status="warning" heading="No rate for this period" description="Choose a period in one of the society's FD slabs." /> : null}
       {r ? (
         <View style={styles.result}>
-          <Text role="caption" style={{ color: onBrandMuted }}>
+          <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
             {payout === 'ON_MATURITY' ? 'You get at maturity' : payout === 'MONTHLY' ? 'Interest every month' : 'Interest every quarter'}
           </Text>
-          <Text role="display" tone="onBrand" accessibilityLiveRegion="polite">
+          <Text type="display-2" tone="onAccent" accessibilityLiveRegion="polite">
             {formatINR(payout === 'ON_MATURITY' ? r.maturityValue : r.periodicInterest)}
           </Text>
-          <Text role="caption" style={{ color: onBrandMuted }}>
+          <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
             Matures around {formatDisplayDate(r.maturityDate)}
           </Text>
         </View>
       ) : null}
       {r ? (
         <Card>
-          <KeyValue label="You deposit" value={formatINR(principal)} />
-          <KeyValue label="Total interest" value={formatINR(r.totalInterest)} emphasis />
-          {payout !== 'ON_MATURITY' ? <KeyValue label="Returned at maturity" value={formatINR(r.maturityValue)} /> : null}
+          <MetadataListItem label="You deposit" value={formatINR(principal)} />
+          <MetadataListItem label="Total interest" value={formatINR(r.totalInterest)} emphasis />
+          {payout !== 'ON_MATURITY' ? <MetadataListItem label="Returned at maturity" value={formatINR(r.maturityValue)} /> : null}
         </Card>
       ) : null}
-      <Text role="caption" tone="tertiary">
+      <Text type="supporting" tone="secondary">
         Interest on maturity is compounded quarterly. Rates as set by the society today.
       </Text>
-      <Button text="Open a fixed deposit" rightSlot={ArrowRight} size="lg" fullWidth disabled={!r} onPress={() => router.push('/deposit/open')} />
+      <Button label="Open a fixed deposit" iconEnd={ArrowRight} size="lg" fullWidth disabled={!r} onPress={() => router.push('/deposit/open')} />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  result: { backgroundColor: color.brand.solid, borderRadius: radius.card, padding: space[10], gap: space[2] },
-  check: { flexDirection: 'row', alignItems: 'center', gap: space[4], paddingVertical: space[2] },
-  head: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  result: { backgroundColor: color.accent, borderRadius: radius.container, padding: spacing[5], gap: spacing[1] },
+  check: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingVertical: spacing[1] },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
 });

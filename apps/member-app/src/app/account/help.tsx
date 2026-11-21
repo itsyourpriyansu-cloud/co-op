@@ -9,14 +9,14 @@ import { isApiError } from '@tgs/api-client';
 import type { SupportTicket } from '@tgs/types';
 import { api } from '@/lib/api';
 import { accountKeys, stamp, useSupport } from '@/lib/account';
-import { Alert, Button, Card, EmptyState, Header, Screen, Section, Segmented, SelectField, Skeleton, Tag, Text, TextField } from '@/ui';
-import { color, radius, space, touchTarget } from '@/theme';
+import { Banner, Button, Card, EmptyState, Header, Screen, Section, SegmentedControl, SelectField, Skeleton, Token, Text, TextField } from '@/ui';
+import { color, radius, touchTarget, spacing } from '@/theme';
 
 type Category = NonNullable<SupportTicket['category']>;
 const CATEGORY: Record<Category, string> = { LOAN: 'Loans', DEPOSIT: 'Deposits', PAYMENT: 'Payments', PROFILE: 'Profile', APP: 'The app', OTHER: 'Something else' };
-const STATUS: Record<SupportTicket['status'], { text: string; color: 'warning' | 'primary' | 'neutral' }> = {
+const STATUS: Record<SupportTicket['status'], { text: string; color: 'warning' | 'info' | 'neutral' }> = {
   OPEN: { text: 'Waiting for reply', color: 'warning' },
-  ANSWERED: { text: 'Office replied', color: 'primary' },
+  ANSWERED: { text: 'Office replied', color: 'info' },
   CLOSED: { text: 'Closed', color: 'neutral' },
 };
 
@@ -29,12 +29,12 @@ export default function Help() {
   return (
     <Screen header={<Header title="Help & support" onBack={() => (asking ? setAsking(false) : router.back())} />} refreshing={q.isRefetching} onRefresh={() => void q.refetch()}>
       {q.isLoading ? (
-        <View style={{ gap: space[6] }}>
-          <Skeleton height={160} radius={radius.card} />
-          <Skeleton height={240} radius={radius.card} />
+        <View style={{ gap: spacing[3] }}>
+          <Skeleton height={160} radius={radius.container} />
+          <Skeleton height={240} radius={radius.container} />
         </View>
       ) : q.isError || !q.data ? (
-        <Alert type="error" heading="Couldn't load help" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />
+        <Banner status="error" heading="Couldn't load help" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />
       ) : asking ? (
         <AskForm
           onSent={() => {
@@ -44,7 +44,7 @@ export default function Help() {
         />
       ) : (
         <>
-          <Segmented label="Show" value={tab} options={[{ value: 'help', label: 'Get help' }, { value: 'mine', label: `My questions (${q.data.tickets.length})` }]} onChange={setTab} />
+          <SegmentedControl label="Show" value={tab} options={[{ value: 'help', label: 'Get help' }, { value: 'mine', label: `My questions (${q.data.tickets.length})` }]} onChange={setTab} />
           {tab === 'help' ? (
             <>
               <Section title="Contact the society office">
@@ -60,7 +60,7 @@ export default function Help() {
                 <View style={styles.chips}>
                   {['All', ...new Set(q.data.faqs.map((f) => f.topic))].map((t) => (
                     <Pressable key={t} accessibilityRole="button" accessibilityState={{ selected: topic === t }} onPress={() => setTopic(t)} style={[styles.chip, topic === t && styles.chipOn]}>
-                      <Text role="captionStrong" style={{ color: topic === t ? color.text.onBrand : color.text.secondary }}>
+                      <Text type="supporting" weight="medium" style={{ color: topic === t ? color.text.onAccent : color.text.secondary }}>
                         {t}
                       </Text>
                     </Pressable>
@@ -74,14 +74,14 @@ export default function Help() {
                     ))}
                 </Card>
               </Section>
-              <Button text="Ask the office a question" leftSlot={MessageSquarePlus} size="lg" fullWidth onPress={() => setAsking(true)} />
+              <Button label="Ask the office a question" icon={MessageSquarePlus} size="lg" fullWidth onPress={() => setAsking(true)} />
             </>
           ) : q.data.tickets.length ? (
             <>
               {q.data.tickets.map((t) => (
                 <Ticket key={t.id} t={t} />
               ))}
-              <Button text="Ask another question" leftSlot={MessageSquarePlus} buttonType="secondary" fullWidth onPress={() => setAsking(true)} />
+              <Button label="Ask another question" icon={MessageSquarePlus} variant="secondary" fullWidth onPress={() => setAsking(true)} />
             </>
           ) : (
             <EmptyState icon={MessageSquarePlus} title="No questions yet" description="Ask the office anything about your loans, deposits or payments." action={{ text: 'Ask a question', onPress: () => setAsking(true) }} />
@@ -95,19 +95,19 @@ export default function Help() {
 function Contact({ icon: Icon, label, value, onPress, divider }: { icon: LucideIcon; label: string; value: string; onPress?: () => void; divider?: boolean }) {
   const body = (
     <>
-      <Icon size={20} color={onPress ? color.brand.solid : color.text.secondary} strokeWidth={1.75} />
-      <View style={{ flex: 1, gap: space[1] }}>
-        <Text role="caption" tone="secondary">
+      <Icon size={20} color={onPress ? color.accent : color.text.secondary} strokeWidth={1.75} />
+      <View style={{ flex: 1, gap: spacing[0.5] }}>
+        <Text type="supporting" tone="secondary">
           {label}
         </Text>
-        <Text role="body" tone={onPress ? 'link' : 'primary'}>
+        <Text type="body" tone={onPress ? 'link' : 'primary'}>
           {value}
         </Text>
       </View>
     </>
   );
   return onPress ? (
-    <Pressable accessibilityRole="link" onPress={onPress} style={({ pressed }) => [styles.contact, divider && styles.divider, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
+    <Pressable accessibilityRole="link" onPress={onPress} style={({ pressed }) => [styles.contact, divider && styles.divider, pressed && { backgroundColor: color.background.muted }]}>
       {body}
     </Pressable>
   ) : (
@@ -120,13 +120,13 @@ function Faq({ q, a, divider }: { q: string; a: string; divider?: boolean }) {
   return (
     <View style={divider && styles.divider}>
       <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen((o) => !o)} style={styles.faqQ}>
-        <Text role="label" style={{ flex: 1 }}>
+        <Text type="label" style={{ flex: 1 }}>
           {q}
         </Text>
-        {open ? <ChevronUp size={18} color={color.text.tertiary} /> : <ChevronDown size={18} color={color.text.tertiary} />}
+        {open ? <ChevronUp size={18} color={color.text.secondary} /> : <ChevronDown size={18} color={color.text.secondary} />}
       </Pressable>
       {open ? (
-        <Text role="body" tone="secondary" style={styles.faqA}>
+        <Text type="body" tone="secondary" style={styles.faqA}>
           {a}
         </Text>
       ) : null}
@@ -138,24 +138,24 @@ function Ticket({ t }: { t: SupportTicket }) {
   const s = STATUS[t.status];
   return (
     <Card>
-      <View style={{ gap: space[6] }}>
+      <View style={{ gap: spacing[3] }}>
         <View style={styles.ticketHead}>
-          <View style={{ flex: 1, gap: space[1] }}>
-            <Text role="cardTitle">{t.subject}</Text>
-            <Text role="caption" tone="tertiary">
+          <View style={{ flex: 1, gap: spacing[0.5] }}>
+            <Text type="h4">{t.subject}</Text>
+            <Text type="supporting" tone="secondary">
               {t.category ? `${CATEGORY[t.category]} · ` : ''}
               {stamp(t.createdAt)}
             </Text>
           </View>
-          <Tag text={s.text} color={s.color} size="xs" />
+          <Token text={s.text} status={s.color} size="xs" />
         </View>
         {(t.messages ?? []).map((m, i) => (
           <View key={i} style={[styles.bubble, m.from === 'MEMBER' ? styles.mine : styles.theirs]}>
-            <Text role="captionStrong" tone={m.from === 'MEMBER' ? 'link' : 'secondary'}>
+            <Text type="supporting" weight="medium" tone={m.from === 'MEMBER' ? 'link' : 'secondary'}>
               {m.from === 'MEMBER' ? 'You' : m.byName}
             </Text>
-            <Text role="body">{m.text}</Text>
-            <Text role="caption" tone="tertiary">
+            <Text type="body">{m.text}</Text>
+            <Text type="supporting" tone="secondary">
               {stamp(m.at)}
             </Text>
           </View>
@@ -189,28 +189,28 @@ function AskForm({ onSent }: { onSent: () => void }) {
   };
   return (
     <>
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         The office replies here within two working days. For anything urgent, call the office.
       </Text>
       <SelectField label="About" value={category} options={(Object.keys(CATEGORY) as Category[]).map((k) => ({ value: k, label: CATEGORY[k] }))} onChange={(v) => setCategory(v as Category)} />
       <TextField label="Subject" value={subject} onChangeText={setSubject} error={errors.subject} placeholder="e.g. Interest certificate for FD" required />
       <TextField label="Your question" value={message} onChangeText={setMessage} error={errors.message} multiline numberOfLines={5} textAlignVertical="top" required />
-      {errors.form ? <Alert type="error" heading="Not sent" description={errors.form} /> : null}
-      <Button text="Send question" leftSlot={Send} size="lg" fullWidth loading={busy} disabled={!subject.trim() || !message.trim()} onPress={() => void send()} />
+      {errors.form ? <Banner status="error" heading="Not sent" description={errors.form} /> : null}
+      <Button label="Send question" icon={Send} size="lg" fullWidth loading={busy} disabled={!subject.trim() || !message.trim()} onPress={() => void send()} />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  contact: { flexDirection: 'row', alignItems: 'center', gap: space[6], minHeight: touchTarget + 12, paddingHorizontal: space[8], paddingVertical: space[4] },
-  divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3] },
-  chip: { paddingHorizontal: space[6], minHeight: 36, justifyContent: 'center', borderRadius: 18, borderWidth: 1, borderColor: color.border.default, backgroundColor: color.bg.surface },
-  chipOn: { backgroundColor: color.brand.solid, borderColor: color.brand.solid },
-  faqQ: { flexDirection: 'row', alignItems: 'center', gap: space[4], minHeight: touchTarget + 8, paddingHorizontal: space[8], paddingVertical: space[4] },
-  faqA: { paddingHorizontal: space[8], paddingBottom: space[8] },
-  ticketHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space[4] },
-  bubble: { gap: space[1], padding: space[6], borderRadius: radius.card, maxWidth: '92%' },
-  mine: { alignSelf: 'flex-end', backgroundColor: color.brand.subtle },
-  theirs: { alignSelf: 'flex-start', backgroundColor: color.bg.surfaceSubtle },
+  contact: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], minHeight: touchTarget + 12, paddingHorizontal: spacing[4], paddingVertical: spacing[2] },
+  divider: { borderTopWidth: 1, borderTopColor: color.border },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1.5] },
+  chip: { paddingHorizontal: spacing[3], minHeight: 36, justifyContent: 'center', borderRadius: 18, borderWidth: 1, borderColor: color.border, backgroundColor: color.background.surface },
+  chipOn: { backgroundColor: color.accent, borderColor: color.accent },
+  faqQ: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], minHeight: touchTarget + 8, paddingHorizontal: spacing[4], paddingVertical: spacing[2] },
+  faqA: { paddingHorizontal: spacing[4], paddingBottom: spacing[4] },
+  ticketHead: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2] },
+  bubble: { gap: spacing[0.5], padding: spacing[3], borderRadius: radius.container, maxWidth: '92%' },
+  mine: { alignSelf: 'flex-end', backgroundColor: color.accentMuted },
+  theirs: { alignSelf: 'flex-start', backgroundColor: color.background.muted },
 });

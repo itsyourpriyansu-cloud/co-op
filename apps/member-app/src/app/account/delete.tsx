@@ -7,7 +7,7 @@ import { useMutation } from '@tanstack/react-query';
 import { isApiError } from '@tgs/api-client';
 import { ask } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Alert, Button, Card, Header, Screen, Section, Text, TextField } from '@/ui';
+import { Banner, Button, Card, Header, Screen, Section, Text, TextField } from '@/ui';
 
 export default function DeleteAccount() {
   const [reason, setReason] = useState('');
@@ -24,23 +24,23 @@ export default function DeleteAccount() {
   };
 
   return (
-    <Screen header={<Header title="Delete my account" onBack={() => router.back()} />} footer={send.isSuccess ? <Button text="Done" size="lg" fullWidth onPress={() => router.back()} /> : <Button text="Send deletion request" buttonType="danger" size="lg" fullWidth loading={send.isPending} onPress={() => void submit()} />}>
+    <Screen header={<Header title="Delete my account" onBack={() => router.back()} />} footer={send.isSuccess ? <Button label="Done" size="lg" fullWidth onPress={() => router.back()} /> : <Button label="Send deletion request" variant="destructive" size="lg" fullWidth loading={send.isPending} onPress={() => void submit()} />}>
       {send.isSuccess ? (
-        <Alert type="success" heading="Request sent" description="The office will reply under Help within two working days, and will tell you when your app account is closed." />
+        <Banner status="success" heading="Request sent" description="The office will reply under Help within two working days, and will tell you when your app account is closed." />
       ) : (
         <>
           <Section title="What is deleted">
             <Card>
-              <Text role="body">Your app sign-in, the phones that get your notifications, your message settings and the photos you uploaded that the society does not need to keep.</Text>
+              <Text type="body">Your app sign-in, the phones that get your notifications, your message settings and the photos you uploaded that the society does not need to keep.</Text>
             </Card>
           </Section>
           <Section title="What the society keeps">
             <Card>
-              <Text role="body">Your membership, loan, deposit, share and payment records, with the forms you signed. A co-operative credit society must keep them for its audits and the law. Membership itself ends only when you leave the society at the office.</Text>
+              <Text type="body">Your membership, loan, deposit, share and payment records, with the forms you signed. A co-operative credit society must keep them for its audits and the law. Membership itself ends only when you leave the society at the office.</Text>
             </Card>
           </Section>
           <TextField label="Why are you leaving? (optional)" value={reason} onChangeText={setReason} multiline />
-          {send.isError ? <Alert type="error" heading="Not sent" description={isApiError(send.error) ? send.error.message : 'Please try again.'} /> : null}
+          {send.isError ? <Banner status="error" heading="Not sent" description={isApiError(send.error) ? send.error.message : 'Please try again.'} /> : null}
         </>
       )}
     </Screen>

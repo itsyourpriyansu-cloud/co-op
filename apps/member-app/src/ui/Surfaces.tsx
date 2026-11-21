@@ -1,62 +1,79 @@
-// Card, Alert, Section, KeyValue, Divider (native mirrors of Blend CardV2 / AlertV2 / KeyValuePairV2).
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+// Astryx Card (clickable / selectable when given onPress / selected), Banner, Section, MetadataListItem,
+// Divider (docs/25 §5). Cards separate by surface step + hairline border, never by shadow.
+import { useState, type ReactNode } from 'react';
+import { Animated, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, type LucideIcon } from 'lucide-react-native';
-import type { Tone } from '@tgs/design-tokens';
-import { color, elevation, radius, space } from '@/theme';
-import { Button } from './Button';
+import { color, radius, spacing, type StatusName } from '@/theme';
+import { Link } from './Button';
+import { useEnter, usePressScale } from './motion';
 import { Text } from './Text';
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export function Card({ children, onPress, selected, padded = true, style, accessibilityLabel }: { children: ReactNode; onPress?: () => void; selected?: boolean; padded?: boolean; style?: StyleProp<ViewStyle>; accessibilityLabel?: string }) {
+  const [pressed, setPressed] = useState(false);
+  const { scaleStyle, pressHandlers } = usePressScale(0.98);
   const base = [styles.card, padded && styles.padded, selected && styles.selected, style];
   if (!onPress) return <View style={base}>{children}</View>;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} accessibilityState={{ selected: !!selected }} onPress={onPress} style={({ pressed }) => [...base, pressed && styles.pressed]}>
+    <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ selected: !!selected }}
+      onPress={onPress}
+      onPressIn={() => {
+        setPressed(true);
+        pressHandlers.onPressIn();
+      }}
+      onPressOut={() => {
+        setPressed(false);
+        pressHandlers.onPressOut();
+      }}
+      style={[...base, scaleStyle]}
+    >
       {children}
-    </Pressable>
+      {/* Pressed tint sits over any card colour, the navy hero included. */}
+      {pressed ? <View pointerEvents="none" style={styles.pressTint} /> : null}
+    </AnimatedPressable>
   );
 }
 
-export type AlertType = 'primary' | 'success' | 'warning' | 'error' | 'neutral' | 'purple';
-const ALERT: Record<AlertType, { tone: Tone; icon: LucideIcon }> = {
-  primary: { tone: 'info', icon: Info },
-  success: { tone: 'success', icon: CircleCheck },
-  warning: { tone: 'warning', icon: TriangleAlert },
-  error: { tone: 'danger', icon: CircleAlert },
-  neutral: { tone: 'neutral', icon: Info },
-  purple: { tone: 'approval', icon: Info },
-};
+export type BannerStatus = 'info' | 'success' | 'warning' | 'error' | 'neutral' | 'approval';
+const BANNER_ICON: Record<BannerStatus, LucideIcon> = { info: Info, success: CircleCheck, warning: TriangleAlert, error: CircleAlert, neutral: Info, approval: Info };
 
-export function Alert({ type = 'primary', heading, description, action }: { type?: AlertType; heading: string; description?: string; action?: { text: string; onPress: () => void } }) {
-  const a = ALERT[type];
-  const s = color.status[a.tone];
+export function Banner({ status = 'info', heading, description, action }: { status?: BannerStatus; heading: string; description?: string; action?: { text: string; onPress: () => void } }) {
+  const s = color.status[status satisfies StatusName];
+  const Icon = BANNER_ICON[status];
+  const enter = useEnter();
   return (
-    <View accessibilityRole="alert" style={[styles.alert, { backgroundColor: s.bg, borderColor: s.border }]}>
-      <a.icon size={20} color={s.fg} strokeWidth={1.75} />
-      <View style={{ flex: 1, gap: space[1] }}>
-        <Text role="label" style={{ color: s.fg }}>
+    <Animated.View accessibilityRole="alert" style={[styles.banner, { backgroundColor: s.tint, borderColor: s.border }, enter]}>
+      <Icon size={20} color={s.text} strokeWidth={1.75} style={styles.bannerIcon} />
+      <View style={{ flex: 1, gap: spacing[1] }}>
+        <Text type="label" weight="semibold" style={{ color: s.text }}>
           {heading}
         </Text>
         {description ? (
-          <Text role="caption" tone="secondary">
+          <Text type="supporting" tone="secondary">
             {description}
           </Text>
         ) : null}
-        {action ? <Button text={action.text} subType="inline" onPress={action.onPress} /> : null}
+        {action ? <Link label={action.text} onPress={action.onPress} /> : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 export function Section({ title, description, right, children }: { title?: string; description?: string; right?: ReactNode; children: ReactNode }) {
   return (
-    <View style={{ gap: space[6] }}>
+    <View style={{ gap: spacing[3] }}>
       {title ? (
         <View style={styles.sectionHead}>
-          <View style={{ flex: 1, gap: space[1] }}>
-            <Text role="sectionTitle">{title}</Text>
+          <View style={{ flex: 1, gap: spacing[0.5] }}>
+            <Text type="h3">
+              {title}
+            </Text>
             {description ? (
-              <Text role="caption" tone="tertiary">
+              <Text type="supporting" tone="secondary">
                 {description}
               </Text>
             ) : null}
@@ -69,13 +86,14 @@ export function Section({ title, description, right, children }: { title?: strin
   );
 }
 
-export function KeyValue({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
+/** Astryx MetadataListItem: label left, value right, figures tabular. */
+export function MetadataListItem({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
   return (
     <View style={styles.kv}>
-      <Text role="caption" tone="tertiary" style={{ flexShrink: 1 }}>
+      <Text type="supporting" tone="secondary" style={{ flexShrink: 1 }}>
         {label}
       </Text>
-      <Text role={emphasis ? 'amount' : 'bodyStrong'} style={{ flexShrink: 1, maxWidth: '64%', textAlign: 'right' }}>
+      <Text type={emphasis ? 'amount' : 'body'} weight={emphasis ? undefined : 'medium'} style={styles.kvValue}>
         {value}
       </Text>
     </View>
@@ -87,12 +105,14 @@ export function Divider() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: color.bg.surface, borderRadius: radius.card, borderWidth: 1, borderColor: color.border.default },
-  padded: { padding: space[8] },
-  selected: { borderColor: color.brand.solid, backgroundColor: color.brand.subtle },
-  pressed: { backgroundColor: color.bg.surfaceSubtle },
-  alert: { flexDirection: 'row', gap: space[6], padding: space[8], borderRadius: radius.card, borderWidth: 1 },
-  sectionHead: { flexDirection: 'row', alignItems: 'flex-end', gap: space[6] },
-  kv: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space[8], paddingVertical: space[4] },
-  divider: { height: 1, backgroundColor: color.border.subtle },
+  card: { backgroundColor: color.background.surface, borderRadius: radius.container, borderCurve: 'continuous', borderWidth: 1, borderColor: color.border, overflow: 'hidden' },
+  padded: { padding: spacing[4] },
+  selected: { borderColor: color.accent, backgroundColor: color.accentMuted },
+  pressTint: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: color.overlayPressed },
+  banner: { flexDirection: 'row', gap: spacing[3], padding: spacing[4], borderRadius: radius.container, borderCurve: 'continuous', borderWidth: 1 },
+  bannerIcon: { marginTop: 2 },
+  sectionHead: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing[3] },
+  kv: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing[4], paddingVertical: spacing[2] },
+  kvValue: { flexShrink: 1, maxWidth: '64%', textAlign: 'right', fontVariant: ['tabular-nums'] },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: color.borderEmphasized },
 });
