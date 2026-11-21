@@ -3,7 +3,7 @@
 import { View } from 'react-native';
 import type { LoanBankAccount } from '@tgs/types';
 import { Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { spacing } from '@/theme';
 
 export const EMPTY_BANK: LoanBankAccount = { holderName: '', bankName: '', branch: '', accountNo: '', ifsc: '' };
 
@@ -12,8 +12,8 @@ export function BankAccountFields({ value, onChange, err, intro }: { value: Loan
   const set = (p: Partial<LoanBankAccount>) => onChange({ ...v, ...p });
   const e = (k: keyof LoanBankAccount) => err(`bankAccount.${k}`);
   return (
-    <View style={{ gap: space[8] }}>
-      <Text role="caption" tone="secondary">
+    <View style={{ gap: spacing[4] }}>
+      <Text type="supporting" tone="secondary">
         {intro}
       </Text>
       <TextField label="Account holder's name" value={v.holderName} onChangeText={(holderName) => set({ holderName })} autoCapitalize="words" required {...(e('holderName') ? { error: e('holderName')! } : {})} />

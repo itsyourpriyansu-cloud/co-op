@@ -9,8 +9,8 @@ import { useNotifications } from '@/lib/account';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { stagesFor, STEPS, errorsForStep, useJoiningReference, useMyApplication } from '@/lib/joining';
-import { Alert, Button, Card, EmptyState, Skeleton, StageTracker, StatusTag, Text, WizardProgress } from '@/ui';
-import { color, radius, space, theme, onBrandMuted, onBrandTile } from '@/theme';
+import { Banner, Button, Card, EmptyState, Skeleton, StageTracker, StatusToken, Text, Stepper, Link } from '@/ui';
+import { color, radius, spacing, layout } from '@/theme';
 
 export default function Tracker() {
   const { session, logout, syncSession } = useAuth();
@@ -52,10 +52,10 @@ export default function Tracker() {
   const body = () => {
     if (mine.isLoading || !app) {
       return (
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <Skeleton height={28} width="60%" />
-          <Skeleton height={140} radius={radius.card} />
-          <Skeleton height={260} radius={radius.card} />
+          <Skeleton height={140} radius={radius.container} />
+          <Skeleton height={260} radius={radius.container} />
         </View>
       );
     }
@@ -67,23 +67,23 @@ export default function Tracker() {
       const done = STEPS.slice(0, -1).filter((_, i) => Object.keys(errorsForStep(errors, i)).length === 0).length;
       return (
         <>
-          <View style={{ gap: space[3] }}>
-            <Text role="pageTitle">Hi {app.form?.personal?.fullName?.split(' ')[0] ?? session?.user.name.split(' ')[0]}</Text>
-            <Text role="body" tone="secondary">
+          <View style={{ gap: spacing[1.5] }}>
+            <Text type="h1">Hi {app.form?.personal?.fullName?.split(' ')[0] ?? session?.user.name.split(' ')[0]}</Text>
+            <Text type="body" tone="secondary">
               Your application is saved. Pick up where you left off.
             </Text>
           </View>
           <Card>
-            <View style={{ gap: space[8] }}>
+            <View style={{ gap: spacing[4] }}>
               <View style={styles.rowBetween}>
-                <Text role="cardTitle">Membership application</Text>
-                <StatusTag entity="membership" status="DRAFT" />
+                <Text type="h4">Membership application</Text>
+                <StatusToken entity="membership" status="DRAFT" />
               </View>
-              <WizardProgress step={done} total={STEPS.length - 1} title="Sections complete" />
-              <Text role="caption" tone="secondary">
+              <Stepper step={done} total={STEPS.length - 1} title="Sections complete" />
+              <Text type="supporting" tone="secondary">
                 {done} of {STEPS.length - 1} sections complete · about {Math.max(1, (STEPS.length - 1 - done) * 1.5)} minutes left
               </Text>
-              <Button text="Continue application" rightSlot={ArrowRight} size="lg" fullWidth onPress={() => router.push('/apply')} />
+              <Button label="Continue application" iconEnd={ArrowRight} size="lg" fullWidth onPress={() => router.push('/apply')} />
             </View>
           </Card>
         </>
@@ -94,37 +94,37 @@ export default function Tracker() {
     const shares = app.sharesProposed || app.form?.shares?.sharesProposed || 0;
     return (
       <>
-        {submitted ? <Alert type="success" heading="Application submitted" description="Signed with OTP. We'll notify you as each stage completes." /> : null}
+        {submitted ? <Banner status="success" heading="Application submitted" description="Signed with OTP. We'll notify you as each stage completes." /> : null}
 
         {app.status === 'ACTIVE' ? (
           <Card style={styles.welcome}>
-            <View style={{ alignItems: 'center', gap: space[6] }}>
+            <View style={{ alignItems: 'center', gap: spacing[3] }}>
               <View style={styles.party}>
-                <PartyPopper size={34} color={color.text.onBrand} strokeWidth={1.5} />
+                <PartyPopper size={34} color={color.text.onAccent} strokeWidth={1.5} />
               </View>
-              <Text role="sectionTitle" tone="onBrand" style={{ textAlign: 'center' }}>
+              <Text type="h3" tone="onAccent" style={{ textAlign: 'center' }}>
                 Welcome to the society!
               </Text>
               <View style={{ alignItems: 'center' }}>
-                <Text role="caption" style={{ color: onBrandMuted }}>
+                <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
                   Your General No.
                 </Text>
-                <Text role="display" tone="onBrand">
+                <Text type="display-2" tone="onAccent">
                   {app.allottedGeneralNo}
                 </Text>
               </View>
-              <Button text="Go to my account" buttonType="secondary" size="lg" fullWidth rightSlot={ArrowRight} onPress={() => void enterAsMember()} />
+              <Button label="Go to my account" variant="secondary" size="lg" fullWidth iconEnd={ArrowRight} onPress={() => void enterAsMember()} />
             </View>
           </Card>
         ) : (
-          <View style={{ gap: space[3] }}>
+          <View style={{ gap: spacing[1.5] }}>
             <View style={styles.rowBetween}>
-              <Text role="pageTitle" style={{ flex: 1 }}>
+              <Text type="h1" style={{ flex: 1 }}>
                 Your application
               </Text>
-              <StatusTag entity="membership" status={app.status} size="md" />
+              <StatusToken entity="membership" status={app.status} size="md" />
             </View>
-            <Text role="caption" tone="tertiary">
+            <Text type="supporting" tone="secondary">
               {app.applicationNo}
               {app.submittedOn ? ` · submitted ${formatDisplayDate(app.submittedOn)}` : ''}
             </Text>
@@ -132,8 +132,8 @@ export default function Tracker() {
         )}
 
         {app.status === 'INFO_REQUESTED' && app.infoRequest ? (
-          <Alert
-            type="warning"
+          <Banner
+            status="warning"
             heading={`${app.infoRequest.by === 'DDO' ? 'Your department' : 'The society office'} needs a correction`}
             description={app.infoRequest.message}
             action={{ text: 'Fix and resubmit', onPress: () => router.push('/apply') }}
@@ -142,17 +142,17 @@ export default function Tracker() {
 
         {app.status === 'SHARE_PAYMENT_PENDING' ? (
           <Card>
-            <View style={{ gap: space[6] }}>
+            <View style={{ gap: spacing[3] }}>
               <View style={styles.rowIcon}>
-                <Banknote size={22} color={color.brand.solid} />
-                <Text role="cardTitle" style={{ flex: 1 }}>
+                <Banknote size={22} color={color.accent} />
+                <Text type="h4" style={{ flex: 1 }}>
                   Pay {formatINR(shares * (reference.data?.shareValue ?? 10000))} for {shares} shares
                 </Text>
               </View>
-              <Text role="body" tone="secondary">
+              <Text type="body" tone="secondary">
                 Pay at the society office (cash or bank transfer). Your membership becomes active as soon as the cashier records it.
               </Text>
-              <Text role="caption" tone="tertiary">
+              <Text type="supporting" tone="secondary">
                 {reference.data?.society.address}
               </Text>
             </View>
@@ -160,7 +160,7 @@ export default function Tracker() {
         ) : null}
 
         {app.status === 'REJECTED' ? (
-          <EmptyState icon={CircleX} tone="danger" title="Application not approved" description={app.events.at(-1)?.remarks ?? 'Contact the society office for details.'} />
+          <EmptyState icon={CircleX} tone="error" title="Application not approved" description={app.events.at(-1)?.remarks ?? 'Contact the society office for details.'} />
         ) : null}
 
         <Card>
@@ -170,20 +170,20 @@ export default function Tracker() {
         {/* Prototype only: move the application through staff stages until the console screens exist (M3). */}
         {app.status !== 'ACTIVE' && app.status !== 'REJECTED' ? (
           <Card style={styles.demo}>
-            <View style={{ gap: space[6] }}>
+            <View style={{ gap: spacing[3] }}>
               <View style={styles.rowIcon}>
-                <FlaskConical size={18} color={color.status.warning.fg} />
-                <Text role="label" tone="warning">
+                <FlaskConical size={18} color={color.status.warning.text} />
+                <Text type="label" tone="warning">
                   Demo controls
                 </Text>
               </View>
-              <Text role="caption" tone="secondary">
+              <Text type="supporting" tone="secondary">
                 Staff act in the Admin Console and this page updates by itself. These buttons act for them when you demo alone.
               </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[4] }}>
-                {app.status !== 'INFO_REQUESTED' ? <Button text="Advance stage" size="sm" loading={demoBusy} onPress={() => void demo(api.demo.membership.advance)} /> : null}
-                {['SUBMITTED', 'DDO_CERTIFICATION', 'OFFICE_REVIEW'].includes(app.status) ? <Button text="Request correction" buttonType="secondary" size="sm" disabled={demoBusy} onPress={() => void demo(api.demo.membership.requestInfo)} /> : null}
-                <Button text="Reject" buttonType="secondary" size="sm" disabled={demoBusy} onPress={() => void demo(api.demo.membership.reject)} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+                {app.status !== 'INFO_REQUESTED' ? <Button label="Advance stage" size="sm" loading={demoBusy} onPress={() => void demo(api.demo.membership.advance)} /> : null}
+                {['SUBMITTED', 'DDO_CERTIFICATION', 'OFFICE_REVIEW'].includes(app.status) ? <Button label="Request correction" variant="secondary" size="sm" disabled={demoBusy} onPress={() => void demo(api.demo.membership.requestInfo)} /> : null}
+                <Button label="Reject" variant="secondary" size="sm" disabled={demoBusy} onPress={() => void demo(api.demo.membership.reject)} />
               </View>
             </View>
           </Card>
@@ -191,8 +191,8 @@ export default function Tracker() {
 
         {app.signature ? (
           <View style={styles.rowIcon}>
-            <PenLine size={16} color={color.text.tertiary} />
-            <Text role="caption" tone="tertiary" style={{ flex: 1 }}>
+            <PenLine size={16} color={color.text.secondary} />
+            <Text type="supporting" tone="secondary" style={{ flex: 1 }}>
               Signed with OTP on {formatDisplayDate(app.signature.signedAt.slice(0, 10))} · agreement version {app.signature.textVersion}
             </Text>
           </View>
@@ -202,17 +202,17 @@ export default function Tracker() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: color.bg.canvas }} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: color.background.body }} edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={mine.isRefetching} onRefresh={() => void mine.refetch()} tintColor={color.brand.solid} />}
+        refreshControl={<RefreshControl refreshing={mine.isRefetching} onRefresh={() => void mine.refetch()} tintColor={color.accent} />}
       >
         <View style={styles.topBar}>
           <Pressable accessibilityRole="button" accessibilityLabel={unread ? `Notifications, ${unread} unread` : 'Notifications'} onPress={() => router.push('/notifications' as Href)} style={styles.bell} hitSlop={8}>
             <Bell size={22} color={color.text.primary} strokeWidth={1.75} />
             {unread ? (
               <View style={styles.badge}>
-                <Text role="captionStrong" tone="onBrand" style={{ fontSize: 10, lineHeight: 14 }}>
+                <Text type="supporting" weight="medium" tone="onAccent" style={{ fontSize: 10, lineHeight: 14 }}>
                   {unread > 9 ? '9+' : unread}
                 </Text>
               </View>
@@ -220,7 +220,7 @@ export default function Tracker() {
           </Pressable>
         </View>
         {body()}
-        <Button text="Sign out" subType="inline" leftSlot={LogOut} onPress={() => void signOut()} style={{ alignSelf: 'center', marginTop: space[8] }} />
+        <Link label="Sign out" icon={LogOut} onPress={() => void signOut()} style={{ alignSelf: 'center', marginTop: spacing[4] }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -228,12 +228,12 @@ export default function Tracker() {
 
 const styles = StyleSheet.create({
   topBar: { alignItems: 'flex-end' },
-  bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.default },
-  badge: { position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: color.status.danger.solid, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: space[8], gap: space[10], paddingBottom: space[16], width: '100%', maxWidth: theme.layout.contentMaxWidth, alignSelf: 'center' },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  rowIcon: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  welcome: { backgroundColor: color.brand.solid, borderColor: color.brand.solid, padding: space[12] },
-  party: { width: 72, height: 72, borderRadius: 36, backgroundColor: onBrandTile, alignItems: 'center', justifyContent: 'center' },
-  demo: { borderStyle: 'dashed', borderColor: color.status.warning.border, backgroundColor: color.status.warning.bg },
+  bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.background.surface, borderWidth: 1, borderColor: color.border },
+  badge: { position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: color.status.error.solid, alignItems: 'center', justifyContent: 'center' },
+  content: { padding: spacing[4], gap: spacing[5], paddingBottom: spacing[8], width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center' },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  rowIcon: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  welcome: { backgroundColor: color.accent, borderColor: color.accent, padding: spacing[6] },
+  party: { width: 72, height: 72, borderRadius: 36, backgroundColor: color.accentTile, alignItems: 'center', justifyContent: 'center' },
+  demo: { borderStyle: 'dashed', borderColor: color.status.warning.border, backgroundColor: color.status.warning.tint },
 });

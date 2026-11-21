@@ -6,39 +6,39 @@ import { ChevronRight, HandCoins, Plus } from 'lucide-react-native';
 import { formatCycle, formatDisplayDate, formatINR, loanHistoryCounts } from '@tgs/domain';
 import type { LoanRow, LoanStatusGroup } from '@tgs/types';
 import { SEGMENTS, useMyLoans } from '@/lib/loans';
-import { Alert, Button, Card, EmptyState, Screen, Segmented, Skeleton, StatusTag, Text } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Card, EmptyState, Screen, SegmentedControl, Skeleton, StatusToken, Text } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 function LoanCard({ row }: { row: LoanRow }) {
   return (
     <Card onPress={() => router.push({ pathname: '/loan/[id]', params: { id: row.id } })}>
-      <View style={{ gap: space[4] }}>
+      <View style={{ gap: spacing[2] }}>
         <View style={styles.row}>
-          <View style={{ flex: 1, gap: space[1] }}>
-            <Text role="cardTitle">{row.productName}</Text>
-            <Text role="caption" tone="tertiary">
+          <View style={{ flex: 1, gap: spacing[0.5] }}>
+            <Text type="h4">{row.productName}</Text>
+            <Text type="supporting" tone="secondary">
               {row.loanNo ?? row.applicationNo} · {formatDisplayDate(row.appliedOn)}
             </Text>
           </View>
-          <ChevronRight size={20} color={color.text.tertiary} />
+          <ChevronRight size={20} color={color.text.secondary} />
         </View>
         <View style={styles.row}>
-          <Text role="amount" style={{ flex: 1 }}>
+          <Text type="amount" style={{ flex: 1 }}>
             {formatINR(row.sanctionedAmount ?? row.appliedAmount)}
           </Text>
-          <StatusTag entity="loan" status={row.status} size="xs" />
+          <StatusToken entity="loan" status={row.status} size="xs" />
         </View>
         {row.group === 'ACTIVE' ? (
-          <Text role="caption" tone="secondary">
+          <Text type="supporting" tone="secondary">
             Outstanding {formatINR(row.outstanding)}
             {row.nextDue ? ` · next EMI ${formatINR(row.nextDue.amount)} in ${formatCycle(row.nextDue.cycle)}` : ''}
           </Text>
         ) : row.group === 'IN_PROCESS' && row.waitingOn ? (
-          <Text role="caption" tone="secondary">
+          <Text type="supporting" tone="secondary">
             Waiting on {row.waitingOn}
           </Text>
         ) : row.group === 'DRAFT' ? (
-          <Text role="caption" tone="secondary">
+          <Text type="supporting" tone="secondary">
             Not submitted yet. Tap to continue.
           </Text>
         ) : null}
@@ -56,27 +56,27 @@ export default function Loans() {
   return (
     <Screen refreshing={loans.isRefetching} onRefresh={() => void loans.refetch()}>
       <View style={styles.row}>
-        <Text role="pageTitle" style={{ flex: 1 }}>
+        <Text type="h1" style={{ flex: 1 }}>
           Loans
         </Text>
-        <Button text="Apply" size="sm" leftSlot={Plus} onPress={() => router.push('/loan/apply')} />
+        <Button label="Apply" size="sm" icon={Plus} onPress={() => router.push('/loan/apply')} />
       </View>
       {/* D-131: the member's loan record at a glance. */}
       {loans.data?.length ? (
-        <Text role="caption" tone="secondary">
+        <Text type="supporting" tone="secondary">
           {(({ applied, approved, rejected }) => `Applied ${applied} · Approved ${approved} · Rejected ${rejected}`)(loanHistoryCounts(loans.data.map((r) => r.status)))}
         </Text>
       ) : null}
-      <Segmented label="Show" value={segment} options={SEGMENTS.map((s) => ({ value: s.value, label: `${s.label} ${count(s.value) || ''}`.trim() }))} onChange={setSegment} />
+      <SegmentedControl label="Show" value={segment} options={SEGMENTS.map((s) => ({ value: s.value, label: `${s.label} ${count(s.value) || ''}`.trim() }))} onChange={setSegment} />
       {loans.isLoading ? (
-        <View style={{ gap: space[6] }}>
-          <Skeleton height={120} radius={radius.card} />
-          <Skeleton height={120} radius={radius.card} />
+        <View style={{ gap: spacing[3] }}>
+          <Skeleton height={120} radius={radius.container} />
+          <Skeleton height={120} radius={radius.container} />
         </View>
       ) : loans.isError ? (
-        <Alert type="error" heading="Couldn't load your loans" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void loans.refetch() }} />
+        <Banner status="error" heading="Couldn't load your loans" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void loans.refetch() }} />
       ) : rows.length ? (
-        <View style={{ gap: space[6] }}>
+        <View style={{ gap: spacing[3] }}>
           {rows.map((r) => (
             <LoanCard key={r.id} row={r} />
           ))}
@@ -94,5 +94,5 @@ export default function Loans() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
 });

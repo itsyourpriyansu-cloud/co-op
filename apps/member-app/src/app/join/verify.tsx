@@ -7,8 +7,8 @@ import { MessageSquareText } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Alert, Button, Header, Hero, OtpInput, Screen, Text } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Header, PageHeader, OtpInput, Screen, Text, Link } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function JoinVerify() {
   const params = useLocalSearchParams<{ otpRef: string; mobile: string; fullName: string; demoOtp?: string }>();
@@ -48,8 +48,8 @@ export default function JoinVerify() {
   };
 
   return (
-    <Screen header={<Header onBack={() => router.back()} />} footer={<Button text="Verify" size="lg" fullWidth loading={busy} disabled={otp.length !== 6} onPress={() => void verify()} />}>
-      <Hero icon={MessageSquareText} title="Enter the code" subtitle={`We sent a 6-digit code to +91 ${params.mobile?.slice(0, 5)} ${params.mobile?.slice(5)}.`} />
+    <Screen header={<Header onBack={() => router.back()} />} footer={<Button label="Verify" size="lg" fullWidth loading={busy} disabled={otp.length !== 6} onPress={() => void verify()} />}>
+      <PageHeader icon={MessageSquareText} title="Enter the code" subtitle={`We sent a 6-digit code to +91 ${params.mobile?.slice(0, 5)} ${params.mobile?.slice(5)}.`} />
       <OtpInput
         value={otp}
         error={error}
@@ -58,17 +58,17 @@ export default function JoinVerify() {
           if (v.length === 6) void verify(v);
         }}
       />
-      {params.demoOtp ? <Alert type="neutral" heading={`Demo code: ${params.demoOtp}`} description="This prototype doesn't send WhatsApp messages." /> : null}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
-        <Text role="caption" tone="tertiary">
+      {params.demoOtp ? <Banner status="neutral" heading={`Demo code: ${params.demoOtp}`} description="This prototype doesn't send WhatsApp messages." /> : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+        <Text type="supporting" tone="secondary">
           Didn't get it?
         </Text>
         {resendIn > 0 ? (
-          <Text role="captionStrong" tone="tertiary">
+          <Text type="supporting" weight="medium" tone="secondary">
             Resend in {resendIn}s
           </Text>
         ) : (
-          <Button text="Resend code" subType="inline" onPress={() => void resend()} />
+          <Link label="Resend code" onPress={() => void resend()} />
         )}
       </View>
     </Screen>

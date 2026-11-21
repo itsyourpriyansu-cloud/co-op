@@ -9,8 +9,8 @@ import type { Address, MemberDetail, MemberInput, SocietySettings } from '@tgs/t
 import { ActionAlert, Loaded, MoneyField, useAction, useToday } from '@/components/staff';
 import { api } from '@/lib/api';
 import { emptyMemberInput, memberToInput, RELATIONS } from '@/lib/staffMembers';
-import { Alert, Button, Card, Checkbox, DateField, Header, KeyValue, Screen, Segmented, SelectField, Text, TextField, WizardProgress } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, CheckboxInput, DateField, Header, MetadataListItem, Screen, SegmentedControl, SelectField, Text, TextField, Stepper } from '@/ui';
+import { spacing } from '@/theme';
 
 const STEPS = ['Personal', 'Address', 'Employment & service', 'Nominee', 'Shares', 'Pay profile'];
 /** Which step holds each field, to jump to the first problem. */
@@ -94,17 +94,17 @@ function Form({ d, s, id }: { d?: MemberDetail; s: SocietySettings; id?: string 
   return (
     <Screen
       header={<Header title={editing ? `Edit ${d?.member.name ?? 'member'}` : 'New member'} onBack={() => (step ? setStep(step - 1) : router.back())} />}
-      footer={<Button text={!last ? 'Continue' : editing ? 'Save changes' : 'Add member'} size="lg" fullWidth loading={a.busy} disabled={a.busy || a.unconfirmed} onPress={() => (last ? void submit() : setStep(step + 1))} />}
+      footer={<Button label={!last ? 'Continue' : editing ? 'Save changes' : 'Add member'} size="lg" fullWidth loading={a.busy} disabled={a.busy || a.unconfirmed} onPress={() => (last ? void submit() : setStep(step + 1))} />}
     >
-      <WizardProgress step={step + 1} total={STEPS.length} title={STEPS[step]!} />
-      {problemCount ? <Alert type="warning" heading="Some details need attention" description={`${problemCount} field${problemCount === 1 ? '' : 's'} highlighted.`} /> : null}
+      <Stepper step={step + 1} total={STEPS.length} title={STEPS[step]!} />
+      {problemCount ? <Banner status="warning" heading="Some details need attention" description={`${problemCount} field${problemCount === 1 ? '' : 's'} highlighted.`} /> : null}
 
       {step === 0 ? (
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <TextField label="Full name" required value={v.name} onChangeText={(x) => set({ name: x })} error={errors.name} />
           <TextField label="Father's name" required value={v.fatherName} onChangeText={(x) => set({ fatherName: x })} error={errors.fatherName} />
           <DateField label="Date of birth" required value={v.dob} onChange={(x) => set({ dob: x ?? '' })} error={errors.dob} />
-          <Segmented label="Gender" value={v.gender} options={[{ value: 'F', label: 'Female' }, { value: 'M', label: 'Male' }]} onChange={(x) => set({ gender: x as 'F' | 'M' })} />
+          <SegmentedControl label="Gender" value={v.gender} options={[{ value: 'F', label: 'Female' }, { value: 'M', label: 'Male' }]} onChange={(x) => set({ gender: x as 'F' | 'M' })} />
           <SelectField label="Caste" placeholder="Choose category" value={v.caste ?? ''} options={s.casteCategories.map((c) => ({ value: c, label: c }))} onChange={(x) => set({ caste: x })} error={errors.caste} />
           <TextField label="Mobile" required keyboardType="phone-pad" prefix="+91" value={v.mobile} onChangeText={(x) => set({ mobile: x.replace(/\D/g, '').slice(0, 10) })} hint="10 digits. The member signs in to the app with it." error={errors.mobile} />
           <TextField label="Email" keyboardType="email-address" autoCapitalize="none" value={v.email ?? ''} onChangeText={(x) => set({ email: x })} hint="Optional" error={errors.email} />
@@ -113,29 +113,29 @@ function Form({ d, s, id }: { d?: MemberDetail; s: SocietySettings; id?: string 
       ) : null}
 
       {step === 1 ? (
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <AddressFields prefix="presentAddress" value={v.presentAddress} onChange={(x) => set({ presentAddress: x })} errors={errors} />
-          <Checkbox checked={same} onChange={setSame} label="Permanent address is the same" />
+          <CheckboxInput checked={same} onChange={setSame} label="Permanent address is the same" />
           {!same ? <AddressFields prefix="permanentAddress" value={v.permanentAddress} onChange={(x) => set({ permanentAddress: x })} errors={errors} /> : null}
         </View>
       ) : null}
 
       {step === 2 ? (
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <TextField label="Employee ID" required autoCapitalize="characters" value={v.employeeId} onChangeText={(x) => set({ employeeId: x.toUpperCase() })} error={errors.employeeId} />
           {editing ? (
-            <KeyValue label="Department" value={d?.department?.name ?? ''} />
+            <MetadataListItem label="Department" value={d?.department?.name ?? ''} />
           ) : (
             <SelectField label="Department" required searchable placeholder="Choose department" value={v.departmentId} options={(depts.data ?? []).map((x) => ({ value: x.id, label: x.name }))} onChange={(x) => set({ departmentId: x })} error={errors.departmentId} />
           )}
           <SelectField label="Designation" required searchable placeholder="Choose designation" value={v.designation} options={designations} onChange={(x) => set({ designation: x })} error={errors.designation} />
-          <Segmented label="Employment type" value={v.employmentType} options={[{ value: 'REGULAR', label: 'Regular' }, { value: 'APPROVED_PROBATIONER', label: 'Probationer' }]} onChange={(x) => set({ employmentType: x as MemberInput['employmentType'] })} />
+          <SegmentedControl label="Employment type" value={v.employmentType} options={[{ value: 'REGULAR', label: 'Regular' }, { value: 'APPROVED_PROBATIONER', label: 'Probationer' }]} onChange={(x) => set({ employmentType: x as MemberInput['employmentType'] })} />
           <DateField label="Date of joining service" required value={v.doj} onChange={(x) => set({ doj: x ?? '' })} error={errors.doj} />
           {/* D-131: an existing member's date changes only through the Super Admin's request on the profile. */}
           {editing ? (
             <Card>
-              <KeyValue label="Date of retirement" value={formatDisplayDate(v.dor)} />
-              <Text role="caption" tone="tertiary">
+              <MetadataListItem label="Date of retirement" value={formatDisplayDate(v.dor)} />
+              <Text type="supporting" tone="secondary">
                 Changed from the member profile: the Super Admin proposes, three officers approve.
               </Text>
             </Card>
@@ -154,29 +154,29 @@ function Form({ d, s, id }: { d?: MemberDetail; s: SocietySettings; id?: string 
             />
           )}
           <Card>
-            <KeyValue label="Left-over service" value={leftover ?? 'Enter the date of retirement'} />
+            <MetadataListItem label="Left-over service" value={leftover ?? 'Enter the date of retirement'} />
           </Card>
         </View>
       ) : null}
 
       {step === 3 ? (
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <TextField label="Nominee name" required value={v.nominee.name} onChangeText={(x) => set({ nominee: { ...v.nominee, name: x } })} error={errors['nominee.name']} />
           <SelectField label="Relation" value={v.nominee.relation} options={RELATIONS.map((r) => ({ value: r, label: r }))} onChange={(x) => set({ nominee: { ...v.nominee, relation: x as MemberInput['nominee']['relation'] } })} />
         </View>
       ) : null}
 
       {step === 4 ? (
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <TextField label="Number of shares" keyboardType="number-pad" editable={!editing} value={Number.isFinite(v.numberOfShares) ? String(v.numberOfShares) : ''} onChangeText={(x) => set({ numberOfShares: x === '' ? Number.NaN : Number(x.replace(/\D/g, '')) })} error={errors.numberOfShares} hint={editing ? 'Shares change through a share purchase, not an edit.' : `Between ${s.minShares} and ${s.maxShares} shares of ${formatINR(s.shareValue)} each.`} />
           <Card>
-            <KeyValue label="Share capital" value={Number.isFinite(v.numberOfShares) ? formatINR(v.numberOfShares * s.shareValue) : '—'} />
+            <MetadataListItem label="Share capital" value={Number.isFinite(v.numberOfShares) ? formatINR(v.numberOfShares * s.shareValue) : '—'} />
           </Card>
         </View>
       ) : null}
 
       {step === 5 ? (
-        <View style={{ gap: space[8] }}>
+        <View style={{ gap: spacing[4] }}>
           <TextField label="Scale of pay" placeholder="e.g. 24280-72850" value={v.payProfile.scaleOfPay} onChangeText={(x) => set({ payProfile: { ...v.payProfile, scaleOfPay: x } })} error={errors['payProfile.scaleOfPay']} />
           <MoneyField label="Gross salary (monthly)" value={v.payProfile.grossSalary} onChange={(x) => set({ payProfile: { ...v.payProfile, grossSalary: x } })} error={errors['payProfile.grossSalary']} />
           <MoneyField label="Substantive pay" value={v.payProfile.substantivePay} onChange={(x) => set({ payProfile: { ...v.payProfile, substantivePay: x } })} error={errors['payProfile.substantivePay']} />

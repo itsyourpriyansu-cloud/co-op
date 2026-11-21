@@ -7,8 +7,8 @@ import { UserPlus } from 'lucide-react-native';
 import { isApiError } from '@tgs/api-client';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Alert, Button, Header, Hero, Screen, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Header, PageHeader, Screen, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function JoinSignUp() {
   const { loginAsPersona } = useAuth();
@@ -44,11 +44,11 @@ export default function JoinSignUp() {
   return (
     <Screen
       header={<Header onBack={() => router.back()} />}
-      footer={<Button text="Send OTP" size="lg" fullWidth loading={busy} disabled={fullName.trim().length < 3 || mobile.length !== 10} onPress={submit} />}
+      footer={<Button label="Send OTP" size="lg" fullWidth loading={busy} disabled={fullName.trim().length < 3 || mobile.length !== 10} onPress={submit} />}
     >
-      <Hero icon={UserPlus} title="Become a member" subtitle="Start with your name and mobile number. We'll send a one-time password to verify it." />
+      <PageHeader icon={UserPlus} title="Become a member" subtitle="Start with your name and mobile number. We'll send a one-time password to verify it." />
 
-      <View style={{ gap: space[10] }}>
+      <View style={{ gap: spacing[5] }}>
         <TextField label="Full name" required value={fullName} onChangeText={setFullName} autoCapitalize="words" autoComplete="name" placeholder="As in your service records" error={errors.fullName} />
         <TextField
           label="Mobile number"
@@ -64,14 +64,14 @@ export default function JoinSignUp() {
         />
       </View>
 
-      {formError ? <Alert type="error" heading="Can't continue" description={formError.message} action={formError.signIn ? { text: 'Sign in instead', onPress: () => router.replace('/login') } : undefined} /> : null}
+      {formError ? <Banner status="error" heading="Can't continue" description={formError.message} action={formError.signIn ? { text: 'Sign in instead', onPress: () => router.replace('/login') } : undefined} /> : null}
 
-      <View style={{ gap: space[4] }}>
-        <Text role="overline" tone="tertiary">
+      <View style={{ gap: spacing[2] }}>
+        <Text type="overline" tone="secondary">
           Demo shortcuts
         </Text>
-        <Button text="Continue as Divya S (new applicant)" buttonType="secondary" size="sm" onPress={() => void demoAs('apl-divya')} />
-        <Button text="Continue as Ravi Teja K (application in progress)" buttonType="secondary" size="sm" onPress={() => void demoAs('apl-ravi')} />
+        <Button label="Continue as Divya S (new applicant)" variant="secondary" size="sm" onPress={() => void demoAs('apl-divya')} />
+        <Button label="Continue as Ravi Teja K (application in progress)" variant="secondary" size="sm" onPress={() => void demoAs('apl-ravi')} />
       </View>
     </Screen>
   );

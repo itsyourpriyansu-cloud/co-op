@@ -12,11 +12,11 @@ import { DEFAULT_SOCIETY, localDate, withSignatures, type Society } from '@/lib/
 import { DocumentActions } from '@/components/DocumentActions';
 import { useAuth } from '@/lib/auth';
 import { getServerUrl } from '@/lib/serverUrl';
-import { Alert, Button, Card, Header, Screen, Segmented, SelectField, Skeleton, Text, TextField, type TagColor, Tag } from '@/ui';
-import { color, radius, space, touchTarget } from '@/theme';
+import { Banner, Button, Card, Header, Screen, SegmentedControl, SelectField, Skeleton, Text, TextField, Token, Link } from '@/ui';
+import { color, radius, touchTarget, spacing, type StatusName } from '@/theme';
 
 export const MUST_CHANGE_KEY = 'tgs.staff.mustChange';
-export const TICKET_TAG: Record<StaffTicketRow['status'], { text: string; color: TagColor }> = { OPEN: { text: 'Waiting for reply', color: 'warning' }, ANSWERED: { text: 'Answered', color: 'primary' }, CLOSED: { text: 'Closed', color: 'neutral' } };
+export const TICKET_TAG: Record<StaffTicketRow['status'], { text: string; color: StatusName }> = { OPEN: { text: 'Waiting for reply', color: 'warning' }, ANSWERED: { text: 'Answered', color: 'info' }, CLOSED: { text: 'Closed', color: 'neutral' } };
 
 // ---- Navigation ----------------------------------------------------------------------------
 
@@ -103,8 +103,8 @@ export function useAction() {
  */
 export function ActionAlert({ action, heading = "That didn't work", check }: { action: ReturnType<typeof useAction>; heading?: string; check?: { text: string; href: Href } }) {
   if (action.unconfirmed)
-    return <Alert type="warning" heading="We couldn't confirm this was saved" description={`The connection dropped. ${check ? `${check.text} before trying again.` : 'Check the record before trying again.'}`} {...(check ? { action: { text: check.text, onPress: () => router.replace(check.href) } } : {})} />;
-  return action.error ? <Alert type="error" heading={heading} description={action.error} /> : null;
+    return <Banner status="warning" heading="We couldn't confirm this was saved" description={`The connection dropped. ${check ? `${check.text} before trying again.` : 'Check the record before trying again.'}`} {...(check ? { action: { text: check.text, onPress: () => router.replace(check.href) } } : {})} />;
+  return action.error ? <Banner status="error" heading={heading} description={action.error} /> : null;
 }
 
 // ---- Screen parts --------------------------------------------------------------------------
@@ -115,23 +115,23 @@ export function Loaded<T>({ q, what, height = 110, count = 3, page, children }: 
   const frame = (state: ReactNode) => (page ? <Screen header={<Header title="" onBack={() => (router.canGoBack() ? router.back() : router.replace('/staff/home'))} />}>{state}</Screen> : state);
   if (q.isLoading)
     return frame(
-      <View style={{ gap: space[6] }}>
+      <View style={{ gap: spacing[3] }}>
         {Array.from({ length: count }, (_, i) => (
-          <Skeleton key={i} height={height} radius={radius.card} />
+          <Skeleton key={i} height={height} radius={radius.container} />
         ))}
       </View>,
     );
   if (q.isError || q.data === undefined) {
-    if (isApiError(q.error) && q.error.status === 403) return frame(<Alert type="warning" heading="You don't have access to this" description="Ask the Super Admin if you need it." />);
-    if (isApiError(q.error) && q.error.status === 404) return frame(<Alert type="neutral" heading="Not found" description="The record may have been removed." />);
-    return frame(<Alert type="error" heading={`Couldn't load ${what}`} description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />);
+    if (isApiError(q.error) && q.error.status === 403) return frame(<Banner status="warning" heading="You don't have access to this" description="Ask the Super Admin if you need it." />);
+    if (isApiError(q.error) && q.error.status === 404) return frame(<Banner status="neutral" heading="Not found" description="The record may have been removed." />);
+    return frame(<Banner status="error" heading={`Couldn't load ${what}`} description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />);
   }
   return <>{children(q.data)}</>;
 }
 
 /** Up to four values fit a Segmented; more go in a picker (docs/23 §4.2). */
 export function Filter<T extends string>({ label = 'Show', value, options, onChange, compact }: { label?: string; value: T; options: Array<{ value: T; label: string }>; onChange: (v: T) => void; compact?: boolean }) {
-  if (options.length <= 4) return <Segmented label={label} value={value} options={options} onChange={onChange} />;
+  if (options.length <= 4) return <SegmentedControl label={label} value={value} options={options} onChange={onChange} />;
   const select = <SelectField compact={!!compact} label={label} value={value} options={options} onChange={(v) => onChange(v as T)} />;
   return compact ? <FilterBar>{select}</FilterBar> : select;
 }
@@ -142,10 +142,10 @@ export const plain = (text: string) => text.replace(/\s*\((?=[^)]*\b(?:BR|D|Q|F|
 /** Search, then filters side by side and scrolling sideways, so a list's records stay near the top of the phone. */
 export function FilterBar({ search, children }: { search?: ReactNode; children?: ReactNode }) {
   return (
-    <View style={{ gap: space[2] }}>
+    <View style={{ gap: spacing[1] }}>
       {search}
       {children ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ marginHorizontal: -space[8] }} contentContainerStyle={{ gap: space[3], paddingHorizontal: space[8], paddingVertical: space[1] }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ marginHorizontal: -spacing[4] }} contentContainerStyle={{ gap: spacing[1.5], paddingHorizontal: spacing[4], paddingVertical: spacing[0.5] }}>
           {children}
         </ScrollView>
       ) : null}
@@ -158,23 +158,23 @@ export function RecordCard({ title, subtitle, amount, tag, caption, onPress, chi
   const body = (
     <>
       <View style={styles.recordHead}>
-        <View style={{ flex: 1, gap: space[1] }}>
-          <Text role="cardTitle">{title}</Text>
+        <View style={{ flex: 1, gap: spacing[0.5] }}>
+          <Text type="h4">{title}</Text>
           {subtitle ? (
-            <Text role="caption" tone="tertiary">
+            <Text type="supporting" tone="secondary">
               {subtitle}
             </Text>
           ) : null}
         </View>
         {amount || tag ? (
           <View style={styles.recordFigure}>
-            {amount ? <Text role="amount">{amount}</Text> : null}
+            {amount ? <Text type="amount">{amount}</Text> : null}
             {tag}
           </View>
         ) : null}
       </View>
       {caption ? (
-        <Text role="caption" tone="secondary">
+        <Text type="supporting" tone="secondary">
           {caption}
         </Text>
       ) : null}
@@ -182,7 +182,7 @@ export function RecordCard({ title, subtitle, amount, tag, caption, onPress, chi
     </>
   );
   return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.record, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.record, pressed && { backgroundColor: color.background.muted }]}>
       {body}
     </Pressable>
   ) : (
@@ -205,45 +205,45 @@ export function Stack2({ children }: { children: ReactNode }) {
 
 /** Menu row, as on the member More screen. */
 export function Row({ icon: Icon, label, hint, onPress, danger, divider, right }: { icon?: LucideIcon; label: string; hint?: string; onPress: () => void; danger?: boolean; divider?: boolean; right?: ReactNode }) {
-  const tint = danger ? color.status.danger.fg : color.text.primary;
+  const tint = danger ? color.status.error.text : color.text.primary;
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.menu, divider && styles.divider, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.menu, divider && styles.divider, pressed && { backgroundColor: color.background.muted }]}>
       {Icon ? <Icon size={22} color={tint} strokeWidth={1.75} /> : null}
-      <View style={{ flex: 1, gap: space[1], paddingVertical: space[3] }}>
-        <Text role="body" style={{ color: tint }}>
+      <View style={{ flex: 1, gap: spacing[0.5], paddingVertical: spacing[1.5] }}>
+        <Text type="body" style={{ color: tint }}>
           {label}
         </Text>
         {hint ? (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             {hint}
           </Text>
         ) : null}
       </View>
       {right}
-      {!danger ? <ChevronRight size={20} color={color.text.tertiary} /> : null}
+      {!danger ? <ChevronRight size={20} color={color.text.secondary} /> : null}
     </Pressable>
   );
 }
 
 export function StatTile({ label, value, sub, tone, onPress }: { label: string; value: string; sub?: string; tone?: 'neutral' | 'warning' | 'danger' | 'success'; onPress?: () => void }) {
-  const fg = tone === 'warning' ? color.status.warning.fg : tone === 'danger' ? color.status.danger.fg : tone === 'success' ? color.status.success.fg : color.text.primary;
+  const fg = tone === 'warning' ? color.status.warning.text : tone === 'danger' ? color.status.error.text : tone === 'success' ? color.status.success.text : color.text.primary;
   const body = (
     <>
-      <Text role="caption" tone="secondary" numberOfLines={2}>
+      <Text type="supporting" tone="secondary" numberOfLines={2}>
         {label}
       </Text>
-      <Text role="sectionTitle" style={{ color: fg, fontVariant: ['tabular-nums'] }}>
+      <Text type="h3" style={{ color: fg, fontVariant: ['tabular-nums'] }}>
         {value}
       </Text>
       {sub ? (
-        <Text role="caption" tone="tertiary" numberOfLines={2}>
+        <Text type="supporting" tone="secondary" numberOfLines={2}>
           {sub}
         </Text>
       ) : null}
     </>
   );
   return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.tile, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.tile, pressed && { backgroundColor: color.background.muted }]}>
       {body}
     </Pressable>
   ) : (
@@ -264,7 +264,7 @@ export function TileGrid({ children }: { children: ReactNode }) {
 }
 
 /** A plain horizontal meter (rate 0 to 1). */
-export function Meter({ rate, tint = color.brand.solid }: { rate: number; tint?: string }) {
+export function Meter({ rate, tint = color.accent }: { rate: number; tint?: string }) {
   return (
     <View style={styles.track}>
       <View style={{ height: '100%', borderRadius: 3, backgroundColor: tint, width: `${Math.round(Math.min(1, Math.max(0, rate)) * 100)}%` }} />
@@ -273,8 +273,8 @@ export function Meter({ rate, tint = color.brand.solid }: { rate: number; tint?:
 }
 
 export function WaitTag({ days }: { days: number }) {
-  const c: TagColor = days > 7 ? 'error' : days > 3 ? 'warning' : 'neutral';
-  return <Tag text={days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'}`} color={c} size="xs" />;
+  const c: StatusName = days > 7 ? 'error' : days > 3 ? 'warning' : 'neutral';
+  return <Token text={days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'}`} status={c} size="xs" />;
 }
 
 /**
@@ -285,8 +285,8 @@ export function StaffDocument({ title, fileName, build }: { title: string; fileN
   const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings.get, staleTime: 5 * 60_000 });
   const society = settings.data?.society ?? DEFAULT_SOCIETY;
   return (
-    <View style={{ gap: space[2] }}>
-      <Text role="label">{title}</Text>
+    <View style={{ gap: spacing[1] }}>
+      <Text type="label">{title}</Text>
       <DocumentActions title={title} fileName={fileName} html={async () => withSignatures(await build({ society, generatedOn: localDate() }), async (id) => (await api.signatures.image(id)).dataUrl)} />
     </View>
   );
@@ -308,7 +308,7 @@ export function ShareCsvButton({ title, rows }: { title: string; rows: () => Arr
       setBusy(false);
     }
   };
-  return <Button text="Share CSV" buttonType="secondary" leftSlot={Share2} fullWidth loading={busy} onPress={() => void go()} />;
+  return <Button label="Share CSV" variant="secondary" icon={Share2} fullWidth loading={busy} onPress={() => void go()} />;
 }
 
 /** A section of a long record that opens in place. Stands in for the console's detail tabs. */
@@ -317,11 +317,11 @@ export function Expand({ title, badge, initiallyOpen, flush, children }: { title
   const body = (
     <>
       <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded: open }} onPress={() => setOpen((o) => !o)} style={styles.menu}>
-        <Text role="cardTitle" style={{ flex: 1 }}>
+        <Text type="h4" style={{ flex: 1 }}>
           {title}
         </Text>
         {badge}
-        {open ? <ChevronDown size={20} color={color.text.tertiary} /> : <ChevronRight size={20} color={color.text.tertiary} />}
+        {open ? <ChevronDown size={20} color={color.text.secondary} /> : <ChevronRight size={20} color={color.text.secondary} />}
       </Pressable>
       {open ? <View style={styles.expandBody}>{children}</View> : null}
     </>
@@ -332,14 +332,14 @@ export function Expand({ title, badge, initiallyOpen, flush, children }: { title
 /** Every rule outcome, explained (the console's RuleCheckList). */
 export function RuleChecks({ checks }: { checks: Array<{ ruleId: string; pass: boolean; message: string; severity?: string }> }) {
   return (
-    <View style={{ gap: space[4] }}>
+    <View style={{ gap: spacing[2] }}>
       {checks.map((c, i) => {
         const Icon = c.pass ? CircleCheck : c.severity === 'warn' ? TriangleAlert : CircleX;
-        const tint = c.pass ? color.status.success.fg : c.severity === 'warn' ? color.status.warning.fg : color.status.danger.fg;
+        const tint = c.pass ? color.status.success.text : c.severity === 'warn' ? color.status.warning.text : color.status.error.text;
         return (
-          <View key={`${c.ruleId}-${i}`} style={{ flexDirection: 'row', gap: space[3] }}>
+          <View key={`${c.ruleId}-${i}`} style={{ flexDirection: 'row', gap: spacing[1.5] }}>
             <Icon size={18} color={tint} />
-            <Text role="body" style={{ flex: 1 }}>
+            <Text type="body" style={{ flex: 1 }}>
               {c.message}
             </Text>
           </View>
@@ -397,7 +397,7 @@ export function CashStatus({ amount, counts }: { amount: number; counts: Counts 
   const total = countsTotal(counts);
   const ok = total === amount;
   return (
-    <Text role="captionStrong" tone={ok ? 'success' : 'danger'} accessibilityLiveRegion="polite">
+    <Text type="supporting" weight="medium" tone={ok ? 'success' : 'error'} accessibilityLiveRegion="polite">
       Counted {formatINR(total)} · {ok ? 'matches the amount' : `${total < amount ? 'short' : 'over'} by ${formatINR(Math.abs(amount - total))}`}
     </Text>
   );
@@ -406,28 +406,28 @@ export function CashStatus({ amount, counts }: { amount: number; counts: Counts 
 /** BR-029: notes × count, the total must equal the amount. */
 export function DenominationCounter({ amount, counts, onChange }: { amount: number; counts: Counts; onChange: (c: Counts) => void }) {
   return (
-    <View style={{ gap: space[3] }}>
+    <View style={{ gap: spacing[1.5] }}>
       {DENOMINATIONS.map((d) => (
         <View key={d} style={styles.row}>
-          <Text role="label" style={{ width: 64 }}>
+          <Text type="label" style={{ width: 64 }}>
             ₹{d} ×
           </Text>
           <View style={{ flex: 1 }}>
             <TextField compact label={`Number of ₹${d} notes`} keyboardType="number-pad" value={counts[d] ? String(counts[d]) : ''} onChangeText={(t) => onChange({ ...counts, [d]: Math.floor(Number(t.replace(/\D/g, '')) || 0) })} />
           </View>
-          <Text role="body" tone="secondary" style={{ minWidth: 96, textAlign: 'right', fontVariant: ['tabular-nums'] }}>
+          <Text type="body" tone="secondary" style={{ minWidth: 96, textAlign: 'right', fontVariant: ['tabular-nums'] }}>
             {formatINR(d * 100 * (counts[d] ?? 0))}
           </Text>
         </View>
       ))}
-      <Button text="Fill fewest notes" subType="inline" style={{ alignSelf: 'flex-start' }} onPress={() => onChange(denominationsFor(amount))} />
+      <Link label="Fill fewest notes" style={{ alignSelf: 'flex-start' }} onPress={() => onChange(denominationsFor(amount))} />
     </View>
   );
 }
 
 /** Result of a finished decision, with one way forward. */
 export function DoneAlert({ heading, description }: { heading: string; description?: string }) {
-  return <Alert type="success" heading={heading} {...(description ? { description } : {})} />;
+  return <Banner status="success" heading={heading} {...(description ? { description } : {})} />;
 }
 
 function useDebounced<T>(value: T, ms = 250): T {
@@ -451,23 +451,23 @@ export function MemberPicker({ label = 'Member', value, onPick, error, exclude =
     return (
       <Card>
         <View style={styles.row}>
-          <UserRound size={20} color={color.brand.solid} />
-          <View style={{ flex: 1, gap: space[1] }}>
-            <Text role="label">{value.name}</Text>
-            <Text role="caption" tone="tertiary">
+          <UserRound size={20} color={color.accent} />
+          <View style={{ flex: 1, gap: spacing[0.5] }}>
+            <Text type="label">{value.name}</Text>
+            <Text type="supporting" tone="secondary">
               General No. {value.generalNo} · {value.departmentName}
             </Text>
           </View>
-          <Button text="Change" subType="inline" onPress={() => onPick(undefined)} />
+          <Link label="Change" onPress={() => onPick(undefined)} />
         </View>
       </Card>
     );
   return (
-    <View style={{ gap: space[4] }}>
+    <View style={{ gap: spacing[2] }}>
       <TextField label={label} value={q} onChangeText={setQ} placeholder="Name or General No." autoCorrect={false} error={error} />
-      {isSearchable(dq) && res.isLoading ? <Skeleton height={68} radius={radius.card} /> : null}
+      {isSearchable(dq) && res.isLoading ? <Skeleton height={68} radius={radius.container} /> : null}
       {isSearchable(dq) && res.data?.length === 0 ? (
-        <Text role="caption" tone="tertiary">
+        <Text type="supporting" tone="secondary">
           No member matches “{dq}”.
         </Text>
       ) : null}
@@ -489,34 +489,34 @@ export function PasswordForm({ currentLabel, currentValue, onCurrent, employeeId
   const [mismatch, setMismatch] = useState(false);
   const check = checkPassword(next, { employeeId });
   return (
-    <View style={{ gap: space[8] }}>
+    <View style={{ gap: spacing[4] }}>
       <TextField label={currentLabel} value={currentValue} onChangeText={onCurrent} secureTextEntry autoCapitalize="none" autoComplete="current-password" error={fields.currentPassword} />
       <TextField label="New password" value={next} onChangeText={setNext} secureTextEntry autoCapitalize="none" autoComplete="new-password" error={fields.newPassword} />
-      <View style={{ gap: space[2] }} accessibilityLabel="Password rules">
+      <View style={{ gap: spacing[1] }} accessibilityLabel="Password rules">
         {check.checks.map((c) => (
-          <Text key={c.ruleId} role="caption" tone={next && c.pass ? 'success' : 'secondary'}>
+          <Text key={c.ruleId} type="supporting" tone={next && c.pass ? 'success' : 'secondary'}>
             {next && c.pass ? '✓ ' : '• '}
             {c.message}
           </Text>
         ))}
       </View>
       <TextField label="Type the new password again" value={again} onChangeText={(v) => (setAgain(v), setMismatch(false))} secureTextEntry autoCapitalize="none" autoComplete="new-password" {...(mismatch ? { error: 'The two passwords do not match.' } : {})} />
-      <Button text={submitText} size="lg" fullWidth loading={busy} disabled={!currentValue || !check.ok || !again || busy} onPress={() => (next === again ? onSave(next) : setMismatch(true))} />
+      <Button label={submitText} size="lg" fullWidth loading={busy} disabled={!currentValue || !check.ok || !again || busy} onPress={() => (next === again ? onSave(next) : setMismatch(true))} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  menu: { flexDirection: 'row', alignItems: 'center', gap: space[6], minHeight: touchTarget + 8, paddingHorizontal: space[8] },
-  divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  menu: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], minHeight: touchTarget + 8, paddingHorizontal: spacing[4] },
+  divider: { borderTopWidth: 1, borderTopColor: color.border },
   grid: { flexDirection: 'row', flexWrap: 'wrap', overflow: 'hidden' },
   cell: { flexGrow: 1, flexBasis: '50%' },
-  ruleLeft: { borderLeftWidth: 1, borderLeftColor: color.border.subtle },
-  tile: { flex: 1, gap: space[1], padding: space[6] },
-  record: { gap: space[3], padding: space[8] },
-  recordHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space[4] },
-  recordFigure: { alignItems: 'flex-end', gap: space[2], maxWidth: '50%' },
-  expandBody: { paddingHorizontal: space[8], paddingBottom: space[8], gap: space[4] },
-  track: { height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: color.bg.surfaceSunken },
+  ruleLeft: { borderLeftWidth: 1, borderLeftColor: color.border },
+  tile: { flex: 1, gap: spacing[0.5], padding: spacing[3] },
+  record: { gap: spacing[1.5], padding: spacing[4] },
+  recordHead: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2] },
+  recordFigure: { alignItems: 'flex-end', gap: spacing[1], maxWidth: '50%' },
+  expandBody: { paddingHorizontal: spacing[4], paddingBottom: spacing[4], gap: spacing[2] },
+  track: { height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: color.background.muted },
 });

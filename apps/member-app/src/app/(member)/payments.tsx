@@ -7,8 +7,8 @@ import { ChevronDown, ChevronRight, ChevronUp, CircleCheck, Plus, ReceiptIndianR
 import { formatCycle, formatDisplayDate, formatINR } from '@tgs/domain';
 import type { MyPayments } from '@tgs/types';
 import { MODE_LABEL, SOURCE_LABEL, useMyPayments } from '@/lib/payments';
-import { Alert, Button, Card, EmptyState, Screen, Segmented, Skeleton, StatusTag, Tag, Text } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Card, EmptyState, Screen, SegmentedControl, Skeleton, StatusToken, Token, Text, Link } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 type Seg = 'MONTHS' | 'RECEIPTS' | 'REPORTED';
 
@@ -16,47 +16,47 @@ function MonthCard({ m, open, onToggle }: { m: MyPayments['months'][number]; ope
   const posted = m.sheetStatus === 'RECOVERY_POSTED';
   return (
     <Card onPress={onToggle}>
-      <View style={{ gap: space[4] }}>
+      <View style={{ gap: spacing[2] }}>
         <View style={styles.row}>
-          <Text role="cardTitle" style={{ flex: 1 }}>
+          <Text type="h4" style={{ flex: 1 }}>
             {formatCycle(m.cycle)}
           </Text>
-          {posted ? m.short ? <Tag text={`Short ${formatINR(m.short)}`} color="error" size="xs" /> : <Tag text="Paid in full" color="success" size="xs" /> : <Tag text="Being deducted" color="primary" size="xs" />}
-          {open ? <ChevronUp size={18} color={color.text.tertiary} /> : <ChevronDown size={18} color={color.text.tertiary} />}
+          {posted ? m.short ? <Token text={`Short ${formatINR(m.short)}`} status="error" size="xs" /> : <Token text="Paid in full" status="success" size="xs" /> : <Token text="Being deducted" status="info" size="xs" />}
+          {open ? <ChevronUp size={18} color={color.text.secondary} /> : <ChevronDown size={18} color={color.text.secondary} />}
         </View>
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text role="caption" tone="tertiary">
+            <Text type="supporting" tone="secondary">
               Demand
             </Text>
-            <Text role="bodyStrong">{formatINR(m.demand)}</Text>
+            <Text type="body" weight="medium">{formatINR(m.demand)}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text role="caption" tone="tertiary">
+            <Text type="supporting" tone="secondary">
               {posted ? 'Paid' : 'Status'}
             </Text>
-            <Text role="bodyStrong" tone={posted && m.short ? 'danger' : 'primary'}>
+            <Text type="body" weight="medium" tone={posted && m.short ? 'error' : 'primary'}>
               {posted ? formatINR(m.recovered ?? 0) : 'With your DDO'}
             </Text>
           </View>
         </View>
         {open ? (
           <View style={styles.breakdown}>
-            <Text role="caption" tone="tertiary">
+            <Text type="supporting" tone="secondary">
               {posted ? 'How it was applied (in the society order)' : 'What will be deducted'}
             </Text>
             {m.components.map((c, i) => (
               <View key={i} style={styles.row}>
-                <Text role="caption" style={{ flex: 1 }}>
+                <Text type="supporting" style={{ flex: 1 }}>
                   {i + 1}. {c.label}
                   {c.loanNo ? ` · ${c.loanNo}` : ''}
                 </Text>
                 {posted ? (
-                  <Text role="caption" tone={c.allocated < c.amount ? 'danger' : 'success'}>
+                  <Text type="supporting" tone={c.allocated < c.amount ? 'error' : 'success'}>
                     {formatINR(c.allocated)} / {formatINR(c.amount)}
                   </Text>
                 ) : (
-                  <Text role="caption">{formatINR(c.amount)}</Text>
+                  <Text type="supporting">{formatINR(c.amount)}</Text>
                 )}
               </View>
             ))}
@@ -78,39 +78,39 @@ export default function Payments() {
   return (
     <Screen refreshing={q.isRefetching} onRefresh={() => void q.refetch()}>
       <View style={styles.row}>
-        <Text role="pageTitle" style={{ flex: 1 }}>
+        <Text type="h1" style={{ flex: 1 }}>
           Payments
         </Text>
-        <Button text="Report" size="sm" leftSlot={Plus} onPress={() => router.push('/payment/report')} />
+        <Button label="Report" size="sm" icon={Plus} onPress={() => router.push('/payment/report')} />
       </View>
 
       {q.isLoading ? (
-        <View style={{ gap: space[6] }}>
-          <Skeleton height={110} radius={radius.card} />
-          <Skeleton height={120} radius={radius.card} />
-          <Skeleton height={120} radius={radius.card} />
+        <View style={{ gap: spacing[3] }}>
+          <Skeleton height={110} radius={radius.container} />
+          <Skeleton height={120} radius={radius.container} />
+          <Skeleton height={120} radius={radius.container} />
         </View>
       ) : q.isError || !d ? (
-        <Alert type="error" heading="Couldn't load your payments" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />
+        <Banner status="error" heading="Couldn't load your payments" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />
       ) : (
         <>
           {owed > 0 ? (
-            <Alert
-              type="warning"
+            <Banner
+              status="warning"
               heading={`${formatINR(owed)} unpaid`}
               description={`${d.dues.arrears.length ? `From ${d.dues.arrears.map((a) => formatCycle(a.cycle)).join(', ')} when your salary deduction came short. ` : ''}${d.dues.totalPenal ? `Includes ${formatINR(d.dues.totalPenal)} penal interest, which grows each day until paid. ` : ''}${d.dues.shareCapitalDue ? `Share capital ${formatINR(d.dues.shareCapitalDue)}. ` : ''}${d.dues.suretyRecoveries?.length ? `As a surety you are asked to pay ${d.dues.suretyRecoveries.map((r) => `${formatINR(r.due)} for ${r.borrowerName}'s loan ${r.loanNo}`).join(' and ')}; pay it at the counter or it comes off your next salary. ` : ''}Pay at the counter, or pay by bank / UPI and report it here.${pending ? ` ${pending} report${pending === 1 ? ' is' : 's are'} being verified.` : ''}`}
               action={{ text: 'Report a payment', onPress: () => router.push('/payment/report') }}
             />
           ) : (
             <View style={styles.ok}>
-              <CircleCheck size={18} color={color.status.success.fg} />
-              <Text role="caption" tone="success" style={{ flex: 1 }}>
+              <CircleCheck size={18} color={color.status.success.text} />
+              <Text type="supporting" tone="success" style={{ flex: 1 }}>
                 Nothing unpaid. Every month was deducted in full.
               </Text>
             </View>
           )}
 
-          <Segmented
+          <SegmentedControl
             label="Show"
             value={seg}
             options={[
@@ -123,7 +123,7 @@ export default function Payments() {
 
           {seg === 'MONTHS' ? (
             d.months.length ? (
-              <View style={{ gap: space[6] }}>
+              <View style={{ gap: spacing[3] }}>
                 {d.months.map((m) => (
                   <MonthCard key={m.cycle} m={m} open={open === m.cycle} onToggle={() => setOpen(open === m.cycle ? null : m.cycle)} />
                 ))}
@@ -135,19 +135,19 @@ export default function Payments() {
             d.receipts.length ? (
               <Card padded={false}>
                 {d.receipts.map((r, i) => (
-                  <Pressable key={r.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/payment/receipt/[id]', params: { id: r.id } })} style={({ pressed }) => [styles.item, i > 0 && styles.divider, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
-                    <View style={{ flex: 1, gap: space[1] }}>
-                      <Text role="label">{SOURCE_LABEL[r.source]}</Text>
-                      <Text role="caption" tone="tertiary">
+                  <Pressable key={r.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/payment/receipt/[id]', params: { id: r.id } })} style={({ pressed }) => [styles.item, i > 0 && styles.divider, pressed && { backgroundColor: color.background.muted }]}>
+                    <View style={{ flex: 1, gap: spacing[0.5] }}>
+                      <Text type="label">{SOURCE_LABEL[r.source]}</Text>
+                      <Text type="supporting" tone="secondary">
                         {r.receiptNo} · {formatDisplayDate(r.date)}
                         {r.cycle ? ` · ${formatCycle(r.cycle)}` : ''}
                         {r.cancelled ? ' · Cancelled' : ''}
                       </Text>
                     </View>
-                    <Text role="bodyStrong" tone="credit">
+                    <Text type="body" weight="medium" tone="credit">
                       {formatINR(r.amount)}
                     </Text>
-                    <ChevronRight size={18} color={color.text.tertiary} />
+                    <ChevronRight size={18} color={color.text.secondary} />
                   </Pressable>
                 ))}
               </Card>
@@ -155,25 +155,25 @@ export default function Payments() {
               <EmptyState icon={ReceiptIndianRupee} title="No receipts yet" />
             )
           ) : d.reports.length ? (
-            <View style={{ gap: space[6] }}>
+            <View style={{ gap: spacing[3] }}>
               {d.reports.map((r) => (
                 <Card key={r.id}>
-                  <View style={{ gap: space[3] }}>
+                  <View style={{ gap: spacing[1.5] }}>
                     <View style={styles.row}>
-                      <Text role="bodyStrong" style={{ flex: 1 }}>
+                      <Text type="body" weight="medium" style={{ flex: 1 }}>
                         {formatINR(r.amount)}
                       </Text>
-                      <StatusTag entity="paymentReport" status={r.status} size="xs" />
+                      <StatusToken entity="paymentReport" status={r.status} size="xs" />
                     </View>
-                    <Text role="caption" tone="tertiary">
+                    <Text type="supporting" tone="secondary">
                       {MODE_LABEL[r.mode]} · {r.reference} · paid {formatDisplayDate(r.paidOn)}
                     </Text>
                     {r.status === 'REJECTED' && r.rejectReason ? (
-                      <Text role="caption" tone="danger">
+                      <Text type="supporting" tone="error">
                         {r.rejectReason}
                       </Text>
                     ) : null}
-                    {r.status === 'VERIFIED' && r.receiptId ? <Button text="View receipt" size="sm" buttonType="secondary" subType="inline" onPress={() => router.push({ pathname: '/payment/receipt/[id]', params: { id: r.receiptId! } })} /> : null}
+                    {r.status === 'VERIFIED' && r.receiptId ? <Link label="View receipt" onPress={() => router.push({ pathname: '/payment/receipt/[id]', params: { id: r.receiptId! } })} /> : null}
                   </View>
                 </Card>
               ))}
@@ -188,9 +188,9 @@ export default function Payments() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  ok: { flexDirection: 'row', alignItems: 'center', gap: space[4], padding: space[6], borderRadius: radius.card, backgroundColor: color.status.success.bg },
-  breakdown: { gap: space[3], paddingTop: space[4], borderTopWidth: 1, borderTopColor: color.border.subtle },
-  item: { flexDirection: 'row', alignItems: 'center', gap: space[4], paddingHorizontal: space[8], paddingVertical: space[6] },
-  divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  ok: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], padding: spacing[3], borderRadius: radius.container, backgroundColor: color.status.success.tint },
+  breakdown: { gap: spacing[1.5], paddingTop: spacing[2], borderTopWidth: 1, borderTopColor: color.border },
+  item: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
+  divider: { borderTopWidth: 1, borderTopColor: color.border },
 });

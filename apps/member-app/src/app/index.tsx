@@ -9,8 +9,8 @@ export default function Index() {
   const { ready, session } = useAuth();
   if (!ready) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg.canvas }}>
-        <ActivityIndicator color={color.brand.solid} size="large" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: color.background.body }}>
+        <ActivityIndicator color={color.accent} size="large" />
       </View>
     );
   }

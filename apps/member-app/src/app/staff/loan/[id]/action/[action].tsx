@@ -11,8 +11,8 @@ import { ActionAlert, ask, DoneAlert, Loaded, MoneyField, RuleChecks, useAction,
 import { StaffSanctionSheet } from '@/components/StaffSanctionSheet';
 import { api } from '@/lib/api';
 import { ACTION_LABEL, NEEDS_REASON, TITLES } from '@/lib/staffLoans';
-import { Alert, Button, Card, Checkbox, DateField, Header, KeyValue, MonthPicker, Screen, Section, Segmented, Text, TextField } from '@/ui';
-import { color, space } from '@/theme';
+import { Banner, Button, Card, CheckboxInput, DateField, Header, MetadataListItem, MonthPicker, Screen, Section, SegmentedControl, Text, TextField } from '@/ui';
+import { color, spacing } from '@/theme';
 
 const CONFIRM = new Set(['reject', 'secretarySign', 'presidentSign', 'disburse', 'sendForSanction', 'changeFirstDue']);
 
@@ -97,56 +97,56 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
 
   if (done)
     return (
-      <Screen header={<Header title={meta.title} />} footer={<Button text="Done" size="lg" fullWidth onPress={() => router.back()} />}>
+      <Screen header={<Header title={meta.title} />} footer={<Button label="Done" size="lg" fullWidth onPress={() => router.back()} />}>
         <DoneAlert {...done} />
       </Screen>
     );
 
   return (
-    <Screen header={<Header title={meta.title} onBack={() => router.back()} />} footer={<Button text={ACTION_LABEL[action] ?? action} size="lg" fullWidth buttonType={action === 'reject' ? 'danger' : 'primary'} loading={a.busy} disabled={!ready || a.busy || a.unconfirmed} onPress={() => void submit()} />}>
+    <Screen header={<Header title={meta.title} onBack={() => router.back()} />} footer={<Button label={ACTION_LABEL[action] ?? action} size="lg" fullWidth variant={action === 'reject' ? 'destructive' : 'primary'} loading={a.busy} disabled={!ready || a.busy || a.unconfirmed} onPress={() => void submit()} />}>
       <Card>
-        <Text role="label">
+        <Text type="label">
           {d.member.name} · No. {d.member.generalNo}
         </Text>
-        <Text role="caption" tone="secondary">
+        <Text type="supporting" tone="secondary">
           {d.product.name} · {formatINR(l.sanctionedAmount ?? l.appliedAmount)} · {l.sanctionedInstalments ?? l.appliedInstalments} months · {d.member.departmentName}
         </Text>
       </Card>
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         {meta.description}
       </Text>
 
       {action === 'forward' ? (
         <Section title="Checklist">
-          <Checkbox checked={member} onChange={setMember} label="Member details match the member master" />
-          <Checkbox checked={docs} onChange={setDocs} label="Application and documents verified" />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-            <CircleCheck size={18} color={color.status.success.fg} />
-            <Text role="body" style={{ flex: 1 }}>
+          <CheckboxInput checked={member} onChange={setMember} label="Member details match the member master" />
+          <CheckboxInput checked={docs} onChange={setDocs} label="Application and documents verified" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5] }}>
+            <CircleCheck size={18} color={color.status.success.text} />
+            <Text type="body" style={{ flex: 1 }}>
               Sureties confirmed in the app ({d.sureties.filter((s) => s.status === 'ACCEPTED').length} of {d.product.suretiesRequired})
             </Text>
           </View>
           <RuleChecks checks={d.checks} />
-          {blocks.length ? <Alert type="error" heading="A rule fails" description="Return or reject the application instead." /> : null}
+          {blocks.length ? <Banner status="error" heading="A rule fails" description="Return or reject the application instead." /> : null}
         </Section>
       ) : null}
 
       {action === 'ddoCertify' ? (
         <Section title="Items 1–5">
           <Card>
-            <KeyValue label="1 · Name, General No." value={`${d.member.name}, ${d.member.generalNo}`} />
-            <KeyValue label="2 · Date of birth" value={formatDisplayDate(d.member.dob)} />
-            <KeyValue label="3 · Date of retirement" value={formatDisplayDate(d.member.dor)} />
-            <KeyValue label="4 · Office, designation" value={`${d.member.departmentName}, ${d.member.designation}`} />
-            {l.form?.pay ? <KeyValue label="5 · Gross / net salary" value={`${formatINR(l.form.pay.grossSalary)} / ${formatINR(d.preview.netSalary)}`} /> : null}
+            <MetadataListItem label="1 · Name, General No." value={`${d.member.name}, ${d.member.generalNo}`} />
+            <MetadataListItem label="2 · Date of birth" value={formatDisplayDate(d.member.dob)} />
+            <MetadataListItem label="3 · Date of retirement" value={formatDisplayDate(d.member.dor)} />
+            <MetadataListItem label="4 · Office, designation" value={`${d.member.departmentName}, ${d.member.designation}`} />
+            {l.form?.pay ? <MetadataListItem label="5 · Gross / net salary" value={`${formatINR(l.form.pay.grossSalary)} / ${formatINR(d.preview.netSalary)}`} /> : null}
           </Card>
-          <Checkbox checked={feasible} onChange={setFeasible} label="Particulars are correct and the instalments can be recovered from salary" />
+          <CheckboxInput checked={feasible} onChange={setFeasible} label="Particulars are correct and the instalments can be recovered from salary" />
         </Section>
       ) : null}
 
       {action === 'ddoRecordManual' ? (
         <Section title="Paper certificate">
-          <View style={{ gap: space[8] }}>
+          <View style={{ gap: spacing[4] }}>
             <TextField label="DDO name" required value={manual.ddoName} onChangeText={(v) => setManual((m) => ({ ...m, ddoName: v }))} placeholder={d.member.departmentName} />
             <TextField label="Designation" required value={manual.designation} onChangeText={(v) => setManual((m) => ({ ...m, designation: v }))} />
             <DateField key={today} label="Date of the certificate" required value={date} onChange={setDate} />
@@ -157,7 +157,7 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
 
       {action === 'sendForSanction' ? (
         <Section title="Sanction">
-          <View style={{ gap: space[8] }}>
+          <View style={{ gap: spacing[4] }}>
             <MoneyField label="Amount to sanction" value={amount} onChange={setAmount} error={fe.amount} hint={`Applied ${amountInWords(l.appliedAmount)}`} />
             {/* D-123: reduce only, and only to a period the society offers (the server repeats the check). */}
             <MonthPicker label="Instalments (reduce only)" value={instalments} choices={(preview.data?.instalmentOptions ?? [l.appliedInstalments]).map((months) => ({ months, allowed: true }))} onChange={setInstalments} error={fe.instalments} />
@@ -167,18 +167,18 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
 
       {action === 'sendForSanction' || action === 'changeFirstDue' ? (
         <Section title="First deduction from salary">
-          <View style={{ gap: space[4] }}>
-            <Segmented label="Month of the first instalment" value={chosenDue} options={(preview.data?.firstDueOptions ?? (chosenDue ? [chosenDue] : [])).map((c) => ({ value: c, label: formatCycle(c) }))} onChange={setFirstDue} />
-            <Text role="caption" tone="tertiary">
+          <View style={{ gap: spacing[2] }}>
+            <SegmentedControl label="Month of the first instalment" value={chosenDue} options={(preview.data?.firstDueOptions ?? (chosenDue ? [chosenDue] : [])).map((c) => ({ value: c, label: formatCycle(c) }))} onChange={setFirstDue} />
+            <Text type="supporting" tone="secondary">
               Only months whose demand sheet has not gone to the DDO are offered. The days from payment to the 1st of that month are charged as interest on the first deduction.
             </Text>
             {fe.firstDueCycle ? (
-              <Text role="caption" tone="danger">
+              <Text type="supporting" tone="error">
                 {fe.firstDueCycle}
               </Text>
             ) : null}
             {action === 'changeFirstDue' && l.sanctionSheet ? (
-              <Text role="body">
+              <Text type="body">
                 Now: {formatCycle(l.sanctionSheet.firstDueCycle)}
                 {preview.data?.sheet.earlyInterest ? ` · interest for the days before it about ${formatINR(preview.data.sheet.earlyInterest)} (worked out again when paid)` : ''}
               </Text>
@@ -201,7 +201,7 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
               { role: 'Secretary', s: l.signOffs?.secretary },
               { role: 'President', s: l.signOffs?.president },
             ].map((r) => (
-              <KeyValue key={r.role} label={r.role} value={r.s ? `${r.s.byName} · ${formatDisplayDateTime(r.s.at)}${r.s.remarks ? ` · “${r.s.remarks}”` : ''}` : 'Pending'} />
+              <MetadataListItem key={r.role} label={r.role} value={r.s ? `${r.s.byName} · ${formatDisplayDateTime(r.s.at)}${r.s.remarks ? ` · “${r.s.remarks}”` : ''}` : 'Pending'} />
             ))}
           </Card>
         </Section>
@@ -209,17 +209,17 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
 
       {action === 'disburse' ? (
         <Section title="Payment">
-          <View style={{ gap: space[8] }}>
-            <KeyValue label="Borrower's account" value={l.form?.bankAccount ? formatBankAccount(l.form.bankAccount) : 'Not on the application. Confirm it with the member before paying.'} />
-            <Segmented label="Mode" value={mode} options={[{ value: 'NEFT', label: 'NEFT / RTGS' }, { value: 'CHEQUE', label: 'Cheque' }, { value: 'TRANSFER', label: 'Transfer' }]} onChange={(v) => setMode(v as typeof mode)} />
+          <View style={{ gap: spacing[4] }}>
+            <MetadataListItem label="Borrower's account" value={l.form?.bankAccount ? formatBankAccount(l.form.bankAccount) : 'Not on the application. Confirm it with the member before paying.'} />
+            <SegmentedControl label="Mode" value={mode} options={[{ value: 'NEFT', label: 'NEFT / RTGS' }, { value: 'CHEQUE', label: 'Cheque' }, { value: 'TRANSFER', label: 'Transfer' }]} onChange={(v) => setMode(v as typeof mode)} />
             <TextField label={mode === 'CHEQUE' ? 'Cheque number' : 'UTR / reference'} required value={reference} onChangeText={setReference} error={fe.reference ?? fe['disbursement.reference']} />
             <TextField label="Paid to (only if not the borrower)" value={payee} onChangeText={setPayee} hint="F7: the borrower authorises payment to this person" error={fe.payee ?? fe['disbursement.payee']} />
             <DateField key={today} label="Payment date" required value={date} onChange={setDate} error={fe.date ?? fe['disbursement.date']} />
             <Card>
-              <KeyValue label={`Pay to ${d.member.name}${l.parentLoanId ? ' (after settling the old loan)' : ''}`} value={formatINR(l.netDisbursable ?? d.preview.netDisbursable)} emphasis />
+              <MetadataListItem label={`Pay to ${d.member.name}${l.parentLoanId ? ' (after settling the old loan)' : ''}`} value={formatINR(l.netDisbursable ?? d.preview.netDisbursable)} emphasis />
             </Card>
             {l.sanctionSheet?.firstDueChosen ? (
-              <Text role="caption" tone="tertiary">
+              <Text type="supporting" tone="secondary">
                 First deduction from {formatCycle(l.sanctionSheet.firstDueCycle)}. If that month's sheet has gone to the DDO, the Accountant must move it first.
               </Text>
             ) : null}
@@ -229,7 +229,7 @@ function Decision({ d, action }: { d: LoanDetail; action: string }) {
 
       <TextField label={needsReason ? 'Reason (the member sees this)' : 'Remarks'} value={remarks} onChangeText={setRemarks} multiline numberOfLines={3} placeholder={needsReason ? 'e.g. Attach the salary certificate' : 'Optional'} required={needsReason} error={fe.remarks} />
       <ActionAlert action={a} heading="Not saved" check={{ text: 'Check the loan', href: `/staff/loan/${l.id}` }} />
-      <Text role="caption" tone="tertiary">
+      <Text type="supporting" tone="secondary">
         Recorded with your name and time.
       </Text>
     </Screen>

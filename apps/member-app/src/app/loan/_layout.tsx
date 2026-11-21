@@ -6,5 +6,5 @@ import { color } from '@/theme';
 export default function LoanLayout() {
   const { ready, session } = useAuth();
   if (ready && session?.user.role !== 'MEMBER') return <Redirect href="/" />;
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg.canvas }, animation: 'slide_from_right' }} />;
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.background.body }, animation: 'slide_from_right' }} />;
 }

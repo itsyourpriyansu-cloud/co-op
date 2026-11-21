@@ -10,7 +10,7 @@ import { api } from '@/lib/api';
 import { useStaffLock } from '@/lib/appLock';
 import { useAuth } from '@/lib/auth';
 import * as storage from '@/lib/storage';
-import { Button, EmptyState, Hero, Screen } from '@/ui';
+import { Button, EmptyState, PageHeader, Screen } from '@/ui';
 import NoAccess from './no-access';
 import { color } from '@/theme';
 
@@ -55,7 +55,7 @@ export default function StaffLayout() {
   const needed = ROUTE_PERMISSION.find(([re]) => re.test(pathname))?.[1];
   if (needed && me && !me.permissions.includes(needed)) return <NoAccess />;
 
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg.canvas }, animation: 'slide_from_right' }} />;
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.background.body }, animation: 'slide_from_right' }} />;
 }
 
 /** AU-01m lock: the staff screens after time away. Opens the phone's prompt straight away. */
@@ -64,7 +64,7 @@ function Locked({ unlock, signOut }: { unlock: () => Promise<boolean>; signOut: 
     void unlock();
   }, [unlock]);
   return (
-    <Screen footer={<Button text="Sign out instead" buttonType="secondary" fullWidth onPress={signOut} />}>
+    <Screen footer={<Button label="Sign out instead" variant="secondary" fullWidth onPress={signOut} />}>
       <EmptyState icon={LockKeyhole} title="Staff screens locked" description="Unlock with your fingerprint, face or phone PIN. Locked after 5 minutes away." action={{ text: 'Unlock', onPress: () => void unlock() }} />
     </Screen>
   );
@@ -73,8 +73,8 @@ function Locked({ unlock, signOut }: { unlock: () => Promise<boolean>; signOut: 
 /** AU-01m last sign-in step (D-126): shown until a signature is on file, then never again. */
 function AddSignature({ signOut }: { signOut: () => void }) {
   return (
-    <Screen footer={<Button text="Sign out" buttonType="secondary" fullWidth onPress={signOut} />}>
-      <Hero icon={PenLine} title="Add your signature" subtitle="One last step. Your signature is printed on what you approve, certify or pay out. You can change it later in My account." />
+    <Screen footer={<Button label="Sign out" variant="secondary" fullWidth onPress={signOut} />}>
+      <PageHeader icon={PenLine} title="Add your signature" subtitle="One last step. Your signature is printed on what you approve, certify or pay out. You can change it later in My account." />
       <SignatureCard />
     </Screen>
   );
@@ -84,7 +84,7 @@ function AddSignature({ signOut }: { signOut: () => void }) {
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return (
     <Screen>
-      <EmptyState icon={TriangleAlert} tone="danger" title="Something went wrong" description="We couldn't show this screen. Your data is safe." action={{ text: 'Try again', onPress: () => void retry() }} />
+      <EmptyState icon={TriangleAlert} tone="error" title="Something went wrong" description="We couldn't show this screen. Your data is safe." action={{ text: 'Try again', onPress: () => void retry() }} />
     </Screen>
   );
 }

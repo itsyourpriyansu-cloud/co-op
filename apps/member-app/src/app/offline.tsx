@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { RotateCcw, Server, WifiOff } from 'lucide-react-native';
 import { api } from '@/lib/api';
 import { DEMO_TOOLS, getServerUrl } from '@/lib/serverUrl';
-import { Alert, Button, EmptyState, Screen } from '@/ui';
+import { Banner, Button, EmptyState, Screen } from '@/ui';
 
 export default function Offline() {
   const [checking, setChecking] = useState(false);
@@ -28,13 +28,13 @@ export default function Offline() {
     <Screen
       footer={
         <>
-          <Button text="Try again" leftSlot={RotateCcw} size="lg" fullWidth loading={checking} onPress={() => void retry()} />
-          {DEMO_TOOLS ? <Button text="Change server" leftSlot={Server} buttonType="secondary" size="lg" fullWidth onPress={() => router.push('/demo-settings')} /> : null}
+          <Button label="Try again" icon={RotateCcw} size="lg" fullWidth loading={checking} onPress={() => void retry()} />
+          {DEMO_TOOLS ? <Button label="Change server" icon={Server} variant="secondary" size="lg" fullWidth onPress={() => router.push('/demo-settings')} /> : null}
         </>
       }
     >
       <EmptyState icon={WifiOff} tone="warning" title="Can't reach the society server" description={`Check that your phone is on the same Wi-Fi as the demo laptop.\nServer: ${getServerUrl()}`} />
-      {stillDown ? <Alert type="error" heading="Still unreachable" description="Is `npm run demo` running on the laptop?" /> : null}
+      {stillDown ? <Banner status="error" heading="Still unreachable" description="Is `npm run demo` running on the laptop?" /> : null}
     </Screen>
   );
 }

@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ActionAlert, PasswordForm, useAction } from '@/components/staff';
-import { Alert, Button, Header, Screen } from '@/ui';
+import { Banner, Button, Header, Screen } from '@/ui';
 
 export default function ChangePassword() {
   const { session } = useAuth();
@@ -15,8 +15,8 @@ export default function ChangePassword() {
     <Screen header={<Header title="Change password" onBack={() => router.back()} />}>
       {done ? (
         <>
-          <Alert type="success" heading="Password changed" description="Use the new password next time you sign in." />
-          <Button text="Done" size="lg" fullWidth onPress={() => router.back()} />
+          <Banner status="success" heading="Password changed" description="Use the new password next time you sign in." />
+          <Button label="Done" size="lg" fullWidth onPress={() => router.back()} />
         </>
       ) : (
         <>

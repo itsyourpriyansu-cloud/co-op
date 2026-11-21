@@ -19,20 +19,20 @@ import {
   useCan,
 } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Button, Card, EmptyState, Header, Screen, Tag, Text } from '@/ui';
-import { color, space } from '@/theme';
+import { Button, Card, EmptyState, Header, Screen, Token, Text, Link } from '@/ui';
+import { color, spacing } from '@/theme';
 
 type Tab = 'mine' | 'questions' | 'sent';
 
 /** G9 (D-121): what the outbox and the provider did with a composed message. */
 function messageStatus(m: OutboxMessage): {
   text: string;
-  color: 'neutral' | 'primary' | 'success' | 'warning';
+  color: 'neutral' | 'info' | 'success' | 'warning';
 } {
   if (m.status === 'QUEUED')
     return m.scheduledFor
       ? { text: `Goes out ${formatDisplayDateTime(m.scheduledFor)}`, color: 'neutral' }
-      : { text: 'Sending…', color: 'primary' };
+      : { text: 'Sending…', color: 'info' };
   if (m.status === 'DELIVERED_SIMULATED')
     return { text: 'Delivered (simulated)', color: 'success' };
   return m.failed
@@ -67,8 +67,8 @@ export default function Notifications() {
         ? {
             footer: (
               <Button
-                text="Send a message"
-                leftSlot={Send}
+                label="Send a message"
+                icon={Send}
                 size="lg"
                 fullWidth
                 onPress={() => router.push('/staff/account/compose')}
@@ -104,15 +104,14 @@ function Mine() {
     <Loaded q={q} what="your notifications">
       {(d) =>
         d.items.length ? (
-          <View style={{ gap: space[6] }}>
+          <View style={{ gap: spacing[3] }}>
             <View style={styles.between}>
-              <Text role="caption" tone="secondary">
+              <Text type="supporting" tone="secondary">
                 {d.unread ? `${d.unread} unread` : 'All read'}
               </Text>
               {d.unread > 0 ? (
-                <Button
-                  text="Mark all read"
-                  subType="inline"
+                <Link
+                  label="Mark all read"
                   onPress={() => void api.notifications.readAll().then(refresh)}
                 />
               ) : null}
@@ -126,19 +125,19 @@ function Mine() {
                   style={({ pressed }) => [
                     styles.note,
                     i > 0 && styles.divider,
-                    !n.read && { backgroundColor: color.brand.subtle },
-                    pressed && { backgroundColor: color.bg.surfaceSubtle },
+                    !n.read && { backgroundColor: color.accentMuted },
+                    pressed && { backgroundColor: color.background.muted },
                   ]}
                 >
-                  <Bell size={18} color={n.read ? color.text.tertiary : color.brand.solid} />
-                  <View style={{ flex: 1, gap: space[1] }}>
-                    <Text role="label" tone={n.read ? 'secondary' : 'primary'}>
+                  <Bell size={18} color={n.read ? color.text.secondary : color.accent} />
+                  <View style={{ flex: 1, gap: spacing[0.5] }}>
+                    <Text type="label" tone={n.read ? 'secondary' : 'primary'}>
                       {n.title}
                     </Text>
-                    <Text role="caption" tone="secondary">
+                    <Text type="supporting" tone="secondary">
                       {n.body}
                     </Text>
-                    <Text role="caption" tone="tertiary">
+                    <Text type="supporting" tone="secondary">
                       {formatDisplayDateTime(n.createdAt)}
                       {n.read ? '' : ' · Unread'}
                     </Text>
@@ -176,9 +175,9 @@ function Questions() {
                 title={x.subject}
                 subtitle={`${x.member.name} · ${x.member.generalNo}`}
                 tag={
-                  <Tag
+                  <Token
                     text={TICKET_TAG[x.status].text}
-                    color={TICKET_TAG[x.status].color}
+                    status={TICKET_TAG[x.status].color}
                     size="xs"
                   />
                 }
@@ -219,7 +218,7 @@ function Sent() {
                   title={m.title}
                   subtitle={`${m.channel === 'EMAIL' ? 'Email' : 'WhatsApp'} · ${m.audienceLabel}`}
                   tag={
-                    <Tag text={messageStatus(m).text} color={messageStatus(m).color} size="xs" />
+                    <Token text={messageStatus(m).text} status={messageStatus(m).color} size="xs" />
                   }
                   caption={`${m.body}\n${formatDisplayDateTime(m.at)} · ${m.byName} · ${m.recipients} recipient${m.recipients === 1 ? '' : 's'}${m.skipped ? `, ${m.skipped} skipped` : ''}${m.progress?.DELIVERED || m.progress?.READ ? ` · ${(m.progress.DELIVERED ?? 0) + (m.progress.READ ?? 0)} delivered, ${m.progress.READ ?? 0} read` : ''}`}
                 />
@@ -253,9 +252,9 @@ function FailedSends() {
     });
   if (!q.data?.length) return null;
   return (
-    <View style={{ gap: space[6], marginBottom: space[8] }}>
-      <Text role="label">Not delivered ({q.data.length})</Text>
-      <Text role="caption" tone="tertiary">
+    <View style={{ gap: spacing[3], marginBottom: spacing[4] }}>
+      <Text type="label">Not delivered ({q.data.length})</Text>
+      <Text type="supporting" tone="secondary">
         Retried for about 40 minutes, or refused by WhatsApp / email. Check the member's number or
         email, then send again.
       </Text>
@@ -268,9 +267,9 @@ function FailedSends() {
           caption={`${f.title}\n${f.error} · ${formatDisplayDateTime(f.at)}`}
         >
           <Button
-            text="Send again"
-            leftSlot={RotateCw}
-            buttonType="secondary"
+            label="Send again"
+            icon={RotateCw}
+            variant="secondary"
             size="sm"
             loading={a.busy}
             disabled={a.busy}
@@ -286,9 +285,9 @@ const styles = StyleSheet.create({
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   note: {
     flexDirection: 'row',
-    gap: space[6],
-    paddingHorizontal: space[8],
-    paddingVertical: space[6],
+    gap: spacing[3],
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
   },
-  divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
+  divider: { borderTopWidth: 1, borderTopColor: color.border },
 });

@@ -9,8 +9,8 @@ import type { DepositListParams, DepositTab } from '@tgs/types';
 import { FilterBar, Loaded, RecordCard, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { MATURING, TABS } from '@/lib/staffDeposits';
-import { Button, EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Button, EmptyState, Screen, SelectField, StatusToken, Token, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function Deposits() {
   const [tab, setTab] = useState<DepositTab>('FD');
@@ -32,14 +32,14 @@ export default function Deposits() {
 
   return (
     <Screen refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
-        <View style={{ flex: 1, gap: space[1] }}>
-          <Text role="pageTitle">Deposits</Text>
-          <Text role="caption" tone="secondary">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+        <View style={{ flex: 1, gap: spacing[0.5] }}>
+          <Text type="h1">Deposits</Text>
+          <Text type="supporting" tone="secondary">
             {t?.requestsOpen ? `${t.requestsOpen} FD requests open` : 'Fixed deposits and running accounts'}
           </Text>
         </View>
-        {first?.canOpen ? <Button text="Open FD" size="sm" leftSlot={Plus} onPress={() => router.push('/staff/deposit/new')} /> : null}
+        {first?.canOpen ? <Button label="Open FD" size="sm" icon={Plus} onPress={() => router.push('/staff/deposit/new')} /> : null}
       </View>
       <TileGrid>
         <StatTile label="Fixed deposits held" value={t ? formatINRCompact(t.fdPrincipal) : '—'} sub={`${first?.counts.FD ?? 0} accounts`} />
@@ -60,11 +60,11 @@ export default function Deposits() {
           ) : (
             <Stack2>
               {items.map((r) => (
-                <RecordCard key={r.id} title={r.memberName} subtitle={`No. ${r.generalNo} · ${r.fdrNo ?? r.accountNo}${r.joint ? ' · joint' : ''}${r.minor ? ' · minor' : ''}`} amount={formatINR(r.amount)} tag={<StatusTag entity="deposit" status={r.status} audience="staff" size="xs" />} onPress={() => router.push(`/staff/deposit/${r.id}`)} caption={[`${r.ratePercent}%${r.tenureMonths ? ` · ${r.tenureMonths} mths` : r.monthlyAmount ? ' · monthly' : ''}`, fd && r.maturityDate ? `matures ${formatDisplayDate(r.maturityDate)}${r.maturityValue ? ` · ${formatINR(r.maturityValue)}` : ''}` : undefined, r.waitingOn].filter(Boolean).join(' · ')}>
-                  {r.pledged ? <Tag text="Pledged" color="purple" size="xs" /> : null}
+                <RecordCard key={r.id} title={r.memberName} subtitle={`No. ${r.generalNo} · ${r.fdrNo ?? r.accountNo}${r.joint ? ' · joint' : ''}${r.minor ? ' · minor' : ''}`} amount={formatINR(r.amount)} tag={<StatusToken entity="deposit" status={r.status} audience="staff" size="xs" />} onPress={() => router.push(`/staff/deposit/${r.id}`)} caption={[`${r.ratePercent}%${r.tenureMonths ? ` · ${r.tenureMonths} mths` : r.monthlyAmount ? ' · monthly' : ''}`, fd && r.maturityDate ? `matures ${formatDisplayDate(r.maturityDate)}${r.maturityValue ? ` · ${formatINR(r.maturityValue)}` : ''}` : undefined, r.waitingOn].filter(Boolean).join(' · ')}>
+                  {r.pledged ? <Token text="Pledged" status="approval" size="xs" /> : null}
                 </RecordCard>
               ))}
-              {list.hasNextPage ? <View style={{ padding: space[6] }}><Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
+              {list.hasNextPage ? <View style={{ padding: spacing[3] }}><Button label="Load more" variant="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
             </Stack2>
           )
         }

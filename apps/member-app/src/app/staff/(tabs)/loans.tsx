@@ -9,8 +9,8 @@ import type { LoanListParams, LoanProductCode, LoanStatusGroup } from '@tgs/type
 import { FilterBar, Loaded, RecordCard, Stack2, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { GROUP_ITEMS, PRODUCT_TABS } from '@/lib/staffLoans';
-import { Button, EmptyState, Screen, SelectField, StatusTag, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Button, EmptyState, Screen, SelectField, StatusToken, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function Loans() {
   const [product, setProduct] = useState<LoanProductCode | 'ALL' | 'TOPUP'>('ALL');
@@ -37,14 +37,14 @@ export default function Loans() {
 
   return (
     <Screen refreshing={list.isRefetching && !list.isFetchingNextPage} onRefresh={() => void list.refetch()}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
-        <View style={{ flex: 1, gap: space[1] }}>
-          <Text role="pageTitle">Loans</Text>
-          <Text role="caption" tone="secondary">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+        <View style={{ flex: 1, gap: spacing[0.5] }}>
+          <Text type="h1">Loans</Text>
+          <Text type="supporting" tone="secondary">
             {first ? `${first.total} found${first.scope.departmentName ? ` · ${first.scope.departmentName} only` : ''}` : 'Application to disbursement'}
           </Text>
         </View>
-        {first?.canCreate ? <Button text="New" size="sm" leftSlot={Plus} onPress={() => router.push('/staff/loan/new')} /> : null}
+        {first?.canCreate ? <Button label="New" size="sm" icon={Plus} onPress={() => router.push('/staff/loan/new')} /> : null}
       </View>
       <FilterBar search={<TextField compact label="Search" value={text} onChangeText={setText} placeholder="Member, General No. or loan no." autoCorrect={false} />}>
         <SelectField compact label="Loan type" value={product} options={tabs.map((t) => ({ value: t.value, label: t.value === 'ALL' ? 'All loan types' : t.label }))} onChange={(v) => setProduct(v as typeof product)} />
@@ -60,9 +60,9 @@ export default function Loans() {
           ) : (
             <Stack2>
               {items.map((r) => (
-                <RecordCard key={r.id} title={r.memberName} subtitle={`No. ${r.generalNo} · ${r.loanNo ?? r.applicationNo}`} amount={formatINR(r.sanctionedAmount ?? r.appliedAmount)} tag={<StatusTag entity="loan" status={r.status} audience="staff" size="xs" />} onPress={() => router.push(`/staff/loan/${r.id}`)} caption={[`${r.productName}${r.isTopup ? ' · top-up' : ''}`, `${r.instalments} mths${r.emi ? ` · EMI ${formatINR(r.emi)}` : ''}`, r.group === 'ACTIVE' ? `outstanding ${formatINR(r.outstanding)}${r.nextDue ? `, next ${formatCycle(r.nextDue.cycle)}` : ''}` : r.group === 'IN_PROCESS' ? r.waitingOn : undefined].filter(Boolean).join(' · ')} />
+                <RecordCard key={r.id} title={r.memberName} subtitle={`No. ${r.generalNo} · ${r.loanNo ?? r.applicationNo}`} amount={formatINR(r.sanctionedAmount ?? r.appliedAmount)} tag={<StatusToken entity="loan" status={r.status} audience="staff" size="xs" />} onPress={() => router.push(`/staff/loan/${r.id}`)} caption={[`${r.productName}${r.isTopup ? ' · top-up' : ''}`, `${r.instalments} mths${r.emi ? ` · EMI ${formatINR(r.emi)}` : ''}`, r.group === 'ACTIVE' ? `outstanding ${formatINR(r.outstanding)}${r.nextDue ? `, next ${formatCycle(r.nextDue.cycle)}` : ''}` : r.group === 'IN_PROCESS' ? r.waitingOn : undefined].filter(Boolean).join(' · ')} />
               ))}
-              {list.hasNextPage ? <View style={{ padding: space[6] }}><Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
+              {list.hasNextPage ? <View style={{ padding: spacing[3] }}><Button label="Load more" variant="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
             </Stack2>
           )
         }

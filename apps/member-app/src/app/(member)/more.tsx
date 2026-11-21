@@ -4,7 +4,7 @@ import { router, type Href } from 'expo-router';
 import { Bell, Calculator, ChevronRight, FlaskConical, Handshake, LifeBuoy, LogOut, Percent, Settings, UserRound, type LucideIcon } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
 import { Card, Screen, Text } from '@/ui';
-import { color, space, touchTarget } from '@/theme';
+import { color, touchTarget, spacing } from '@/theme';
 import { DEMO_TOOLS } from '@/lib/serverUrl';
 
 const items: Array<{ icon: LucideIcon; label: string; href: Href }> = [
@@ -25,7 +25,7 @@ export default function More() {
   };
   return (
     <Screen>
-      <Text role="pageTitle">More</Text>
+      <Text type="h1">More</Text>
       <Card padded={false}>
         {items.map((item, i) => (
           <Row key={item.label} icon={item.icon} label={item.label} onPress={() => router.push(item.href)} divider={i > 0} />
@@ -40,19 +40,19 @@ export default function More() {
 }
 
 function Row({ icon: Icon, label, onPress, danger, divider }: { icon: LucideIcon; label: string; onPress: () => void; danger?: boolean; divider?: boolean }) {
-  const tint = danger ? color.status.danger.fg : color.text.primary;
+  const tint = danger ? color.status.error.text : color.text.primary;
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, divider && styles.divider, pressed && { backgroundColor: color.bg.surfaceSubtle }]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, divider && styles.divider, pressed && { backgroundColor: color.background.muted }]}>
       <Icon size={22} color={tint} strokeWidth={1.75} />
-      <Text role="body" style={{ flex: 1, color: tint }}>
+      <Text type="body" style={{ flex: 1, color: tint }}>
         {label}
       </Text>
-      {!danger ? <ChevronRight size={20} color={color.text.tertiary} /> : null}
+      {!danger ? <ChevronRight size={20} color={color.text.secondary} /> : null}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[6], minHeight: touchTarget + 8, paddingHorizontal: space[8] },
-  divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], minHeight: touchTarget + 8, paddingHorizontal: spacing[4] },
+  divider: { borderTopWidth: 1, borderTopColor: color.border },
 });

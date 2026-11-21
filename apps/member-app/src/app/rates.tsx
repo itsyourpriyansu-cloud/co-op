@@ -8,8 +8,8 @@ import { useQuery } from '@tanstack/react-query';
 import { calculateEmi, formatDisplayDate, formatINR, toPaise } from '@tgs/domain';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Alert, Card, Divider, Header, KeyValue, MonthPicker, Screen, Section, SelectField, Skeleton, Tag, Text, TextField } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Card, Divider, Header, MetadataListItem, MonthPicker, Screen, Section, SelectField, Skeleton, Token, Text, TextField } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 export default function Rates() {
   const { ready, session } = useAuth();
@@ -26,15 +26,15 @@ export default function Rates() {
   return (
     <Screen header={<Header title="Interest rates" onBack={() => router.back()} />} refreshing={rates.isRefetching} onRefresh={() => void refetch()}>
       {rates.isLoading ? (
-        <View style={{ gap: space[8] }}>
-          <Skeleton height={180} radius={radius.card} />
-          <Skeleton height={240} radius={radius.card} />
+        <View style={{ gap: spacing[4] }}>
+          <Skeleton height={180} radius={radius.container} />
+          <Skeleton height={240} radius={radius.container} />
         </View>
       ) : rates.isError || !rates.data ? (
-        <Alert type="error" heading="Couldn't load the rates" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void rates.refetch() }} />
+        <Banner status="error" heading="Couldn't load the rates" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void rates.refetch() }} />
       ) : (
         <>
-          <Text role="body" tone="secondary">
+          <Text type="body" tone="secondary">
             {rates.data.updatedAt ? `Rates set by the society. Last changed ${formatDisplayDate(rates.data.updatedAt.slice(0, 10))}.` : 'Rates set by the society.'}
           </Text>
           <EmiEstimate products={rates.data.loanProducts} />
@@ -43,13 +43,13 @@ export default function Rates() {
             <Card padded={false}>
               {rates.data.loanProducts.map((p, i) => (
                 <View key={p.code} style={[styles.row, i > 0 && styles.divider]}>
-                  <View style={{ flex: 1, gap: space[1] }}>
-                    <Text role="label">{p.name}</Text>
-                    <Text role="caption" tone="secondary">
+                  <View style={{ flex: 1, gap: spacing[0.5] }}>
+                    <Text type="label">{p.name}</Text>
+                    <Text type="supporting" tone="secondary">
                       Up to {formatINR(p.maxAmount)} · {p.instalmentOptions.join(' / ')} months{p.suretiesRequired ? ` · ${p.suretiesRequired} ${p.suretiesRequired === 1 ? 'surety' : 'sureties'}` : ''}
                     </Text>
                   </View>
-                  <Text role="cardTitle">{p.ratePercent}%</Text>
+                  <Text type="h4">{p.ratePercent}%</Text>
                 </View>
               ))}
             </Card>
@@ -59,10 +59,10 @@ export default function Rates() {
             <Card padded={false}>
               {rates.data.fdSlabs.map((s, i) => (
                 <View key={`${s.fromMonths}-${s.toMonths}`} style={[styles.row, i > 0 && styles.divider]}>
-                  <Text role="body" style={{ flex: 1 }}>
+                  <Text type="body" style={{ flex: 1 }}>
                     {s.fromMonths}–{s.toMonths} months
                   </Text>
-                  <Text role="cardTitle">{s.ratePercent}%</Text>
+                  <Text type="h4">{s.ratePercent}%</Text>
                 </View>
               ))}
             </Card>
@@ -70,9 +70,9 @@ export default function Rates() {
 
           <Section title="Other deposits">
             <Card>
-              <KeyValue label="Savings" value={`${rates.data.savingsRatePercent}%`} />
-              <KeyValue label="CRD" value={`${rates.data.crdRatePercent}%`} />
-              <KeyValue label="SRDS" value={`${rates.data.srdsRatePercent}%`} />
+              <MetadataListItem label="Savings" value={`${rates.data.savingsRatePercent}%`} />
+              <MetadataListItem label="CRD" value={`${rates.data.crdRatePercent}%`} />
+              <MetadataListItem label="SRDS" value={`${rates.data.srdsRatePercent}%`} />
             </Card>
           </Section>
         </>
@@ -103,34 +103,34 @@ function EmiEstimate({ products }: { products: Product[] }) {
 
   return (
     <Card>
-      <View style={{ gap: space[8] }}>
+      <View style={{ gap: spacing[4] }}>
         <View style={styles.head}>
-          <Text role="cardTitle" style={{ flex: 1 }}>
+          <Text type="h4" style={{ flex: 1 }}>
             Estimate your instalment
           </Text>
-          <Tag text={`${product.ratePercent}% a year`} color="primary" size="xs" />
+          <Token text={`${product.ratePercent}% a year`} status="info" size="xs" />
         </View>
         <SelectField label="Loan" value={code} options={products.map((p) => ({ value: p.code, label: p.name, hint: `${p.ratePercent}%` }))} onChange={setCode} />
         <TextField label="Amount" prefix="₹" keyboardType="number-pad" value={amount} onChangeText={setAmount} error={overMax ? `The most for this loan is ${formatINR(product.maxAmount)}.` : undefined} />
         <MonthPicker label="Months" value={tenure} choices={choices} onChange={setMonths} />
         <Divider />
         {result ? (
-          <View style={{ gap: space[2] }}>
-            <Text role="caption" tone="secondary">
+          <View style={{ gap: spacing[1] }}>
+            <Text type="supporting" tone="secondary">
               {result.constant ? 'Monthly instalment' : 'First instalment (it gets smaller every month)'}
             </Text>
-            <Text role="pageTitle" accessibilityLiveRegion="polite">
+            <Text type="h1" accessibilityLiveRegion="polite">
               {formatINR(result.firstInstalment)}
             </Text>
-            <KeyValue label="Total interest" value={formatINR(result.totalInterest)} />
-            <KeyValue label="Total payable" value={formatINR(result.totalPayable)} />
+            <MetadataListItem label="Total interest" value={formatINR(result.totalInterest)} />
+            <MetadataListItem label="Total payable" value={formatINR(result.totalPayable)} />
           </View>
         ) : (
-          <Text role="caption" tone="secondary">
+          <Text type="supporting" tone="secondary">
             Enter an amount to see the instalment.
           </Text>
         )}
-        <Text role="caption" tone="tertiary">
+        <Text type="supporting" tone="secondary">
           An estimate only. The society confirms the amount when you apply.
         </Text>
       </View>
@@ -139,7 +139,7 @@ function EmiEstimate({ products }: { products: Product[] }) {
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[6], paddingHorizontal: space[8], paddingVertical: space[6] },
-  divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
+  divider: { borderTopWidth: 1, borderTopColor: color.border },
 });

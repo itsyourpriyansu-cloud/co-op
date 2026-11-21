@@ -3,9 +3,10 @@
 // for testing and the poster would sit over every test.
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, Platform, Pressable, StyleSheet } from 'react-native';
+import { motion } from '@/theme';
+import { ease } from '@/ui';
 
 const SHOW_MS = 2500;
-const FADE_MS = 300;
 /** The poster's own top and bottom colour, so taller screens get seamless bands instead of cropping. */
 const POSTER_BLUE = '#7dd3f7';
 
@@ -13,7 +14,7 @@ export function LaunchPoster() {
   const [visible, setVisible] = useState(Platform.OS !== 'web');
   const opacity = useRef(new Animated.Value(1)).current;
 
-  const close = () => Animated.timing(opacity, { toValue: 0, duration: FADE_MS, useNativeDriver: true }).start(() => setVisible(false));
+  const close = () => Animated.timing(opacity, { toValue: 0, duration: motion.duration.mediumMin, easing: ease.exit, useNativeDriver: true }).start(() => setVisible(false));
 
   useEffect(() => {
     if (!visible) return;

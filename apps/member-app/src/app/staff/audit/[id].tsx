@@ -5,15 +5,15 @@ import { useQuery } from '@tanstack/react-query';
 import { formatDisplayDateTime } from '@tgs/domain';
 import { Loaded } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Card, Header, KeyValue, Screen, Section, Text } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Card, Header, MetadataListItem, Screen, Section, Text } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 function Snapshot({ title, value }: { title: string; value: unknown }) {
   if (value === null || value === undefined) return null;
   return (
     <Section title={title}>
-      <ScrollView horizontal style={{ borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.control, backgroundColor: color.bg.surfaceMuted }} contentContainerStyle={{ padding: space[6] }}>
-        <Text role="caption" style={{ fontFamily: 'monospace' }}>
+      <ScrollView horizontal style={{ borderWidth: 1, borderColor: color.border, borderRadius: radius.element, backgroundColor: color.background.muted }} contentContainerStyle={{ padding: spacing[3] }}>
+        <Text type="supporting" style={{ fontFamily: 'monospace' }}>
           {JSON.stringify(value, null, 2)}
         </Text>
       </ScrollView>
@@ -28,17 +28,17 @@ export default function AuditEntry() {
     <Loaded page q={q} what="this entry">
       {(e) => (
         <Screen header={<Header title="Audit entry" onBack={() => router.back()} />}>
-          <View style={{ gap: space[2] }}>
-            <Text role="pageTitle">{e.summary}</Text>
-            <Text role="caption" tone="secondary">
+          <View style={{ gap: spacing[1] }}>
+            <Text type="h1">{e.summary}</Text>
+            <Text type="supporting" tone="secondary">
               {e.actorName ?? 'System'} · {formatDisplayDateTime(e.at)}
             </Text>
           </View>
           <Card>
-            <KeyValue label="Action" value={e.action} />
-            <KeyValue label="Record" value={`${e.entity}${e.entityId ? ` ${e.entityId}` : ''}`} />
-            <KeyValue label="Role" value={e.actorRole ?? '—'} />
-            <KeyValue label="From" value={e.ip ?? '—'} />
+            <MetadataListItem label="Action" value={e.action} />
+            <MetadataListItem label="Record" value={`${e.entity}${e.entityId ? ` ${e.entityId}` : ''}`} />
+            <MetadataListItem label="Role" value={e.actorRole ?? '—'} />
+            <MetadataListItem label="From" value={e.ip ?? '—'} />
           </Card>
           <Snapshot title="Before" value={e.before} />
           <Snapshot title="After" value={e.after} />

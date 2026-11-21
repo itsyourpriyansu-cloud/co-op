@@ -7,7 +7,7 @@ import type { ComposeInput, ComposePreview, MemberPick, MessageAudience, Message
 import { ActionAlert, Filter, MemberPicker, useAction } from '@/components/staff';
 import { api } from '@/lib/api';
 import { Button, Card, Header, Screen, Section, SelectField, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { spacing } from '@/theme';
 
 type Kind = MessageAudience['kind'];
 
@@ -45,15 +45,15 @@ export default function Compose() {
     <Screen
       header={<Header title="Send a message" onBack={() => router.back()} />}
       footer={
-        <View style={{ gap: space[3] }}>
-          <Text role="caption" tone="tertiary">
+        <View style={{ gap: spacing[1.5] }}>
+          <Text type="supporting" tone="secondary">
             {preview ? `${preview.recipients} recipient${preview.recipients === 1 ? '' : 's'}${preview.skipped ? ` · ${preview.skipped} without ${channel === 'EMAIL' ? 'an email' : 'a number'}` : ''}` : 'Preview first to see who gets it'}
           </Text>
-          {preview ? <Button text="Send" size="lg" fullWidth loading={a.busy} disabled={!preview.recipients || a.busy} onPress={send} /> : <Button text="Preview" size="lg" fullWidth loading={a.busy} onPress={() => void doPreview()} />}
+          {preview ? <Button label="Send" size="lg" fullWidth loading={a.busy} disabled={!preview.recipients || a.busy} onPress={send} /> : <Button label="Preview" size="lg" fullWidth loading={a.busy} onPress={() => void doPreview()} />}
         </View>
       }
     >
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         Members also get it in the app.
       </Text>
       <Filter label="Channel" value={channel} options={[{ value: 'WHATSAPP', label: 'WhatsApp' }, { value: 'EMAIL', label: 'Email' }]} onChange={(c) => (setChannel(c), reset())} />
@@ -79,20 +79,20 @@ export default function Compose() {
       <ActionAlert action={a} heading="Not sent" />
       {preview ? (
         <Section title={`${preview.audienceLabel} · ${preview.recipients} recipient${preview.recipients === 1 ? '' : 's'}`}>
-          <View style={{ gap: space[4] }}>
+          <View style={{ gap: spacing[2] }}>
             {preview.sample.map((s) => (
               <Card key={s.memberId}>
-                <View style={{ gap: space[1] }}>
-                  <Text role="caption" tone="tertiary">
+                <View style={{ gap: spacing[0.5] }}>
+                  <Text type="supporting" tone="secondary">
                     To {s.name} ({s.generalNo}) · {s.to}
                   </Text>
-                  <Text role="label">{s.title}</Text>
-                  <Text role="body">{s.body}</Text>
+                  <Text type="label">{s.title}</Text>
+                  <Text type="body">{s.body}</Text>
                 </View>
               </Card>
             ))}
             {preview.recipients > preview.sample.length ? (
-              <Text role="caption" tone="tertiary">
+              <Text type="supporting" tone="secondary">
                 …and {preview.recipients - preview.sample.length} more.
               </Text>
             ) : null}

@@ -8,8 +8,8 @@ import { BookOpenText, CalendarCheck, ListTree, Plus } from 'lucide-react-native
 import { formatDisplayDate, formatINR } from '@tgs/domain';
 import { Filter, Loaded, RecordCard, Row, Stack2, useCan } from '@/components/staff';
 import { api } from '@/lib/api';
-import { Button, Card, EmptyState, Header, Screen, Section, Tag } from '@/ui';
-import { space } from '@/theme';
+import { Button, Card, EmptyState, Header, Screen, Section, Token } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function Accounts() {
   const can = useCan();
@@ -26,7 +26,7 @@ export default function Accounts() {
       header={<Header title="Accounts" onBack={() => router.back()} />}
       refreshing={list.isRefetching && !list.isFetchingNextPage}
       onRefresh={() => void list.refetch()}
-      {...(can('ledger.post') ? { footer: <Button text="New voucher" leftSlot={Plus} size="lg" fullWidth onPress={() => router.push('/staff/accounts/voucher/new')} /> } : {})}
+      {...(can('ledger.post') ? { footer: <Button label="New voucher" icon={Plus} size="lg" fullWidth onPress={() => router.push('/staff/accounts/voucher/new')} /> } : {})}
     >
       <Card>
         <Row icon={ListTree} label="Chart of accounts" hint="Heads and the sub-heads you add" onPress={() => router.push('/staff/accounts/heads')} divider />
@@ -56,13 +56,13 @@ export default function Accounts() {
                     subtitle={`${v.voucherNo} · ${formatDisplayDate(v.date)}`}
                     caption={`${v.headName} · ${v.mode === 'CASH' ? 'Cash' : 'Bank'}`}
                     amount={`${v.kind === 'PAYMENT' ? '−' : '+'}${formatINR(v.amount)}`}
-                    {...(v.reversed ? { tag: <Tag text="Cancelled" color="neutral" size="xs" /> } : {})}
+                    {...(v.reversed ? { tag: <Token text="Cancelled" status="neutral" size="xs" /> } : {})}
                     onPress={() => router.push(`/staff/accounts/voucher/${v.id}`)}
                   />
                 ))}
                 {list.hasNextPage ? (
-                  <View style={{ padding: space[6] }}>
-                    <Button text="Load older" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} />
+                  <View style={{ padding: spacing[3] }}>
+                    <Button label="Load older" variant="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} />
                   </View>
                 ) : null}
               </Stack2>

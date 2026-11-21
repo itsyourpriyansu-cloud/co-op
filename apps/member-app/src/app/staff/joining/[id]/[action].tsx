@@ -8,8 +8,8 @@ import { F1_CERT_ITEMS, type F1CertItem, type MembershipAction, type MembershipA
 import { ActionAlert, ask, DoneAlert, Loaded, RuleChecks, useAction } from '@/components/staff';
 import { api } from '@/lib/api';
 import { ACTION_LABEL, certItems, ITEM_FIELD, RETURN_FIELDS } from '@/lib/staffJoining';
-import { Alert, Button, Card, Checkbox, ChoiceCard, Header, KeyValue, Screen, Section, Segmented, SelectField, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, CheckboxInput, SelectableCard, Header, MetadataListItem, Screen, Section, SegmentedControl, SelectField, Text, TextField, Link } from '@/ui';
+import { spacing } from '@/theme';
 
 const TITLES: Record<MembershipAction, (d: MembershipDetail) => { title: string; description: string }> = {
   sendToDdo: (d) => ({ title: 'Intake check', description: `Confirm the application is complete, then send it to the ${d.department?.name ?? ''} DDO for certification.` }),
@@ -87,37 +87,37 @@ function Decision({ d, action }: { d: MembershipDetail; action: MembershipAction
 
   if (done)
     return (
-      <Screen header={<Header title={title} />} footer={<Button text="Done" size="lg" fullWidth onPress={() => router.back()} />}>
+      <Screen header={<Header title={title} />} footer={<Button label="Done" size="lg" fullWidth onPress={() => router.back()} />}>
         <DoneAlert {...done} />
       </Screen>
     );
 
   return (
-    <Screen header={<Header title={title} onBack={() => router.back()} />} footer={<Button text={primaryText} size="lg" fullWidth buttonType={action === 'reject' ? 'danger' : 'primary'} loading={a.busy} disabled={disabled} onPress={() => void submit()} />}>
+    <Screen header={<Header title={title} onBack={() => router.back()} />} footer={<Button label={primaryText} size="lg" fullWidth variant={action === 'reject' ? 'destructive' : 'primary'} loading={a.busy} disabled={disabled} onPress={() => void submit()} />}>
       <Card>
-        <Text role="label">{app.name}</Text>
-        <Text role="caption" tone="secondary">
+        <Text type="label">{app.name}</Text>
+        <Text type="supporting" tone="secondary">
           {app.applicationNo} · {app.designation} · {d.department?.name}
         </Text>
       </Card>
-      <Text role="body" tone="secondary">
+      <Text type="body" tone="secondary">
         {description}
       </Text>
 
       {action === 'certify' ? (
         <>
-          <Section title="Items 1 to 7 (form F1)" right={<Button text="All correct" subType="inline" onPress={() => setItems(Object.fromEntries(F1_CERT_ITEMS.map((i) => [i, 'OK'])))} />}>
-            <View style={{ gap: space[4] }}>
+          <Section title="Items 1 to 7 (form F1)" right={<Link label="All correct" onPress={() => setItems(Object.fromEntries(F1_CERT_ITEMS.map((i) => [i, 'OK'])))} />}>
+            <View style={{ gap: spacing[2] }}>
               {rows.map((r) => (
                 <Card key={r.key}>
-                  <View style={{ gap: space[3] }}>
+                  <View style={{ gap: spacing[1.5] }}>
                     <View>
-                      <Text role="caption" tone="tertiary">
+                      <Text type="supporting" tone="secondary">
                         {r.no} · {r.label}
                       </Text>
-                      <Text role="label">{r.value}</Text>
+                      <Text type="label">{r.value}</Text>
                     </View>
-                    <Segmented label={`Item ${r.no}`} value={items[r.key] ?? ''} options={[{ value: 'OK', label: 'Correct' }, { value: 'FLAG', label: 'Fix' }]} onChange={(v) => setItems((s) => ({ ...s, [r.key]: v as 'OK' | 'FLAG' }))} />
+                    <SegmentedControl label={`Item ${r.no}`} value={items[r.key] ?? ''} options={[{ value: 'OK', label: 'Correct' }, { value: 'FLAG', label: 'Fix' }]} onChange={(v) => setItems((s) => ({ ...s, [r.key]: v as 'OK' | 'FLAG' }))} />
                   </View>
                 </Card>
               ))}
@@ -128,13 +128,13 @@ function Decision({ d, action }: { d: MembershipDetail; action: MembershipAction
           ) : (
             <Section title="Salary recovery mandate (form F6)">
               {(d.agreements.find((x) => x.key === 'recoveryMandate')?.summary ?? []).map((s) => (
-                <Text key={s} role="caption" tone="secondary">
+                <Text key={s} type="supporting" tone="secondary">
                   • {s}
                 </Text>
               ))}
-              <Checkbox checked={mandate} onChange={setMandate} label="AGREED: deduct society dues from this employee's salary" description={`As ${d.department?.ddoDesignation ?? 'DDO'}, ${d.department?.name ?? ''}`} />
+              <CheckboxInput checked={mandate} onChange={setMandate} label="AGREED: deduct society dues from this employee's salary" description={`As ${d.department?.ddoDesignation ?? 'DDO'}, ${d.department?.name ?? ''}`} />
               {a.fields.mandateAgreed ? (
-                <Text role="caption" tone="danger">
+                <Text type="supporting" tone="error">
                   {a.fields.mandateAgreed}
                 </Text>
               ) : null}
@@ -149,23 +149,23 @@ function Decision({ d, action }: { d: MembershipDetail; action: MembershipAction
         </Section>
       ) : null}
 
-      {action === 'forward' && app.ddoCertification ? <Alert type="success" heading="DDO certificate" description={`Items 1–7 certified and recovery mandate agreed by ${app.ddoCertification.byName}, ${app.ddoCertification.designation} · ${formatDisplayDateTime(app.ddoCertification.at)}`} /> : null}
+      {action === 'forward' && app.ddoCertification ? <Banner status="success" heading="DDO certificate" description={`Items 1–7 certified and recovery mandate agreed by ${app.ddoCertification.byName}, ${app.ddoCertification.designation} · ${formatDisplayDateTime(app.ddoCertification.at)}`} /> : null}
 
       {action === 'approve' ? (
         <>
           <Card>
-            <KeyValue label="Shares proposed" value={String(app.sharesProposed)} />
-            <KeyValue label="Share capital" value={formatINR(d.shareAmount)} />
-            <KeyValue label="DDO certificate" value={app.ddoCertification ? `${app.ddoCertification.byName}, ${app.ddoCertification.designation} · mandate agreed` : 'Not certified'} />
-            {app.officeReview?.remarks ? <KeyValue label="Office remarks" value={`“${app.officeReview.remarks}”`} /> : null}
-            <KeyValue label="Secretary" value={app.secretaryApproval ? `${app.secretaryApproval.byName} · ${formatDisplayDateTime(app.secretaryApproval.at)}` : 'Pending'} />
-            <KeyValue label="President" value={app.presidentApproval ? `${app.presidentApproval.byName} · ${formatDisplayDateTime(app.presidentApproval.at)}` : 'Pending'} />
+            <MetadataListItem label="Shares proposed" value={String(app.sharesProposed)} />
+            <MetadataListItem label="Share capital" value={formatINR(d.shareAmount)} />
+            <MetadataListItem label="DDO certificate" value={app.ddoCertification ? `${app.ddoCertification.byName}, ${app.ddoCertification.designation} · mandate agreed` : 'Not certified'} />
+            {app.officeReview?.remarks ? <MetadataListItem label="Office remarks" value={`“${app.officeReview.remarks}”`} /> : null}
+            <MetadataListItem label="Secretary" value={app.secretaryApproval ? `${app.secretaryApproval.byName} · ${formatDisplayDateTime(app.secretaryApproval.at)}` : 'Pending'} />
+            <MetadataListItem label="President" value={app.presidentApproval ? `${app.presidentApproval.byName} · ${formatDisplayDateTime(app.presidentApproval.at)}` : 'Pending'} />
           </Card>
           {finalApproval ? (
             <Section title="Share payment">
-              <View style={{ gap: space[4] }}>
-                <ChoiceCard title="At the counter" description="The new member pays the cashier now. Membership starts on receipt." selected={route === 'COUNTER'} onPress={() => setRoute('COUNTER')} />
-                <ChoiceCard title="On the first demand sheet" description="Membership starts now. Shares are added to the first salary demand." selected={route === 'FIRST_DEMAND'} onPress={() => setRoute('FIRST_DEMAND')} />
+              <View style={{ gap: spacing[2] }}>
+                <SelectableCard title="At the counter" description="The new member pays the cashier now. Membership starts on receipt." selected={route === 'COUNTER'} onPress={() => setRoute('COUNTER')} />
+                <SelectableCard title="On the first demand sheet" description="Membership starts now. Shares are added to the first salary demand." selected={route === 'FIRST_DEMAND'} onPress={() => setRoute('FIRST_DEMAND')} />
               </View>
             </Section>
           ) : null}
@@ -175,14 +175,14 @@ function Decision({ d, action }: { d: MembershipDetail; action: MembershipAction
       {action === 'recordSharePayment' || action === 'activate' ? (
         <Section title="Share capital">
           <Card>
-            <Text role="sectionTitle">{formatINR(d.shareAmount)}</Text>
-            <Text role="caption" tone="tertiary">
+            <Text type="h3">{formatINR(d.shareAmount)}</Text>
+            <Text type="supporting" tone="secondary">
               {app.sharesProposed} shares · {amountInWords(d.shareAmount)}
             </Text>
           </Card>
           {action === 'recordSharePayment' ? (
             <>
-              <Segmented label="Received as" value={mode} options={[{ value: 'CASH', label: 'Cash' }, { value: 'UPI', label: 'UPI' }, { value: 'CHEQUE', label: 'Cheque' }]} onChange={(v) => setMode(v as typeof mode)} />
+              <SegmentedControl label="Received as" value={mode} options={[{ value: 'CASH', label: 'Cash' }, { value: 'UPI', label: 'UPI' }, { value: 'CHEQUE', label: 'Cheque' }]} onChange={(v) => setMode(v as typeof mode)} />
               {mode !== 'CASH' ? <TextField label={mode === 'UPI' ? 'UPI reference' : 'Cheque number'} placeholder={mode === 'UPI' ? 'e.g. 4302 1187 6650' : 'e.g. 004512'} value={reference} onChangeText={setReference} required error={a.fields.reference} /> : null}
             </>
           ) : null}
@@ -194,7 +194,7 @@ function Decision({ d, action }: { d: MembershipDetail; action: MembershipAction
       {action !== 'certify' ? <TextField label={action === 'reject' ? 'Reason' : action === 'returnToApplicant' ? 'Message to the applicant' : 'Remarks'} placeholder={action === 'reject' ? 'e.g. Member of another credit society with dues.' : action === 'returnToApplicant' ? 'e.g. Upload a clear copy of the appointment order.' : 'Optional'} value={remarks} onChangeText={setRemarks} multiline numberOfLines={3} required={action === 'reject' || action === 'returnToApplicant'} hint={action === 'reject' || action === 'returnToApplicant' ? 'The applicant sees this in the app. At least 10 characters.' : undefined} error={a.fields.remarks} /> : null}
 
       <ActionAlert action={a} heading="Couldn't save" check={{ text: 'Check the application', href: `/staff/joining/${app.id}` }} />
-      <Text role="caption" tone="tertiary">
+      <Text type="supporting" tone="secondary">
         Recorded with your name and time.
       </Text>
     </Screen>

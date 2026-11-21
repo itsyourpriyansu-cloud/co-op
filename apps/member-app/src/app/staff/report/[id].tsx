@@ -12,8 +12,8 @@ import { Expand, MemberPicker, ShareCsvButton, StaffDocument, staffHref, FilterB
 import { api } from '@/lib/api';
 import { documentFileName } from '@/lib/documents';
 import { reportHtml } from '@/lib/staffDocuments';
-import { Alert, Button, Card, DateField, EmptyState, Header, KeyValue, Screen, Section, SelectField, Skeleton, Text } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, DateField, EmptyState, Header, MetadataListItem, Screen, Section, SelectField, Skeleton, Text, Link } from '@/ui';
+import { spacing } from '@/theme';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -45,7 +45,7 @@ function Rows({ r, rows }: { r: ReportResult; rows: ReportResult['groups'][numbe
   const [first, ...rest] = r.columns;
   const nameCol = rest.find((c) => c.key === 'name');
   return (
-    <View style={{ gap: space[4] }}>
+    <View style={{ gap: spacing[2] }}>
       <Stack2>
         {rows.slice(0, shown).map((row, i) => {
           const key = show(first!, row[first!.key] ?? null);
@@ -56,14 +56,14 @@ function Rows({ r, rows }: { r: ReportResult; rows: ReportResult['groups'][numbe
                 {rest
                   .filter((c) => c !== nameCol && !['—', '–'].includes(show(c, row[c.key] ?? null)))
                   .map((c) => (
-                    <KeyValue key={c.key} label={c.label} value={show(c, row[c.key] ?? null)} />
+                    <MetadataListItem key={c.key} label={c.label} value={show(c, row[c.key] ?? null)} />
                   ))}
               </View>
             </RecordCard>
           );
         })}
       </Stack2>
-      {rows.length > shown ? <Button text={`Show more (${rows.length - shown} left)`} buttonType="secondary" fullWidth onPress={() => setShown((s) => s + 50)} /> : null}
+      {rows.length > shown ? <Button label={`Show more (${rows.length - shown} left)`} variant="secondary" fullWidth onPress={() => setShown((s) => s + 50)} /> : null}
     </View>
   );
 }
@@ -73,7 +73,7 @@ function Result({ r }: { r: ReportResult }) {
   const grouped = r.groups.some((g) => g.label);
   return (
     <>
-      <Text role="caption" tone="secondary">
+      <Text type="supporting" tone="secondary">
         {r.filterLabels.join(' · ') || 'All records'}
         {'\n'}
         {r.rowCount.toLocaleString('en-IN')} row{r.rowCount === 1 ? '' : 's'} · as of {formatDisplayDate(r.asOf)} · generated {formatDisplayDateTime(r.generatedAt)}
@@ -82,7 +82,7 @@ function Result({ r }: { r: ReportResult }) {
         <Section title="Grand total">
           <Card>
             {totalled.map((c) => (
-              <KeyValue key={c.key} label={c.label} value={show(c, r.totals[c.key] ?? 0)} emphasis />
+              <MetadataListItem key={c.key} label={c.label} value={show(c, r.totals[c.key] ?? 0)} emphasis />
             ))}
           </Card>
         </Section>
@@ -92,11 +92,11 @@ function Result({ r }: { r: ReportResult }) {
           <Expand key={g.label} title={`${g.label} · ${g.rows.length} row${g.rows.length === 1 ? '' : 's'}`} initiallyOpen={i === 0}>
             {totalled.length ? (
               <View>
-                <Text role="overline" tone="tertiary">
+                <Text type="overline" tone="secondary">
                   Subtotal
                 </Text>
                 {totalled.map((c) => (
-                  <KeyValue key={c.key} label={c.label} value={show(c, g.subtotal[c.key] ?? 0)} />
+                  <MetadataListItem key={c.key} label={c.label} value={show(c, g.subtotal[c.key] ?? 0)} />
                 ))}
               </View>
             ) : null}
@@ -137,12 +137,12 @@ export default function ReportViewer() {
   return (
     <Screen header={<Header title={def?.title ?? 'Report'} onBack={() => router.back()} />}>
       {def?.description ? (
-        <Text role="body" tone="secondary">
+        <Text type="body" tone="secondary">
           {plain(def.description)}
         </Text>
       ) : null}
       {def && opts ? (
-        <View style={{ gap: space[4] }}>
+        <View style={{ gap: spacing[2] }}>
           {has('memberId') ? <MemberPicker value={member} onPick={(m) => (setMember(m), set('memberId', m?.id))} /> : null}
           {(['cycle', 'departmentId', 'product', 'minCycles', 'withinMonths', 'book', 'account', 'scheme', 'month'] as const).some(has) ? (
             <FilterBar>
@@ -158,12 +158,12 @@ export default function ReportViewer() {
             </FilterBar>
           ) : null}
           {/* Remounts once when the server's default arrives; DateField keeps its own text after that. */}
-          <View style={{ flexDirection: 'row', gap: space[4] }}>
+          <View style={{ flexDirection: 'row', gap: spacing[2] }}>
           {has('from') ? <View style={{ flex: 1 }}><DateField key={`from-${filters.from ? 'set' : (r?.filters.from ?? '')}`} label="From" value={filters.from ?? r?.filters.from} onChange={(d) => d && set('from', d)} /></View> : null}
           {has('to') ? <View style={{ flex: 1 }}><DateField key={`to-${filters.to ? 'set' : (r?.filters.to ?? '')}`} label="To" value={filters.to ?? r?.filters.to} onChange={(d) => d && set('to', d)} error={errorMsg?.includes('start') ? errorMsg : undefined} /></View> : null}
           {has('asOf') ? <View style={{ flex: 1 }}><DateField key={`asof-${filters.asOf ? 'set' : (r?.filters.asOf ?? '')}`} label="As on" value={filters.asOf ?? r?.filters.asOf} onChange={(d) => d && set('asOf', d)} /></View> : null}
           </View>
-          {Object.keys(filters).length ? <Button text="Clear filters" subType="inline" style={{ alignSelf: 'flex-start' }} onPress={clear} /> : null}
+          {Object.keys(filters).length ? <Link label="Clear filters" style={{ alignSelf: 'flex-start' }} onPress={clear} /> : null}
         </View>
       ) : null}
 
@@ -176,13 +176,13 @@ export default function ReportViewer() {
       ) : needsMember ? (
         <EmptyState icon={UserRound} title="Choose a member" description="Search for the member whose ledger you want to see." />
       ) : q.isError ? (
-        <Alert type={isApiError(q.error) && q.error.code === 'VALIDATION_ERROR' ? 'warning' : 'error'} heading="Couldn't run this report" description={errorMsg ?? 'Check your connection and try again.'} action={{ text: 'Try again', onPress: () => void q.refetch() }} />
+        <Banner status={isApiError(q.error) && q.error.code === 'VALIDATION_ERROR' ? 'warning' : 'error'} heading="Couldn't run this report" description={errorMsg ?? 'Check your connection and try again.'} action={{ text: 'Try again', onPress: () => void q.refetch() }} />
       ) : r && r.rowCount === 0 ? (
         <EmptyState icon={FileSearch} title="Nothing matches these filters" action={{ text: 'Clear filters', onPress: clear }} />
       ) : r ? (
         <>
           <Result r={r} />
-          <View style={{ gap: space[3] }}>
+          <View style={{ gap: spacing[1.5] }}>
             <ShareCsvButton title={r.def.title} rows={() => csvRows(r)} />
             <StaffDocument title="Print this report" fileName={documentFileName(r.def.title, r.asOf)} build={(o) => reportHtml(r, o)} />
           </View>

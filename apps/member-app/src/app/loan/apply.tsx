@@ -14,8 +14,8 @@ import type { LoanApplicationForm, LoanContext, LoanProductCode, LoanRequestInpu
 import { BankAccountFields, EMPTY_BANK } from '@/components/BankAccountFields';
 import { api } from '@/lib/api';
 import { loanKeys, useAssessment, useLoanContext, useMemberSearch } from '@/lib/loans';
-import { Alert, Button, Card, ChoiceCard, Divider, Header, KeyValue, MonthPicker, OtpInput, Screen, Section, Skeleton, Text, TextField, WizardProgress } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Card, SelectableCard, Divider, Header, MetadataListItem, MonthPicker, OtpInput, Screen, Section, Skeleton, Text, TextField, Stepper } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 type StepKey = 'type' | 'pay' | 'loan' | 'sureties' | 'review';
 const TITLES: Record<StepKey, string> = { type: 'Choose a loan', pay: 'About your pay', loan: 'Your loan', sureties: 'Your sureties', review: 'Review & sign' };
@@ -142,7 +142,7 @@ export default function ApplyLoan() {
     return (
       <Screen header={<Header title="Apply for a loan" onBack={() => router.back()} />}>
         <Skeleton height={28} width="60%" />
-        <Skeleton height={300} radius={radius.card} />
+        <Skeleton height={300} radius={radius.container} />
       </Screen>
     );
   }
@@ -214,20 +214,20 @@ export default function ApplyLoan() {
 
   const eligibility = a ? (
     <Card>
-      <View style={{ gap: space[4] }}>
+      <View style={{ gap: spacing[2] }}>
         <View style={styles.row}>
-          {a.eligible ? <CircleCheck size={20} color={color.status.success.fg} /> : <CircleX size={20} color={color.status.danger.fg} />}
-          <Text role="label" style={{ flex: 1 }}>
+          {a.eligible ? <CircleCheck size={20} color={color.status.success.text} /> : <CircleX size={20} color={color.status.error.text} />}
+          <Text type="label" style={{ flex: 1 }}>
             {a.eligible ? 'You are eligible' : 'Not possible as entered'}
           </Text>
-          {assessment.isFetching ? <ActivityIndicator size="small" color={color.text.tertiary} /> : null}
+          {assessment.isFetching ? <ActivityIndicator size="small" color={color.text.secondary} /> : null}
         </View>
         {a.checks
           .filter((c) => !c.pass)
           .map((c, i) => (
             <View key={i} style={styles.row}>
-              {c.severity === 'block' ? <CircleX size={16} color={color.status.danger.fg} /> : <TriangleAlert size={16} color={color.status.warning.fg} />}
-              <Text role="caption" tone={c.severity === 'block' ? 'danger' : 'warning'} style={{ flex: 1 }}>
+              {c.severity === 'block' ? <CircleX size={16} color={color.status.error.text} /> : <TriangleAlert size={16} color={color.status.warning.text} />}
+              <Text type="supporting" tone={c.severity === 'block' ? 'error' : 'warning'} style={{ flex: 1 }}>
                 {c.message}
               </Text>
             </View>
@@ -235,16 +235,16 @@ export default function ApplyLoan() {
         {a.preview.topup ? (
           <>
             <Divider />
-            <Text role="label">Your running loan {a.preview.topup.loanNo} is closed from this one</Text>
-            <KeyValue label="Still owed" value={formatINR(a.preview.topup.outstandingPrincipal)} />
-            <KeyValue label="Interest up to today" value={formatINR(a.preview.topup.accruedInterest)} />
+            <Text type="label">Your running loan {a.preview.topup.loanNo} is closed from this one</Text>
+            <MetadataListItem label="Still owed" value={formatINR(a.preview.topup.outstandingPrincipal)} />
+            <MetadataListItem label="Interest up to today" value={formatINR(a.preview.topup.accruedInterest)} />
           </>
         ) : null}
         <Divider />
-        <KeyValue label="First instalment" value={formatINR(a.preview.emi)} emphasis />
-        <KeyValue label="Share deposit deduction" value={formatINR(a.preview.shareDeduction)} />
-        <KeyValue label="You receive" value={formatINR(a.preview.netDisbursable)} />
-        <Text role="caption" tone="tertiary">
+        <MetadataListItem label="First instalment" value={formatINR(a.preview.emi)} emphasis />
+        <MetadataListItem label="Share deposit deduction" value={formatINR(a.preview.shareDeduction)} />
+        <MetadataListItem label="You receive" value={formatINR(a.preview.netDisbursable)} />
+        <Text type="supporting" tone="secondary">
           Up to {a.preview.maxInstalments} months for you (left-over service {ctx.member.leftoverLabel}).
         </Text>
       </View>
@@ -253,33 +253,33 @@ export default function ApplyLoan() {
 
   return (
     <Screen
-      header={<Header title={topupOf ? 'Top-up request' : 'Apply for a loan'} onBack={back} right={busy ? <ActivityIndicator size="small" color={color.text.tertiary} /> : null} />}
+      header={<Header title={topupOf ? 'Top-up request' : 'Apply for a loan'} onBack={back} right={busy ? <ActivityIndicator size="small" color={color.text.secondary} /> : null} />}
       footer={
         key === 'review' ? (
           signing ? (
-            <Button text="Confirm & submit" size="lg" fullWidth disabled={otp.length !== 6} loading={busy} onPress={() => void confirm()} />
+            <Button label="Confirm & submit" size="lg" fullWidth disabled={otp.length !== 6} loading={busy} onPress={() => void confirm()} />
           ) : (
-            <Button text="Sign with OTP" leftSlot={PenLine} size="lg" fullWidth loading={busy} onPress={() => void startSigning()} />
+            <Button label="Sign with OTP" icon={PenLine} size="lg" fullWidth loading={busy} onPress={() => void startSigning()} />
           )
         ) : (
-          <Button text={key === 'type' ? 'Continue' : 'Save & continue'} size="lg" fullWidth loading={busy} onPress={() => void next()} />
+          <Button label={key === 'type' ? 'Continue' : 'Save & continue'} size="lg" fullWidth loading={busy} onPress={() => void next()} />
         )
       }
     >
-      <View style={{ gap: space[8] }}>
-        <WizardProgress step={step + 1} total={steps.length} title={TITLES[key]} />
-        <Text role="pageTitle">{TITLES[key]}</Text>
+      <View style={{ gap: spacing[4] }}>
+        <Stepper step={step + 1} total={steps.length} title={TITLES[key]} />
+        <Text type="h1">{TITLES[key]}</Text>
       </View>
-      {showErrors && (Object.keys(stepErrors).length || blocks.length) ? <Alert type="error" heading={blocks.length && key === 'loan' ? 'This loan is not possible as entered' : 'A few details are missing'} description={key === 'loan' && blocks.length ? blocks[0]!.message : 'Fill the highlighted fields to continue.'} /> : null}
-      {serverError ? <Alert type="error" heading="Something went wrong" description={serverError} /> : null}
+      {showErrors && (Object.keys(stepErrors).length || blocks.length) ? <Banner status="error" heading={blocks.length && key === 'loan' ? 'This loan is not possible as entered' : 'A few details are missing'} description={key === 'loan' && blocks.length ? blocks[0]!.message : 'Fill the highlighted fields to continue.'} /> : null}
+      {serverError ? <Banner status="error" heading="Something went wrong" description={serverError} /> : null}
 
-      {key === 'type' && topupOf ? <Alert type="primary" heading="Top-up" description="Your new loan first pays off what you still owe on the running loan, with interest up to today. You receive the rest." /> : null}
+      {key === 'type' && topupOf ? <Banner status="info" heading="Top-up" description="Your new loan first pays off what you still owe on the running loan, with interest up to today. You receive the rest." /> : null}
       {key === 'type' &&
         ctx.products.map((p) => {
           const full = !topupOf && held(p.code) >= p.maxConcurrent;
           if (topupOf && p.code !== product) return null;
           return (
-            <ChoiceCard
+            <SelectableCard
               key={p.code}
               title={`${p.name} · ${p.ratePercent}%`}
               description={full ? `You already have a running ${p.name}. Ask for a top-up instead.` : `Up to ${formatINR(p.maxAmount)} · ${p.instalmentOptions.join(' / ')} months${p.suretiesRequired ? ` · ${p.suretiesRequired} sureties` : p.code === 'DEPOSIT' ? ' · against your FD' : ' · no sureties'}`}
@@ -295,24 +295,24 @@ export default function ApplyLoan() {
 
       {key === 'pay' && product !== 'SALARY' && (
         <Card>
-          <View style={{ gap: space[8] }}>
-            <Text role="caption" tone="secondary">
+          <View style={{ gap: spacing[4] }}>
+            <Text type="supporting" tone="secondary">
               From your pay profile. Correct anything that changed; your DDO confirms these.
             </Text>
             <TextField label="Scale of pay" value={form.pay?.scaleOfPay ?? ''} onChangeText={(v) => setPay({ scaleOfPay: v })} />
             <TextField label="Gross salary per month" prefix="₹" keyboardType="number-pad" value={rupees(form.pay?.grossSalary ?? 0)} onChangeText={(v) => setPay({ grossSalary: paise(v) })} error={err('pay.grossSalary')} required />
             <TextField label="Deductions for Government loans" prefix="₹" keyboardType="number-pad" value={rupees(form.pay?.govtLoanDeductions ?? 0)} onChangeText={(v) => setPay({ govtLoanDeductions: paise(v) })} />
             <TextField label="Other loan deductions (not this society)" prefix="₹" keyboardType="number-pad" value={rupees(form.pay?.otherLoanDeductions ?? 0)} onChangeText={(v) => setPay({ otherLoanDeductions: paise(v) })} />
-            <KeyValue label="Net salary" value={formatINR((form.pay?.grossSalary ?? 0) - (form.pay?.govtLoanDeductions ?? 0) - (form.pay?.otherLoanDeductions ?? 0))} emphasis />
+            <MetadataListItem label="Net salary" value={formatINR((form.pay?.grossSalary ?? 0) - (form.pay?.govtLoanDeductions ?? 0) - (form.pay?.otherLoanDeductions ?? 0))} emphasis />
           </View>
         </Card>
       )}
 
       {key === 'pay' && product === 'SALARY' && (
         <Card>
-          <View style={{ gap: space[8] }}>
+          <View style={{ gap: spacing[4] }}>
             <TextField label="Substantive pay" prefix="₹" keyboardType="number-pad" value={rupees(form.salary?.substantivePay ?? 0)} onChangeText={(v) => setSalary({ substantivePay: paise(v) })} error={err('salary.substantivePay')} required />
-            <Text role="label">Compulsory deductions this month</Text>
+            <Text type="label">Compulsory deductions this month</Text>
             {(form.salary?.compulsoryDeductions ?? []).map((d, i) => (
               <View key={i} style={styles.row}>
                 <View style={{ flex: 1 }}>
@@ -322,17 +322,17 @@ export default function ApplyLoan() {
                   <TextField label="Amount" prefix="₹" keyboardType="number-pad" value={rupees(d.amount)} onChangeText={(v) => setSalary({ compulsoryDeductions: form.salary!.compulsoryDeductions.map((x, j) => (j === i ? { ...x, amount: paise(v) } : x)) })} />
                 </View>
                 <Pressable accessibilityRole="button" accessibilityLabel="Remove deduction" style={styles.icon} onPress={() => setSalary({ compulsoryDeductions: form.salary!.compulsoryDeductions.filter((_, j) => j !== i) })}>
-                  <X size={18} color={color.text.tertiary} />
+                  <X size={18} color={color.text.secondary} />
                 </Pressable>
               </View>
             ))}
             {err('salary.compulsoryDeductions') ? (
-              <Text role="caption" tone="danger">
+              <Text type="supporting" tone="error">
                 {err('salary.compulsoryDeductions')}
               </Text>
             ) : null}
-            <Button text="Add a deduction" buttonType="secondary" size="sm" leftSlot={Plus} onPress={() => setSalary({ compulsoryDeductions: [...(form.salary?.compulsoryDeductions ?? []), { label: '', amount: 0 }] })} />
-            <KeyValue label="Ordinary-loan dues (society)" value={formatINR(ctx.ordinaryLoanDues)} />
+            <Button label="Add a deduction" variant="secondary" size="sm" icon={Plus} onPress={() => setSalary({ compulsoryDeductions: [...(form.salary?.compulsoryDeductions ?? []), { label: '', amount: 0 }] })} />
+            <MetadataListItem label="Ordinary-loan dues (society)" value={formatINR(ctx.ordinaryLoanDues)} />
             <TextField label="Net pay earned so far this month" prefix="₹" keyboardType="number-pad" value={rupees(form.salary?.netPayEarnedToDate ?? 0)} onChangeText={(v) => setSalary({ netPayEarnedToDate: paise(v) })} error={err('salary.netPayEarnedToDate')} hint="A salary loan can be at most this." required />
           </View>
         </Card>
@@ -341,9 +341,9 @@ export default function ApplyLoan() {
       {key === 'loan' && (
         <>
           <Card>
-            <View style={{ gap: space[8] }}>
+            <View style={{ gap: spacing[4] }}>
               <TextField label="Amount you need" prefix="₹" keyboardType="number-pad" value={rupees(amount)} onChangeText={(v) => setAmount(paise(v))} error={err('amount')} hint={amount > 0 ? amountInWords(amount) : prod ? `Up to ${formatINR(prod.maxAmount)}` : undefined} required />
-              <View style={{ gap: space[3] }}>
+              <View style={{ gap: spacing[1.5] }}>
                 <MonthPicker label="Monthly instalments" value={instalments} choices={choices} onChange={setInstalments} error={err('instalments')} />
               </View>
               <TextField label="What is it for?" value={purpose} onChangeText={setPurpose} placeholder="e.g. House repair, marriage, medical" error={err('purpose')} required />
@@ -360,12 +360,12 @@ export default function ApplyLoan() {
           {product === 'DEPOSIT' ? (
             <Section title="Fixed deposit to pledge">
               {ctx.pledgeableDeposits.length ? (
-                ctx.pledgeableDeposits.map((d) => <ChoiceCard key={d.id} title={`${d.accountNo} · ${formatINR(d.principal)}`} description={d.maturityDate ? `Matures ${formatDisplayDate(d.maturityDate)}` : undefined} selected={pledged === d.id} onPress={() => setPledged(d.id)} />)
+                ctx.pledgeableDeposits.map((d) => <SelectableCard key={d.id} title={`${d.accountNo} · ${formatINR(d.principal)}`} description={d.maturityDate ? `Matures ${formatDisplayDate(d.maturityDate)}` : undefined} selected={pledged === d.id} onPress={() => setPledged(d.id)} />)
               ) : (
-                <Alert type="warning" heading="No fixed deposit to pledge" description="You need an active FD that is not already pledged." />
+                <Banner status="warning" heading="No fixed deposit to pledge" description="You need an active FD that is not already pledged." />
               )}
               {err('pledgedDepositId') ? (
-                <Text role="caption" tone="danger">
+                <Text type="supporting" tone="error">
                   {err('pledgedDepositId')}
                 </Text>
               ) : null}
@@ -382,7 +382,7 @@ export default function ApplyLoan() {
 
       {key === 'sureties' && prod && (
         <>
-          <Text role="body" tone="secondary">
+          <Text type="body" tone="secondary">
             Choose {prod.suretiesRequired} members who know you. Each one gets a request in their app and signs with an OTP.
           </Text>
           {sureties.map((s) => {
@@ -391,19 +391,19 @@ export default function ApplyLoan() {
             return (
               <Card key={s.id}>
                 <View style={styles.row}>
-                  <View style={{ flex: 1, gap: space[1] }}>
-                    <Text role="label">{s.name}</Text>
-                    <Text role="caption" tone="tertiary">
+                  <View style={{ flex: 1, gap: spacing[0.5] }}>
+                    <Text type="label">{s.name}</Text>
+                    <Text type="supporting" tone="secondary">
                       No. {s.generalNo} · {s.departmentName}
                     </Text>
                     {issue ? (
-                      <Text role="caption" tone={issue.severity === 'block' ? 'danger' : 'warning'}>
+                      <Text type="supporting" tone={issue.severity === 'block' ? 'error' : 'warning'}>
                         {issue.message}
                       </Text>
                     ) : null}
                   </View>
                   <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${s.name}`} style={styles.icon} onPress={() => setSureties((x) => x.filter((y) => y.id !== s.id))}>
-                    <X size={20} color={color.text.tertiary} />
+                    <X size={20} color={color.text.secondary} />
                   </Pressable>
                 </View>
               </Card>
@@ -411,9 +411,9 @@ export default function ApplyLoan() {
           })}
           {sureties.length < prod.suretiesRequired ? (
             <Card>
-              <View style={{ gap: space[6] }}>
+              <View style={{ gap: spacing[3] }}>
                 <TextField label="Find a member" value={q} onChangeText={setQ} placeholder="Name or General No." />
-                {search.isFetching ? <ActivityIndicator size="small" color={color.text.tertiary} /> : null}
+                {search.isFetching ? <ActivityIndicator size="small" color={color.text.secondary} /> : null}
                 {(search.data ?? [])
                   .filter((m) => !sureties.some((s) => s.id === m.id))
                   .slice(0, 6)
@@ -421,16 +421,16 @@ export default function ApplyLoan() {
                     <Pressable
                       key={m.id}
                       accessibilityRole="button"
-                      style={({ pressed }) => [styles.result, pressed && { backgroundColor: color.bg.surfaceSubtle }]}
+                      style={({ pressed }) => [styles.result, pressed && { backgroundColor: color.background.muted }]}
                       onPress={() => {
                         setSureties((x) => [...x, m]);
                         setQ('');
                       }}
                     >
-                      <Search size={16} color={color.text.tertiary} />
+                      <Search size={16} color={color.text.secondary} />
                       <View style={{ flex: 1 }}>
-                        <Text role="label">{m.name}</Text>
-                        <Text role="caption" tone="tertiary">
+                        <Text type="label">{m.name}</Text>
+                        <Text type="supporting" tone="secondary">
                           No. {m.generalNo} · {m.departmentName} · {m.leftoverLabel} left
                         </Text>
                       </View>
@@ -439,38 +439,38 @@ export default function ApplyLoan() {
               </View>
             </Card>
           ) : null}
-          {err('sureties') ? <Alert type="error" heading={err('sureties')!} /> : null}
-          {blocks.some((b) => b.ruleId === 'BR-014') ? <Alert type="error" heading="Choose another surety" description={blocks.find((b) => b.ruleId === 'BR-014')!.message} /> : null}
+          {err('sureties') ? <Banner status="error" heading={err('sureties')!} /> : null}
+          {blocks.some((b) => b.ruleId === 'BR-014') ? <Banner status="error" heading="Choose another surety" description={blocks.find((b) => b.ruleId === 'BR-014')!.message} /> : null}
         </>
       )}
 
       {key === 'review' && prod && (
         <>
           <Card>
-            <KeyValue label="Loan" value={`${prod.name} · ${prod.ratePercent}%`} />
-            <KeyValue label="Amount" value={formatINR(amount)} emphasis />
-            <KeyValue label="Instalments" value={`${instalments} months`} />
-            <KeyValue label="Purpose" value={purpose} />
-            {a ? <KeyValue label="First instalment" value={formatINR(a.preview.emi)} /> : null}
-            {a ? <KeyValue label="You receive" value={formatINR(a.preview.netDisbursable)} /> : null}
-            {form.bankAccount?.accountNo ? <KeyValue label="Paid into" value={`${form.bankAccount.bankName} · A/c ${maskAccountNo(form.bankAccount.accountNo)}`} /> : null}
-            {sureties.length ? <KeyValue label="Sureties" value={sureties.map((s) => s.name).join(', ')} /> : null}
+            <MetadataListItem label="Loan" value={`${prod.name} · ${prod.ratePercent}%`} />
+            <MetadataListItem label="Amount" value={formatINR(amount)} emphasis />
+            <MetadataListItem label="Instalments" value={`${instalments} months`} />
+            <MetadataListItem label="Purpose" value={purpose} />
+            {a ? <MetadataListItem label="First instalment" value={formatINR(a.preview.emi)} /> : null}
+            {a ? <MetadataListItem label="You receive" value={formatINR(a.preview.netDisbursable)} /> : null}
+            {form.bankAccount?.accountNo ? <MetadataListItem label="Paid into" value={`${form.bankAccount.bankName} · A/c ${maskAccountNo(form.bankAccount.accountNo)}`} /> : null}
+            {sureties.length ? <MetadataListItem label="Sureties" value={sureties.map((s) => s.name).join(', ')} /> : null}
           </Card>
-          {a && !a.eligible ? <Alert type="error" heading="Not possible as entered" description={blocks[0]?.message} /> : null}
+          {a && !a.eligible ? <Banner status="error" heading="Not possible as entered" description={blocks[0]?.message} /> : null}
           <Section title="Declaration">
             <Card>
-              <Text role="body">{product === 'SALARY' ? ctx.declaration.f3 : ctx.declaration.f2}</Text>
-              <Text role="caption" tone="tertiary">
+              <Text type="body">{product === 'SALARY' ? ctx.declaration.f3 : ctx.declaration.f2}</Text>
+              <Text type="supporting" tone="secondary">
                 Text version {ctx.declaration.version}
               </Text>
             </Card>
           </Section>
           {signing ? (
             <Card>
-              <View style={{ gap: space[6] }}>
-                <Text role="body">Enter the 6-digit code we sent to your mobile to sign.</Text>
+              <View style={{ gap: spacing[3] }}>
+                <Text type="body">Enter the 6-digit code we sent to your mobile to sign.</Text>
                 {signing.demoOtp ? (
-                  <Text role="caption" tone="tertiary">
+                  <Text type="supporting" tone="secondary">
                     Demo code: {signing.demoOtp}
                   </Text>
                 ) : null}
@@ -485,7 +485,7 @@ export default function ApplyLoan() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   icon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  result: { flexDirection: 'row', alignItems: 'center', gap: space[4], paddingVertical: space[4], borderRadius: radius.control },
+  result: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingVertical: spacing[2], borderRadius: radius.element },
 });

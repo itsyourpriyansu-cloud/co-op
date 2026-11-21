@@ -9,8 +9,8 @@ import type { ReceiptTab } from '@tgs/types';
 import { FilterBar, Loaded, RecordCard, Stack2, StatTile, TileGrid, useDebounced } from '@/components/staff';
 import { api } from '@/lib/api';
 import { PURPOSE_LABEL, REPORT_MODE_LABEL, SOURCE_LABEL } from '@/lib/staffCollections';
-import { Button, EmptyState, Screen, SelectField, StatusTag, Tag, Text, TextField } from '@/ui';
-import { space } from '@/theme';
+import { Button, EmptyState, Screen, SelectField, StatusToken, Token, Text, TextField } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function Payments() {
   const params = useLocalSearchParams<{ tab?: ReceiptTab }>();
@@ -40,14 +40,14 @@ export default function Payments() {
         void reports.refetch();
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
-        <View style={{ flex: 1, gap: space[1] }}>
-          <Text role="pageTitle">Payments</Text>
-          <Text role="caption" tone="secondary">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+        <View style={{ flex: 1, gap: spacing[0.5] }}>
+          <Text type="h1">Payments</Text>
+          <Text type="supporting" tone="secondary">
             {reportedOpen ? `${reportedOpen} to verify` : 'Every receipt'}
           </Text>
         </View>
-        {first?.canReceive ? <Button text="New receipt" size="sm" leftSlot={Plus} onPress={() => router.push('/staff/payment/new')} /> : null}
+        {first?.canReceive ? <Button label="New receipt" size="sm" icon={Plus} onPress={() => router.push('/staff/payment/new')} /> : null}
       </View>
       <TileGrid>
         <StatTile label="Received today" value={formatINRCompact(first?.totals.today ?? 0)} sub="Counter, bank and salary" />
@@ -66,9 +66,9 @@ export default function Payments() {
             ) : (
               <Stack2>
                 {rows.map((r) => (
-                  <RecordCard key={r.id} title={r.memberName} subtitle={`No. ${r.generalNo} · ${r.departmentName}`} amount={formatINR(r.amount)} tag={<StatusTag entity="paymentReport" status={r.status} audience="staff" size="xs" />} caption={`${REPORT_MODE_LABEL[r.mode]} ${r.reference} · paid ${formatDisplayDate(r.paidOn)}`} {...(r.status === 'REPORTED' && first?.canReceive !== false ? { onPress: () => router.push(`/staff/payment/verify/${r.id}`) } : {})}>
+                  <RecordCard key={r.id} title={r.memberName} subtitle={`No. ${r.generalNo} · ${r.departmentName}`} amount={formatINR(r.amount)} tag={<StatusToken entity="paymentReport" status={r.status} audience="staff" size="xs" />} caption={`${REPORT_MODE_LABEL[r.mode]} ${r.reference} · paid ${formatDisplayDate(r.paidOn)}`} {...(r.status === 'REPORTED' && first?.canReceive !== false ? { onPress: () => router.push(`/staff/payment/verify/${r.id}`) } : {})}>
                     {r.status === 'REJECTED' && r.rejectReason ? (
-                      <Text role="caption" tone="danger">
+                      <Text type="supporting" tone="error">
                         {r.rejectReason}
                       </Text>
                     ) : null}
@@ -86,9 +86,9 @@ export default function Payments() {
               ) : (
                 <Stack2>
                   {items.map((r) => (
-                    <RecordCard key={r.id} title={r.memberName} subtitle={`${r.receiptNo} · ${formatDisplayDate(r.date)}`} amount={formatINR(r.amount)} {...(r.cancelled ? { tag: <Tag text="Cancelled" color="error" size="xs" /> } : {})} onPress={() => router.push(`/staff/payment/${r.id}`)} caption={`No. ${r.generalNo} · ${SOURCE_LABEL[r.source]}${r.purpose ? ` · ${PURPOSE_LABEL[r.purpose]}` : r.cycle ? ` · ${formatCycle(r.cycle)}` : ''} · ${r.byName ?? 'Salary recovery'}`} />
+                    <RecordCard key={r.id} title={r.memberName} subtitle={`${r.receiptNo} · ${formatDisplayDate(r.date)}`} amount={formatINR(r.amount)} {...(r.cancelled ? { tag: <Token text="Cancelled" status="error" size="xs" /> } : {})} onPress={() => router.push(`/staff/payment/${r.id}`)} caption={`No. ${r.generalNo} · ${SOURCE_LABEL[r.source]}${r.purpose ? ` · ${PURPOSE_LABEL[r.purpose]}` : r.cycle ? ` · ${formatCycle(r.cycle)}` : ''} · ${r.byName ?? 'Salary recovery'}`} />
                   ))}
-                  {list.hasNextPage ? <View style={{ padding: space[6] }}><Button text="Load more" buttonType="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
+                  {list.hasNextPage ? <View style={{ padding: spacing[3] }}><Button label="Load more" variant="secondary" fullWidth loading={list.isFetchingNextPage} onPress={() => void list.fetchNextPage()} /></View> : null}
                 </Stack2>
               )
             }

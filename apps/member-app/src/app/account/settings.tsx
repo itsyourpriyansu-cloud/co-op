@@ -16,8 +16,8 @@ import type { MemberPreferences } from '@tgs/types';
 import { consoleUrl } from '@/components/staff';
 import { api } from '@/lib/api';
 import { accountKeys, usePreferences } from '@/lib/account';
-import { Alert, Button, Card, Header, KeyValue, Screen, Section, Skeleton, Tag, Text } from '@/ui';
-import { color, radius, space, touchTarget } from '@/theme';
+import { Banner, Button, Card, Header, MetadataListItem, Screen, Section, Skeleton, Token, Text } from '@/ui';
+import { color, radius, touchTarget, spacing } from '@/theme';
 
 type Channel = keyof MemberPreferences['channels'];
 const CHANNELS: Array<{
@@ -66,10 +66,10 @@ export default function SettingsScreen() {
   return (
     <Screen header={<Header title="Settings" onBack={() => router.back()} />}>
       {q.isLoading ? (
-        <Skeleton height={220} radius={radius.card} />
+        <Skeleton height={220} radius={radius.container} />
       ) : q.isError || !q.data ? (
-        <Alert
-          type="error"
+        <Banner
+          status="error"
           heading="Couldn't load your settings"
           action={{ text: 'Try again', onPress: () => void q.refetch() }}
         />
@@ -82,20 +82,20 @@ export default function SettingsScreen() {
             <Card padded={false}>
               <View style={styles.row}>
                 <Smartphone size={22} color={color.text.secondary} strokeWidth={1.75} />
-                <View style={{ flex: 1, gap: space[1] }}>
-                  <Text role="body">In the app</Text>
-                  <Text role="caption" tone="secondary">
+                <View style={{ flex: 1, gap: spacing[0.5] }}>
+                  <Text type="body">In the app</Text>
+                  <Text type="supporting" tone="secondary">
                     Notifications tab
                   </Text>
                 </View>
-                <Tag text="Always on" size="xs" />
+                <Token text="Always on" size="xs" />
               </View>
               {CHANNELS.map((c) => (
                 <View key={c.key} style={[styles.row, styles.divider]}>
                   <c.icon size={22} color={color.text.secondary} strokeWidth={1.75} />
-                  <View style={{ flex: 1, gap: space[1] }}>
-                    <Text role="body">{c.label}</Text>
-                    <Text role="caption" tone="secondary">
+                  <View style={{ flex: 1, gap: spacing[0.5] }}>
+                    <Text type="body">{c.label}</Text>
+                    <Text type="supporting" tone="secondary">
                       {c.detail(q.data)}
                     </Text>
                   </View>
@@ -104,17 +104,17 @@ export default function SettingsScreen() {
                     value={q.data.channels[c.key]}
                     disabled={saving !== undefined}
                     onValueChange={(v) => void toggle(c.key, v)}
-                    trackColor={{ true: color.brand.solid, false: color.border.strong }}
-                    thumbColor={color.bg.surface}
+                    trackColor={{ true: color.accent, false: color.borderEmphasized }}
+                    thumbColor={color.background.surface}
                     // react-native-web colours the thumb separately when on.
-                    {...({ activeThumbColor: color.bg.surface } as object)}
+                    {...({ activeThumbColor: color.background.surface } as object)}
                   />
                 </View>
               ))}
             </Card>
             {error ? (
-              <Alert
-                type="error"
+              <Banner
+                status="error"
                 heading="Not saved"
                 description={error}
                 action={
@@ -124,7 +124,7 @@ export default function SettingsScreen() {
                 }
               />
             ) : null}
-            <Text role="caption" tone="tertiary">
+            <Text type="supporting" tone="secondary">
               Everything also appears in the Notifications tab, whichever channels are on. Receipts
               and a change of your mobile number always come on WhatsApp too, for your safety.
             </Text>
@@ -132,8 +132,8 @@ export default function SettingsScreen() {
 
           <Section title="Language">
             <Card>
-              <KeyValue label="App language" value="English" />
-              <Text role="caption" tone="tertiary">
+              <MetadataListItem label="App language" value="English" />
+              <Text type="supporting" tone="secondary">
                 Telugu is planned once the society confirms the wording.
               </Text>
             </Card>
@@ -141,14 +141,14 @@ export default function SettingsScreen() {
 
           <Section title="Account">
             <Button
-              text="Privacy notice"
-              buttonType="secondary"
+              label="Privacy notice"
+              variant="secondary"
               fullWidth
               onPress={() => void Linking.openURL(consoleUrl('/privacy'))}
             />
             <Button
-              text="Delete my account"
-              buttonType="secondary"
+              label="Delete my account"
+              variant="secondary"
               fullWidth
               onPress={() => router.push('/account/delete')}
             />
@@ -163,10 +163,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space[6],
+    gap: spacing[3],
     minHeight: touchTarget + 16,
-    paddingHorizontal: space[8],
-    paddingVertical: space[4],
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
   },
-  divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
+  divider: { borderTopWidth: 1, borderTopColor: color.border },
 });

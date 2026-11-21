@@ -11,8 +11,8 @@ import { loanBondHtml, loanFormHtml } from '@/lib/staffDocuments';
 import { documentFileName, sanctionLetterHtml, scheduleHtml } from '@/lib/documents';
 import { useAuth } from '@/lib/auth';
 import { ACTION_LABEL, formFor, SECONDARY } from '@/lib/staffLoans';
-import { Alert, Button, Card, Header, KeyValue, Screen, Section, StageTracker, StatusTag, Tag, Text } from '@/ui';
-import { space } from '@/theme';
+import { Banner, Button, Card, Header, MetadataListItem, Screen, Section, StageTracker, StatusToken, Token, Text, Link } from '@/ui';
+import { spacing } from '@/theme';
 
 export default function LoanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,29 +36,29 @@ function SuretyRecovery({ loanId }: { loanId: string }) {
     <Section title="Recover from sureties" description={`After ${p.threshold} unpaid month${p.threshold === 1 ? '' : 's'} in a row the sureties pay equal shares`}>
       <Card>
         {p.recoveries.length ? (
-          <View style={{ gap: space[4] }}>
+          <View style={{ gap: spacing[2] }}>
             {p.recoveries.map((r) => (
-              <KeyValue key={r.id} label={`${r.suretyName} · share ${formatINR(r.share)} · paid ${formatINR(r.paid)}${r.demandedCycle ? ` · on the ${formatCycle(r.demandedCycle)} demand` : ''}`} value={r.status === 'OPEN' ? `${formatINR(r.due)} due` : r.closedReason === 'BORROWER_PAID' ? 'Closed: borrower paid' : 'Paid'} />
+              <MetadataListItem key={r.id} label={`${r.suretyName} · share ${formatINR(r.share)} · paid ${formatINR(r.paid)}${r.demandedCycle ? ` · on the ${formatCycle(r.demandedCycle)} demand` : ''}`} value={r.status === 'OPEN' ? `${formatINR(r.due)} due` : r.closedReason === 'BORROWER_PAID' ? 'Closed: borrower paid' : 'Paid'} />
             ))}
-            <Text role="caption" tone="tertiary">
+            <Text type="supporting" tone="secondary">
               Raised by {p.recoveries[0]!.raisedByName} · {formatDisplayDateTime(p.recoveries[0]!.raisedOn)}
             </Text>
           </View>
         ) : (
-          <View style={{ gap: space[3] }}>
-            <Text role="body" tone="secondary">
+          <View style={{ gap: spacing[1.5] }}>
+            <Text type="body" tone="secondary">
               {formatINR(p.overdue)} overdue · unpaid {p.consecutiveCycles} month{p.consecutiveCycles === 1 ? '' : 's'} in a row.
             </Text>
-            {p.eligible ? p.shares.map((s) => <KeyValue key={s.memberId} label={`${s.name} (${s.generalNo})`} value={formatINR(s.share)} />) : null}
+            {p.eligible ? p.shares.map((s) => <MetadataListItem key={s.memberId} label={`${s.name} (${s.generalNo})`} value={formatINR(s.share)} />) : null}
             {p.reason ? (
-              <Text role="caption" tone="tertiary">
+              <Text type="supporting" tone="secondary">
                 {p.reason}
               </Text>
             ) : null}
           </View>
         )}
       </Card>
-      {!p.recoveries.length && p.eligible && p.canRaise ? <Button text="Recover from sureties" buttonType="secondary" fullWidth loading={a.busy} disabled={a.busy || a.unconfirmed} onPress={() => void raise()} /> : null}
+      {!p.recoveries.length && p.eligible && p.canRaise ? <Button label="Recover from sureties" variant="secondary" fullWidth loading={a.busy} disabled={a.busy || a.unconfirmed} onPress={() => void raise()} /> : null}
       <ActionAlert action={a} heading="Not raised" />
     </Section>
   );
@@ -74,16 +74,16 @@ function Closure({ loanId }: { loanId: string }) {
   return (
     <Section title="Close the loan early" description="Outstanding principal and interest up to today">
       <Card>
-        <KeyValue label="Principal outstanding" value={formatINR(p.principal)} />
-        <KeyValue label={`Interest from ${formatDisplayDate(p.interestFrom)}`} value={formatINR(p.interest)} />
-        <KeyValue label="To close today" value={formatINR(p.total)} emphasis />
+        <MetadataListItem label="Principal outstanding" value={formatINR(p.principal)} />
+        <MetadataListItem label={`Interest from ${formatDisplayDate(p.interestFrom)}`} value={formatINR(p.interest)} />
+        <MetadataListItem label="To close today" value={formatINR(p.total)} emphasis />
         {p.blockers.map((b) => (
-          <Text key={b} role="caption" tone="warning">
+          <Text key={b} type="supporting" tone="warning">
             {b}
           </Text>
         ))}
       </Card>
-      {canReceive && p.canClose ? <Button text="Take the closing payment" buttonType="secondary" fullWidth onPress={() => router.push(`/staff/loan/${loanId}/close`)} /> : null}
+      {canReceive && p.canClose ? <Button label="Take the closing payment" variant="secondary" fullWidth onPress={() => router.push(`/staff/loan/${loanId}/close`)} /> : null}
     </Section>
   );
 }
@@ -118,15 +118,15 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
       {...(d.actions.length || canMoveFirstDue
         ? {
             footer: (
-              <View style={{ gap: space[3] }}>
-                {canMoveFirstDue ? <Button text="First deduction month" buttonType="secondary" fullWidth onPress={() => open('changeFirstDue')} /> : null}
+              <View style={{ gap: spacing[1.5] }}>
+                {canMoveFirstDue ? <Button label="First deduction month" variant="secondary" fullWidth onPress={() => open('changeFirstDue')} /> : null}
                 {primary.map((a) => (
-                  <Button key={a} text={ACTION_LABEL[a] ?? a} size="lg" fullWidth onPress={() => open(a)} />
+                  <Button key={a} label={ACTION_LABEL[a] ?? a} size="lg" fullWidth onPress={() => open(a)} />
                 ))}
                 {secondary.length ? (
-                  <View style={{ flexDirection: 'row', gap: space[4] }}>
+                  <View style={{ flexDirection: 'row', gap: spacing[2] }}>
                     {secondary.map((a) => (
-                      <Button key={a} text={ACTION_LABEL[a] ?? a} buttonType="secondary" style={{ flex: 1 }} onPress={() => open(a)} />
+                      <Button key={a} label={ACTION_LABEL[a] ?? a} variant="secondary" style={{ flex: 1 }} onPress={() => open(a)} />
                     ))}
                   </View>
                 ) : null}
@@ -135,40 +135,40 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
           }
         : {})}
     >
-      <View style={{ gap: space[2] }}>
-        <Text role="pageTitle">
+      <View style={{ gap: spacing[1] }}>
+        <Text type="h1">
           {d.product.name} · {formatINR(l.sanctionedAmount ?? l.appliedAmount)}
         </Text>
-        <Text role="caption" tone="secondary">
+        <Text type="supporting" tone="secondary">
           {l.loanNo ?? l.applicationNo} · {d.member.departmentName} · applied {formatDisplayDate(l.appliedOn)}
         </Text>
-        <Button text={`${d.member.name} (No. ${d.member.generalNo})`} subType="inline" style={{ alignSelf: 'flex-start' }} onPress={() => router.push(`/staff/member/${d.member.id}`)} />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[3] }}>
-          <StatusTag entity="loan" status={l.status} audience="staff" />
-          <Tag text={`Form ${formFor(l.product)}`} color="neutral" />
+        <Link label={`${d.member.name} (No. ${d.member.generalNo})`} style={{ alignSelf: 'flex-start' }} onPress={() => router.push(`/staff/member/${d.member.id}`)} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1.5] }}>
+          <StatusToken entity="loan" status={l.status} audience="staff" />
+          <Token text={`Form ${formFor(l.product)}`} status="neutral" />
         </View>
       </View>
 
-      {l.status === 'RETURNED' && l.returnInfo ? <Alert type="warning" heading={`Returned to the member by ${l.returnInfo.byName}`} description={l.returnInfo.reason} /> : null}
-      {l.status === 'REJECTED' ? <Alert type="error" heading={`Rejected${l.rejection ? ` by ${l.rejection.byName}` : ''}`} description={l.rejection?.remarks ?? 'No reason recorded.'} /> : null}
-      {l.status === 'ACTIVE' && l.disbursement ? <Alert type="success" heading={`Disbursed on ${formatDisplayDate(l.disbursement.date)}`} description={`${formatINR(l.disbursement.amount)} by ${l.disbursement.mode} · ref ${l.disbursement.reference} · ${l.disbursement.byName}`} /> : null}
+      {l.status === 'RETURNED' && l.returnInfo ? <Banner status="warning" heading={`Returned to the member by ${l.returnInfo.byName}`} description={l.returnInfo.reason} /> : null}
+      {l.status === 'REJECTED' ? <Banner status="error" heading={`Rejected${l.rejection ? ` by ${l.rejection.byName}` : ''}`} description={l.rejection?.remarks ?? 'No reason recorded.'} /> : null}
+      {l.status === 'ACTIVE' && l.disbursement ? <Banner status="success" heading={`Disbursed on ${formatDisplayDate(l.disbursement.date)}`} description={`${formatINR(l.disbursement.amount)} by ${l.disbursement.mode} · ref ${l.disbursement.reference} · ${l.disbursement.byName}`} /> : null}
 
       <Section title="Next step">
         <Card>
           {d.actions.length ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[3] }}>
-              <Tag text="Your turn" color="primary" />
-              <Text role="label">{primary.map((a) => ACTION_LABEL[a] ?? a).join(' or ')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing[1.5] }}>
+              <Token text="Your turn" status="info" />
+              <Text type="label">{primary.map((a) => ACTION_LABEL[a] ?? a).join(' or ')}</Text>
             </View>
           ) : d.waitingOn ? (
-            <View style={{ gap: space[1] }}>
-              <Text role="label">Waiting on {d.waitingOn}</Text>
-              <Text role="caption" tone="tertiary">
+            <View style={{ gap: spacing[0.5] }}>
+              <Text type="label">Waiting on {d.waitingOn}</Text>
+              <Text type="supporting" tone="secondary">
                 In this stage for {daysInStage === 0 ? 'less than a day' : `${daysInStage} day${daysInStage === 1 ? '' : 's'}`}
               </Text>
             </View>
           ) : (
-            <Text role="body" tone="secondary">
+            <Text type="body" tone="secondary">
               {l.status === 'ACTIVE' ? 'Disbursed and being recovered every month.' : 'No further steps.'}
             </Text>
           )}
@@ -181,48 +181,48 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
 
       <Section title="Money" description="Live preview from the society's rules">
         <Card>
-          <KeyValue label={l.emi ? 'EMI' : 'First instalment'} value={formatINR(l.emi ?? d.preview.emi)} />
-          <KeyValue label="Total interest" value={formatINR(d.preview.totalInterest)} />
-          <KeyValue label="Share deposit deduction" value={formatINR(l.shareDepositDeduction ?? d.preview.shareDeduction)} />
-          <KeyValue label="Net disbursable" value={formatINR(l.netDisbursable ?? d.preview.netDisbursable)} />
-          {l.status === 'ACTIVE' ? <KeyValue label="Outstanding" value={formatINR(l.outstandingPrincipal)} emphasis /> : null}
+          <MetadataListItem label={l.emi ? 'EMI' : 'First instalment'} value={formatINR(l.emi ?? d.preview.emi)} />
+          <MetadataListItem label="Total interest" value={formatINR(d.preview.totalInterest)} />
+          <MetadataListItem label="Share deposit deduction" value={formatINR(l.shareDepositDeduction ?? d.preview.shareDeduction)} />
+          <MetadataListItem label="Net disbursable" value={formatINR(l.netDisbursable ?? d.preview.netDisbursable)} />
+          {l.status === 'ACTIVE' ? <MetadataListItem label="Outstanding" value={formatINR(l.outstandingPrincipal)} emphasis /> : null}
         </Card>
       </Section>
 
       <Expand title="Application" initiallyOpen>
-        <KeyValue label="7a · Amount required" value={formatINR(l.appliedAmount)} />
-        <Text role="caption" tone="tertiary">
+        <MetadataListItem label="7a · Amount required" value={formatINR(l.appliedAmount)} />
+        <Text type="supporting" tone="secondary">
           {amountInWords(l.appliedAmount)}
         </Text>
-        <KeyValue label="7b · Purpose" value={l.purpose || '—'} />
-        <KeyValue label="11 · Monthly instalments" value={`${l.appliedInstalments} months at ${l.ratePercent}% a year`} />
-        {f.education ? <KeyValue label="Education" value={`${f.education.studentName} (${f.education.relation}) · ${f.education.course}, ${f.education.institution}`} /> : null}
-        {d.product.code !== 'SALARY' ? <KeyValue label="8 · Security" value={d.pledgedDeposit ? `Pledge of FD ${d.pledgedDeposit.accountNo} (${formatINR(d.pledgedDeposit.principal)})` : f.security?.type === 'OTHER' ? (f.security.description ?? 'Other') : d.sureties.length ? `${d.sureties.length} sureties` : '—'} /> : null}
-        {f.additionalShares ? <KeyValue label="6c · Additional shares proposed" value={String(f.additionalShares)} /> : null}
-        <KeyValue label="Pay the loan into" value={f.bankAccount ? formatBankAccount(f.bankAccount) : 'Not given (made before bank details were asked)'} />
-        <KeyValue label="Entered" value={l.channel === 'COUNTER' ? `By ${l.createdByName ?? 'the office'} from the paper form` : 'By the member in the app'} />
-        <KeyValue label="Signed" value={l.signature ? `With OTP · ${formatDisplayDateTime(l.signature.signedAt)} · text ${l.signature.textVersion}` : l.channel === 'COUNTER' ? 'On paper' : 'Not yet'} />
+        <MetadataListItem label="7b · Purpose" value={l.purpose || '—'} />
+        <MetadataListItem label="11 · Monthly instalments" value={`${l.appliedInstalments} months at ${l.ratePercent}% a year`} />
+        {f.education ? <MetadataListItem label="Education" value={`${f.education.studentName} (${f.education.relation}) · ${f.education.course}, ${f.education.institution}`} /> : null}
+        {d.product.code !== 'SALARY' ? <MetadataListItem label="8 · Security" value={d.pledgedDeposit ? `Pledge of FD ${d.pledgedDeposit.accountNo} (${formatINR(d.pledgedDeposit.principal)})` : f.security?.type === 'OTHER' ? (f.security.description ?? 'Other') : d.sureties.length ? `${d.sureties.length} sureties` : '—'} /> : null}
+        {f.additionalShares ? <MetadataListItem label="6c · Additional shares proposed" value={String(f.additionalShares)} /> : null}
+        <MetadataListItem label="Pay the loan into" value={f.bankAccount ? formatBankAccount(f.bankAccount) : 'Not given (made before bank details were asked)'} />
+        <MetadataListItem label="Entered" value={l.channel === 'COUNTER' ? `By ${l.createdByName ?? 'the office'} from the paper form` : 'By the member in the app'} />
+        <MetadataListItem label="Signed" value={l.signature ? `With OTP · ${formatDisplayDateTime(l.signature.signedAt)} · text ${l.signature.textVersion}` : l.channel === 'COUNTER' ? 'On paper' : 'Not yet'} />
         {pay ? (
           <>
-            <Text role="overline" tone="tertiary">
+            <Text type="overline" tone="secondary">
               Items 4–5 · Pay details (DDO certifies)
             </Text>
-            <KeyValue label="Scale of pay" value={pay.scaleOfPay || '—'} />
-            <KeyValue label="5a · Gross salary" value={formatINR(pay.grossSalary)} />
-            <KeyValue label="5b · Govt loan deductions" value={formatINR(pay.govtLoanDeductions)} />
-            <KeyValue label="5c · Other loan deductions" value={formatINR(pay.otherLoanDeductions)} />
-            <KeyValue label="5d · Total deductions" value={formatINR(pay.govtLoanDeductions + pay.otherLoanDeductions)} />
-            <KeyValue label="5e · Net salary" value={formatINR(d.preview.netSalary)} />
+            <MetadataListItem label="Scale of pay" value={pay.scaleOfPay || '—'} />
+            <MetadataListItem label="5a · Gross salary" value={formatINR(pay.grossSalary)} />
+            <MetadataListItem label="5b · Govt loan deductions" value={formatINR(pay.govtLoanDeductions)} />
+            <MetadataListItem label="5c · Other loan deductions" value={formatINR(pay.otherLoanDeductions)} />
+            <MetadataListItem label="5d · Total deductions" value={formatINR(pay.govtLoanDeductions + pay.otherLoanDeductions)} />
+            <MetadataListItem label="5e · Net salary" value={formatINR(d.preview.netSalary)} />
           </>
         ) : null}
         {f.salary ? (
           <>
-            <Text role="overline" tone="tertiary">
+            <Text type="overline" tone="secondary">
               Form F3 · Pay this month
             </Text>
-            <KeyValue label="5 · Substantive pay" value={formatINR(f.salary.substantivePay)} />
-            <KeyValue label="6 · Compulsory deductions" value={f.salary.compulsoryDeductions.length ? f.salary.compulsoryDeductions.map((x) => `${x.label} ${formatINR(x.amount)}`).join(' · ') : 'None'} />
-            <KeyValue label="9 · Net pay earned to date" value={formatINR(f.salary.netPayEarnedToDate)} />
+            <MetadataListItem label="5 · Substantive pay" value={formatINR(f.salary.substantivePay)} />
+            <MetadataListItem label="6 · Compulsory deductions" value={f.salary.compulsoryDeductions.length ? f.salary.compulsoryDeductions.map((x) => `${x.label} ${formatINR(x.amount)}`).join(' · ') : 'None'} />
+            <MetadataListItem label="9 · Net pay earned to date" value={formatINR(f.salary.netPayEarnedToDate)} />
           </>
         ) : null}
       </Expand>
@@ -233,11 +233,11 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
         </Expand>
       ) : null}
 
-      <Expand title="Eligibility" badge={blocking ? <Tag text={String(blocking)} color="error" size="xs" /> : undefined}>
+      <Expand title="Eligibility" badge={blocking ? <Token text={String(blocking)} status="error" size="xs" /> : undefined}>
         {d.checks.length ? (
           <RuleChecks checks={d.checks} />
         ) : (
-          <Text role="body" tone="secondary">
+          <Text type="body" tone="secondary">
             This loan is past sanction, so eligibility is not re-run.
           </Text>
         )}
@@ -245,11 +245,11 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
 
       <Expand title={`Sureties (${d.sureties.length})`}>
         {!d.product.suretiesRequired ? (
-          <Text role="body" tone="secondary">
+          <Text type="body" tone="secondary">
             {d.product.name} does not need sureties.
           </Text>
         ) : !d.sureties.length ? (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             No sureties chosen yet.
           </Text>
         ) : (
@@ -257,41 +257,41 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
             const issue = s.checks.find((c) => !c.pass && c.severity === 'block') ?? s.checks.find((c) => !c.pass && c.severity === 'warn');
             return (
               <Card key={s.memberId} onPress={() => router.push(`/staff/member/${s.memberId}`)}>
-                <View style={{ gap: space[2] }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-                    <Text role="label" style={{ flex: 1 }}>
+                <View style={{ gap: spacing[1] }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5] }}>
+                    <Text type="label" style={{ flex: 1 }}>
                       {s.name}
                     </Text>
-                    {s.status ? <StatusTag entity="surety" status={s.status} audience="staff" size="xs" /> : null}
+                    {s.status ? <StatusToken entity="surety" status={s.status} audience="staff" size="xs" /> : null}
                   </View>
-                  <Text role="caption" tone="tertiary">
+                  <Text type="supporting" tone="secondary">
                     No. {s.generalNo} · {s.designation} · {s.departmentName}
                   </Text>
-                  <KeyValue label="(d) Date of birth" value={formatDisplayDate(s.dob)} />
-                  <KeyValue label="(e) Substantive pay" value={formatINR(s.substantivePay)} />
-                  <KeyValue label="(j) Shares held" value={String(s.numberOfShares)} />
-                  <KeyValue label="(l) Retires" value={`${formatDisplayDate(s.dor)} · ${s.leftoverLabel} left`} />
+                  <MetadataListItem label="(d) Date of birth" value={formatDisplayDate(s.dob)} />
+                  <MetadataListItem label="(e) Substantive pay" value={formatINR(s.substantivePay)} />
+                  <MetadataListItem label="(j) Shares held" value={String(s.numberOfShares)} />
+                  <MetadataListItem label="(l) Retires" value={`${formatDisplayDate(s.dor)} · ${s.leftoverLabel} left`} />
                   {issue ? (
-                    <Text role="caption" tone={issue.severity === 'block' ? 'danger' : 'warning'}>
+                    <Text type="supporting" tone={issue.severity === 'block' ? 'error' : 'warning'}>
                       {issue.message}
                     </Text>
                   ) : null}
-                  <Text role="caption" tone="tertiary">
+                  <Text type="supporting" tone="secondary">
                     Item 10 · Already a surety for
                   </Text>
                   {s.guarantees.length ? (
                     s.guarantees.map((g) => (
-                      <Text key={g.applicationNo} role="caption" tone="secondary">
+                      <Text key={g.applicationNo} type="supporting" tone="secondary">
                         {g.borrower} (No. {g.generalNo}) · {g.product} · {g.applicationNo} · outstanding {formatINR(g.outstanding)}
                       </Text>
                     ))
                   ) : (
-                    <Text role="caption" tone="secondary">
+                    <Text type="supporting" tone="secondary">
                       No other loans.
                     </Text>
                   )}
                   {s.declineReason ? (
-                    <Text role="caption" tone="danger">
+                    <Text type="supporting" tone="error">
                       Declined: {s.declineReason}
                     </Text>
                   ) : null}
@@ -305,20 +305,20 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
       <Expand title="Schedule">
         {l.schedule.length ? (
           l.schedule.map((r) => (
-            <View key={r.installmentNo} style={{ gap: space[1], paddingVertical: space[2] }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-                <Text role="label" style={{ flex: 1 }}>
+            <View key={r.installmentNo} style={{ gap: spacing[0.5], paddingVertical: spacing[1] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1.5] }}>
+                <Text type="label" style={{ flex: 1 }}>
                   {r.installmentNo} · {formatCycle(r.dueCycle)} · {formatINR(r.emi)}
                 </Text>
-                {r.paidStatus ? <StatusTag entity="schedule" status={r.paidStatus} audience="staff" size="xs" /> : null}
+                {r.paidStatus ? <StatusToken entity="schedule" status={r.paidStatus} audience="staff" size="xs" /> : null}
               </View>
-              <Text role="caption" tone="secondary">
+              <Text type="supporting" tone="secondary">
                 Opening {formatINR(r.opening)} · interest {formatINR(r.interest)} · principal {formatINR(r.principal)} · closing {formatINR(r.closing)}
               </Text>
             </View>
           ))
         ) : (
-          <Text role="body" tone="secondary">
+          <Text type="body" tone="secondary">
             The schedule is fixed at sanction. Expected now: first instalment {formatINR(d.preview.emi)}
             {d.preview.lastInstalment !== d.preview.emi ? `, last ${formatINR(d.preview.lastInstalment)}` : ''}, total interest {formatINR(d.preview.totalInterest)}.
           </Text>
@@ -329,7 +329,7 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
         {l.events.length ? (
           <StageTracker stages={[...l.events].reverse().map((e, i) => ({ key: `${e.at}-${i}`, title: e.action === 'submit' ? 'Application submitted' : (ACTION_LABEL[e.action] ?? e.action), description: `${e.actorName} · ${ROLE_LABELS[e.actorRole as Role] ?? e.actorRole}${e.remarks ? `\n“${e.remarks}”` : ''}`, date: formatDisplayDateTime(e.at), status: e.toStatus === 'REJECTED' ? 'failed' : e.toStatus === 'RETURNED' ? 'attention' : 'done' }))} />
         ) : (
-          <Text role="caption" tone="tertiary">
+          <Text type="supporting" tone="secondary">
             No activity yet.
           </Text>
         )}
@@ -338,7 +338,7 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
       {l.signOffs?.review || l.signOffs?.ddo || l.signOffs?.assessment ? (
         <Expand title="Sign-offs">
           {signOffs.map(([label, so]) => (
-            <KeyValue key={label} label={label} value={so ? `${so.byName} · ${formatDisplayDateTime(so.at)}` : '—'} />
+            <MetadataListItem key={label} label={label} value={so ? `${so.byName} · ${formatDisplayDateTime(so.at)}` : '—'} />
           ))}
         </Expand>
       ) : null}
@@ -347,16 +347,16 @@ function Body({ d, refetching, refetch }: { d: LoanDetail; refetching: boolean; 
       {l.status === 'ACTIVE' ? <Closure loanId={l.id} /> : null}
 
       <Expand title="Borrower">
-        <KeyValue label="Designation" value={d.member.designation} />
-        <KeyValue label="Mobile" value={d.member.mobileMasked} />
-        <KeyValue label="Retires on" value={formatDisplayDate(d.member.dor)} />
-        <KeyValue label="Left-over service" value={d.member.leftover.label} />
+        <MetadataListItem label="Designation" value={d.member.designation} />
+        <MetadataListItem label="Mobile" value={d.member.mobileMasked} />
+        <MetadataListItem label="Retires on" value={formatDisplayDate(d.member.dor)} />
+        <MetadataListItem label="Left-over service" value={d.member.leftover.label} />
         {/* D-131: every application this member has made, so the reviewer sees past outcomes. */}
-        {d.history ? <KeyValue label="Loan record" value={`Applied ${d.history.applied} · Approved ${d.history.approved} · Rejected ${d.history.rejected}`} /> : null}
-        {d.parentLoan ? <KeyValue label="Top-up of" value={d.parentLoan.loanNo ?? d.parentLoan.applicationNo} /> : null}
+        {d.history ? <MetadataListItem label="Loan record" value={`Applied ${d.history.applied} · Approved ${d.history.approved} · Rejected ${d.history.rejected}`} /> : null}
+        {d.parentLoan ? <MetadataListItem label="Top-up of" value={d.parentLoan.loanNo ?? d.parentLoan.applicationNo} /> : null}
       </Expand>
 
-      <View style={{ gap: space[3] }}>
+      <View style={{ gap: spacing[1.5] }}>
         {l.status !== 'DRAFT' && l.product !== 'DEPOSIT' ? <StaffDocument title={`${l.product === 'SALARY' ? 'F3' : 'F2'} loan application`} fileName={documentFileName('Loan-form', l.applicationNo)} build={async (o) => loanFormHtml(d, await api.members.get(l.memberId).catch(() => undefined), o)} /> : null}
         {l.sanctionLetterNo ? <StaffDocument title="Bond & receipt" fileName={documentFileName('Bond', l.loanNo ?? l.applicationNo)} build={(o) => loanBondHtml(d, o)} /> : null}
         {l.sanctionLetterNo ? <StaffDocument title="Sanction letter" fileName={documentFileName('Sanction-letter', l.sanctionLetterNo)} build={(o) => sanctionLetterHtml(d, { ...o, copy: 'office' })} /> : null}

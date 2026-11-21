@@ -7,8 +7,8 @@ import { Bell, BellOff, CheckCheck, ChevronRight, Settings } from 'lucide-react-
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { accountKeys, appRouteFor, stamp, useNotifications } from '@/lib/account';
-import { Alert, Button, Card, EmptyState, Header, Screen, Skeleton, Text } from '@/ui';
-import { color, radius, space } from '@/theme';
+import { Banner, Button, Card, EmptyState, Header, Screen, Skeleton, Text } from '@/ui';
+import { color, radius, spacing } from '@/theme';
 
 const VIA: Record<string, string> = { WHATSAPP: 'WhatsApp', EMAIL: 'Email' };
 
@@ -47,22 +47,22 @@ export default function Notifications() {
       onRefresh={() => void q.refetch()}
     >
       {q.isLoading ? (
-        <View style={{ gap: space[4] }}>
+        <View style={{ gap: spacing[2] }}>
           {[0, 1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} height={72} radius={radius.card} />
+            <Skeleton key={i} height={72} radius={radius.container} />
           ))}
         </View>
       ) : q.isError || !q.data ? (
-        <Alert type="error" heading="Couldn't load notifications" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />
+        <Banner status="error" heading="Couldn't load notifications" description="Check your connection and try again." action={{ text: 'Try again', onPress: () => void q.refetch() }} />
       ) : !q.data.items.length ? (
         <EmptyState icon={BellOff} title="No notifications yet" description="Loan, deposit and payment updates from the society appear here." />
       ) : (
         <>
           <View style={styles.bar}>
-            <Text role="body" tone="secondary" style={{ flex: 1 }}>
+            <Text type="body" tone="secondary" style={{ flex: 1 }}>
               {q.data.unread ? `${q.data.unread} unread` : 'All read'}
             </Text>
-            {q.data.unread ? <Button text="Mark all read" leftSlot={CheckCheck} buttonType="secondary" size="sm" onPress={() => void readAll()} /> : null}
+            {q.data.unread ? <Button label="Mark all read" icon={CheckCheck} variant="secondary" size="sm" onPress={() => void readAll()} /> : null}
           </View>
           <Card padded={false}>
             {q.data.items.map((n, i) => {
@@ -72,27 +72,27 @@ export default function Notifications() {
                   key={n.id}
                   accessibilityRole="button"
                   onPress={() => void open(n.id, n.read, n.link)}
-                  style={({ pressed }) => [styles.row, i > 0 && styles.divider, !n.read && { backgroundColor: color.brand.subtle }, pressed && { opacity: 0.7 }]}
+                  style={({ pressed }) => [styles.row, i > 0 && styles.divider, !n.read && { backgroundColor: color.accentMuted }, pressed && { opacity: 0.7 }]}
                 >
-                  <View style={[styles.icon, { backgroundColor: n.read ? color.bg.surfaceSubtle : color.bg.surface }]}>
-                    <Bell size={18} color={n.read ? color.text.tertiary : color.brand.solid} />
+                  <View style={[styles.icon, { backgroundColor: n.read ? color.background.muted : color.background.surface }]}>
+                    <Bell size={18} color={n.read ? color.text.secondary : color.accent} />
                   </View>
-                  <View style={{ flex: 1, gap: space[1] }}>
+                  <View style={{ flex: 1, gap: spacing[0.5] }}>
                     <View style={styles.titleRow}>
-                      <Text role={n.read ? 'body' : 'label'} style={{ flex: 1 }}>
+                      <Text type={n.read ? 'body' : 'label'} style={{ flex: 1 }}>
                         {n.title}
                       </Text>
                       {!n.read ? <View style={styles.dot} /> : null}
                     </View>
-                    <Text role="caption" tone="secondary">
+                    <Text type="supporting" tone="secondary">
                       {n.body}
                     </Text>
-                    <Text role="caption" tone="tertiary">
+                    <Text type="supporting" tone="secondary">
                       {stamp(n.createdAt)}
                       {n.alsoSentVia?.length ? ` · also by ${n.alsoSentVia.map((v) => VIA[v]).join(', ')}` : ''}
                     </Text>
                   </View>
-                  {linked ? <ChevronRight size={18} color={color.text.tertiary} /> : null}
+                  {linked ? <ChevronRight size={18} color={color.text.secondary} /> : null}
                 </Pressable>
               );
             })}
@@ -105,10 +105,10 @@ export default function Notifications() {
 
 const styles = StyleSheet.create({
   headerBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  bar: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space[6], padding: space[8] },
-  divider: { borderTopWidth: 1, borderTopColor: color.border.subtle },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3], padding: spacing[4] },
+  divider: { borderTopWidth: 1, borderTopColor: color.border },
   icon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.brand.solid },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[1.5] },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.accent },
 });

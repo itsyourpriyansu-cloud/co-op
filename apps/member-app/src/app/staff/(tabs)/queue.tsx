@@ -8,12 +8,12 @@ import { formatDisplayDate, formatINR } from '@tgs/domain';
 import type { AnyStatus, WorkItem } from '@tgs/types';
 import { api } from '@/lib/api';
 import { Filter, Loaded, RecordCard, Stack2, staffHref, WaitTag } from '@/components/staff';
-import { EmptyState, Screen, StatusTag, Tag, Text } from '@/ui';
-import { space } from '@/theme';
+import { EmptyState, Screen, StatusToken, Token, Text } from '@/ui';
+import { spacing } from '@/theme';
 
 function stageTag(i: WorkItem) {
-  if (i.status && (i.kind === 'loan' || i.kind === 'membership')) return <StatusTag entity={i.kind} status={i.status as AnyStatus} audience="staff" size="xs" />;
-  return <Tag text={i.stageLabel} size="xs" />;
+  if (i.status && (i.kind === 'loan' || i.kind === 'membership')) return <StatusToken entity={i.kind} status={i.status as AnyStatus} audience="staff" size="xs" />;
+  return <Token text={i.stageLabel} size="xs" />;
 }
 
 export default function Queue() {
@@ -27,9 +27,9 @@ export default function Queue() {
 
   return (
     <Screen refreshing={q.isRefetching} onRefresh={() => void q.refetch()}>
-      <View style={{ gap: space[1] }}>
-        <Text role="pageTitle">Work Queue</Text>
-        <Text role="caption" tone="secondary">
+      <View style={{ gap: spacing[0.5] }}>
+        <Text type="h1">Work Queue</Text>
+        <Text type="supporting" tone="secondary">
           {data ? `${data.items.length} waiting, oldest first${data.scope.departmentName ? ` · ${data.scope.departmentName} only` : ''}` : 'Waiting for your review, certificate, signature or payout'}
         </Text>
       </View>
@@ -41,13 +41,13 @@ export default function Queue() {
             <Stack2>
               {rows.map((i) => (
                 <RecordCard key={`${i.kind}-${i.id}`} title={i.title} subtitle={`${i.ref} · ${i.subtitle}`} {...(i.amount ? { amount: formatINR(i.amount) } : {})} tag={stageTag(i)} onPress={() => router.push(staffHref(i.link))}>
-                  <Text role="caption" tone="tertiary">
+                  <Text type="supporting" tone="secondary">
                     {i.departmentName && !i.title.startsWith(i.departmentName) ? `${i.departmentName} · ` : ''}since {formatDisplayDate(i.since)}
                   </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space[3] }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing[1.5] }}>
                     <WaitTag days={i.days} />
-                    {i.overTarget ? <Tag text={`Over the ${i.targetLabel ?? 'target'}`} color="error" size="xs" /> : null}
-                    <Text role="captionStrong" tone="link" style={{ marginLeft: 'auto' }}>
+                    {i.overTarget ? <Token text={`Over the ${i.targetLabel ?? 'target'}`} status="error" size="xs" /> : null}
+                    <Text type="supporting" weight="medium" tone="link" style={{ marginLeft: 'auto' }}>
                       {i.actionLabel}
                     </Text>
                   </View>
