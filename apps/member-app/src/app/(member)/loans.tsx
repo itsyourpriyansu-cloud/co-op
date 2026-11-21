@@ -67,7 +67,7 @@ export default function Loans() {
           {(({ applied, approved, rejected }) => `Applied ${applied} · Approved ${approved} · Rejected ${rejected}`)(loanHistoryCounts(loans.data.map((r) => r.status)))}
         </Text>
       ) : null}
-      <SegmentedControl label="Show" value={segment} options={SEGMENTS.map((s) => ({ value: s.value, label: `${s.label} ${count(s.value) || ''}`.trim() }))} onChange={setSegment} />
+      <SegmentedControl label="Show" hideLabel value={segment} options={SEGMENTS.map((s) => ({ value: s.value, label: `${s.label} ${count(s.value) || ''}`.trim() }))} onChange={setSegment} />
       {loans.isLoading ? (
         <View style={{ gap: spacing[3] }}>
           <Skeleton height={120} radius={radius.container} />

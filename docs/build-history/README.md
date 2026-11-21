@@ -25,6 +25,7 @@ Every entry has the same sections: **Built** (screens by ID) · **Key files** ·
 | 16 | [Production readiness G1–G8](15-production-readiness.md) | Built, owner items open | 2026-11-12 |
 | 17 | [G9 flow gaps and notifications](16-flow-gaps-notifications.md) | Built, webhook secrets open | 2026-11-13 |
 | 18 | [Phone app on Astryx, seal navy and gold (D-138)](17-mobile-design-system.md) | Built, real-phone check open | 2026-11-20 |
+| 19 | [Phone UX audit: glass hero, gold 60/30/10, spacing (D-139)](18-ux-audit-glass-hero.md) | Built, real-phone check open | 2026-11-21 |
 
 ## How to resume
 1. `npm install` (once) → `npm run demo` (mock API :4000 + console :5180; `npm run demo:prod` for the built console) → `npm run dev:web` for the phone preview on :8090 (or `npm run dev:app` for Expo Go). Port 5173 belongs to the user's other project: never use or kill it.

@@ -216,5 +216,23 @@ Differences from the plan, kept smaller on purpose:
 - **Selection cross-fades** (a layer plus a press spring) instead of a sliding pill, because option rows wrap onto two lines; the **tab indicator scales in per tab** instead of sliding across the bar.
 - **No header title-on-scroll** and **no pulsing status dot** (a list of pulsing dots is noise); `StatusToken` shows a static dot.
 - **`brand`** (society name, registration number) is still read from `@tgs/design-tokens`: identity data, not design.
-- **Gold**: one moment in a screen's content plus the tab indicator.
+- **Gold**: one moment in a screen's content plus the tab indicator (widened to the 10 % of 60 / 30 / 10 by D-139, §12).
 - **Section titles carry no heading role** (unchanged from before), so screen-reader semantics stay exactly as they were.
+
+## 12. UX audit and glass hero (D-139, 2026-11-21)
+
+Audit of the owner's phone screenshots plus a phone-size walk of 12 member screens on Expo web (ux-audit skill, visual polish sweep).
+
+| Finding | Cause | Fix |
+|---|---|---|
+| Cards and sections touch on a real phone (home, profile, payments, help) | `Screen`'s entrance wrapper held a whole fragment of blocks without the screen's 24 px gap; web has no wrapper, so tests missed it | `Enter` wrapper repeats `gap: spacing[6]` (`ui/Layout.tsx`) |
+| Profile: "Edit conta…", "Request a…", "My signat…" cut off | Three buttons in one row | Menu list (`ListRow` with hints) |
+| "Show" label above every list filter; filters looked like three loose buttons; long labels cut off | Form-style `SegmentedControl` reused as a filter | One track with a white thumb, labels size to fit and wrap, `hideLabel` (label kept for screen readers) |
+| Home: quick actions and the salary card float between sections | No section titles | "Quick actions" and "This month" sections |
+| Home hero sub-line "1 FD + CRD, SR…" cut off | One-line limit | Two lines |
+| Flat navy summary blocks, little gold | — | Glass hero + 60 / 30 / 10 gold (below) |
+| Floating grey gear on every screen | **Expo Go's developer button**, not the app | Nothing to fix; absent from the APK |
+
+**Glass hero:** `HeroCard`, `heroSurface`, `glassTile` (`ui/Surfaces.tsx`); tokens `color.hero.{solid, gradient, glow, ring, glass, glassBorder, glassEdge}`. Navy gradient `#063B76 → #003471 → #001F45` at 155°, a gold radial glow from the top-right, 1 px gold ring at 55 %, `shadow.high`, radius `page`. Tiles: white 8 % over the gradient, white 16 % border, a 1 px inner top highlight. No blur package: the gradient behind the tiles gives the frosted read, and `expo-blur` would add native code. Contrast for the gradient start and the glass tile is in `theme.test.ts` (38 pairs).
+
+**60 / 30 / 10:** neutrals (`background.body`, `surface`) 60, navy 30, gold 10. Gold: hero ring + glow + label (`tone="goldOnAccent"`), profile initials ring, quick-action icons (gold on navy gradient tiles), this-month icon (`goldText` on `goldMuted`), tab indicator, stage halo. Never gold text on light.

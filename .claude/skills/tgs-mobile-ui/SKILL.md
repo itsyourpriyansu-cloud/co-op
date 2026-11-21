@@ -17,7 +17,9 @@ Source of truth: `docs/25-mobile-design-system.md`. Tokens: `apps/member-app/src
 ## Colour
 
 - **Navy `color.accent` is the only accent**: primary buttons, links, focus, selection, progress, active tab.
-- **Gold `color.gold` is a highlight, never text on a light surface** (2.26:1). One gold moment in a screen's content (hero ring, current-stage halo, seal intro) plus the tab indicator. Readable gold on light uses `color.goldText`; gold text is fine on navy.
+- **Colour by 60 / 30 / 10 (D-139):** neutrals 60, navy 30, gold 10. **Gold `color.gold` is never text on a light surface** (2.26:1). Gold marks: hero ring and glow, hero labels (`tone="goldOnAccent"`, navy only), avatar ring, quick-action icons on navy tiles, the tab indicator, the current-stage halo. Readable gold on light is `color.goldText` (on `goldMuted` or white).
+- **Glass hero (D-139):** a screen's top summary is `HeroCard` (or `heroSurface` on a pressable `Card` / result panel) with `glassTile` tiles on it. Never a flat `backgroundColor: color.accent` block.
+- **Spacing:** `Screen` puts 24 px between blocks, fragments included. Menus are `Card padded={false}` + `ListRow`. List filters are `SegmentedControl hideLabel`; never three buttons side by side that truncate.
 - Text: `primary`, `secondary` only (Astryx has no tertiary). On navy: `onAccent`, `onAccentMuted`.
 - Status: `color.status.<info|success|warning|error|neutral|approval>.{solid,onSolid,text,tint,border}`. Text goes on `tint`, never on Astryx's own muted. Status colours carry meaning only; don't mix them with the accent for decoration.
 - Cards separate by surface step (`background.body` → `background.surface`) plus a hairline `border`. Shadows (`shadow.low|med|high`, RN `boxShadow`) only for things that float: sticky footer, tab bar, raised hero, sheets.

@@ -12,7 +12,13 @@ function contrast(a: string, b: string) {
   return (hi! + 0.05) / (lo! + 0.05);
 }
 
+/** A translucent white layer over a solid colour, as the eye sees it (glass tiles on the hero). */
+function overWhite(hex: string, alpha: number) {
+  return '#' + [1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - alpha) + 255 * alpha).toString(16).padStart(2, '0')).join('');
+}
+
 const { background: bg, text } = color;
+const glass = overWhite(color.hero.solid, parseFloat(color.hero.glass.split(',')[3]!)); // rgba(255,255,255,a)
 const pairs: Array<[string, string, string]> = [
   ['text.primary on body', text.primary, bg.body],
   ['text.secondary on body', text.secondary, bg.body],
@@ -26,6 +32,12 @@ const pairs: Array<[string, string, string]> = [
   ['goldText on surface', color.goldText, bg.surface],
   ['goldText on goldMuted', color.goldText, color.goldMuted],
   ['gold on accent', color.gold, color.accent],
+  ['onAccent on hero', text.onAccent, color.hero.solid],
+  ['onAccentMuted on hero', text.onAccentMuted, color.hero.solid],
+  ['gold on hero', color.gold, color.hero.solid],
+  ['onAccent on hero glass', text.onAccent, glass],
+  ['onAccentMuted on hero glass', text.onAccentMuted, glass],
+  ['text.secondary on track', text.secondary, color.track],
   ['money.credit on surface', color.money.credit, bg.surface],
   ['money.debit on surface', color.money.debit, bg.surface],
   ...Object.entries(color.status).flatMap(([name, s]): Array<[string, string, string]> => [

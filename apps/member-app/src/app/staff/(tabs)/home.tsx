@@ -10,8 +10,8 @@ import { AppMark } from '@/components/AppMark';
 import { Loaded, Meter, StatTile, staffHref, TileGrid, WaitTag } from '@/components/staff';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Card, CountUp, EmptyState, Screen, Section, StatusToken, Token, Text, Link } from '@/ui';
-import { color, radius, shadow, spacing } from '@/theme';
+import { Card, CountUp, EmptyState, heroSurface, Screen, Section, StatusToken, Token, Text, Link } from '@/ui';
+import { color, spacing } from '@/theme';
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 const hour = new Date().getHours();
@@ -195,7 +195,7 @@ function RoleView({ d, summary }: { d: RoleDashboard; summary?: DashboardSummary
         <Card onPress={() => router.push('/staff/queue')} padded={false} style={styles.hero}>
           <View style={{ flex: 1, gap: spacing[0.5] }}>
             <CountUp type="h1" tone="onAccent" style={styles.heroFigure} value={total} format={String} />
-            <Text type="label" tone="onAccent">
+            <Text type="label" weight="semibold" tone="goldOnAccent">
               waiting on you
             </Text>
             <Text type="supporting" style={{ color: color.text.onAccentMuted }}>
@@ -377,7 +377,8 @@ export default function StaffHome() {
 const styles = StyleSheet.create({
   greeting: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   // The screen's one gold moment: a hairline ring on the raised navy card.
-  hero: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], padding: spacing[4], backgroundColor: color.accent, borderColor: color.gold, boxShadow: shadow.med },
+  // D-139: the same glass hero as the member home.
+  hero: { ...heroSurface, flexDirection: 'row', alignItems: 'center', gap: spacing[2], padding: spacing[5] },
   heroFigure: { fontSize: 44, lineHeight: 50, fontVariant: ['tabular-nums'] },
   bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.background.surface, borderWidth: 1, borderColor: color.border },
   badge: { position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: color.status.error.solid, alignItems: 'center', justifyContent: 'center' },

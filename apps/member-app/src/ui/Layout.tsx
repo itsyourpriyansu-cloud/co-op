@@ -37,10 +37,13 @@ function useKeepFocusedFieldVisible(scrollRef: RefObject<ComponentRef<typeof Scr
   };
 }
 
-/** Wraps one block of a screen so it fades and rises in, after the blocks before it. */
+/**
+ * Wraps one block of a screen so it fades and rises in, after the blocks before it. The block may be a
+ * fragment of many sections, so the wrapper repeats the screen's gap (without it they touch on a phone).
+ */
 function Enter({ index, children }: { index: number; children: ReactNode }) {
   const style = useEnter(index);
-  return style ? <Animated.View style={style}>{children}</Animated.View> : <>{children}</>;
+  return style ? <Animated.View style={[styles.block, style]}>{children}</Animated.View> : <>{children}</>;
 }
 
 export function Screen({ children, footer, header, refreshing, onRefresh }: { children: ReactNode; footer?: ReactNode; header?: ReactNode; refreshing?: boolean; onRefresh?: () => void }) {
@@ -156,6 +159,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   column: { width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center' },
   content: { padding: layout.gutter, gap: spacing[6], paddingBottom: spacing[8] },
+  block: { gap: spacing[6] },
   footer: { padding: spacing[4], paddingTop: spacing[3], gap: spacing[2], backgroundColor: color.background.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.borderEmphasized, boxShadow: shadow.low },
   header: { height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing[2] },
   back: { width: touchTarget, height: touchTarget, justifyContent: 'center', alignItems: 'center', borderRadius: radius.full },

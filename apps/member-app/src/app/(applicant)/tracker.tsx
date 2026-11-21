@@ -9,7 +9,7 @@ import { useNotifications } from '@/lib/account';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { stagesFor, STEPS, errorsForStep, useJoiningReference, useMyApplication } from '@/lib/joining';
-import { Banner, Button, Card, EmptyState, Skeleton, StageTracker, StatusToken, Text, Stepper, Link } from '@/ui';
+import { Banner, Button, Card, EmptyState, heroSurface, Skeleton, StageTracker, StatusToken, Text, Stepper, Link } from '@/ui';
 import { color, radius, spacing, layout } from '@/theme';
 
 export default function Tracker() {
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing[4], gap: spacing[5], paddingBottom: spacing[8], width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   rowIcon: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  welcome: { backgroundColor: color.accent, borderColor: color.accent, padding: spacing[6] },
+  welcome: { ...heroSurface, padding: spacing[6] },
   party: { width: 72, height: 72, borderRadius: 36, backgroundColor: color.accentTile, alignItems: 'center', justifyContent: 'center' },
   demo: { borderStyle: 'dashed', borderColor: color.status.warning.border, backgroundColor: color.status.warning.tint },
 });

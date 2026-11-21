@@ -44,7 +44,7 @@ export default function Help() {
         />
       ) : (
         <>
-          <SegmentedControl label="Show" value={tab} options={[{ value: 'help', label: 'Get help' }, { value: 'mine', label: `My questions (${q.data.tickets.length})` }]} onChange={setTab} />
+          <SegmentedControl label="Show" hideLabel value={tab} options={[{ value: 'help', label: 'Get help' }, { value: 'mine', label: `My questions (${q.data.tickets.length})` }]} onChange={setTab} />
           {tab === 'help' ? (
             <>
               <Section title="Contact the society office">

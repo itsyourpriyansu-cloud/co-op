@@ -1,10 +1,8 @@
 // More tab = the sitemap's "Settings / Index" (docs/17, docs/06 v0.4). Everything is live from M8.
-import { Pressable, StyleSheet, View } from 'react-native';
 import { router, type Href } from 'expo-router';
-import { Bell, Calculator, ChevronRight, FlaskConical, Handshake, LifeBuoy, LogOut, Percent, Settings, UserRound, type LucideIcon } from 'lucide-react-native';
+import { Bell, Calculator, FlaskConical, Handshake, LifeBuoy, LogOut, Percent, Settings, UserRound, type LucideIcon } from 'lucide-react-native';
 import { useAuth } from '@/lib/auth';
-import { Card, Screen, Text } from '@/ui';
-import { color, touchTarget, spacing } from '@/theme';
+import { Card, ListRow, Screen, Text } from '@/ui';
 import { DEMO_TOOLS } from '@/lib/serverUrl';
 
 const items: Array<{ icon: LucideIcon; label: string; href: Href }> = [
@@ -28,31 +26,13 @@ export default function More() {
       <Text type="h1">More</Text>
       <Card padded={false}>
         {items.map((item, i) => (
-          <Row key={item.label} icon={item.icon} label={item.label} onPress={() => router.push(item.href)} divider={i > 0} />
+          <ListRow key={item.label} icon={item.icon} label={item.label} onPress={() => router.push(item.href)} divider={i > 0} />
         ))}
       </Card>
       <Card padded={false}>
-        {DEMO_TOOLS ? <Row icon={FlaskConical} label="Demo settings" onPress={() => router.push('/demo-settings')} /> : null}
-        <Row icon={LogOut} label="Sign out" onPress={() => void signOut()} danger divider={DEMO_TOOLS} />
+        {DEMO_TOOLS ? <ListRow icon={FlaskConical} label="Demo settings" onPress={() => router.push('/demo-settings')} /> : null}
+        <ListRow icon={LogOut} label="Sign out" onPress={() => void signOut()} danger divider={DEMO_TOOLS} />
       </Card>
     </Screen>
   );
 }
-
-function Row({ icon: Icon, label, onPress, danger, divider }: { icon: LucideIcon; label: string; onPress: () => void; danger?: boolean; divider?: boolean }) {
-  const tint = danger ? color.status.error.text : color.text.primary;
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, divider && styles.divider, pressed && { backgroundColor: color.background.muted }]}>
-      <Icon size={22} color={tint} strokeWidth={1.75} />
-      <Text type="body" style={{ flex: 1, color: tint }}>
-        {label}
-      </Text>
-      {!danger ? <ChevronRight size={20} color={color.text.secondary} /> : null}
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], minHeight: touchTarget + 8, paddingHorizontal: spacing[4] },
-  divider: { borderTopWidth: 1, borderTopColor: color.border },
-});
