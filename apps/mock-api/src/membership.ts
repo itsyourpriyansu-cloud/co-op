@@ -33,7 +33,7 @@ import { nowIso } from './clock';
 import { fail } from './errors';
 import { AGREEMENTS, REQUIRED_DOCUMENTS } from './joining-reference';
 import { permissionsFor } from './permissions';
-import type { Db, Store } from './store';
+import { ddoInCharge, type Db, type Store } from './store';
 
 type Env = { Variables: { session: SessionUser; token: string } };
 
@@ -53,7 +53,7 @@ export function stageOwner(db: Db, app: MembershipApplication): Actor | undefine
   const role = MEMBERSHIP_STAGE_OWNER[app.status];
   if (!role || role === 'APPLICANT') return undefined;
   if (role === 'DDO') {
-    const login = db.staffUsers.find((u) => u.role === 'DDO' && u.departmentId === app.departmentId);
+    const login = ddoInCharge(db, app.departmentId);
     if (login) return { id: login.id, name: login.name, role: 'DDO', departmentId: app.departmentId };
     const dept = db.departments.find((d) => d.id === app.departmentId);
     return { id: `ddo-${app.departmentId}`, name: dept?.ddoName ?? 'Department DDO', role: 'DDO', departmentId: app.departmentId };

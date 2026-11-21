@@ -36,6 +36,9 @@ export interface Department {
   kind: 'SECRETARY_DEPT' | 'EXTERNAL_OFFICE';
   ddoName: string;
   ddoDesignation: string;
+  /** D-142: the DDO login in charge (a department may have many DDO logins; DDO tasks go to this one).
+   *  Unset or no longer an active DDO here: the department's longest-standing active DDO login. */
+  ddoUserId?: string;
 }
 
 export interface StaffUser {

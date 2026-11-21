@@ -40,10 +40,13 @@ export function DocumentActions({ html, fileName, title }: { html: () => string 
   const download = () =>
     run('download', async () => {
       if (Platform.OS === 'web') return printOnWeb(html());
-      const { uri } = await Print.printToFileAsync({ html: await html() });
+      // expo-print saves into the raw cache, which the file system may not read (Expo Go scopes it), so
+      // take the PDF as base64 and write it into our own cache under its readable name.
+      const { base64 } = await Print.printToFileAsync({ html: await html(), base64: true });
+      if (!base64) throw new Error('The PDF came out empty. Try again.');
       const named = new File(Paths.cache, fileName);
       if (named.exists) named.delete();
-      await new File(uri).move(named);
+      await named.write(base64, { encoding: 'base64' });
       if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this phone.');
       await Sharing.shareAsync(named.uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle: title });
     });

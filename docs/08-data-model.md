@@ -1,5 +1,6 @@
 # 08 · Data Model
 
+> Version 0.15 · 2026-11-21 · D-142: `Department.ddoUserId` is the DDO login in charge (column `departments.ddo_user_id`); a department may have many DDO logins.
 > Version 0.14 · 2026-11-19 · D-132: `LoanApplicationForm.bankAccount` (`LoanBankAccount`: holderName, bankName, branch?, accountNo, ifsc), where the loan is paid.
 > Version 0.13 · 2026-11-18 · D-131: table `retirement_changes` (`RetirementChange`: current / new date, reason, status, proposed, approvals, rejection), setting `probationMonths`.
 > Version 0.12 · 2026-11-16 · D-124: `DemandSheet.supplementNo` (table `demand_sheets.supplement_no`, unique with cycle + department), `ScheduleRow.earlyInterest`, `SanctionSheet.{firstDueChosen, earlyInterest, earlyInterestFrom}`, settings `earlyInterestEnabled`, `lateJoinerOwesMissedMonth`.
@@ -40,7 +41,7 @@ erDiagram
 ## 2. Entities
 
 ### Department [P]
-`id, code, name, ddoName, ddoDesignation, ddoContact?, ddoUserId?, active`
+`id, code, name, ddoName, ddoDesignation, ddoContact?, ddoUserId?, active` (`ddoUserId`: the DDO login in charge, D-142; the API returns the one actually in charge, which falls back to the longest-standing active DDO login)
 
 ### Member [A unless noted]
 | Field | Type | Notes |

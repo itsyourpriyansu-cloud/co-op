@@ -39,6 +39,8 @@ describe('member documents', () => {
   it('receipt: letterhead, amount, lines, member copy note; names are escaped', () => {
     const html = receiptHtml(receipt, { society, paidBy: 'Cash', generatedOn });
     expect(html).toContain('Regd. No. P-929');
+    // The seal travels inside the page: expo-print cannot load bundled assets.
+    expect(html).toMatch(/<img class="seal" src="data:image\/png;base64,[A-Za-z0-9+/=]{1000,}"/);
     expect(html).toContain('RCP-202611-000012');
     expect(html).toContain('₹5,684');
     expect(html).toContain('Nov 2026 · Ordinary loan interest · LN-2026-00001');

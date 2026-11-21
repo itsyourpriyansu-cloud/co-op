@@ -515,6 +515,8 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
   const list = useQuery({ queryKey: ['departments'], queryFn: api.settings.departments });
   const users = useQuery({ queryKey: ['users'], queryFn: api.settings.users });
   const loginOf = (id?: string) => users.data?.find((u) => u.id === id);
+  /** Active DDO logins of a department (D-142: many per department, one in charge). */
+  const ddosOf = (deptId?: string) => (users.data ?? []).filter((u) => u.role === 'DDO' && u.departmentId === deptId && u.active !== false);
   const [editing, setEditing] = useState<Partial<Department>>();
   const a = useAction();
   const e = a.fields;
@@ -539,6 +541,22 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
             For members transferred outside the Secretariat (recovery mandate moves here).
           </Text>
         ) : null}
+        {editing.id ? (
+          ddosOf(editing.id).length ? (
+            <SelectField
+              label="DDO in charge"
+              value={ddosOf(editing.id).some((u) => u.id === editing.ddoUserId) ? editing.ddoUserId : ''}
+              options={ddosOf(editing.id).map((u) => ({ value: u.id, label: u.name, hint: u.userId }))}
+              onChange={(id) => set({ ddoUserId: id, ddoName: loginOf(id)?.name ?? editing.ddoName })}
+              error={e.ddoUserId}
+              hint="Only the one in charge gets this office's certifications, mandates and demand sheets."
+            />
+          ) : (
+            <Text type="supporting" tone="secondary">
+              No DDO login in this department yet. Add one in Users (role DDO), then choose who is in charge here.
+            </Text>
+          )
+        ) : null}
         <TextField label="DDO name" value={editing.ddoName ?? ''} onChangeText={(ddoName) => set({ ddoName })} error={e.ddoName} />
         <TextField label="DDO designation" value={editing.ddoDesignation ?? ''} onChangeText={(ddoDesignation) => set({ ddoDesignation })} error={e.ddoDesignation} />
       </Editor>
@@ -556,7 +574,8 @@ function Departments({ canEdit, title }: { canEdit: boolean; title: string }) {
               {rows.map((r) => (
                 <RecordCard key={r.id} title={r.name} subtitle={`${r.code} · ${r.memberCount} members`} caption={`DDO ${r.ddoName}, ${r.ddoDesignation}`} {...(canEdit ? { onPress: () => setEditing(r) } : {})}>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[1] }}>
-                    <Token text={r.ddoUserId ? `Login: ${loginOf(r.ddoUserId)?.userId ?? 'yes'}` : 'No login yet'} status={r.ddoUserId ? 'success' : 'neutral'} size="xs" />
+                    <Token text={r.ddoUserId ? `In charge: ${loginOf(r.ddoUserId)?.userId ?? 'yes'}` : 'No login yet'} status={r.ddoUserId ? 'success' : 'neutral'} size="xs" />
+                    {ddosOf(r.id).length > 1 ? <Token text={`${ddosOf(r.id).length} DDO logins`} status="neutral" size="xs" /> : null}
                     {r.kind === 'EXTERNAL_OFFICE' ? <Token text="Outside Secretariat" status="neutral" size="xs" /> : null}
                   </View>
                 </RecordCard>
@@ -609,7 +628,11 @@ function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
   if (editing) {
     const close = () => setEditing(undefined);
     const save = async () => {
-      const ok = await a.run(async () => qc.setQueryData(['users'], await (editing.id ? api.settings.updateUser(editing.id, editing) : api.settings.createUser(editing))));
+      const ok = await a.run(async () => {
+        qc.setQueryData(['users'], await (editing.id ? api.settings.updateUser(editing.id, editing) : api.settings.createUser(editing)));
+        // A DDO login added, moved or switched off changes who is in charge on the Departments screen (D-142).
+        void qc.invalidateQueries({ queryKey: ['departments'] });
+      });
       if (ok) close();
       return ok;
     };
@@ -623,7 +646,7 @@ function Users({ canEdit, title }: { canEdit: boolean; title: string }) {
         <TextField label="Mobile (optional)" keyboardType="phone-pad" value={editing.mobile ?? ''} onChangeText={(mobile) => set({ mobile: mobile.replace(/\D/g, '').slice(0, 10) })} error={e.mobile} />
         <TextField label="Email (optional)" keyboardType="email-address" autoCapitalize="none" value={editing.email ?? ''} onChangeText={(email) => set({ email })} error={e.email} />
         <SelectField label="Role" value={editing.role ?? ''} options={CONSOLE_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r], hint: ROLE_HINT[r] }))} onChange={(role) => set({ role: role as ConsoleRole })} error={e.role} />
-        {editing.role === 'DDO' ? <SelectField label="Department" searchable value={editing.departmentId ?? ''} options={(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))} onChange={(departmentId) => set({ departmentId, ...(editing.name ? {} : { name: depts.data?.find((d) => d.id === departmentId)?.ddoName ?? '' }) })} error={e.departmentId} hint="One active DDO login per department." /> : null}
+        {editing.role === 'DDO' ? <SelectField label="Department" searchable value={editing.departmentId ?? ''} options={(depts.data ?? []).map((d) => ({ value: d.id, label: d.name }))} onChange={(departmentId) => set({ departmentId })} error={e.departmentId} hint="A department can have many DDO logins; choose the one in charge in Departments." /> : null}
         {editing.id ? <CheckboxInput checked={editing.active !== false} onChange={(active) => set({ active })} label="Can sign in" {...(e.active ? { description: e.active } : {})} /> : null}
         {editing.id && 'totpEnabled' in editing ? <SignIn user={editing as BackendUser} /> : null}
       </Editor>

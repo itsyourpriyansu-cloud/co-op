@@ -1,5 +1,5 @@
 // Scenarios the other journeys don't cover (owner request, 2026-11-20): staff add a member, the Admin
-// adds users and DDO logins (one per department, D-133), edits permissions (D-134), and the office
+// adds users and DDO logins (many per department, one in charge, D-142), edits permissions (D-134), and the office
 // enters a loan with the bank account it is paid into (D-132). Against the backend.
 import type { Page } from '@playwright/test';
 import {
@@ -15,6 +15,19 @@ import {
   test,
 } from './support';
 
+/** The Finance row of Departments & DDOs (the Users table, kept in the page, also says "Finance"). */
+const financeRow = (page: Page) => page.getByRole('row').filter({ has: page.getByRole('gridcell', { name: 'FIN', exact: true }) });
+
+/** Console Departments & DDOs: edit Finance and choose the DDO in charge. */
+async function setInCharge(page: Page, option: string) {
+  await financeRow(page).getByRole('button', { name: 'Edit' }).click();
+  // Blend's select trigger is a button named by its current value (the DDO in charge).
+  await page.getByRole('dialog').getByRole('button', { name: / · ddo\./ }).click();
+  await page.getByRole('menuitem', { name: option }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+}
+
 /** A phone picker: open it by its label, choose the option. */
 async function pick(page: Page, field: string, option: string | RegExp) {
   await page.getByRole('button', { name: new RegExp(`^${field}:`) }).click();
@@ -24,7 +37,7 @@ async function pick(page: Page, field: string, option: string | RegExp) {
 test.describe('owner scenarios · backend', () => {
   test.beforeAll(async ({ request }) => resetDemo(request));
 
-  test('Admin adds a user and sees it at once; a second DDO login for a department is refused', async ({
+  test('Admin adds a user and sees it at once; a second DDO login joins the department and can be put in charge', async ({
     page,
     request,
   }) => {
@@ -41,16 +54,23 @@ test.describe('owner scenarios · backend', () => {
     await page.getByRole('button', { name: 'Add user' }).click();
     await page.getByRole('radio', { name: /^DDO/ }).click();
     await page.getByRole('button', { name: 'Finance', exact: true }).click();
-    // The name fills in from the department's DDO.
-    await expect(page.getByLabel('Full name')).not.toHaveValue('');
-    await page.getByLabel('User ID').fill(`ddo.${Date.now().toString(36).slice(-6)}`);
+    const ddoId = `ddo.${Date.now().toString(36).slice(-6)}`;
+    await page.getByLabel('Full name').fill('Lakshmi Prasanna');
+    await page.getByLabel('User ID').fill(ddoId);
     await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page.getByText(/is already the DDO login for this department/)).toBeVisible();
-  });
+    await expect(page.getByText(ddoId)).toBeVisible();
 
-  test('Departments & DDOs names the DDO login of each office', async ({ page, request }) => {
-    await consoleAs(page, request, 'stf-admin', '/settings/departments');
-    await expect(page.getByText(/Kiran Kumar · ddo\.fin/)).toBeVisible();
+    // Departments & DDOs lists both logins at once; Kiran Kumar stays in charge until the Admin chooses.
+    await page.goto(page.url().replace('/settings/users', '/settings/departments'));
+    const finance = financeRow(page);
+    await expect(finance.getByRole('listitem', { name: 'Kiran Kumar · ddo.fin · in charge' })).toBeVisible();
+    await expect(finance.getByRole('listitem', { name: `Lakshmi Prasanna · ${ddoId}`, exact: true })).toBeVisible();
+    await expect(finance.getByText('In charge')).toHaveCount(1);
+    await setInCharge(page, `Lakshmi Prasanna · ${ddoId}`);
+    await expect(finance.getByRole('listitem', { name: `Lakshmi Prasanna · ${ddoId} · in charge` })).toBeVisible();
+    // Hand it back so the other journeys keep their DDO.
+    await setInCharge(page, 'Kiran Kumar · ddo.fin');
+    await expect(finance.getByRole('listitem', { name: 'Kiran Kumar · ddo.fin · in charge' })).toBeVisible();
   });
 
   test('only the Super Admin edits permissions, and admin-only rights stay locked', async ({

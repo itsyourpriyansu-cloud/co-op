@@ -14,7 +14,7 @@ Every entry has the same sections: **Built** (screens by ID) · **Key files** ·
 | 5 | [M4 Loans core (phone + console)](04-loans-core.md) | Done | 2026-10-24 |
 | 6 | [M5 Loan workflow (phone + console)](05-loan-workflow.md) | Done | 2026-10-24 |
 | 7 | [M6 Deposits (phone + console)](06-deposits.md) | Done | 2026-10-24 |
-| 8 | [M7 Demand & collections (phone + console)](07-collections.md) | Done | 2026-10-24 |
+| 8 | [M7 Demand & collections (phone + console)](07-collections.md) | Done | 2026-10-24 |check 
 | 9 | [M8 Member app completion (phone)](08-member-app.md) | Done | 2026-10-25 |
 | 10 | [M9 Dashboards, notifications & reports (console)](09-insight.md) | Done | 2026-10-25 |
 | 11 | [M10 Polish: a11y, states, search, demo script](10-polish.md) | Done (demo scope) | 2026-10-25 |
@@ -26,6 +26,8 @@ Every entry has the same sections: **Built** (screens by ID) · **Key files** ·
 | 17 | [G9 flow gaps and notifications](16-flow-gaps-notifications.md) | Built, webhook secrets open | 2026-11-13 |
 | 18 | [Phone app on Astryx, seal navy and gold (D-138)](17-mobile-design-system.md) | Built, real-phone check open | 2026-11-20 |
 | 19 | [Phone UX audit: glass hero, gold 60/30/10, spacing (D-139)](18-ux-audit-glass-hero.md) | Built, real-phone check open | 2026-11-21 |
+| 20 | [Clean prints, seal on phone paperwork, wizard content (D-140, D-141)](19-prints-seal-wizards.md) | Built, real-phone check open | 2026-11-21 |
+| 21 | [Many DDO logins per department, one in charge (D-142)](20-ddo-in-charge.md) | Built, backend tests need `backend/.env` | 2026-11-21 |
 
 ## How to resume
 1. `npm install` (once) → `npm run demo` (mock API :4000 + console :5180; `npm run demo:prod` for the built console) → `npm run dev:web` for the phone preview on :8090 (or `npm run dev:app` for Expo Go). Port 5173 belongs to the user's other project: never use or kill it.

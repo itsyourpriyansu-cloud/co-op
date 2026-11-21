@@ -328,8 +328,6 @@ export interface SettingsBundle {
 
 export interface DepartmentRow extends Department {
   memberCount: number;
-  /** Staff login for this department's DDO, if any. */
-  ddoUserId?: string;
 }
 
 export interface PermissionMatrix {

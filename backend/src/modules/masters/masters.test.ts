@@ -160,6 +160,27 @@ describe('departments (P2, ST-67)', () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/departments', headers: bearer(member) })).statusCode).toBe(403);
   });
 
+  it('has one DDO in charge among many logins; the Admin picks it (D-142)', async () => {
+    const inCharge = async () => (await app.inject({ method: 'GET', url: '/api/v1/departments', headers: bearer(admin) })).json().find((d: { id: string }) => d.id === 'dept-fin').ddoUserId;
+    const put = (payload: object) => app.inject({ method: 'PUT', url: '/api/v1/departments/dept-fin', headers: bearer(admin), payload });
+    expect((await app.inject({ method: 'POST', url: '/api/v1/users', headers: bearer(admin), payload: { name: 'Second Ddo', userId: 'ddo.fin2', role: 'DDO', departmentId: 'dept-fin' } })).statusCode).toBe(200);
+    // A new login does not take over; the longest-standing stays in charge until the Admin chooses.
+    expect(await inCharge()).toBe('stf-ddo-fin');
+    expect((await put({ ddoUserId: 'stf-ddo-fin2' })).statusCode).toBe(200);
+    expect(await inCharge()).toBe('stf-ddo-fin2');
+    expect(await app.departments.ddoLogin('dept-fin')).toBe('stf-ddo-fin2');
+    // Only an active DDO login of this department can be in charge.
+    const wrong = await put({ ddoUserId: 'stf-accountant' });
+    expect(wrong.statusCode).toBe(400);
+    expect(wrong.json().fieldErrors.ddoUserId).toBe('Choose an active DDO login of this department.');
+    // Editing other fields keeps the choice; deactivating the chosen login hands it back.
+    await put({ ddoDesignation: 'Deputy Secretary' });
+    expect(await inCharge()).toBe('stf-ddo-fin2');
+    const u = (await app.inject({ method: 'GET', url: '/api/v1/users', headers: bearer(admin) })).json().find((x: { id: string }) => x.id === 'stf-ddo-fin2');
+    expect((await app.inject({ method: 'PUT', url: '/api/v1/users/stf-ddo-fin2', headers: bearer(admin), payload: { ...u, active: false } })).statusCode).toBe(200);
+    expect(await inCharge()).toBe('stf-ddo-fin');
+  });
+
   it('adds and edits a department with code checks', async () => {
     const body = { code: 'tstd', name: 'Test Department', ddoName: 'A. Officer', ddoDesignation: 'Section Officer (Claims)' };
     const created = await app.inject({ method: 'POST', url: '/api/v1/departments', headers: bearer(admin), payload: body });

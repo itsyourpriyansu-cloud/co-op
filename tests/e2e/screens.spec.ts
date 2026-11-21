@@ -62,16 +62,38 @@ test.describe('screen sizes', () => {
     });
   }
 
-  test('print pages render at 1280×800', async ({ page, request }) => {
+  // D-140: a print is the document alone (no sidebar or topbar), not clipped to one screen, with the seal.
+  test('print pages print the document alone, unclipped, with the seal', async ({ page, request }) => {
+    test.setTimeout(240_000);
     ids ??= await seededIds(request);
     await page.setViewportSize({ width: 1280, height: 800 });
-    await consoleAs(page, request, 'stf-cashier', `/deposits/${ids.deposit}/fdr`);
-    await expect(page.getByText('FIXED DEPOSIT RECEIPT')).toBeVisible();
-    await page.emulateMedia({ media: 'print' });
-    await shot(page, 'print-fdr');
-    await page.emulateMedia({ media: 'screen' });
-    await page.goto(`${CONSOLE_URL}/reports/print/membership`);
-    await expect(page.getByRole('heading').first()).toBeVisible();
+    const PRINTS = ['/deposits/:deposit/fdr', '/payments/:receipt', '/loans/:loan/letter', '/demand-sheets/:sheet', '/reports/:report', '/reports/print/loan-form?loan=:loan', '/reports/print/loan-bond?loan=:loan', '/reports/print/fd-form?deposit=:deposit', '/reports/print/membership?member=:member', '/reports/print/agreement?member=:member', '/reports/print/defaulter-notice?member=:member'];
+    const problems: string[] = [];
+    await consoleAs(page, request, 'stf-admin');
+    for (const template of PRINTS) {
+      await page.emulateMedia({ media: 'screen' });
+      await page.goto(`${CONSOLE_URL}${fillIds(template, ids)}`);
+      await expect(page.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 20_000 });
+      // A seeded record from before the app has no letter yet; that page shows its empty state instead.
+      if (await page.getByRole('heading', { name: /^No .* yet$/ }).count()) continue;
+      await page.emulateMedia({ media: 'print' });
+      const seal = page.getByAltText('TGSECCSL seal').first();
+      await expect(seal, `${template}: seal`).toBeVisible();
+      const p = await page.evaluate(() => {
+        const main = document.querySelector('[data-main-content]') as HTMLElement;
+        const sidebar = document.querySelector('nav[data-sidebar]');
+        return {
+          sidebar: sidebar ? getComputedStyle(sidebar).display : 'none',
+          clipped: main.scrollHeight - main.clientHeight,
+          seal: (document.querySelector('img[alt="TGSECCSL seal"]') as HTMLImageElement | null)?.naturalWidth ?? 0,
+        };
+      });
+      if (p.sidebar !== 'none') problems.push(`${template}: sidebar prints`);
+      if (p.clipped > 1) problems.push(`${template}: clipped by ${p.clipped}px`);
+      if (!p.seal) problems.push(`${template}: seal image not loaded`);
+      await shot(page, `print${template.replace(/[/:?=]/g, '_')}`);
+    }
+    expect(problems).toEqual([]);
   });
 
   test('phone 360×740: no horizontal scroll', async ({ browser, request }) => {

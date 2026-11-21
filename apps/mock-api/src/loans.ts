@@ -44,7 +44,7 @@ import {
 } from '@tgs/types';
 import { audit, can, notify, nowIso, requireMember, requirePermission, requireStaff, type Api, type Guard } from './common';
 import { fail } from './errors';
-import type { Db, Store } from './store';
+import { ddoInCharge, type Db, type Store } from './store';
 
 const DEMO_OTP = '123456';
 export const LOAN_TEXT_VERSION = 'F2+F3-2026.1';
@@ -205,7 +205,7 @@ export function waitingOnFor(db: Db, loan: Loan, m: Member | undefined): string 
   if (!role) return undefined;
   if (role === 'DDO') {
     const dept = db.departments.find((d) => d.id === m?.departmentId);
-    const login = db.staffUsers.find((u) => u.role === 'DDO' && u.departmentId === m?.departmentId);
+    const login = ddoInCharge(db, m?.departmentId);
     return `${login?.name ?? dept?.ddoName ?? 'DDO'} (DDO, ${dept?.name ?? ''})`;
   }
   const u = db.staffUsers.find((x) => x.role === role);

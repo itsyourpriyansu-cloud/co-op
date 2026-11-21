@@ -236,3 +236,8 @@ Audit of the owner's phone screenshots plus a phone-size walk of 12 member scree
 **Glass hero:** `HeroCard`, `heroSurface`, `glassTile` (`ui/Surfaces.tsx`); tokens `color.hero.{solid, gradient, glow, ring, glass, glassBorder, glassEdge}`. Navy gradient `#063B76 → #003471 → #001F45` at 155°, a gold radial glow from the top-right, 1 px gold ring at 55 %, `shadow.high`, radius `page`. Tiles: white 8 % over the gradient, white 16 % border, a 1 px inner top highlight. No blur package: the gradient behind the tiles gives the frosted read, and `expo-blur` would add native code. Contrast for the gradient start and the glass tile is in `theme.test.ts` (38 pairs).
 
 **60 / 30 / 10:** neutrals (`background.body`, `surface`) 60, navy 30, gold 10. Gold: hero ring + glow + label (`tone="goldOnAccent"`), profile initials ring, quick-action icons (gold on navy gradient tiles), this-month icon (`goldText` on `goldMuted`), tab indicator, stage halo. Never gold text on light.
+
+## 13. Prints and wizard content (D-140, D-141, 2026-11-21)
+
+- **Phone documents** carry the seal in the letterhead (`lib/sealImage.ts`, a 192 px PNG data URI: expo-print cannot load bundled assets). **Download PDF** writes the base64 PDF into `Paths.cache` instead of moving expo-print's file (Expo Go refuses to read that one).
+- **Wizards:** a step starts with `StepHeader` (progress, title, one line on what the step is for). Results that react to inputs sit right under those inputs (loan: "Your instalment" under amount and months). A summary on a review step has a section title. A list of periods on a card is a range ("12 to 100 months"); the step that picks one lists them all, in an even three-column grid.

@@ -89,6 +89,8 @@ export const departments = pgTable(
     kind: text('kind').$type<Department['kind']>().notNull(),
     ddoName: text('ddo_name').notNull(),
     ddoDesignation: text('ddo_designation').notNull(),
+    /** D-142: the DDO login in charge (staff_users.id); see DepartmentsRepository.ddoInCharge. */
+    ddoUserId: text('ddo_user_id'),
     createdAt: ts('created_at').notNull().defaultNow(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },

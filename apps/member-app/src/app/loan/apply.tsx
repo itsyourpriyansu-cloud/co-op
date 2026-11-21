@@ -14,11 +14,18 @@ import type { LoanApplicationForm, LoanContext, LoanProductCode, LoanRequestInpu
 import { BankAccountFields, EMPTY_BANK } from '@/components/BankAccountFields';
 import { api } from '@/lib/api';
 import { loanKeys, useAssessment, useLoanContext, useMemberSearch } from '@/lib/loans';
-import { Banner, Button, Card, SelectableCard, Divider, Header, MetadataListItem, MonthPicker, OtpInput, Screen, Section, Skeleton, Text, TextField, Stepper } from '@/ui';
+import { Banner, Button, Card, SelectableCard, Divider, Header, MetadataListItem, MonthPicker, OtpInput, Screen, Section, Skeleton, StepHeader, Text, TextField } from '@/ui';
 import { color, radius, spacing } from '@/theme';
 
 type StepKey = 'type' | 'pay' | 'loan' | 'sureties' | 'review';
 const TITLES: Record<StepKey, string> = { type: 'Choose a loan', pay: 'About your pay', loan: 'Your loan', sureties: 'Your sureties', review: 'Review & sign' };
+/** One line under each step's title: what this step is for (sureties: built from the product). */
+const INTROS: Record<Exclude<StepKey, 'sureties'>, string> = {
+  type: 'Pick the loan that fits you. The society sets each rate and limit.',
+  pay: 'From your pay profile. Correct anything that changed; your DDO confirms these.',
+  loan: 'How much, over how many months, and what for. Your instalment updates as you type.',
+  review: 'Check the details, then sign with the code sent to your mobile.',
+};
 const STEP_FIELDS: Record<StepKey, (k: string) => boolean> = {
   type: () => false,
   pay: (k) => k.startsWith('pay.') || k.startsWith('salary.'),
@@ -27,6 +34,8 @@ const STEP_FIELDS: Record<StepKey, (k: string) => boolean> = {
   review: () => false,
 };
 
+/** "12 to 100 months" (one period: "24 months"); the next step lists every period. */
+const monthsRange = (m: number[]) => (m.length > 1 ? `${Math.min(...m)} to ${Math.max(...m)} months` : `${m[0] ?? 0} months`);
 const rupees = (p: number) => (p > 0 ? String(Math.round(p / 100)) : '');
 const paise = (t: string) => Math.round(Number(t.replace(/[^0-9]/g, '') || 0) * 100);
 
@@ -266,10 +275,12 @@ export default function ApplyLoan() {
         )
       }
     >
-      <View style={{ gap: spacing[4] }}>
-        <Stepper step={step + 1} total={steps.length} title={TITLES[key]} />
-        <Text type="h1">{TITLES[key]}</Text>
-      </View>
+      <StepHeader
+        step={step + 1}
+        total={steps.length}
+        title={TITLES[key]}
+        intro={key === 'sureties' ? `Choose ${prod?.suretiesRequired ?? 2} members who know you. Each one gets a request in their app and signs with an OTP.` : key === 'pay' && product === 'SALARY' ? "This month's pay, as on your pay slip." : INTROS[key]}
+      />
       {showErrors && (Object.keys(stepErrors).length || blocks.length) ? <Banner status="error" heading={blocks.length && key === 'loan' ? 'This loan is not possible as entered' : 'A few details are missing'} description={key === 'loan' && blocks.length ? blocks[0]!.message : 'Fill the highlighted fields to continue.'} /> : null}
       {serverError ? <Banner status="error" heading="Something went wrong" description={serverError} /> : null}
 
@@ -282,7 +293,7 @@ export default function ApplyLoan() {
             <SelectableCard
               key={p.code}
               title={`${p.name} · ${p.ratePercent}%`}
-              description={full ? `You already have a running ${p.name}. Ask for a top-up instead.` : `Up to ${formatINR(p.maxAmount)} · ${p.instalmentOptions.join(' / ')} months${p.suretiesRequired ? ` · ${p.suretiesRequired} sureties` : p.code === 'DEPOSIT' ? ' · against your FD' : ' · no sureties'}`}
+              description={full ? `You already have a running ${p.name}. Ask for a top-up instead.` : `Up to ${formatINR(p.maxAmount)} · ${monthsRange(p.instalmentOptions)}${p.suretiesRequired ? ` · ${p.suretiesRequired} sureties` : p.code === 'DEPOSIT' ? ' · against your FD' : ' · no sureties'}`}
               selected={product === p.code}
               onPress={() => {
                 if (full) return;
@@ -296,9 +307,6 @@ export default function ApplyLoan() {
       {key === 'pay' && product !== 'SALARY' && (
         <Card>
           <View style={{ gap: spacing[4] }}>
-            <Text type="supporting" tone="secondary">
-              From your pay profile. Correct anything that changed; your DDO confirms these.
-            </Text>
             <TextField label="Scale of pay" value={form.pay?.scaleOfPay ?? ''} onChangeText={(v) => setPay({ scaleOfPay: v })} />
             <TextField label="Gross salary per month" prefix="₹" keyboardType="number-pad" value={rupees(form.pay?.grossSalary ?? 0)} onChangeText={(v) => setPay({ grossSalary: paise(v) })} error={err('pay.grossSalary')} required />
             <TextField label="Deductions for Government loans" prefix="₹" keyboardType="number-pad" value={rupees(form.pay?.govtLoanDeductions ?? 0)} onChangeText={(v) => setPay({ govtLoanDeductions: paise(v) })} />
@@ -371,20 +379,17 @@ export default function ApplyLoan() {
               ) : null}
             </Section>
           ) : null}
+          {eligibility ? <Section title="Your instalment">{eligibility}</Section> : null}
           <Section title="Pay the loan into">
             <Card>
               <BankAccountFields value={form.bankAccount} onChange={(bankAccount) => setForm((f) => ({ ...f, bankAccount }))} err={err} intro="Your own savings or salary account. The society pays the loan here by bank transfer." />
             </Card>
           </Section>
-          {eligibility}
         </>
       )}
 
       {key === 'sureties' && prod && (
         <>
-          <Text type="body" tone="secondary">
-            Choose {prod.suretiesRequired} members who know you. Each one gets a request in their app and signs with an OTP.
-          </Text>
           {sureties.map((s) => {
             const card = a?.sureties.find((x) => x.memberId === s.id);
             const issue = card?.checks.find((c) => !c.pass);
@@ -446,6 +451,7 @@ export default function ApplyLoan() {
 
       {key === 'review' && prod && (
         <>
+          <Section title="Your application">
           <Card>
             <MetadataListItem label="Loan" value={`${prod.name} · ${prod.ratePercent}%`} />
             <MetadataListItem label="Amount" value={formatINR(amount)} emphasis />
@@ -456,6 +462,7 @@ export default function ApplyLoan() {
             {form.bankAccount?.accountNo ? <MetadataListItem label="Paid into" value={`${form.bankAccount.bankName} · A/c ${maskAccountNo(form.bankAccount.accountNo)}`} /> : null}
             {sureties.length ? <MetadataListItem label="Sureties" value={sureties.map((s) => s.name).join(', ')} /> : null}
           </Card>
+          </Section>
           {a && !a.eligible ? <Banner status="error" heading="Not possible as entered" description={blocks[0]?.message} /> : null}
           <Section title="Declaration">
             <Card>

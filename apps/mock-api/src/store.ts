@@ -17,6 +17,13 @@ export interface Db extends Dataset {
   messageLog: OutboxMessage[];
 }
 
+/** D-142: the DDO login in charge of a department: the Admin's choice if it is still an active DDO there,
+ *  else the department's longest-standing active DDO login. Every DDO task goes to this one. */
+export function ddoInCharge(db: Db, departmentId: string | undefined) {
+  const mine = db.staffUsers.filter((u) => u.role === 'DDO' && u.departmentId === departmentId && u.active !== false);
+  return mine.find((u) => u.id === db.departments.find((d) => d.id === departmentId)?.ddoUserId) ?? mine[0];
+}
+
 function freshDb(latencyMs: [number, number]): Db {
   const seed = createSeed();
   // The demo clock starts at the dataset's anchor date so ages, retirements and cycles agree.

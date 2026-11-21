@@ -1,10 +1,11 @@
 // ST-67 Departments & DDOs: who certifies and deducts for each office (incl. external offices
-// for members transferred out of the Secretariat, Q-512).
+// for members transferred out of the Secretariat, Q-512). A department may have many DDO logins (added in
+// Users); the Admin picks the one in charge here, and every DDO task goes to that one (D-142).
 import { useState } from 'react';
 import { Plus, Pencil } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { ButtonV2, ButtonV2Size, ButtonV2Type, ColumnType, Radio, RadioGroup, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, type ColumnDefinition } from '@juspay/blend-design-system';
-import type { Department, DepartmentRow } from '@tgs/types';
+import { ButtonV2, ButtonV2Size, ButtonV2Type, ColumnType, Radio, RadioGroup, SingleSelectV2, TagV2, TagV2Color, TagV2Size, TagV2SubType, TagV2Type, type ColumnDefinition } from '@juspay/blend-design-system';
+import type { Department, DepartmentRow, StaffUser } from '@tgs/types';
 import { TextField, fieldErrorsOf } from '@/components/Form';
 import { SideDrawer } from '@/components/SideDrawer';
 import { Table } from '@/components/Table';
@@ -22,6 +23,9 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
   const save = useSettingsSave((d: Partial<Department>) => (d.id ? api.settings.updateDepartment(d.id, d) : api.settings.createDepartment(d)), 'Department saved', ['departments']);
   const errors = fieldErrorsOf(save.error);
   const set = (patch: Partial<Department>) => setEditing((e) => ({ ...e, ...patch }));
+  /** Active DDO logins of a department, longest-standing first (the list keeps creation order). */
+  const ddosOf = (deptId?: string): StaffUser[] => (users.data ?? []).filter((u) => u.role === 'DDO' && u.departmentId === deptId && u.active !== false);
+  const editingDdos = ddosOf(editing?.id);
 
   const columns: ColumnDefinition<Row>[] = [
     { field: 'code', header: 'Code', type: ColumnType.TEXT, width: '90px' },
@@ -53,18 +57,29 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
     },
     {
       field: 'ddoUserId',
-      header: 'DDO login',
+      header: 'DDO logins',
       type: ColumnType.REACT_ELEMENT,
       isSortable: false,
-      minWidth: '180px',
+      minWidth: '200px',
       renderCell: (_v, r) => {
-        const login = users.data?.find((u) => u.id === r.ddoUserId);
-        if (!r.ddoUserId) return <span className="text-caption text-fg-tertiary">No login yet · add one in Users</span>;
+        const logins = ddosOf(r.id);
+        if (!logins.length) return <span className="text-caption text-fg-tertiary">No login yet · add one in Users</span>;
         return (
-          <div>
-            <TagV2 text="Has login" size={TagV2Size.XS} color={TagV2Color.SUCCESS} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
-            {login && <p className="mt-1 text-caption text-fg-tertiary">{login.name} · {login.userId}</p>}
-          </div>
+          <ul className="flex flex-col gap-1.5">
+            {[...logins].sort((a, b) => Number(b.id === r.ddoUserId) - Number(a.id === r.ddoUserId)).map((u) => (
+              <li key={u.id} aria-label={`${u.name} · ${u.userId}${u.id === r.ddoUserId ? ' · in charge' : ''}`}>
+                <p className={u.id === r.ddoUserId ? 'text-body text-fg' : 'text-body text-fg-secondary'}>{u.name}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-caption text-fg-tertiary">{u.userId}</span>
+                  {u.id === r.ddoUserId && (
+                    <span className="shrink-0">
+                      <TagV2 text="In charge" size={TagV2Size.XS} color={TagV2Color.SUCCESS} type={TagV2Type.SUBTLE} subType={TagV2SubType.ROUNDED} />
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
         );
       },
     },
@@ -80,8 +95,9 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
         <p className="text-body text-fg-secondary">{list.data ? `${list.data.length} offices · DDOs certify membership and loan applications and deduct dues from salary.` : ' '}</p>
         {canEdit && <ButtonV2 text="Add department" leftSlot={{ slot: <Plus size={16} /> }} onClick={() => setEditing({ ...EMPTY })} />}
       </div>
-      <ViewState state={list.isLoading ? 'loading' : list.isError ? 'error' : 'ready'} layout="table" onRetry={() => void list.refetch()}>
-        <Table<Row> data={(list.data ?? []) as Row[]} columns={columns} idField="id" isHoverable showToolbar={false} />
+      <ViewState state={list.isLoading || users.isLoading ? 'loading' : list.isError ? 'error' : 'ready'} layout="table" onRetry={() => void list.refetch()}>
+        {/* Blend keeps rendered cells until its data changes, so redraw when the DDO logins change (D-142). */}
+        <Table<Row> key={users.dataUpdatedAt} data={(list.data ?? []) as Row[]} columns={columns} idField="id" isHoverable showToolbar={false} />
       </ViewState>
       <SideDrawer
         open={Boolean(editing)}
@@ -107,6 +123,24 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
                 Office outside the Secretariat
               </Radio>
             </RadioGroup>
+            {editing.id &&
+              (editingDdos.length ? (
+                <div className="flex flex-col gap-1">
+                  <SingleSelectV2
+                    label="DDO in charge"
+                    placeholder="Choose"
+                    items={[{ items: editingDdos.map((u) => ({ label: `${u.name} · ${u.userId}`, value: u.id })) }]}
+                    selected={editingDdos.some((u) => u.id === editing.ddoUserId) ? editing.ddoUserId! : ''}
+                    onSelect={(id) => set({ ddoUserId: id, ddoName: editingDdos.find((u) => u.id === id)?.name ?? editing.ddoName })}
+                    {...(errors.ddoUserId ? { error: { show: true, message: errors.ddoUserId } } : {})}
+                  />
+                  <p className="text-caption text-fg-tertiary">
+                    {editingDdos.length} DDO login{editingDdos.length === 1 ? '' : 's'} in this department. Only the one in charge gets its certifications, mandates and demand sheets.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-caption text-fg-tertiary">No DDO login in this department yet. Add one in Users (role DDO), then choose who is in charge here.</p>
+              ))}
             <TextField label="DDO name" name="ddoName" value={editing.ddoName ?? ''} onChange={(ddoName) => set({ ddoName })} errors={errors} />
             <TextField label="DDO designation" name="ddoDesignation" value={editing.ddoDesignation ?? ''} onChange={(ddoDesignation) => set({ ddoDesignation })} errors={errors} />
           </div>

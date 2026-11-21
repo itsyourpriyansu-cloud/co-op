@@ -42,7 +42,7 @@ import type {
 import { audit, can, notify, nowIso, requireMember, requirePermission, requireStaff, type Api, type Guard } from './common';
 import { fail } from './errors';
 import { REQUIRED_DOCUMENTS } from './joining-reference';
-import type { Db, Store } from './store';
+import { ddoInCharge, type Db, type Store } from './store';
 
 const DEMO_OTP = '123456';
 const OPEN_LOAN = new Set(['ACTIVE', 'SANCTIONED']);
@@ -53,7 +53,7 @@ export function nextGeneralNo(db: Db): string {
 }
 
 const deptName = (db: Db, id: string) => db.departments.find((d) => d.id === id)?.name ?? id;
-const ddoLogin = (db: Db, departmentId: string) => db.staffUsers.find((u) => u.role === 'DDO' && u.departmentId === departmentId && u.active !== false);
+const ddoLogin = ddoInCharge;
 
 function addEvent(db: Db, e: Omit<ServiceEvent, 'id'>) {
   db.serviceEvents.push({ id: `sev-${randomUUID().slice(0, 8)}`, ...e });

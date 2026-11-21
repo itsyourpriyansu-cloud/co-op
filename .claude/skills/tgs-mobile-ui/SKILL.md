@@ -19,6 +19,8 @@ Source of truth: `docs/25-mobile-design-system.md`. Tokens: `apps/member-app/src
 - **Navy `color.accent` is the only accent**: primary buttons, links, focus, selection, progress, active tab.
 - **Colour by 60 / 30 / 10 (D-139):** neutrals 60, navy 30, gold 10. **Gold `color.gold` is never text on a light surface** (2.26:1). Gold marks: hero ring and glow, hero labels (`tone="goldOnAccent"`, navy only), avatar ring, quick-action icons on navy tiles, the tab indicator, the current-stage halo. Readable gold on light is `color.goldText` (on `goldMuted` or white).
 - **Glass hero (D-139):** a screen's top summary is `HeroCard` (or `heroSurface` on a pressable `Card` / result panel) with `glassTile` tiles on it. Never a flat `backgroundColor: color.accent` block.
+- **Wizards (D-141):** every step starts with `StepHeader` (progress, title, one-line intro). Put a live result right under the inputs it reacts to; title review summaries; show ranges, not long lists, on cards; choice grids are three even columns.
+- **Printed documents (D-140):** build them only through `lib/documents.ts` `page()` (seal included); never load bundled images into expo-print HTML.
 - **Spacing:** `Screen` puts 24 px between blocks, fragments included. Menus are `Card padded={false}` + `ListRow`. List filters are `SegmentedControl hideLabel`; never three buttons side by side that truncate.
 - Text: `primary`, `secondary` only (Astryx has no tertiary). On navy: `onAccent`, `onAccentMuted`.
 - Status: `color.status.<info|success|warning|error|neutral|approval>.{solid,onSolid,text,tint,border}`. Text goes on `tint`, never on Astryx's own muted. Status colours carry meaning only; don't mix them with the accent for decoration.
