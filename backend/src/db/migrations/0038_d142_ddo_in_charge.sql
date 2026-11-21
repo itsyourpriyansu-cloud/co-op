@@ -1,0 +1,1 @@
+ALTER TABLE "departments" ADD COLUMN "ddo_user_id" text;

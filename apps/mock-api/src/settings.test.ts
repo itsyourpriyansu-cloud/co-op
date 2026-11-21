@@ -78,6 +78,18 @@ describe('masters (ST-61, ST-62, ST-63, ST-67)', () => {
     expect(upd.body.find((d) => d.id === 'dept-tour')?.ddoName).toBe('Lalitha Kumari');
   });
 
+  it('departments: many DDO logins, one in charge chosen by the Admin (D-142)', async () => {
+    const admin = await login('stf-admin');
+    const inCharge = async () => (await call<DepartmentRow[]>('GET', '/departments', undefined, admin)).body.find((d) => d.id === 'dept-fin')?.ddoUserId;
+    expect((await call('POST', '/users', { name: 'Second Ddo', userId: 'ddo.fin2', role: 'DDO', departmentId: 'dept-fin' }, admin)).status).toBe(200);
+    expect(await inCharge()).toBe('stf-ddo-fin');
+    expect((await call('PUT', '/departments/dept-fin', { ddoUserId: 'stf-ddo-fin2' }, admin)).status).toBe(200);
+    expect(await inCharge()).toBe('stf-ddo-fin2');
+    expect((await call('PUT', '/departments/dept-fin', { ddoUserId: 'stf-accountant' }, admin)).body.fieldErrors?.ddoUserId).toBe('Choose an active DDO login of this department.');
+    await call('PUT', '/users/stf-ddo-fin2', { active: false }, admin);
+    expect(await inCharge()).toBe('stf-ddo-fin');
+  });
+
   it('users: create a DDO, deactivate → cannot sign in', async () => {
     const admin = await login('stf-admin');
     expect((await call('POST', '/users', { name: 'X', userId: 'x', role: 'DDO' }, admin)).body.fieldErrors).toMatchObject({ userId: expect.any(String), departmentId: expect.any(String) });

@@ -48,7 +48,7 @@ import type {
 } from '@tgs/types';
 import { audit, can, notify, nowIso, requireMember, requirePermission, requireStaff, type Api, type Guard } from './common';
 import { fail } from './errors';
-import type { Db, Store } from './store';
+import { ddoInCharge, type Db, type Store } from './store';
 
 const HEAD_LABEL: Record<DemandHead, string> = {
   RRF: 'RRF',
@@ -435,7 +435,7 @@ export function registerCollections(api: Api, store: Store, requireSession: Guar
     }
     if (action === 'sendToDdo') {
       sh.sent = so;
-      const ddo = db().staffUsers.find((u) => u.role === 'DDO' && u.departmentId === sh.departmentId);
+      const ddo = ddoInCharge(db(), sh.departmentId);
       if (ddo) notify(store, ddo.id, 'demand.sent', { cycle: formatCycle(sh.cycle), department: deptName(db(), sh.departmentId), members: sh.lines.length, amount: formatINR(sh.totalDemand) }, `/demand-sheets/${sh.id}`);
     }
     if (action === 'postRecovery') {

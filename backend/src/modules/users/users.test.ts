@@ -40,14 +40,10 @@ describe('staff users, permissions and audit (P1a)', () => {
     expect(Object.keys(res.json().fieldErrors)).toEqual(expect.arrayContaining(['name', 'userId']));
   });
 
-  it('keeps one active DDO login per real department', async () => {
+  it('allows many DDO logins in a real department (D-142)', async () => {
     const post = (payload: object) => app.inject({ method: 'POST', url: '/api/v1/users', headers: bearer(admin), payload });
-    const second = await post({ name: 'Second Ddo', userId: 'ddo.fin2', role: 'DDO', departmentId: 'dept-fin' });
-    expect(second.statusCode).toBe(400);
-    expect(second.json().fieldErrors.departmentId).toContain('ddo.fin');
+    expect((await post({ name: 'Second Ddo', userId: 'ddo.fin2', role: 'DDO', departmentId: 'dept-fin' })).statusCode).toBe(200);
     expect((await post({ name: 'Ghost Ddo', userId: 'ddo.ghost', role: 'DDO', departmentId: 'dept-none' })).json().fieldErrors.departmentId).toBe('Choose a department from the list.');
-    // An inactive second login is allowed (prepared for a handover)
-    expect((await post({ name: 'Spare Ddo', userId: 'ddo.spare', role: 'DDO', departmentId: 'dept-fin', active: false })).statusCode).toBe(200);
   });
 
   it('hands over a temporary password that must be changed', async () => {

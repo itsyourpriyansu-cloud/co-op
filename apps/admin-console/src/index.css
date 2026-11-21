@@ -75,6 +75,11 @@
 [data-element='checkbox-label'][data-status='enabled'] {
   color: var(--tgs-text-primary) !important;
 }
+/* A Blend select opened inside a side drawer (layers.drawer, 1100) must open above it, not behind it,
+   where the drawer swallowed every click on its options (D-142). Only while a drawer is open. */
+body:has([data-vaul-drawer][data-state='open']) [data-radix-popper-content-wrapper]:has([data-element='select-item']) {
+  z-index: 1150 !important;
+}
 /* Printing (D-140): a page prints as the document alone. Blend's SidebarV2 owns the sidebar, the topbar
    and an 852 px scroll panel that clipped forms to one page, so they are reached by structure here, once,
    for every print page. Zero @page margin also drops the browser's date / title / URL lines; the margin

@@ -23,7 +23,7 @@ import {
 import { audit, can, requirePermission, requireStaff, type Api, type Guard } from './common';
 import { fail } from './errors';
 import { PERMISSION_LABELS, ROLE_PERMISSIONS } from '@tgs/domain';
-import type { Store } from './store';
+import { ddoInCharge, type Store } from './store';
 
 // PERMISSION_LABELS moved to @tgs/domain (D-076).
 
@@ -125,7 +125,7 @@ export function registerSettings(api: Api, store: Store, requireSession: Guard) 
     db().departments.map((d) => ({
       ...d,
       memberCount: db().members.filter((m) => m.departmentId === d.id && m.status === 'ACTIVE').length,
-      ...(db().staffUsers.find((u) => u.role === 'DDO' && u.departmentId === d.id) ? { ddoUserId: db().staffUsers.find((u) => u.role === 'DDO' && u.departmentId === d.id)!.id } : {}),
+      ddoUserId: ddoInCharge(db(), d.id)?.id,
     }));
 
   api.get('/departments', requireSession, (c) => {
@@ -140,12 +140,13 @@ export function registerSettings(api: Api, store: Store, requireSession: Guard) 
     else if (db().departments.some((x) => x.code === d.code!.trim().toUpperCase() && x.id !== id)) fieldErrors.code = 'This code is already used.';
     if (!d.ddoName?.trim()) fieldErrors.ddoName = "Enter the DDO's name.";
     if (!d.ddoDesignation?.trim()) fieldErrors.ddoDesignation = "Enter the DDO's designation.";
+    if (d.ddoUserId && !db().staffUsers.some((u) => u.id === d.ddoUserId && u.role === 'DDO' && u.departmentId === id && u.active !== false)) fieldErrors.ddoUserId = 'Choose an active DDO login of this department.';
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
   };
 
   api.post('/departments', requireSession, async (c) => {
     const user = editGuard(c);
-    const body = await c.req.json<Partial<Department>>();
+    const body = { ...(await c.req.json<Partial<Department>>()), ddoUserId: undefined };
     validateDept(body);
     const code = body.code!.trim().toUpperCase();
     const dept: Department = { id: `dept-${code.toLowerCase()}`, code, name: body.name!.trim(), kind: body.kind === 'EXTERNAL_OFFICE' ? 'EXTERNAL_OFFICE' : 'SECRETARY_DEPT', ddoName: body.ddoName!.trim(), ddoDesignation: body.ddoDesignation!.trim() };
@@ -162,7 +163,7 @@ export function registerSettings(api: Api, store: Store, requireSession: Guard) 
     const body = await c.req.json<Partial<Department>>();
     const next = { ...current, ...body, id, code: (body.code ?? current.code).trim().toUpperCase() };
     validateDept(next, id);
-    Object.assign(current, { name: next.name.trim(), code: next.code, kind: next.kind, ddoName: next.ddoName.trim(), ddoDesignation: next.ddoDesignation.trim() });
+    Object.assign(current, { name: next.name.trim(), code: next.code, kind: next.kind, ddoName: next.ddoName.trim(), ddoDesignation: next.ddoDesignation.trim(), ddoUserId: next.ddoUserId || undefined });
     audit(store, user, 'department', id, 'update', `Updated ${current.name}`);
     store.save();
     return c.json(deptRows());

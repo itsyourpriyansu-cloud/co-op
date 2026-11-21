@@ -42,7 +42,7 @@ import { fail } from './errors';
 import { collectionWorkItems } from './collections';
 import { depositWorkItems } from './deposits';
 import { assess, inputOf, loanContext, loanDetail, staffCanSee, suretyCards } from './loans';
-import type { Db, Store } from './store';
+import { ddoInCharge, type Db, type Store } from './store';
 
 const DEMO_OTP = '123456';
 const SURETY_DECLARATION =
@@ -64,7 +64,7 @@ function stageOwner(db: Db, l: Loan): Actor | undefined {
   if (!role || role === 'MEMBER') return undefined;
   if (role === 'DDO') {
     const m = db.members.find((x) => x.id === l.memberId);
-    const login = db.staffUsers.find((u) => u.role === 'DDO' && u.departmentId === m?.departmentId);
+    const login = ddoInCharge(db, m?.departmentId);
     const dept = db.departments.find((d) => d.id === m?.departmentId);
     return login ? { id: login.id, name: login.name, role: 'DDO', departmentId: login.departmentId! } : { id: `ddo-${dept?.id}`, name: dept?.ddoName ?? 'DDO', role: 'DDO', ...(dept ? { departmentId: dept.id } : {}) };
   }
