@@ -27,7 +27,7 @@ export function SuretyRecoveryPanel({ loanId }: { loanId: string }) {
       {p.recoveries.length ? (
         <ul className="flex flex-col gap-2.5">
           {p.recoveries.map((r) => (
-            <li key={r.id} className="flex items-start justify-between gap-3">
+            <li key={r.id} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-0.5">
               <span className="text-label text-fg">
                 {r.suretyName}
                 <span className="block text-caption text-fg-secondary">
@@ -35,7 +35,7 @@ export function SuretyRecoveryPanel({ loanId }: { loanId: string }) {
                   {r.demandedCycle ? ` · on the ${formatCycle(r.demandedCycle)} demand` : ''}
                 </span>
               </span>
-              <span className="text-right text-caption text-fg-secondary">{r.status === 'OPEN' ? `${formatINR(r.due)} due` : r.closedReason === 'BORROWER_PAID' ? 'Closed: borrower paid' : 'Paid'}</span>
+              <span className="text-caption text-fg-secondary">{r.status === 'OPEN' ? `${formatINR(r.due)} due` : r.closedReason === 'BORROWER_PAID' ? 'Closed: borrower paid' : 'Paid'}</span>
             </li>
           ))}
           <li className="text-caption text-fg-tertiary">Raised by {p.recoveries[0]!.raisedByName} · {formatDisplayDateTime(p.recoveries[0]!.raisedOn)}</li>
@@ -48,7 +48,7 @@ export function SuretyRecoveryPanel({ loanId }: { loanId: string }) {
           {p.eligible && (
             <ul className="flex flex-col gap-1.5">
               {p.shares.map((s) => (
-                <li key={s.memberId} className="flex justify-between text-label text-fg">
+                <li key={s.memberId} className="flex flex-wrap justify-between gap-x-4 text-label text-fg">
                   <span>
                     {s.name} <span className="text-caption text-fg-tertiary">({s.generalNo})</span>
                   </span>

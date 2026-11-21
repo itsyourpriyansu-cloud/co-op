@@ -175,7 +175,7 @@ export function DemandSheetPage() {
                                       {i + 1}. {c.label}
                                       {c.loanNo ? <span className="text-fg-tertiary"> · {c.loanNo}</span> : null}
                                     </span>
-                                    <span className="tabular text-caption">
+                                    <span className="tabular whitespace-nowrap text-caption">
                                       {posted ? (
                                         <>
                                           <span className={c.allocated < c.amount ? 'text-danger-fg' : 'text-success-fg'}>{formatINR(c.allocated)}</span>

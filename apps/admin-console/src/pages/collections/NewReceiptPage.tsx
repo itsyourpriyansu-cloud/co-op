@@ -187,7 +187,7 @@ export function NewReceiptPage() {
               <div className="divide-y divide-line-subtle">
                 {dues.data.arrears.map((a) => (
                   <div key={a.cycle} className="px-5 py-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3">
                       <p className="text-label text-fg">{cycleLabel(a.cycle)}</p>
                       <Money value={a.unpaid + a.penal} tone="debit" className="text-label" />
                     </div>
@@ -215,7 +215,7 @@ export function NewReceiptPage() {
                       )}
                       {a.penalWaived ? <li className="text-caption text-fg-tertiary">Penal waived so far: {formatINR(a.penalWaived)}</li> : null}
                       {a.components.filter((c) => c.unpaid > 0).map((c, i) => (
-                        <li key={i} className="flex justify-between text-caption text-fg-secondary">
+                        <li key={i} className="flex justify-between gap-3 text-caption text-fg-secondary">
                           <span>{c.label}</span>
                           <span className="tabular">{formatINR(c.unpaid)}</span>
                         </li>
@@ -224,7 +224,7 @@ export function NewReceiptPage() {
                   </div>
                 ))}
                 {dues.data.shareCapitalDue > 0 && (
-                  <div className="flex items-center justify-between px-5 py-3">
+                  <div className="flex items-center justify-between gap-3 px-5 py-3">
                     <p className="text-label text-fg">Share capital (first demand)</p>
                     <Money value={dues.data.shareCapitalDue} tone="debit" className="text-label" />
                   </div>
@@ -238,7 +238,7 @@ export function NewReceiptPage() {
               <p className="text-caption-strong text-brand-text">This receipt pays</p>
               <ul className="mt-2 space-y-1">
                 {preview.map((p, i) => (
-                  <li key={i} className="flex justify-between text-caption text-fg">
+                  <li key={i} className="flex justify-between gap-3 text-caption text-fg">
                     <span>
                       {cycleLabel(p.cycle)} · {p.label}
                       {p.loanNo ? ` · ${p.loanNo}` : ''}

@@ -1,6 +1,6 @@
 # 18 · Design tokens and components (as built)
 
-> Version: 1.1 · Last updated: 2026-11-20 · Written from the code in `packages/design-tokens`, `apps/admin-console/src/components` and (until D-138) `apps/member-app/src/ui`. **The phone kit now follows `docs/25-mobile-design-system.md` (Astryx, D-138); this doc stays the source for the Admin Console.**
+> Version: 1.2 · Last updated: 2026-11-21 · Written from the code in `packages/design-tokens`, `apps/admin-console/src/components` and (until D-138) `apps/member-app/src/ui`. **The phone kit now follows `docs/25-mobile-design-system.md` (Astryx, D-138); this doc stays the source for the Admin Console.**
 > Design intent and visual rules live in `docs/12-design-system.md`. This doc describes what was actually built and how to use it.
 > The living version is the console's **Design System** page (`/design`, Super Admin only).
 
@@ -93,6 +93,9 @@ Blend V2 components are used as they are: `ButtonV2`, `TagV2`, `AlertV2`, `Table
 | `StatusTag` | §6 |
 | `RuleCheckList` | Shows each eligibility or business-rule outcome with its `BR-` id, never a bare "invalid" |
 | `ViewState` | The ten-state contract (docs/19 §3) |
+| `PasswordInput` | Every password field: Blend `TextInputV2` with a Show / Hide eye (D-144) |
+
+D-144 also: the authenticator code uses Blend `OTPInputV2` (six boxes, edges in the tertiary text colour for 3:1+). A label–value row that may hold a long value is `flex flex-wrap justify-between` with no `text-right`, so the value drops under its label when it does not fit; every `<dd>` breaks long values (`index.css`). Steppers share the width equally and wrap titles.
 
 ### Member App (`apps/member-app/src/ui`)
 

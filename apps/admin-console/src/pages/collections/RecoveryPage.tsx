@@ -214,7 +214,7 @@ export function RecoveryPage() {
                             {i + 1}. {comp.label}
                             {comp.loanNo ? <span className="text-fg-tertiary"> · {comp.loanNo}</span> : null}
                           </span>
-                          <span className="tabular text-caption">
+                          <span className="tabular whitespace-nowrap text-caption">
                             <span className={c.allocated < c.amount ? 'text-danger-fg' : 'text-success-fg'}>{formatINR(c.allocated)}</span>
                             <span className="text-fg-tertiary"> / {formatINR(c.amount)}</span>
                           </span>

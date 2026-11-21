@@ -439,9 +439,9 @@ export function LoanDetailPage() {
                           ['President', l.signOffs?.president],
                         ] as Array<[string, { byName: string; at: string } | undefined]>
                       ).map(([label, so]) => (
-                        <li key={label} className="flex items-start justify-between gap-3">
+                        <li key={label} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                           <span className={cn('text-label', so ? 'text-fg' : 'text-fg-tertiary')}>{label}</span>
-                          <span className="text-right text-caption text-fg-secondary">{so ? `${so.byName} · ${formatDisplayDateTime(so.at)}` : '—'}</span>
+                          <span className="text-caption text-fg-secondary">{so ? `${so.byName} · ${formatDisplayDateTime(so.at)}` : '—'}</span>
                         </li>
                       ))}
                     </ol>

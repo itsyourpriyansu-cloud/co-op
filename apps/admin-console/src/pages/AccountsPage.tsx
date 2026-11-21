@@ -300,15 +300,15 @@ function YearEnd() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Income and expenses" subtitle={s.closed ? 'As closed' : 'So far this year'}>
           <dl className="flex flex-col gap-1.5 text-body">
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-3">
               <dt>Income</dt>
               <dd className="tabular">{formatINR(s.income)}</dd>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-3">
               <dt>Expenses</dt>
               <dd className="tabular">{formatINR(s.expense)}</dd>
             </div>
-            <div className="flex justify-between border-t border-line-subtle pt-1.5 text-label">
+            <div className="flex justify-between gap-3 border-t border-line-subtle pt-1.5 text-label">
               <dt>{s.surplus >= 0 ? 'Surplus' : 'Deficit'}</dt>
               <dd className="tabular">{formatINR(Math.abs(s.surplus))}</dd>
             </div>
@@ -329,12 +329,12 @@ function YearEnd() {
             <>
               <dl className="flex flex-col gap-1.5 text-body">
                 {(['SHARE_DEPOSIT', 'CRD', 'SRDS'] as const).map((k) => (
-                  <div key={k} className="flex justify-between">
+                  <div key={k} className="flex justify-between gap-3">
                     <dt>{k === 'SHARE_DEPOSIT' ? 'Share deposit' : k}</dt>
                     <dd className="tabular">{formatINR(ip.totals[k])}</dd>
                   </div>
                 ))}
-                <div className="flex justify-between border-t border-line-subtle pt-1.5 text-label">
+                <div className="flex justify-between gap-3 border-t border-line-subtle pt-1.5 text-label">
                   <dt>{new Set(ip.rows.map((r) => r.memberId)).size} members</dt>
                   <dd className="tabular">{formatINR(ip.totals.all)}</dd>
                 </div>
