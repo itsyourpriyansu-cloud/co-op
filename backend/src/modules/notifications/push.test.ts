@@ -2,7 +2,7 @@ import { createHash, createVerify, generateKeyPairSync } from 'node:crypto';
 import type { Session } from '@tgs/types';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { bearer, reseed, signInAs } from '../../../tests/helpers/auth';
 import { buildTestApp } from '../../../tests/helpers/test-app';
 import { loadEnv } from '../../config/env';
@@ -38,6 +38,27 @@ describe('push notifications and store-release basics (G4)', () => {
     dead = true;
     await app.notifications.notify(member.user.id, 'fd.maturing', { fdrNo: 'FDR-2', maturityDate: '01 Dec 2026' });
     expect(await app.db.select().from(pushTokens).where(eq(pushTokens.token, TOKEN))).toHaveLength(0);
+  });
+
+  it('office replies, composer messages and staff handoffs reach the phone too', async () => {
+    const STAFF_TOKEN = 'ExponentPushToken[staffstaffstaff123]';
+    const admin = await signInAs(app, 'stf-admin');
+    await call('POST', '/me/push-token', member, { token: TOKEN, platform: 'ios' });
+    await call('POST', '/me/push-token', accountant, { token: STAFF_TOKEN, platform: 'ios' });
+    const sent: PushMessage[] = [];
+    app.notifications.push = { send: async (ms) => (sent.push(...ms), ms.map((m) => ({ to: m.to, ok: true, unregistered: false }))) };
+    const titlesTo = (to: string) => sent.filter((m) => m.to === to).map((m) => m.title);
+
+    const ticket = (await call('POST', '/me/support/tickets', member, { subject: 'Interest certificate', message: 'Please send my interest certificate.' })).json();
+    await call('POST', `/support/tickets/${ticket.id}/reply`, accountant, { text: 'Sent to your email today.' });
+    expect(titlesTo(TOKEN)).toContain('Reply from the society office');
+
+    await call('POST', '/messages', accountant, { channel: 'WHATSAPP', audience: { kind: 'MEMBER', memberId: member.user.id }, title: 'Hello {name}', body: 'The office is closed on Friday.' });
+    await vi.waitFor(() => expect(titlesTo(TOKEN).some((t) => t.startsWith('Hello '))).toBe(true));
+
+    expect((await call('POST', `/members/${member.user.id}/retirement-change`, admin, { newDor: '2043-03-31', reason: 'Service register entry corrected' })).statusCode).toBe(200);
+    expect(titlesTo(STAFF_TOKEN)).toEqual(expect.arrayContaining(['Member question', 'Date of retirement change waiting']));
+    await call('DELETE', '/me/push-token', accountant, { token: STAFF_TOKEN });
   });
 
   it('the token moves to whoever signs in on the phone, and sign-out removes it', async () => {

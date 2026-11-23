@@ -1,4 +1,5 @@
 // ST-41m Generate demand (J-10 step 1): month and departments, a preview per department, then Generate.
+// D-147: with one DDO for all departments, the same preview generates one sheet for every department.
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -22,11 +23,12 @@ export default function GenerateDemand() {
   useEffect(() => setSelected(open.map((r) => r.departmentId)), [open]);
   const chosen = open.filter((r) => selected.includes(r.departmentId));
   const total = chosen.reduce((s, r) => s + r.total, 0);
+  const single = Boolean(preview.data?.singleSheet);
   const a = useAction();
   const canGenerate = overview.data?.canGenerate !== false;
 
   const generate = async () => {
-    if (!(await ask('Generate demand', `${chosen.length} sheet${chosen.length === 1 ? '' : 's'} for ${formatCycle(cycle)}, ${formatINR(total)} in all.`, 'Generate'))) return;
+    if (!(await ask('Generate demand', `${single ? `One sheet for ${chosen.length} departments` : `${chosen.length} sheet${chosen.length === 1 ? '' : 's'}`} for ${formatCycle(cycle)}, ${formatINR(total)} in all.`, 'Generate'))) return;
     const ok = await a.run(() => api.demand.generate(cycle, selected));
     if (ok) {
       if (router.canGoBack()) router.back();
@@ -42,9 +44,9 @@ export default function GenerateDemand() {
             footer: (
               <View style={{ gap: spacing[1.5] }}>
                 <Text type="supporting" weight="medium">
-                  {canGenerate ? `${chosen.length} of ${open.length} selected · ${formatINR(total)}` : 'Only the Accountant generates demand sheets.'}
+                  {canGenerate ? `${single ? `${chosen.length} departments on one sheet` : `${chosen.length} of ${open.length} selected`} · ${formatINR(total)}` : 'Only the Accountant generates demand sheets.'}
                 </Text>
-                <Button label={`Generate ${chosen.length} sheet${chosen.length === 1 ? '' : 's'}`} size="lg" fullWidth disabled={!chosen.length || !canGenerate || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void generate()} />
+                <Button label={single ? 'Generate one sheet for all departments' : `Generate ${chosen.length} sheet${chosen.length === 1 ? '' : 's'}`} size="lg" fullWidth disabled={!chosen.length || !canGenerate || a.busy || a.unconfirmed} loading={a.busy} onPress={() => void generate()} />
               </View>
             ),
           }
@@ -57,6 +59,7 @@ export default function GenerateDemand() {
       <Loaded q={preview} what="the preview">
         {(p) => (
           <>
+            {single && open.length ? <Banner status="info" heading="One sheet for all departments" description="One DDO handles every department, so these departments go on one demand sheet, listed department by department." /> : null}
             {p.insuranceMonth ? <Banner status="info" heading="Insurance month" description="This cycle collects the yearly insurance contribution." /> : null}
             {!open.length ? <Banner status="success" heading={`Every department is generated for ${formatCycle(cycle)}`} description="Open a sheet from the list to certify or post it." /> : null}
             {/* What will be generated first; the ones already done follow as single lines. */}
@@ -66,7 +69,14 @@ export default function GenerateDemand() {
                   <RecordCard key={r.departmentId} title={r.departmentName} subtitle={r.warnings.join(' ') || 'Already generated'} amount={formatINR(r.total)} />
                 ) : (
                   <View key={r.departmentId} style={{ gap: spacing[1.5], padding: spacing[4] }}>
-                    <CheckboxInput checked={selected.includes(r.departmentId)} onChange={(v) => setSelected((s) => (v ? [...s, r.departmentId] : s.filter((x) => x !== r.departmentId)))} label={r.departmentName} description={`${r.members} members`} />
+                    {single ? (
+                      <View>
+                        <Text type="h4">{r.departmentName}</Text>
+                        <Text type="supporting" tone="secondary">{`${r.members} members`}</Text>
+                      </View>
+                    ) : (
+                      <CheckboxInput checked={selected.includes(r.departmentId)} onChange={(v) => setSelected((s) => (v ? [...s, r.departmentId] : s.filter((x) => x !== r.departmentId)))} label={r.departmentName} description={`${r.members} members`} />
+                    )}
                     {r.warnings.map((w) => (
                       <Text key={w} type="supporting" tone="warning">
                         {w}

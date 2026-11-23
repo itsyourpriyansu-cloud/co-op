@@ -9,7 +9,7 @@ type LineRow = typeof demandLines.$inferSelect;
 export type SheetHead = Omit<DemandSheet, 'lines'>;
 
 const toSheet = (r: SheetRow): SheetHead => ({ ...r.data, status: r.status, totalDemand: r.totalDemand, totalRecovered: r.totalRecovered, ...(r.supplementNo ? { supplementNo: r.supplementNo } : {}) });
-const toLine = (l: LineRow): DemandLine => ({ memberId: l.memberId, components: l.components, totalDemand: l.totalDemand, ...(l.recovered !== null ? { recovered: l.recovered } : {}), ...(l.entry ?? {}) });
+const toLine = (l: LineRow): DemandLine => ({ memberId: l.memberId, ...(l.departmentId ? { departmentId: l.departmentId } : {}), components: l.components, totalDemand: l.totalDemand, ...(l.recovered !== null ? { recovered: l.recovered } : {}), ...(l.entry ?? {}) });
 /** The line's P7b entry fields, or null when nothing was entered. */
 const entryOf = (l: DemandLine) => (l.deducted !== undefined || l.note || l.penal ? { ...(l.deducted !== undefined ? { deducted: l.deducted } : {}), ...(l.entrySource ? { entrySource: l.entrySource } : {}), ...(l.enteredByName ? { enteredByName: l.enteredByName } : {}), ...(l.enteredAt ? { enteredAt: l.enteredAt } : {}), ...(l.note ? { note: l.note } : {}), ...(l.penal ? { penal: l.penal } : {}) } : null);
 const toShare = (r: typeof shareAccounts.$inferSelect): ShareAccount => ({ memberId: r.memberId, numberOfShares: r.numberOfShares, shareCapital: r.shareCapital, shareDepositBalance: r.shareDepositBalance });
@@ -71,7 +71,7 @@ export class CollectionsRepository {
   async insertSheet(tx: Tx, s: DemandSheet): Promise<void> {
     const { lines, ...head } = s;
     await tx.insert(demandSheets).values({ id: s.id, cycle: s.cycle, departmentId: s.departmentId, status: s.status, totalDemand: s.totalDemand, totalRecovered: s.totalRecovered, supplementNo: s.supplementNo ?? 0, data: head });
-    for (let i = 0; i < lines.length; i += 500) await tx.insert(demandLines).values(lines.slice(i, i + 500).map((l) => ({ sheetId: s.id, memberId: l.memberId, cycle: s.cycle, components: l.components, totalDemand: l.totalDemand, recovered: l.recovered ?? null })));
+    for (let i = 0; i < lines.length; i += 500) await tx.insert(demandLines).values(lines.slice(i, i + 500).map((l) => ({ sheetId: s.id, memberId: l.memberId, departmentId: l.departmentId ?? null, cycle: s.cycle, components: l.components, totalDemand: l.totalDemand, recovered: l.recovered ?? null })));
   }
 
   /** D-124: every member already on a sheet of this cycle (optionally leaving one sheet out). */
@@ -83,7 +83,7 @@ export class CollectionsRepository {
   /** D-124 Regenerate: the sheet's member lines are rebuilt (only while nothing is recorded on them). */
   async replaceLines(tx: Tx, sheetId: string, cycle: string, lines: DemandLine[]): Promise<void> {
     await tx.delete(demandLines).where(eq(demandLines.sheetId, sheetId));
-    for (let i = 0; i < lines.length; i += 500) await tx.insert(demandLines).values(lines.slice(i, i + 500).map((l) => ({ sheetId, memberId: l.memberId, cycle, components: l.components, totalDemand: l.totalDemand, recovered: null })));
+    for (let i = 0; i < lines.length; i += 500) await tx.insert(demandLines).values(lines.slice(i, i + 500).map((l) => ({ sheetId, memberId: l.memberId, departmentId: l.departmentId ?? null, cycle, components: l.components, totalDemand: l.totalDemand, recovered: null })));
   }
 
   async saveSheetHead(tx: Tx, s: SheetHead): Promise<void> {
@@ -106,10 +106,10 @@ export class CollectionsRepository {
     return new Map(rows.map((r) => [r.memberId, Number(r.unpaid)]));
   }
 
-  /** Every line with its sheet's cycle, department and status, oldest cycle first (P8c reports). */
+  /** Every line with its sheet's cycle, department (the line's own on an all-departments sheet, D-147) and status, oldest cycle first (P8c reports). */
   async allLines(): Promise<Array<{ sheetId: string; departmentId: string; status: DemandSheet['status']; cycle: string; memberId: string; components: DemandLine['components']; totalDemand: number; recovered: number | null }>> {
     return this.db
-      .select({ sheetId: demandLines.sheetId, departmentId: demandSheets.departmentId, status: demandSheets.status, cycle: demandLines.cycle, memberId: demandLines.memberId, components: demandLines.components, totalDemand: demandLines.totalDemand, recovered: demandLines.recovered })
+      .select({ sheetId: demandLines.sheetId, departmentId: sql<string>`coalesce(${demandLines.departmentId}, ${demandSheets.departmentId})`, status: demandSheets.status, cycle: demandLines.cycle, memberId: demandLines.memberId, components: demandLines.components, totalDemand: demandLines.totalDemand, recovered: demandLines.recovered })
       .from(demandLines)
       .innerJoin(demandSheets, eq(demandSheets.id, demandLines.sheetId))
       .orderBy(asc(demandLines.cycle));

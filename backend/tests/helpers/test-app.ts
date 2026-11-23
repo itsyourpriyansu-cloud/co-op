@@ -8,7 +8,8 @@ import { createDb } from '../../src/db/client';
  * Pass `ready: false` to add probe routes before the app starts.
  */
 export async function buildTestApp(overrides: Record<string, string> = {}, { ready = true } = {}): Promise<FastifyInstance> {
-  const env = loadEnv({ ...process.env, ...overrides });
+  // Tests never send real email or WhatsApp, and sign in as demo personas, whatever the local .env says.
+  const env = loadEnv({ ...process.env, EMAIL_PROVIDER: 'simulated', WHATSAPP_PROVIDER: 'simulated', PUSH_PROVIDER: 'simulated', DEMO_MODE: 'true', ...overrides });
   const app = await buildApp({ env, logger: false });
   if (ready) await app.ready();
   return app;

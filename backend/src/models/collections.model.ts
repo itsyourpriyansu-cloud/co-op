@@ -26,9 +26,8 @@ export const demandSheets = pgTable(
   {
     id: text('id').primaryKey(),
     cycle: text('cycle').notNull(),
-    departmentId: text('department_id')
-      .notNull()
-      .references(() => departments.id),
+    /** A department id, or ALL_DEPARTMENTS ('ALL') for the one sheet of every department (D-147), so no foreign key. */
+    departmentId: text('department_id').notNull(),
     status: text('status').$type<DemandSheetStatus>().notNull(),
     totalDemand: money('total_demand').notNull(),
     totalRecovered: money('total_recovered').notNull(),
@@ -49,6 +48,8 @@ export const demandLines = pgTable(
     memberId: text('member_id')
       .notNull()
       .references(() => members.id),
+    /** D-147: the member's department for the cycle, on lines of an all-departments sheet only. */
+    departmentId: text('department_id').references(() => departments.id),
     cycle: text('cycle').notNull(),
     components: jsonb('components').$type<DemandComponent[]>().notNull(),
     totalDemand: money('total_demand').notNull(),

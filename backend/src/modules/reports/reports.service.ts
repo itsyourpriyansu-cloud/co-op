@@ -1,4 +1,5 @@
 import { calculateLeftoverService, formatCycle, formatDisplayDate, formatINR, fullMonthsBetween, loanDefaulter, loanUnpaid } from '@tgs/domain';
+import { ALL_DEPARTMENTS } from '@tgs/types';
 import type { Cycle, DefaulterNotice, DemandHead, ReportCell, ReportColumn, ReportDef, ReportFilterKey, ReportId, ReportOptions, ReportResult, SessionUser } from '@tgs/types';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
@@ -205,9 +206,18 @@ export class ReportsService {
           { key: 'unpaid', label: 'Unpaid', type: 'money', total: true },
           { key: 'rate', label: 'Collected', type: 'percent' },
         ];
-        const heads = (await this.app.collections.repo.allSheetHeads()).filter((s) => s.cycle === cycle && (!departmentId || s.departmentId === departmentId));
-        const rows = heads
-          .map((s) => ({ department: `${dept(s.departmentId)}${s.supplementNo ? ` (supplement ${s.supplementNo})` : ''}`, members: lines.filter((l) => l.sheetId === s.id).length, demand: s.totalDemand, recovered: s.totalRecovered, unpaid: s.totalDemand - s.totalRecovered, rate: s.totalDemand ? s.totalRecovered / s.totalDemand : 0 }) as Row)
+        const heads = (await this.app.collections.repo.allSheetHeads()).filter((s) => s.cycle === cycle && (!departmentId || s.departmentId === departmentId || s.departmentId === ALL_DEPARTMENTS));
+        // D-147: the one sheet for all departments is reported department by department, from its lines.
+        const parts = heads.flatMap((s) => {
+          if (s.departmentId !== ALL_DEPARTMENTS) return [{ s, departmentId: s.departmentId, members: lines.filter((l) => l.sheetId === s.id).length, demand: s.totalDemand, recovered: s.totalRecovered }];
+          const own = lines.filter((l) => l.sheetId === s.id && (!departmentId || l.departmentId === departmentId));
+          return [...new Set(own.map((l) => l.departmentId))].map((d) => {
+            const ls = own.filter((l) => l.departmentId === d);
+            return { s, departmentId: d, members: ls.length, demand: ls.reduce((t, l) => t + l.totalDemand, 0), recovered: s.status === 'RECOVERY_POSTED' ? ls.reduce((t, l) => t + (l.recovered ?? 0), 0) : 0 };
+          });
+        });
+        const rows = parts
+          .map(({ s, departmentId: d, members, demand, recovered }) => ({ department: `${dept(d)}${s.supplementNo ? ` (supplement ${s.supplementNo})` : ''}`, members, demand, recovered, unpaid: demand - recovered, rate: demand ? recovered / demand : 0 }) as Row)
           .sort((a, b) => Number(b.unpaid) - Number(a.unpaid));
         groups = [{ label: '', rows, subtotal: totalsOf(rows, columns) }];
         break;

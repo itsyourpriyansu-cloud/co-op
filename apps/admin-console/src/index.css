@@ -56,8 +56,10 @@
 [data-element='placeholder'] {
   color: var(--tgs-text-tertiary) !important;
 }
-/* Blend form hints (gray-500) and the titles of upcoming stepper steps (gray-400). */
+/* Blend form hints (gray-500), radio option descriptions (gray-400, 2.6:1) and the titles of upcoming
+   stepper steps (gray-400). */
 [data-element='hint-text'],
+[data-element='radio-description'],
 [id^='stepper-'][id$='-title'] {
   color: var(--tgs-text-tertiary) !important;
 }
@@ -79,8 +81,12 @@
 [data-empty-state] h2 + div {
   line-height: 1.43 !important;
 }
-/* Blend checkbox labels lose contrast in dark mode; use the primary text role in both modes. */
-[data-element='checkbox-label'][data-status='enabled'] {
+/* Blend checkbox labels, radio group headings (a <label id="…-label"> before the group's fieldset) and
+   radio option labels lose contrast in dark mode; use the primary text role in both modes. A disabled
+   group keeps Blend's muted colour. */
+[data-element='checkbox-label'][data-status='enabled'],
+label[id$='-label']:has(+ fieldset),
+fieldset:not(:disabled) [data-element='radio-label'] > label > span {
   color: var(--tgs-text-primary) !important;
 }
 /* A Blend select opened inside a side drawer (layers.drawer, 1100) must open above it, not behind it,

@@ -21,6 +21,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
 import { sessionOf } from '../../common/guards';
 import { businessCycle, businessNow, businessToday } from '../../common/utils/business-date';
+import { emailKindOf, type EmailParts } from '../../integrations/email-layout';
 import { createSenders, type MessageSender } from '../../integrations/messaging';
 import { expoPush, fcmPush, isExpoToken, parseServiceAccount, routedPush, simulatedPush, type PushSender } from '../../integrations/push';
 import type { DeliveryRow, NotificationsRepository, StoredNotification } from './notifications.repository';
@@ -126,6 +127,13 @@ export class NotificationsService {
     return { ok: true };
   }
 
+  /** Saves an in-app notification, then tells the recipient's open screens and phones (live update + push). */
+  private async deliver(n: StoredNotification, templateKey?: string): Promise<void> {
+    await this.repo.insert(n, templateKey);
+    await this.hub.publish({ recipientId: n.recipientId, id: n.id, title: n.title });
+    await this.pushTo(n.recipientId, n.title, n.body, n.link);
+  }
+
   /** Pushes never block or fail the action that caused them; a dead token is forgotten. */
   private async pushTo(userId: string, title: string, body: string, link?: string): Promise<void> {
     try {
@@ -159,10 +167,7 @@ export class NotificationsService {
       // D-145: with one DDO for all departments, only that DDO is told about DDO work.
       const single = owner === 'DDO' ? await this.app.departments.singleDdo() : undefined;
       for (const recipientId of single ? [single.id] : await this.repo.staffOfRole(owner, departmentId)) {
-        const n: StoredNotification = { id: newId('ntf'), recipientId, title, body, channel: 'IN_APP', createdAt, read: false, link, via: {} };
-        await this.repo.insert(n, 'work.stage');
-        await this.hub.publish({ recipientId, id: n.id, title });
-        await this.pushTo(recipientId, title, body, link);
+        await this.deliver({ id: newId('ntf'), recipientId, title, body, channel: 'IN_APP', createdAt, read: false, link, via: {} }, 'work.stage');
       }
     } catch (err) {
       this.app.log.warn({ err, link }, 'staff stage notification failed');
@@ -183,14 +188,14 @@ export class NotificationsService {
     const t = (await this.app.masters.templates()).find((x) => x.key === templateKey);
     if (!t) return undefined;
     const n: StoredNotification = { id: newId('ntf'), recipientId, title: fill(t.title, vars), body: fill(t.body, vars), channel: 'IN_APP', createdAt: await businessNow(this.app), read: false, ...(link ? { link } : {}), via: {} };
-    await this.repo.insert(n, templateKey);
-    await this.hub.publish({ recipientId, id: n.id, title: n.title });
-    await this.pushTo(recipientId, n.title, n.body, link);
+    await this.deliver(n, templateKey);
     const member = await this.app.members.byId(recipientId);
-    if (member) {
-      const on = { ...(await this.preferencesOf(member)).channels, ...(MANDATORY_TEMPLATES.has(templateKey) ? { WHATSAPP: true } : {}) };
+    // D-146: staff (e.g. the DDO's demand sheet) and applicants get WhatsApp / email too; members choose theirs.
+    const to = member ?? (await this.repo.contactOf(recipientId));
+    if (to) {
+      const on = { ...(member ? (await this.preferencesOf(member)).channels : { WHATSAPP: true, EMAIL: true }), ...(MANDATORY_TEMPLATES.has(templateKey) ? { WHATSAPP: true } : {}) };
       const channels = t.channels.filter((c): c is MessageChannel => (c === 'WHATSAPP' || c === 'EMAIL') && on[c]);
-      const q = await this.enqueue(member, channels, n.title, n.body, { notificationId: n.id }, undefined, channels.includes('WHATSAPP') ? opts.alsoTo : undefined);
+      const q = await this.enqueue({ id: recipientId, ...to }, channels, n.title, n.body, { notificationId: n.id }, undefined, channels.includes('WHATSAPP') ? opts.alsoTo : undefined);
       n.via = q.via;
       if (q.ids.length) {
         await this.repo.setVia(n.id, n.via);
@@ -204,7 +209,7 @@ export class NotificationsService {
   }
 
   /** Queues one send per channel; a channel without an address is skipped. */
-  private async enqueue(m: Member, channels: MessageChannel[], title: string, body: string, ref: { notificationId?: string; messageId?: string }, notBefore?: string, alsoTo?: string): Promise<{ via: Via; ids: string[] }> {
+  private async enqueue(m: { id: string; email?: string | null; mobile?: string | null }, channels: MessageChannel[], title: string, body: string, ref: { notificationId?: string; messageId?: string }, notBefore?: string, alsoTo?: string): Promise<{ via: Via; ids: string[] }> {
     const via: Via = {};
     const rows = channels.flatMap((channel) => {
       const to = channel === 'EMAIL' ? m.email : m.mobile;
@@ -216,9 +221,16 @@ export class NotificationsService {
     return { via, ids: rows.map((r) => r.id) };
   }
 
+  /** D-149: the kind, the person and the society for an email's HTML layout. */
+  private async emailParts(d: DeliveryRow): Promise<EmailParts> {
+    const [{ templateKey, name }, society] = await Promise.all([this.repo.emailContext(d), this.app.masters.society()]);
+    return { kind: emailKindOf(templateKey), society, ...(name ? { name } : {}) };
+  }
+
   /** One claimed send: the provider's answer, or a retry with backoff, or FAILED after the last try. */
   private async sendOne(d: DeliveryRow): Promise<DeliveryStatus> {
-    const res = await this.senders[d.channel].send({ channel: d.channel, to: d.to, title: d.title ?? '', body: d.body ?? '' }).catch((err: Error) => ({ status: 'FAILED' as const, provider: 'unknown', error: err.message, retryable: true, providerMessageId: undefined }));
+    const email = d.channel === 'EMAIL' ? await this.emailParts(d) : undefined;
+    const res = await this.senders[d.channel].send({ channel: d.channel, to: d.to, title: d.title ?? '', body: d.body ?? '', ...(email ? { email } : {}) }).catch((err: Error) => ({ status: 'FAILED' as const, provider: 'unknown', error: err.message, retryable: true, providerMessageId: undefined }));
     const retry = res.status === 'FAILED' && Boolean(res.retryable) && d.attempts < MAX_ATTEMPTS;
     const status: DeliveryStatus = retry ? 'QUEUED' : res.status;
     await this.repo.finish(d.id, { status, provider: res.provider, error: res.error ?? null, providerMessageId: res.providerMessageId ?? null, nextAttemptAt: retry ? new Date(Date.now() + BACKOFF_MS * 4 ** (d.attempts - 1)).toISOString() : null });
@@ -456,14 +468,23 @@ export class NotificationsService {
     const msg: OutboxMessage = { id: newId('msg'), at, byId: user.id, byName: user.name, channel: input.channel, audienceLabel: p.audienceLabel, recipients: p.recipients, skipped: p.skipped, title: input.title || 'Message from the society', body: input.body, ...(input.templateKey ? { templateKey: input.templateKey } : {}), status: 'QUEUED', ...(notBefore ? { scheduledFor: notBefore } : {}) };
     await this.repo.insertMessage(msg);
     const vars = await this.varsFor(p.send);
+    const sent: StoredNotification[] = [];
     for (const m of p.send) {
       const v = vars.get(m.id)!;
       const n: StoredNotification = { id: newId('ntf'), recipientId: m.id, title: fill(msg.title, v), body: fill(input.body, v), channel: 'IN_APP', createdAt: at, read: false, via: {} };
       n.via = (await this.enqueue(m, [input.channel], n.title, n.body, { notificationId: n.id, messageId: msg.id }, notBefore)).via;
       await this.repo.insert(n, input.templateKey);
+      await this.hub.publish({ recipientId: m.id, id: n.id, title: n.title });
+      sent.push(n);
     }
-    // The outbox sends in the background; GET /messages shows its progress.
-    if (!notBefore) this.kick();
+    // The outbox sends in the background; GET /messages shows its progress. Pushes too, so a big
+    // audience does not hold the reply; outside message hours no push wakes anyone (the note waits in the app).
+    if (!notBefore) {
+      this.kick();
+      void (async () => {
+        for (const n of sent) if (!this.closing) await this.pushTo(n.recipientId, n.title, n.body);
+      })();
+    }
     await this.app.audit.record(request, { action: 'send', entity: 'message', entityId: msg.id, summary: `${input.channel} to ${p.audienceLabel} (${p.recipients})` });
     return msg;
   }
@@ -495,7 +516,7 @@ export class NotificationsService {
     t.status = close ? 'CLOSED' : 'ANSWERED';
     t.updatedAt = at;
     await this.repo.saveTicket(t);
-    if (text) await this.repo.insert({ id: newId('ntf'), recipientId: t.memberId, title: 'Reply from the society office', body: `${t.subject}: ${text.slice(0, 120)}`, channel: 'IN_APP', createdAt: at, read: false, link: '/account/help', via: {} });
+    if (text) await this.deliver({ id: newId('ntf'), recipientId: t.memberId, title: 'Reply from the society office', body: `${t.subject}: ${text.slice(0, 120)}`, channel: 'IN_APP', createdAt: at, read: false, link: '/account/help', via: {} });
     await this.app.audit.record(request, { action: close ? 'close' : 'reply', entity: 'ticket', entityId: t.id, summary: `${close ? 'Closed' : 'Replied to'} "${t.subject}"` });
     return t;
   }

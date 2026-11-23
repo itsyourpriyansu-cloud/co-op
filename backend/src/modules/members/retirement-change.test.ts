@@ -1,11 +1,12 @@
 import { serviceRemaining } from '@tgs/domain';
 import type { MemberDetail, MemberHome, Session, WorkQueue } from '@tgs/types';
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bearer, reseed, signInAs } from '../../../tests/helpers/auth';
 import { buildTestApp } from '../../../tests/helpers/test-app';
 import { demoDataset } from '../../db/seed/dataset';
+import { notifications } from '../../models';
 
 // D-131: the date of retirement changes only through the Super Admin's request and the Accountant,
 // Secretary and President's approvals; members see their service left; probationers short of the
@@ -66,6 +67,9 @@ describe('service and retirement date (D-131)', () => {
     expect(done.retirementChange).toMatchObject({ status: 'APPROVED' });
     expect(done.retirementChange!.approvals.map((a) => a.role)).toEqual(['ACCOUNTANT', 'SECRETARY', 'PRESIDENT']);
     expect(done.serviceEvents[0]).toMatchObject({ type: 'RETIREMENT_DATE_CHANGED' });
+    // D-148: the member is told the new date.
+    const [note] = await app.db.select().from(notifications).where(and(eq(notifications.recipientId, lakshmi.id), eq(notifications.templateKey, 'member.dorChanged')));
+    expect(note?.body).toContain('31 Mar 2043');
     expect((await decide(president, 'approve')).json().code).toBe('INVALID_TRANSITION');
   });
 

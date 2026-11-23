@@ -2,6 +2,9 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildTestApp } from '../../tests/helpers/test-app';
 import { acsEmail } from './acs-email';
+import { society } from '@tgs/mock-data';
+import { SEAL_CID } from './email-layout';
+import { EMAIL_FOOTER, smtpEmail } from './smtp-email';
 import { toWhatsAppNumber, whatsAppCloud } from './whatsapp-cloud';
 
 // G5 (D-115): the real WhatsApp and email senders, against a fake fetch (no message leaves).
@@ -67,5 +70,29 @@ describe('one-time codes that cannot be sent (G5)', () => {
     } finally {
       app.notifications.senders.WHATSAPP = original;
     }
+  });
+});
+
+describe('SMTP email sender (D-146)', () => {
+  const opts = { host: 'smtp.example.org', port: 465, secure: true, user: 'office@example.org', password: 'x', from: 'TGSECCSL <office@example.org>' };
+  it('sends the subject and text with the society footer; a temporary refusal is retried, a hard one is not', async () => {
+    const sent: Array<Record<string, unknown>> = [];
+    const replies: Array<Error & { responseCode?: number }> = [Object.assign(new Error('busy'), { responseCode: 421 }), Object.assign(new Error('no such user'), { responseCode: 550 })];
+    const transport = { sendMail: async (mail: Record<string, unknown>) => (sent.length ? Promise.reject(replies.shift()) : (sent.push(mail), { messageId: '<m1@example.org>' })) } as never;
+    const s = smtpEmail({ ...opts, transport });
+    expect(await s.send({ channel: 'EMAIL', to: 'member@example.com', title: 'FD accepted', body: 'FD 12 is active.' })).toEqual({ status: 'SENT', provider: 'smtp', providerMessageId: '<m1@example.org>' });
+    expect(sent[0]).toMatchObject({ from: opts.from, to: 'member@example.com', subject: 'FD accepted' });
+    expect(sent[0]!.text).toBe('FD 12 is active.' + EMAIL_FOOTER);
+    expect(await s.send({ channel: 'EMAIL', to: 'a@b.c', title: 'x', body: 'x' })).toMatchObject({ status: 'FAILED', retryable: true });
+    expect(await s.send({ channel: 'EMAIL', to: 'a@b.c', title: 'x', body: 'x' })).toMatchObject({ status: 'FAILED', retryable: false, error: '550 no such user' });
+  });
+
+  it('sends the HTML layout with the seal attached inline when the message has its email parts (D-149)', async () => {
+    const sent: Array<Record<string, unknown>> = [];
+    const s = smtpEmail({ ...opts, transport: { sendMail: async (mail: Record<string, unknown>) => (sent.push(mail), { messageId: '<m2@example.org>' }) } as never });
+    await s.send({ channel: 'EMAIL', to: 'member@example.com', title: 'Loan repaid', body: 'Loan OL-1 is closed.', email: { kind: 'LOAN', name: 'Ravi', society } });
+    expect(String(sent[0]!.html)).toContain(`cid:${SEAL_CID}`);
+    expect(sent[0]!.attachments).toEqual([expect.objectContaining({ cid: SEAL_CID, contentType: 'image/png' })]);
+    expect(sent[0]!.text).toBe('Loan OL-1 is closed.' + EMAIL_FOOTER);
   });
 });

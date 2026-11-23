@@ -105,8 +105,10 @@ export class SettlementsService {
     if (Object.keys(fieldErrors).length) fail('VALIDATION_ERROR', 'Please check the highlighted fields.', { fieldErrors });
     const status = body.status as ExitStatus;
     const at = await businessNow(this.app);
+    let who = '';
     await withTransaction(this.app.db, async (tx) => {
       const m = (await this.app.members.repo.find(memberId, tx)) ?? fail('NOT_FOUND', 'Member not found.');
+      who = `${m.name} (${m.generalNo})`;
       if (m.status !== 'ACTIVE') fail('INVALID_TRANSITION', 'This member has already left.');
       const next: Member = { ...m, status };
       await this.app.members.repo.update(tx, next);
@@ -115,6 +117,8 @@ export class SettlementsService {
       await this.save(tx, { memberId: m.id, exit: { status, date: body.date!, ...(body.remarks?.trim() ? { remarks: body.remarks.trim() } : {}), byName: user.name, at }, status: 'OPEN' }, true);
       await this.app.audit.record(request, { action: 'member.exit', entity: 'member', entityId: m.id, summary: `${m.name} (${m.generalNo}) marked ${status.toLowerCase()} from ${formatDisplayDate(body.date!)}; final settlement opened` }, tx);
     });
+    // F5 / F6 (D-098): the Accountant posts the settlement.
+    await this.app.notifications.notifyStage('ACCOUNTANT', 'Final settlement waiting', `${who} was marked ${status.toLowerCase()} from ${formatDisplayDate(body.date!)}. Post the final settlement.`, `/members/${memberId}`);
     return this.view(user, memberId);
   }
 

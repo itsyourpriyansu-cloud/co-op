@@ -2,6 +2,8 @@ import type { DeliveryStatus, MessageChannel } from '@tgs/types';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Env } from '../config/env';
 import { acsEmail } from './acs-email';
+import type { EmailParts } from './email-layout';
+import { smtpEmail } from './smtp-email';
 import { whatsAppCloud } from './whatsapp-cloud';
 
 /**
@@ -16,6 +18,8 @@ export interface OutgoingMessage {
   body: string;
   /** G5: a one-time code; WhatsApp sends it with the authentication template. */
   otp?: string;
+  /** D-149: email only: the kind of message, the person and the society, for the HTML layout. */
+  email?: EmailParts;
 }
 
 export interface SendResult {
@@ -56,6 +60,11 @@ export function createSenders(log: FastifyBaseLogger, env: Env, fetchImpl: typeo
       env.WHATSAPP_PROVIDER === 'meta'
         ? whatsAppCloud({ phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID, token: env.WHATSAPP_TOKEN, apiVersion: env.WHATSAPP_API_VERSION, noticeTemplate: env.WHATSAPP_NOTICE_TEMPLATE, otpTemplate: env.WHATSAPP_OTP_TEMPLATE, language: env.WHATSAPP_LANGUAGE, fetchImpl })
         : simulatedSender(log, production, env.WHATSAPP_FROM),
-    EMAIL: env.EMAIL_PROVIDER === 'acs' ? acsEmail({ endpoint: env.ACS_ENDPOINT, from: env.EMAIL_FROM, clientId: env.AZURE_CLIENT_ID, fetchImpl }) : simulatedSender(log, production, env.EMAIL_FROM),
+    EMAIL:
+      env.EMAIL_PROVIDER === 'acs'
+        ? acsEmail({ endpoint: env.ACS_ENDPOINT, from: env.EMAIL_FROM, clientId: env.AZURE_CLIENT_ID, fetchImpl })
+        : env.EMAIL_PROVIDER === 'smtp'
+          ? smtpEmail({ host: env.SMTP_HOST, port: env.SMTP_PORT, secure: env.SMTP_SECURE, user: env.SMTP_USER, password: env.SMTP_PASSWORD, from: env.EMAIL_FROM })
+          : simulatedSender(log, production, env.EMAIL_FROM),
   };
 }

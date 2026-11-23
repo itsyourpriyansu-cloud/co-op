@@ -70,6 +70,7 @@ The console: redeploy the previous commit with **Deploy → Run workflow** on th
 | `JWT-SECRET` | `az keyvault secret set --vault-name $KV -n JWT-SECRET --value "$(openssl rand -base64 48)"`, then `az webapp restart -g $RG -n $APP` | Everyone signs in again |
 | Database password | `az postgres flexible-server update -g $RG -n $DB --admin-password '<new>'`, update `DATABASE-URL` in Key Vault, restart | Brief outage during restart |
 | `WHATSAPP-TOKEN` | New permanent token in Meta Business, `az keyvault secret set ... -n WHATSAPP-TOKEN`, restart | None |
+| `SMTP-PASSWORD` (only with `EMAIL_PROVIDER=smtp`, D-146) | New app password at the mail provider (Gmail: Google account → Security → App passwords), `az keyvault secret set ... -n SMTP-PASSWORD --value '<new>'`, restart, then revoke the old one | None; a failed email is retried |
 | `FCM-SERVICE-ACCOUNT` | Firebase → Service accounts → new private key, `az keyvault secret set ... -n FCM-SERVICE-ACCOUNT --file <key>.json`, restart, then delete the old key in Firebase | None |
 | `DATA-ENCRYPTION-KEY` | **Only if it may have leaked.** See below | Planned downtime (minutes) |
 

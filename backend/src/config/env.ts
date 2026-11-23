@@ -42,7 +42,7 @@ const EnvSchema = z.object({
   AZURE_STORAGE_CONTAINER: z.string().trim().default('files'),
   /** A user-assigned managed identity's client id; empty uses the system-assigned identity. */
   AZURE_CLIENT_ID: z.string().trim().default(''),
-  /** G1 (D-111): largest document upload (photo, ID card, order). 5 MB. */
+  /** G1 (D-111): largest document upload (photo, ID card, order). Default 2 MB (D-122). */
   DOCUMENT_MAX_BYTES: z.coerce.number().int().min(100_000).max(20_000_000).default(2 * 1024 * 1024),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).default(30),
@@ -78,8 +78,22 @@ const EnvSchema = z.object({
   /** G9 (D-121): any long random text, entered again in Meta's webhook setup so Meta can prove the URL. */
   WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().trim().default(''),
   // G5 (D-115): `acs` sends through Azure Communication Services with the managed identity.
-  EMAIL_PROVIDER: z.enum(['simulated', 'acs']).default('simulated'),
+  // D-146: `smtp` sends through any mail server (Gmail with an app password, or the society's domain mail).
+  EMAIL_PROVIDER: z.enum(['simulated', 'acs', 'smtp']).default('simulated'),
   ACS_ENDPOINT: z.string().trim().default(''),
+  SMTP_HOST: z.string().trim().default(''),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  /** true = TLS from the start (port 465); false = STARTTLS (port 587). */
+  SMTP_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  SMTP_USER: z.string().trim().default(''),
+  /** Gmail shows app passwords with spaces; the spaces are not part of it. */
+  SMTP_PASSWORD: z
+    .string()
+    .default('')
+    .transform((v) => v.replace(/\s+/g, '')),
   /** The sender address for society email (F-10). */
   EMAIL_FROM: z.string().trim().default(''),
   /**
@@ -122,6 +136,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   }
   if (raw.WHATSAPP_PROVIDER === 'meta' && !(raw.WHATSAPP_PHONE_NUMBER_ID && raw.WHATSAPP_TOKEN)) throw new Error('Invalid backend configuration: WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TOKEN are required when WHATSAPP_PROVIDER=meta.');
   if (raw.EMAIL_PROVIDER === 'acs' && !(raw.ACS_ENDPOINT && raw.EMAIL_FROM)) throw new Error('Invalid backend configuration: ACS_ENDPOINT and EMAIL_FROM are required when EMAIL_PROVIDER=acs.');
+  if (raw.EMAIL_PROVIDER === 'smtp' && !(raw.SMTP_HOST && raw.SMTP_USER && raw.SMTP_PASSWORD && raw.EMAIL_FROM)) throw new Error('Invalid backend configuration: SMTP_HOST, SMTP_USER, SMTP_PASSWORD and EMAIL_FROM are required when EMAIL_PROVIDER=smtp.');
   if (raw.PUSH_PROVIDER === 'fcm') {
     if (!raw.FCM_SERVICE_ACCOUNT_JSON) throw new Error('Invalid backend configuration: FCM_SERVICE_ACCOUNT_JSON is required when PUSH_PROVIDER=fcm.');
     try {

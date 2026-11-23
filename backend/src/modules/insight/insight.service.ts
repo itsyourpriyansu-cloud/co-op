@@ -1,4 +1,5 @@
 import { calculateLeftoverService, isSearchable, daysBetweenDates as daysBetween, depositActionsFor, formatCycle, formatDisplayDate, formatINR, loanActionsFor, membershipActionsFor, PRIMARY_DEPOSIT_ACTION, PRIMARY_LOAN_ACTION, PROFILE_FIELDS, serviceTarget, inDepartmentScope } from '@tgs/domain';
+import { ALL_DEPARTMENTS } from '@tgs/types';
 import type { DashboardSummary, DepositAccount, Loan, LoanStatus, MembershipApplication, Permission, RoleDashboard, SearchHit, SessionUser, WorkflowEvent, WorkItem, WorkQueue } from '@tgs/types';
 import type { FastifyInstance } from 'fastify';
 import { fail } from '../../common/errors/app-error';
@@ -73,7 +74,7 @@ export class InsightService {
       a.members.pendingRetirementChanges(),
     ]);
     const memberById = new Map(members.map((m) => [m.id, m]));
-    const deptName = new Map(departments.map((d) => [d.id, d.name]));
+    const deptName = new Map([...departments.map((d) => [d.id, d.name] as [string, string]), [ALL_DEPARTMENTS, 'All departments'] as [string, string]]); // D-147
     const can = new Map(perms);
     return { today, cycle, now, settings, members, memberById, departments, deptName, products, loans, deposits, applications, changes, mandates, sheets, reports, retirementChanges, can: (p: Permission) => can.get(p) ?? false, inScope: (memberId: string) => !user.departmentId || memberById.get(memberId)?.departmentId === user.departmentId };
   }
@@ -224,7 +225,7 @@ export class InsightService {
     const lastRate = sum(lastSheets.map((s) => s.totalDemand)) ? sum(lastSheets.map((s) => s.totalRecovered)) / sum(lastSheets.map((s) => s.totalDemand)) : 0;
     const demand: NonNullable<RoleDashboard['demand']> = {
       cycle,
-      byStatus: (['NOT_GENERATED', 'GENERATED', 'CERTIFIED', 'SENT_TO_DDO', 'RECOVERY_POSTED'] as const).map((status) => ({ status, count: status === 'NOT_GENERATED' ? deptsInScope.filter((d) => !sheetsNow.some((s) => s.departmentId === d.id)).length : sheetsNow.filter((s) => s.status === status).length })),
+      byStatus: (['NOT_GENERATED', 'GENERATED', 'CERTIFIED', 'SENT_TO_DDO', 'RECOVERY_POSTED'] as const).map((status) => ({ status, count: status === 'NOT_GENERATED' ? deptsInScope.filter((d) => !sheetsNow.some((s) => s.departmentId === d.id || s.departmentId === ALL_DEPARTMENTS)).length : sheetsNow.filter((s) => s.status === status).length })),
       demand: sum(sheetsNow.map((s) => s.totalDemand)),
       recovered: sum(sheetsNow.map((s) => s.totalRecovered)),
       toPost: sheetsNow.filter((s) => s.status === 'SENT_TO_DDO').length,

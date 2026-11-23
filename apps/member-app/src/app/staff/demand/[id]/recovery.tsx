@@ -128,6 +128,7 @@ function Entry({ d }: { d: DemandSheetDetail }) {
           <Card>
             <Text type="supporting" tone="secondary">
               No. {sel.generalNo}
+              {sel.departmentId ? ` · ${d.byDepartment?.find((p) => p.departmentId === sel.departmentId)?.departmentName ?? ''}` : ''}
               {sel.enteredByName ? ` · ${sel.entrySource === 'PHYSICAL_SHEET' ? 'paper' : 'online'}, ${sel.enteredByName}` : ''}
             </Text>
             {sel.note ? (

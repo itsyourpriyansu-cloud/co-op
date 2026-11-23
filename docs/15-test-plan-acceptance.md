@@ -1,5 +1,6 @@
 # 15 · Test Plan & Acceptance Criteria
 
+> Version 0.8 · 2026-11-23 · `scenarios-backend.spec.ts`: one demand sheet for all departments in single-DDO mode, console and phone (D-147).
 > Version 0.7 · 2026-11-20 · `scenarios-more-backend.spec.ts`: profile change, top-up, early closure, recovery from sureties, receipt cancellation, FD payout and renewal, supplementary sheet, office voucher, year end (D-136). Every flow now has a UI test. **Run it on its own database:** create `tgseccsl_e2e`, migrate and seed it, then `E2E_DATABASE_URL=postgres://…/tgseccsl_e2e npm run e2e` (Playwright starts the backend on that database with demo mode on; without the variable it never resets a developer's data).
 > Version 0.6 · 2026-11-20 · `scenarios-backend.spec.ts`: staff add a member, users and one DDO per department, permissions, loan with bank account (D-132…D-134). Full suite 278 tests; run it on a separate database (`tgseccsl_e2e`) so a developer's data is kept.
 > Version 0.5 · 2026-10-25 (two apps + shared mock API) · §1 "as built" column and §5 updated for demo-ready (D-066)

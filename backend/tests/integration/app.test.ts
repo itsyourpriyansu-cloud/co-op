@@ -98,4 +98,11 @@ describe('configuration', () => {
   it('fails fast with a readable message', () => {
     expect(() => loadEnv({ DATABASE_URL: 'mysql://x' })).toThrow(/DATABASE_URL must be a postgres:\/\/ URL/);
   });
+
+  it('SMTP email needs its server, account and sender; the app password may keep the spaces Gmail shows (D-146)', () => {
+    const base = { DATABASE_URL: 'postgres://x', EMAIL_PROVIDER: 'smtp' };
+    expect(() => loadEnv(base)).toThrow(/SMTP_HOST, SMTP_USER, SMTP_PASSWORD and EMAIL_FROM are required/);
+    const env = loadEnv({ ...base, SMTP_HOST: 'smtp.gmail.com', SMTP_PORT: '465', SMTP_SECURE: 'true', SMTP_USER: 'a@example.org', SMTP_PASSWORD: 'abcd efgh ijkl mnop', EMAIL_FROM: 'a@example.org' });
+    expect(env).toMatchObject({ SMTP_PORT: 465, SMTP_SECURE: true, SMTP_PASSWORD: 'abcdefghijklmnop' });
+  });
 });

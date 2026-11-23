@@ -49,7 +49,7 @@ export default defineConfig({
       url: `${API_URL}/health`,
       // E2E_DATABASE_URL runs the backend on its own database with demo mode on (the suite resets it);
       // without it the backend uses backend/.env, where demo mode stays as set, so a developer's data is never reset.
-      env: { PORT: port(API_URL), MOCK_PERSIST: '0', ...(process.env.E2E_DATABASE_URL ? { DATABASE_URL: process.env.E2E_DATABASE_URL, DEMO_MODE: 'true' } : {}) },
+      env: { PORT: port(API_URL), MOCK_PERSIST: '0', EMAIL_PROVIDER: 'simulated', WHATSAPP_PROVIDER: 'simulated', PUSH_PROVIDER: 'simulated', ...(process.env.E2E_DATABASE_URL ? { DATABASE_URL: process.env.E2E_DATABASE_URL, DEMO_MODE: 'true' } : {}) },
       reuseExistingServer: true,
       timeout: 60_000,
     },

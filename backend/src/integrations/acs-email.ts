@@ -1,4 +1,5 @@
 import { managedIdentityToken, type IdentityOptions } from './azure-identity';
+import { emailHtml } from './email-layout';
 import { retryableHttp, SEND_TIMEOUT_MS, type MessageSender } from './messaging';
 
 /**
@@ -20,7 +21,7 @@ export function acsEmail({ endpoint, from, fetchImpl = fetch, ...identity }: Acs
       const res = await fetchImpl(url, {
         method: 'POST',
         headers: { authorization: `Bearer ${await token()}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ senderAddress: from, recipients: { to: [{ address: m.to }] }, content: { subject: m.title, plainText: `${m.body}\n\n— The Telangana Secretariat Employees Co-operative Credit Society Ltd.` } }),
+        body: JSON.stringify({ senderAddress: from, recipients: { to: [{ address: m.to }] }, content: { subject: m.title, plainText: `${m.body}\n\n— The Telangana Secretariat Employees Co-operative Credit Society Ltd.`, ...(m.email ? { html: emailHtml(m.title, m.body, m.email) } : {}) } }),
         signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
       });
       if (res.status === 202) return { status: 'SENT', provider: 'acs-email' };

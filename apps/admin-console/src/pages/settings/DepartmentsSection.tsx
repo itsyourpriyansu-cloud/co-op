@@ -38,7 +38,9 @@ export function DepartmentsSection({ canEdit }: { canEdit: boolean }) {
   /** The DDO login doing all departments' DDO work now (the server's choice or fallback). */
   const singleNow = single ? userOf(list.data?.find((d) => d.ddoUserId)?.ddoUserId) : undefined;
   const [setup, setSetup] = useState<{ ddoMode: 'PER_DEPARTMENT' | 'SINGLE'; singleDdoUserId: string } | null>(null);
-  const shown = setup ?? { ddoMode: single ? 'SINGLE' : 'PER_DEPARTMENT', singleDdoUserId: singleNow?.id ?? '' };
+  const picked = setup ?? { ddoMode: single ? 'SINGLE' : 'PER_DEPARTMENT', singleDdoUserId: singleNow?.id ?? '' };
+  // The first DDO login stays pre-selected even when the users list loads after the radio was clicked.
+  const shown = { ...picked, singleDdoUserId: picked.singleDdoUserId || (picked.ddoMode === 'SINGLE' ? (allDdos[0]?.id ?? '') : '') };
   const saveSetup = useSettingsSave((p: Partial<SocietySettings>) => api.settings.updateValues(p), 'DDO setup saved', ['departments']);
   const setupErrors = saveSetup.fieldErrors;
 

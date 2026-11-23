@@ -44,7 +44,7 @@ export default function Demand() {
                 <StatTile label={`Demand · ${formatCycle(o.cycle)}`} value={formatINRCompact(o.totals.demand)} sub={`${o.totals.generated} of ${o.rows.length} generated`} />
                 <StatTile label="Recovered" value={formatINRCompact(o.totals.recovered)} sub={o.totals.posted ? `${pct.toFixed(1)}% · ${o.totals.posted} posted` : 'Nothing posted yet'} />
                 <StatTile label="Short" value={formatINRCompact(o.totals.short)} sub={`${o.rows.reduce((s, r) => s + r.shortMembers, 0)} members short`} />
-                <StatTile label="Waiting on you" value={String(o.rows.filter((r) => r.myAction).length)} tone={o.rows.some((r) => r.myAction) ? 'warning' : 'neutral'} sub={o.totals.notGenerated ? `${o.totals.notGenerated} not generated` : 'All generated'} />
+                <StatTile label="Waiting on you" value={String(new Set(o.rows.filter((r) => r.myAction).map((r) => r.id)).size)} tone={o.rows.some((r) => r.myAction) ? 'warning' : 'neutral'} sub={o.totals.notGenerated ? `${o.totals.notGenerated} not generated` : 'All generated'} />
               </TileGrid>
               {!rows.length ? (
                 <EmptyState icon={FileSpreadsheet} title="No department matches this filter" />
@@ -52,9 +52,9 @@ export default function Demand() {
                 <Stack2>
                   {rows.map((r) => (
                     <RecordCard
-                      key={r.id ?? r.departmentId}
+                      key={`${r.id ?? ''}-${r.departmentId}`}
                       title={`${r.departmentName}${r.supplementNo ? ` · Supplement ${r.supplementNo}` : ''}`}
-                      subtitle={`DDO ${r.ddoName}`}
+                      subtitle={`DDO ${r.ddoName}${r.allDepartments ? ' · one sheet for all departments' : ''}`}
                       amount={r.demand ? formatINR(r.demand) : '—'}
                       tag={<StatusToken entity="demandSheet" status={r.status} audience="staff" size="xs" />}
                       {...(r.id ? { onPress: () => router.push(`/staff/demand/${r.id}`) } : {})}

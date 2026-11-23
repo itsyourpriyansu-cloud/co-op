@@ -297,6 +297,7 @@ export class MembersService {
       await this.repo.addEvent(tx, event);
       await this.app.audit.record(request, { action: 'transfer', entity: 'member', entityId: m.id, summary: `${m.name}: ${fromName} → ${to!.name} from ${formatCycle(effectiveCycle)}`, after: transfer }, tx);
     });
+    await this.app.notifications.notifyStage('DDO', 'Salary recovery mandate waiting', `${m.name} (${m.generalNo}) transferred to ${to!.name}. Agree the salary recovery mandate (BR-028).`, `/members/${m.id}`, { departmentId: to!.id });
     return this.toDetail(user, next);
   }
 
@@ -339,6 +340,7 @@ export class MembersService {
       await this.repo.insertRetirementChange(tx, change);
       await this.app.audit.record(request, { action: 'propose', entity: 'retirementChange', entityId: change.id, summary: `Proposed date of retirement ${formatDisplayDate(change.newDor)} for ${m.name} (now ${formatDisplayDate(m.dor)})`, after: change }, tx);
     });
+    await this.notifyRetirementApprover(m, change);
     return this.toDetail(user, m);
   }
 
@@ -367,7 +369,15 @@ export class MembersService {
       const what = decision === 'reject' ? 'Rejected' : done ? 'Approved (final)' : 'Approved';
       await this.app.audit.record(request, { action: decision, entity: 'retirementChange', entityId: change.id, summary: `${what} date of retirement ${formatDisplayDate(change.newDor)} for ${m.name}`, before: change, after: next }, tx);
     });
+    if (done) await this.app.notifications.notify(m.id, 'member.dorChanged', { newDor: formatDisplayDate(change.newDor), oldDor: formatDisplayDate(change.currentDor) }, '/profile');
+    if (next.status === 'PENDING') await this.notifyRetirementApprover(m, next);
+    else await this.app.notifications.notifyStage('SUPER_ADMIN', `Date of retirement change ${next.status === 'APPROVED' ? 'approved' : 'rejected'}`, `${m.name} (${m.generalNo}): ${formatDisplayDate(change.newDor)} was ${next.status === 'APPROVED' ? 'approved by the President and is now on the record' : `rejected by ${user.name}`}.`, `/members/${m.id}`);
     return this.toDetail(user, member);
+  }
+
+  /** D-131: the Accountant, then the Secretary, then the President is told it is their turn. */
+  private notifyRetirementApprover(m: Member, change: RetirementChange): Promise<void> {
+    return this.app.notifications.notifyStage(retirementChangeNextApprover(change.approvals.length), 'Date of retirement change waiting', `${m.name} (${m.generalNo}): ${formatDisplayDate(change.currentDor)} → ${formatDisplayDate(change.newDor)}. Approve or reject it.`, `/members/${m.id}`);
   }
 
   /** Pending corrections, for the work queue. */

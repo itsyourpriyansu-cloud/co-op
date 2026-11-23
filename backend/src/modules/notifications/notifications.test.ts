@@ -38,7 +38,8 @@ describe('notifications (P8a)', () => {
     await app.notifications.notifyStage('MEMBER', 'Not for staff', 'A member-owned stage tells no staff.', '/loans/ln-test');
     const after = (await call('GET', '/notifications', accountant)).json() as StaffNotifications;
     expect(after.items).toHaveLength(own.items.length + 1);
-    expect(after.items[0]).toMatchObject({ title: 'Loan waiting for you', link: '/loans/ln-test', read: false });
+    // Seeded notices carry 10:00–17:00 times on the demo date, so a new one is found, not assumed first.
+    expect(after.items.find((n) => n.link === '/loans/ln-test')).toMatchObject({ title: 'Loan waiting for you', read: false });
     expect(((await call('GET', '/notifications', cashier)).json() as StaffNotifications).items).toHaveLength(other.items.length);
   });
 
@@ -46,7 +47,7 @@ describe('notifications (P8a)', () => {
     const applicant = await signInAs(app, 'apl-ravi');
     const sent = await app.notifications.notify('apl-ravi', 'membership.stage', { name: 'Ravi', applicationNo: 'MEM-TEST', stage: 'review at the society office' }, '/tracker');
     const list = (await call('GET', '/me/notifications', applicant)).json() as MyNotifications;
-    expect(list.items[0]).toMatchObject({ id: sent!.id, read: false, link: '/tracker' });
+    expect(list.items.find((n) => n.id === sent!.id)).toMatchObject({ read: false, link: '/tracker' });
     expect(list.unread).toBeGreaterThan(0);
     expect((await call('POST', `/me/notifications/${sent!.id}/read`, applicant)).statusCode).toBe(200);
     await call('POST', '/me/notifications/read-all', applicant);
@@ -60,8 +61,9 @@ describe('notifications (P8a)', () => {
     expect(sent?.via.WHATSAPP).toBe('SIMULATED');
     const after = (await call('GET', '/me/notifications', member)).json() as MyNotifications;
     expect(after.unread).toBe(before.unread + 1);
-    expect(after.items[0]).toMatchObject({ id: sent!.id, read: false });
-    expect(after.items[0]!.alsoSentVia).toContain('WHATSAPP');
+    const mine = after.items.find((n) => n.id === sent!.id);
+    expect(mine).toMatchObject({ read: false });
+    expect(mine!.alsoSentVia).toContain('WHATSAPP');
     const rows = await app.db.execute(sql`select channel, status, provider from deliveries where notification_id = ${sent!.id}`);
     expect(rows.rows).toContainEqual({ channel: 'WHATSAPP', status: 'SIMULATED', provider: 'simulated' });
 
@@ -90,7 +92,7 @@ describe('notifications (P8a)', () => {
     const msg = res.json() as OutboxMessage;
     expect(((await call('GET', '/messages', accountant)).json() as OutboxMessage[])[0]!.id).toBe(msg.id);
     const mine = (await call('GET', '/me/notifications', member)).json() as MyNotifications;
-    expect(mine.items[0]).toMatchObject({ title: 'Hello', alsoSentVia: ['WHATSAPP'] });
+    expect(mine.items.find((n) => n.title === 'Hello')).toMatchObject({ alsoSentVia: ['WHATSAPP'] });
     // Defaulters and retiring audiences resolve on the backend's own data.
     expect((await call('POST', '/messages/preview', accountant, { ...input, audience: { kind: 'DEFAULTERS' } })).statusCode).toBe(200);
     expect((await call('POST', '/messages/preview', accountant, { ...input, audience: { kind: 'RETIRING', withinMonths: 12 } })).statusCode).toBe(200);
@@ -107,7 +109,7 @@ describe('notifications (P8a)', () => {
     expect(((await call('GET', '/support/tickets', accountant)).json() as StaffTicketRow[]).find((x) => x.id === t.id)?.member.id).toBe('mem-1103');
     const replied = (await call('POST', `/support/tickets/${t.id}/reply`, accountant, { text: 'Your FDR is ready at the counter.' })).json() as SupportTicket;
     expect(replied.status).toBe('ANSWERED');
-    expect(((await call('GET', '/me/notifications', member)).json() as MyNotifications).items[0]!.title).toBe('Reply from the society office');
+    expect(((await call('GET', '/me/notifications', member)).json() as MyNotifications).items.find((n) => n.title === 'Reply from the society office')).toMatchObject({ read: false, link: '/account/help' });
     await call('POST', `/support/tickets/${t.id}/reply`, accountant, { close: true });
     expect((await call('POST', `/support/tickets/${t.id}/reply`, accountant, { text: 'Again, hello' })).statusCode).toBe(409);
   });

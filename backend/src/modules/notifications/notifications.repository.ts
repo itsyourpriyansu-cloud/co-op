@@ -1,7 +1,7 @@
 import type { AppNotification, DeliveryStatus, MemberPreferences, MessageChannel, OutboxMessage, SupportTicket } from '@tgs/types';
 import { and, asc, count, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client';
-import { deliveries, memberPreferences, messages, notifications, pushTokens, staffUsers, supportTickets } from '../../models';
+import { deliveries, memberPreferences, members, membershipApplications, messages, notifications, pushTokens, staffUsers, supportTickets } from '../../models';
 
 type Via = Partial<Record<MessageChannel, DeliveryStatus>>;
 export type StoredNotification = AppNotification & { via: Via };
@@ -43,6 +43,25 @@ export class NotificationsRepository {
   async staffOfRole(role: string, departmentId?: string): Promise<string[]> {
     const where = and(eq(staffUsers.role, role as typeof staffUsers.$inferSelect.role), eq(staffUsers.status, 'ACTIVE'), role === 'DDO' && departmentId ? eq(staffUsers.departmentId, departmentId) : undefined);
     return (await this.db.select({ id: staffUsers.id }).from(staffUsers).where(where)).map((r) => r.id);
+  }
+
+  /** D-146: where a staff user or an applicant (not yet a member) gets WhatsApp and email. */
+  async contactOf(id: string): Promise<{ email?: string; mobile?: string } | undefined> {
+    const [staff] = await this.db.select({ email: staffUsers.email, mobile: staffUsers.mobile }).from(staffUsers).where(and(eq(staffUsers.id, id), eq(staffUsers.status, 'ACTIVE')));
+    if (staff) return { ...(staff.email ? { email: staff.email } : {}), ...(staff.mobile ? { mobile: staff.mobile } : {}) };
+    const [app] = await this.db.select({ data: membershipApplications.data }).from(membershipApplications).where(eq(membershipApplications.applicantId, id));
+    const p = app?.data.form?.personal;
+    return p ? { ...(p.email ? { email: p.email } : {}), ...(p.mobile ? { mobile: p.mobile } : {}) } : undefined;
+  }
+
+  /** D-149: what an email's layout needs: the template it came from (none for composed messages) and the person's name. */
+  async emailContext(d: DeliveryRow): Promise<{ templateKey?: string; name?: string }> {
+    const [n] = d.notificationId ? await this.db.select({ key: notifications.templateKey }).from(notifications).where(eq(notifications.id, d.notificationId)) : [];
+    const [m] = await this.db.select({ name: members.name }).from(members).where(eq(members.id, d.recipientId));
+    const [st] = m ? [] : await this.db.select({ name: staffUsers.name }).from(staffUsers).where(eq(staffUsers.id, d.recipientId));
+    const [app] = m || st ? [] : await this.db.select({ data: membershipApplications.data }).from(membershipApplications).where(eq(membershipApplications.applicantId, d.recipientId));
+    const name = m?.name ?? st?.name ?? app?.data.form?.personal?.fullName;
+    return { ...(n?.key ? { templateKey: n.key } : {}), ...(name ? { name } : {}) };
   }
 
   async pushTokensOf(userId: string): Promise<string[]> {

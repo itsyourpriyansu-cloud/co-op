@@ -11,6 +11,7 @@
 | R3 | WhatsApp Business number verified, `society_notice` and `login_code` templates approved, `WHATSAPP-TOKEN` set (F-10) | A test member receives a real code | |
 | R4 | Email sender works (Azure-managed or the society's domain) | Test email received | |
 | R4a | Push: Firebase project, `google-services.json` in EAS, `FCM-SERVICE-ACCOUNT` in Key Vault, `pushEnabled` deployed (D-135) | A test member gets a push on Android and on an iPhone, and tapping it opens the right screen | |
+| R4b | Email: `EMAIL_PROVIDER=smtp` with the society's domain mail (or `acs` on Azure), `SMTP-PASSWORD` in Key Vault, `EMAIL_FROM` the account's own address; the Gmail app password used in development revoked (D-146, D-149) | A test member with an email gets a receipt email in the designed layout, with the seal | |
 | R5 | Apps in the stores (internal / TestFlight at least), pointed at production, `minAppVersion` set | Store links; sign-in on an Android and an iPhone (docs/23 S10) | |
 | R6 | UAT signed off, no open P1 / P2 | `docs/uat-script.md` sign-off page | |
 | R7 | Staff trained, each with an account and authenticator | Attendance sheet; Admin → Users | |

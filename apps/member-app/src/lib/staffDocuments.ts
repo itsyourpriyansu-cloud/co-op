@@ -313,8 +313,18 @@ export function demandSheetHtml(d: DemandSheetDetail, heads: Array<{ head: Deman
   const sh = d.sheet;
   const posted = sh.status === 'RECOVERY_POSTED';
   const cols = heads.filter((h) => d.totals.heads[h.head]);
+  // D-147: an all-departments sheet prints department by department, each with its DDO and a subtotal.
+  const span = cols.length + 3 + (posted ? 2 : 0);
+  const part = (id?: string) => d.byDepartment?.find((p) => p.departmentId === id);
+  const row = (l: DemandSheetDetail['lines'][number]) =>
+    `<tr><td>${esc(l.generalNo)}</td><td>${esc(l.name)}<br><span class="small">${esc(l.designation)}</span></td>${cols.map((h) => `<td class="n">${l.heads[h.head] ? esc(formatINR(l.heads[h.head]!)) : '—'}</td>`).join('')}<td class="n"><b>${esc(formatINR(l.totalDemand))}</b></td>${posted ? `<td class="n">${esc(formatINR(l.recovered ?? 0))}</td><td class="n">${l.short ? esc(formatINR(l.short)) : '—'}</td>` : ''}</tr>`;
   const lines = d.lines
-    .map((l) => `<tr><td>${esc(l.generalNo)}</td><td>${esc(l.name)}<br><span class="small">${esc(l.designation)}</span></td>${cols.map((h) => `<td class="n">${l.heads[h.head] ? esc(formatINR(l.heads[h.head]!)) : '—'}</td>`).join('')}<td class="n"><b>${esc(formatINR(l.totalDemand))}</b></td>${posted ? `<td class="n">${esc(formatINR(l.recovered ?? 0))}</td><td class="n">${l.short ? esc(formatINR(l.short)) : '—'}</td>` : ''}</tr>`)
+    .map((l, i) => {
+      const p = part(l.departmentId);
+      const head = p && d.lines[i - 1]?.departmentId !== l.departmentId ? `<tr><td colspan="${span}"><b>${esc(p.departmentName)}</b> <span class="small">· ${p.members} members · DDO ${esc(p.ddoName)}, ${esc(p.ddoDesignation)}</span></td></tr>` : '';
+      const sub = p && d.lines[i + 1]?.departmentId !== l.departmentId ? `<tr><td colspan="2"><b>Subtotal · ${esc(p.departmentName)}</b></td>${cols.map((h) => `<td class="n"><b>${esc(formatINR(p.heads[h.head] ?? 0))}</b></td>`).join('')}<td class="n"><b>${esc(formatINR(p.demand))}</b></td>${posted ? `<td class="n"><b>${esc(formatINR(p.recovered))}</b></td><td class="n"><b>${esc(formatINR(p.short))}</b></td>` : ''}</tr>` : '';
+      return `${head}${row(l)}${sub}`;
+    })
     .join('');
   const totals = `<tr><td colspan="2"><b>Total</b></td>${cols.map((h) => `<td class="n"><b>${esc(formatINR(d.totals.heads[h.head] ?? 0))}</b></td>`).join('')}<td class="n"><b>${esc(formatINR(d.totals.demand))}</b></td>${posted ? `<td class="n"><b>${esc(formatINR(d.totals.recovered))}</b></td><td class="n"><b>${esc(formatINR(d.totals.short))}</b></td>` : ''}</tr>`;
   const body = `<h2>DEMAND · ${esc((d.department?.name ?? '').toUpperCase())} · ${esc(formatCycle(sh.cycle).toUpperCase())}${sh.supplementNo ? ` · SUPPLEMENT ${sh.supplementNo}` : ''}</h2>

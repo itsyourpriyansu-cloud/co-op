@@ -17,7 +17,15 @@ import { spacing } from '@/theme';
 function csvRows(d: DemandSheetDetail) {
   const heads = HEAD_COLUMNS.filter((h) => d.totals.heads[h.head]);
   const posted = d.sheet.status === 'RECOVERY_POSTED';
-  return [['General No.', 'Name', 'Designation', ...heads.map((h) => h.label), 'Total demand', ...(posted ? ['Recovered', 'Short'] : [])], ...d.lines.map((l) => [l.generalNo, l.name, l.designation, ...heads.map((h) => (l.heads[h.head] ?? 0) / 100), l.totalDemand / 100, ...(posted ? [(l.recovered ?? 0) / 100, (l.short ?? 0) / 100] : [])]), ['', 'Total', '', ...heads.map((h) => (d.totals.heads[h.head] ?? 0) / 100), d.totals.demand / 100, ...(posted ? [d.totals.recovered / 100, d.totals.short / 100] : [])]];
+  // D-147: an all-departments sheet gets a Department column and a subtotal per department.
+  const parts = d.byDepartment;
+  const dept = (id?: string) => (parts ? [parts.find((p) => p.departmentId === id)?.departmentName ?? ''] : []);
+  return [
+    [...(parts ? ['Department'] : []), 'General No.', 'Name', 'Designation', ...heads.map((h) => h.label), 'Total demand', ...(posted ? ['Recovered', 'Short'] : [])],
+    ...d.lines.map((l) => [...dept(l.departmentId), l.generalNo, l.name, l.designation, ...heads.map((h) => (l.heads[h.head] ?? 0) / 100), l.totalDemand / 100, ...(posted ? [(l.recovered ?? 0) / 100, (l.short ?? 0) / 100] : [])]),
+    ...(parts ?? []).map((p) => [p.departmentName, '', `Subtotal · ${p.members} members`, '', ...heads.map((h) => (p.heads[h.head] ?? 0) / 100), p.demand / 100, ...(posted ? [p.recovered / 100, p.short / 100] : [])]),
+    [...(parts ? [''] : []), '', 'Total', '', ...heads.map((h) => (d.totals.heads[h.head] ?? 0) / 100), d.totals.demand / 100, ...(posted ? [d.totals.recovered / 100, d.totals.short / 100] : [])],
+  ];
 }
 
 export default function DemandSheet() {
@@ -100,6 +108,16 @@ function Body({ d, refetching, refetch }: { d: DemandSheetDetail; refetching: bo
         </Card>
       </Section>
 
+      {d.byDepartment ? (
+        <Section title="By department">
+          <Card>
+            {d.byDepartment.map((p) => (
+              <MetadataListItem key={p.departmentId} label={`${p.departmentName} · ${p.members} members`} value={posted ? `${formatINR(p.recovered)} / ${formatINR(p.demand)}` : formatINR(p.demand)} />
+            ))}
+          </Card>
+        </Section>
+      ) : null}
+
       {sh.certified ? (
         <Text type="supporting" tone="secondary">
           Certified correct by {sh.certified.byName}, {formatDisplayDateTime(sh.certified.at)}
@@ -123,6 +141,7 @@ function Body({ d, refetching, refetch }: { d: DemandSheetDetail; refetching: bo
               }
             >
               <Text type="supporting" tone="secondary">
+                {l.departmentId ? `${d.byDepartment?.find((p) => p.departmentId === l.departmentId)?.departmentName ?? ''} · ` : ''}
                 {l.designation}
                 {posted ? ` · recovered ${formatINR(l.recovered ?? 0)}${l.short ? ` · short ${formatINR(l.short)}` : ''}` : ''}
               </Text>

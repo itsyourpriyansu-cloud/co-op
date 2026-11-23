@@ -10,6 +10,7 @@ import {
   PHONE_URL,
   phoneSettled,
   resetDemo,
+  shot,
   staffAs,
   tap,
   test,
@@ -219,5 +220,95 @@ test.describe('owner scenarios · backend', () => {
     ).toBeVisible();
     await expect(page.getByRole('button', { name: /^Print Repayment schedule/ })).toBeVisible();
     expect(PHONE_URL).toBeTruthy();
+  });
+});
+
+// D-147: one DDO for all departments → the month's demand is one sheet, shown department by department.
+test.describe('one demand sheet for all departments · backend (D-147)', () => {
+  type Part = { departmentId: string; departmentName: string; members: number; demand: number; recovered: number };
+  type Detail = { sheet: { id: string; departmentId: string; status: string; totalRecovered: number }; department: { name: string; ddoName: string }; byDepartment?: Part[]; totals: { demand: number } };
+  type Overview = { cycle: string; rows: Array<{ id?: string; departmentName: string; allDepartments?: boolean; demand: number }>; totals: { demand: number } };
+
+  test.beforeAll(async ({ request }) => {
+    await resetDemo(request);
+    const { token } = await apiToken(request, 'stf-admin', 'console');
+    await apiCall(request, 'PUT', '/settings/values', token, { ddoMode: 'SINGLE', singleDdoUserId: 'stf-ddo-fin' });
+  });
+  test.afterAll(async ({ request }) => {
+    const { token } = await apiToken(request, 'stf-admin', 'console');
+    await apiCall(request, 'PUT', '/settings/values', token, { ddoMode: 'PER_DEPARTMENT' });
+    await resetDemo(request);
+  });
+
+  test('console: generate one sheet, see it per department, certify, send to the one DDO, post', async ({ page, request }) => {
+    const { token } = await apiToken(request, 'stf-accountant', 'console');
+    await consoleAs(page, request, 'stf-accountant', '/demand-sheets/generate');
+    await expect(page.getByRole('heading', { name: 'One sheet for all departments' })).toBeVisible();
+    // No department is picked: every department without a sheet goes on the one sheet.
+    await expect(page.getByRole('checkbox')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Generate one sheet for all departments' }).click();
+    await page.waitForURL(/\/demand-sheets(\?|$)/);
+
+    // The index still lists each department, each opening the one sheet.
+    const o = await apiCall<Overview>(request, 'GET', '/demand', token);
+    const parts = o.rows.filter((r) => r.allDepartments);
+    expect(parts.length).toBeGreaterThan(1);
+    const id = parts[0]!.id!;
+    expect(id).toMatch(/-all$/);
+    expect(new Set(parts.map((r) => r.id))).toEqual(new Set([id]));
+    await expect(page.getByText(/on the one sheet for all departments/).first()).toBeVisible();
+    await page.getByText(parts[0]!.departmentName, { exact: true }).first().click();
+    await page.waitForURL(`**/demand-sheets/${id}`);
+
+    // The sheet: All departments, grouped by department with a subtotal each, totals adding up.
+    const d = await apiCall<Detail>(request, 'GET', `/demand/sheets/${id}`, token);
+    expect(d.sheet.departmentId).toBe('ALL');
+    expect(d.byDepartment!.reduce((s, p) => s + p.demand, 0)).toBe(d.totals.demand);
+    await expect(page.getByRole('heading', { name: /^All departments · / })).toBeVisible();
+    for (const p of d.byDepartment!) await expect(page.getByText(`Subtotal · ${p.departmentName}`, { exact: true })).toBeVisible();
+    await shot(page, 'd147-all-departments-sheet');
+
+    // The usual steps, once; the sheet goes to the one DDO.
+    await page.getByRole('button', { name: 'Certify' }).first().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Certify correct' }).click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await page.getByRole('button', { name: 'Send to DDO' }).first().click();
+    await expect(page.getByRole('dialog').getByText(/DDO for all departments, All departments/)).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Send' }).last().click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await page.getByRole('button', { name: 'Enter recovery' }).click();
+    await page.getByRole('button', { name: 'Import DDO statement' }).click();
+    await page.getByRole('button', { name: 'Approve and post' }).click();
+    await page.getByRole('button', { name: 'Yes, approve and post' }).click();
+    await page.waitForURL(`**/demand-sheets/${id}`, { timeout: 60_000 });
+    await expect(page.getByText(/recovery posted/)).toBeVisible({ timeout: 30_000 });
+
+    const posted = await apiCall<Detail>(request, 'GET', `/demand/sheets/${id}`, token);
+    expect(posted.sheet.status).toBe('RECOVERY_POSTED');
+    expect(posted.byDepartment!.reduce((s, p) => s + p.recovered, 0)).toBe(posted.sheet.totalRecovered);
+    // The one DDO opens it too.
+    const { token: ddo } = await apiToken(request, 'stf-ddo-fin', 'console');
+    expect((await apiCall<Detail>(request, 'GET', `/demand/sheets/${id}`, ddo)).sheet.id).toBe(id);
+  });
+
+  test('phone: the staff screens show the one sheet department by department', async ({ page, request }) => {
+    const { token } = await apiToken(request, 'stf-accountant', 'console');
+    // Runs on its own too: generate the one sheet if the console test has not.
+    let row = (await apiCall<Overview>(request, 'GET', '/demand', token)).rows.find((r) => r.allDepartments);
+    if (!row) {
+      await apiCall(request, 'POST', '/demand/generate', token, { cycle: (await apiCall<Overview>(request, 'GET', '/demand', token)).cycle });
+      row = (await apiCall<Overview>(request, 'GET', '/demand', token)).rows.find((r) => r.allDepartments);
+    }
+    const id = row!.id!;
+    const d = await apiCall<Detail>(request, 'GET', `/demand/sheets/${id}`, token);
+    await staffAs(page, request, 'stf-accountant', '/staff/demand');
+    await phoneSettled(page);
+    await expect(page.getByText(/one sheet for all departments/).first()).toBeVisible();
+    await page.goto(`${PHONE_URL}/staff/demand/${id}`);
+    await phoneSettled(page);
+    await expect(page.getByText(/^All departments · /).first()).toBeVisible();
+    await expect(page.getByText('By department')).toBeVisible();
+    await expect(page.getByText(`${d.byDepartment![0]!.departmentName} · ${d.byDepartment![0]!.members} members`)).toBeVisible();
+    await shot(page, 'd147-staff-sheet');
   });
 });

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { demandLines, demandSheets, paymentReports, receipts, shareAccounts } from '../../models';
 import { demoDataset } from './dataset';
 import type { Seeder } from '.';
@@ -18,6 +19,8 @@ export const collectionSeeders: Seeder[] = [
   {
     name: 'demand-sheets',
     run: async (tx) => {
+      // D-147: demand_sheets has no department key any more (the 'ALL' sheet), so the departments truncate no longer reaches it.
+      await tx.execute(sql`truncate ${demandSheets} cascade`);
       const sheets = demoDataset().demandSheets;
       await batch(
         sheets.map(({ lines: _l, ...s }) => ({ id: s.id, cycle: s.cycle, departmentId: s.departmentId, status: s.status, totalDemand: s.totalDemand, totalRecovered: s.totalRecovered, data: s })),

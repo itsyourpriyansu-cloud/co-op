@@ -100,6 +100,15 @@ describe('notification outbox (G9)', () => {
     expect(ok.body).toBe('12345');
   });
 
+  it('staff and applicants get their email and WhatsApp too, not only members (D-146)', async () => {
+    await app.db.execute(sql`update staff_users set email = 'ddo.office@example.org' where id = 'stf-accountant'`);
+    const staff = await app.notifications.notify('stf-accountant', 'demand.sent', { cycle: 'Nov 2026', department: 'Finance', members: 3, amount: '₹1.00' });
+    const sent = (await app.db.execute(sql`select channel, "to" from deliveries where notification_id = ${staff!.id}`)).rows;
+    expect(sent).toEqual([{ channel: 'EMAIL', to: 'ddo.office@example.org' }]);
+    const applicant = await app.notifications.notify('apl-ravi', 'membership.stage', { name: 'Ravi', applicationNo: 'MEM-TEST', stage: 'review' });
+    expect(Object.keys(applicant!.via)).toContain('WHATSAPP');
+  });
+
   it('the live stream needs a session and tells the open tab at once', async () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/notifications/stream' })).statusCode).toBe(401);
     const address = await app.listen({ port: 0, host: '127.0.0.1' });

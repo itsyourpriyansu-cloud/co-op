@@ -1,6 +1,7 @@
 // ST-42 Demand sheet detail (+ BR-030 certify & send to DDO). One row per member with a column per
 // head in recovery order (BR-011), totals, and — once posted — recovered / short with the allocation
 // per row. Export (CSV for Excel), Print (letterhead), Enter recovery → ST-43.
+// D-147: the one sheet for all departments lists members department by department, each with a subtotal.
 import { Fragment, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -25,10 +26,13 @@ type Drawer = 'certify' | 'sendToDdo' | null;
 function exportCsv(d: DemandSheetDetail) {
   const heads = HEAD_COLUMNS.filter((h) => d.totals.heads[h.head]);
   const posted = d.sheet.status === 'RECOVERY_POSTED';
+  const parts = d.byDepartment;
+  const dept = (id?: string) => (parts ? [parts.find((p) => p.departmentId === id)?.departmentName ?? ''] : []);
   const rows: Array<Array<string | number>> = [
-    ['General No.', 'Name', 'Designation', ...heads.map((h) => h.label), 'Total demand', ...(posted ? ['Recovered', 'Short'] : [])],
-    ...d.lines.map((l) => [l.generalNo, l.name, l.designation, ...heads.map((h) => (l.heads[h.head] ?? 0) / 100), l.totalDemand / 100, ...(posted ? [(l.recovered ?? 0) / 100, (l.short ?? 0) / 100] : [])]),
-    ['', 'Total', '', ...heads.map((h) => (d.totals.heads[h.head] ?? 0) / 100), d.totals.demand / 100, ...(posted ? [d.totals.recovered / 100, d.totals.short / 100] : [])],
+    [...(parts ? ['Department'] : []), 'General No.', 'Name', 'Designation', ...heads.map((h) => h.label), 'Total demand', ...(posted ? ['Recovered', 'Short'] : [])],
+    ...d.lines.map((l) => [...dept(l.departmentId), l.generalNo, l.name, l.designation, ...heads.map((h) => (l.heads[h.head] ?? 0) / 100), l.totalDemand / 100, ...(posted ? [(l.recovered ?? 0) / 100, (l.short ?? 0) / 100] : [])]),
+    ...(parts ?? []).map((p) => [p.departmentName, '', `Subtotal · ${p.members} members`, '', ...heads.map((h) => (p.heads[h.head] ?? 0) / 100), p.demand / 100, ...(posted ? [p.recovered / 100, p.short / 100] : [])]),
+    [...(parts ? [''] : []), '', 'Total', '', ...heads.map((h) => (d.totals.heads[h.head] ?? 0) / 100), d.totals.demand / 100, ...(posted ? [d.totals.recovered / 100, d.totals.short / 100] : [])],
   ];
   downloadCsv(`demand-${d.sheet.cycle}-${d.department?.code ?? d.sheet.departmentId}.csv`, rows);
 }
@@ -140,8 +144,22 @@ export function DemandSheetPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line-subtle">
-                    {d.lines.map((l) => (
+                    {d.lines.map((l, i) => {
+                      const part = l.departmentId ? d.byDepartment?.find((p) => p.departmentId === l.departmentId) : undefined;
+                      const first = part && d.lines[i - 1]?.departmentId !== l.departmentId;
+                      const last = part && d.lines[i + 1]?.departmentId !== l.departmentId;
+                      return (
                       <Fragment key={l.memberId}>
+                        {first && (
+                          <tr className="bg-surface-subtle">
+                            <td colSpan={span} className="px-5 py-2">
+                              <span className="text-label text-fg">{part.departmentName}</span>
+                              <span className="ml-2 text-caption text-fg-tertiary">
+                                {part.members} members · DDO on forms {part.ddoName}, {part.ddoDesignation}
+                              </span>
+                            </td>
+                          </tr>
+                        )}
                         <tr className={cn('cursor-pointer hover:bg-surface-subtle', (l.short ?? 0) > 0 && 'bg-danger-bg/40')} onClick={() => setOpen(open === l.memberId ? null : l.memberId)}>
                           <td className="px-3 py-2.5 text-fg-tertiary print:hidden">{open === l.memberId ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}</td>
                           <td className="tabular px-2 py-2.5 text-fg-secondary">{l.generalNo}</td>
@@ -191,8 +209,31 @@ export function DemandSheetPage() {
                             </td>
                           </tr>
                         )}
+                        {last && (
+                          <tr className="border-t border-line text-label text-fg">
+                            <td className="print:hidden" />
+                            <td className="px-2 py-2" colSpan={2}>
+                              Subtotal · {part.departmentName}
+                            </td>
+                            {heads.map((h) => (
+                              <td key={h.head} className="px-2 py-2 text-right">
+                                <Money value={part.heads[h.head] ?? 0} />
+                              </td>
+                            ))}
+                            <td className="px-2 py-2 text-right">
+                              <Money value={part.demand} />
+                            </td>
+                            {posted && (
+                              <td className="px-2 py-2 text-right">
+                                <Money value={part.recovered} />
+                              </td>
+                            )}
+                            {posted && <td className="px-4 py-2 text-right">{part.short ? <Money value={part.short} tone="debit" /> : '—'}</td>}
+                          </tr>
+                        )}
                       </Fragment>
-                    ))}
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-line bg-surface-subtle text-label text-fg">

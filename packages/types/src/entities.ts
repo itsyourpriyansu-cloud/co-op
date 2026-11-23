@@ -390,8 +390,13 @@ export interface DemandComponent {
   allocated: Paise;
 }
 
+/** D-147: `departmentId` of the one demand sheet for every department (DDO setup "One DDO for all departments"). */
+export const ALL_DEPARTMENTS = 'ALL';
+
 export interface DemandLine {
   memberId: string;
+  /** D-147: the member's department for the cycle; set only on lines of an all-departments sheet. */
+  departmentId?: string;
   components: DemandComponent[];
   totalDemand: Paise;
   recovered?: Paise;

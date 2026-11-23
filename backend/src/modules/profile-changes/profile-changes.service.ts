@@ -69,6 +69,7 @@ export class ProfileChangesService {
       return next;
     });
     if (!approve) await this.notify(member.id, 'profile.rejected', { fields: fieldLabels(saved), reason: body.remarks!.trim() });
+    else await this.notifyStaff('ACCOUNTANT', member, saved);
     return this.toRow(user, saved, member);
   }
 
@@ -125,6 +126,7 @@ export class ProfileChangesService {
       await this.repo.insert(tx, r);
       await this.app.audit.record(request, { action: 'request', entity: 'profileChange', entityId: r.id, summary: `${m.name} asked to change ${fieldLabels(r)}` }, tx);
     });
+    await this.notifyStaff(needsDdo(r) ? 'DDO' : 'ACCOUNTANT', m, r);
     return r;
   }
 
@@ -174,5 +176,10 @@ export class ProfileChangesService {
 
   private async notify(recipientId: string, templateKey: string, vars: Record<string, string>): Promise<void> {
     await notifyMember(this.app, recipientId, templateKey, vars, '/profile');
+  }
+
+  /** The DDO (to certify) or the Accountant (to decide) is told the request is waiting for them. */
+  private notifyStaff(role: 'DDO' | 'ACCOUNTANT', m: Member, r: ProfileChangeRequest): Promise<void> {
+    return this.app.notifications.notifyStage(role, 'Profile change waiting', `${m.name} (${m.generalNo}) asked to change ${fieldLabels(r)}. ${role === 'DDO' ? 'Certify it' : 'Approve or reject it'}.`, '/members/change-requests', { departmentId: m.departmentId });
   }
 }

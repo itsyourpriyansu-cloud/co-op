@@ -168,6 +168,7 @@ export function RecoveryPage() {
                               <p className="text-label text-fg">{r.name}</p>
                               <p className="tabular text-caption text-fg-tertiary">
                                 No. {r.generalNo}
+                                {r.departmentId ? ` · ${d.byDepartment?.find((p) => p.departmentId === r.departmentId)?.departmentName ?? ''}` : ''}
                                 {r.enteredByName ? ` · ${r.entrySource === 'PHYSICAL_SHEET' ? 'paper' : 'online'}, ${r.enteredByName}` : ''}
                               </p>
                               {r.note && <p className="text-caption text-warning-fg">{r.note}</p>}

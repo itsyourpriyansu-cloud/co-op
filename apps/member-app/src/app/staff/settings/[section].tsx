@@ -528,7 +528,9 @@ function Departments({ canEdit, title, settings }: { canEdit: boolean; title: st
   const allDdos = (users.data ?? []).filter((u) => u.role === 'DDO' && u.active !== false);
   const singleNow = single ? loginOf(list.data?.find((d) => d.ddoUserId)?.ddoUserId) : undefined;
   const [setup, setSetup] = useState<DdoSetup>();
-  const shown: DdoSetup = setup ?? { ddoMode: single ? 'SINGLE' : 'PER_DEPARTMENT', singleDdoUserId: singleNow?.id ?? '' };
+  const picked: DdoSetup = setup ?? { ddoMode: single ? 'SINGLE' : 'PER_DEPARTMENT', singleDdoUserId: singleNow?.id ?? '' };
+  // The first DDO login stays pre-selected even when the users list loads after the choice was made.
+  const shown: DdoSetup = { ...picked, singleDdoUserId: picked.singleDdoUserId || (picked.ddoMode === 'SINGLE' ? (allDdos[0]?.id ?? '') : '') };
   const pick = (ddoMode: DdoSetup['ddoMode']) => setSetup({ ddoMode, singleDdoUserId: shown.singleDdoUserId || allDdos[0]?.id || '' });
   const s = useAction();
   const saveSetup = () =>

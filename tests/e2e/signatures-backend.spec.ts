@@ -60,7 +60,9 @@ test.describe('signatures · backend', () => {
     // D-127: every staff role sets up an authenticator first.
     await expect(page.getByRole('heading', { name: 'Set up an authenticator app' })).toBeVisible();
     const secret = (await page.locator('p.select-all').textContent())!.replace(/\s/g, '');
-    await page.getByRole('textbox').fill(await generate({ secret }));
+    // Six code boxes (D-144): typing into the first moves on box by box.
+    await page.getByRole('textbox', { name: /digit 1 of 6/ }).click();
+    await page.keyboard.type(await generate({ secret }));
     await page.getByRole('button', { name: 'Confirm and sign in' }).click();
     await expect(page.getByRole('heading', { name: 'Choose a new password' })).toBeVisible();
     await page.goto(`${CONSOLE_URL}/dashboard`);

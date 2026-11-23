@@ -1,6 +1,6 @@
 # 09 · Business Rules
 
-> Version 0.24 · 2026-11-21 · BR-056: DDO setup, one DDO for all departments or one per department (D-145).
+> Version 0.25 · 2026-11-23 · BR-009: one demand sheet for all departments in single-DDO mode (D-147).
 > Version 0.23 · 2026-11-21 · BR-056: many DDO logins per department, one in charge (D-142). Earlier: BR-055 loan bank account (D-132); Employee ID required on F1 (D-133).
 > Version 0.21 · 2026-11-18 · BR-001 retirement date rule and the three-step correction, BR-054 probation warning (D-131). v0.20: BR-006 first deduction month and early interest, BR-030 Regenerate and supplementary sheets (D-124).
 > Version 0.19 · 2026-11-14 · BR-016 / BR-022 tenure is one of the Admin's periods (D-123).
@@ -119,6 +119,8 @@ For cycle `YYYY-MM` and department D, include every `ACTIVE` member whose depart
 | Arrears | unpaid components of earlier cycles | UNKNOWN (Q-316). Placeholder: carried forward as separate lines |
 
 Generation is idempotent per (cycle, department) (E-10).
+
+**One sheet for all departments [D-147]:** when DDO setup is "One DDO for all departments" (BR-056), the month's demand is **one** sheet (`departmentId = ALL`) holding every department without its own sheet; each line keeps the member's department and the sheet is shown, printed and reported department by department with subtotals. A department is "generated" for a cycle when it has its own month sheet or the cycle has the all-departments sheet, so switching modes never demands twice. A DDO per department keeps one sheet per department.
 
 ## BR-010 Department transfer [A]
 > "The member will automatically appear under the new department in the next Demand Sheet generation cycle."

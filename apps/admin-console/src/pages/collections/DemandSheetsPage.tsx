@@ -59,7 +59,7 @@ export function DemandSheetsPage() {
               <StatCardV2 title={`Demand · ${cycleLabel(d.cycle)}`} value={formatINRCompact(d.totals.demand)} variant={StatCardV2Variant.NUMBER} titleIcon={<FileSpreadsheet size={16} />} subtitle={`${d.totals.generated} of ${d.rows.length} departments generated`} />
               <StatCardV2 title="Recovered" value={formatINRCompact(d.totals.recovered)} variant={StatCardV2Variant.NUMBER} titleIcon={<Banknote size={16} />} subtitle={d.totals.posted ? `${pct.toFixed(1)}% of demand · ${d.totals.posted} posted` : 'Nothing posted yet'} />
               <StatCardV2 title="Short" value={formatINRCompact(d.totals.short)} variant={StatCardV2Variant.NUMBER} titleIcon={<TrendingDown size={16} />} subtitle={`${d.rows.reduce((s, r) => s + r.shortMembers, 0)} members short`} />
-              <StatCardV2 title="Waiting on you" value={String(d.rows.filter((r) => r.myAction).length)} variant={StatCardV2Variant.NUMBER} titleIcon={<CircleAlert size={16} />} subtitle={d.totals.notGenerated ? `${d.totals.notGenerated} not generated yet` : 'Every department generated'} />
+              <StatCardV2 title="Waiting on you" value={String(new Set(d.rows.filter((r) => r.myAction).map((r) => r.id)).size)} variant={StatCardV2Variant.NUMBER} titleIcon={<CircleAlert size={16} />} subtitle={d.totals.notGenerated ? `${d.totals.notGenerated} not generated yet` : 'Every department generated'} />
             </div>
 
             <section className="overflow-x-auto rounded-card border border-line bg-surface shadow-raised">
@@ -83,14 +83,14 @@ export function DemandSheetsPage() {
                   )}
                   {rows.map((r) => (
                     <tr
-                      key={r.id ?? r.departmentId}
+                      key={`${r.id ?? ''}-${r.departmentId}`}
                       className={cn('text-body', r.id ? 'cursor-pointer hover:bg-surface-subtle' : 'text-fg-tertiary')}
                       onClick={() => r.id && navigate(`/demand-sheets/${r.id}`)}
                       {...(r.id ? { role: 'link', tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => e.key === 'Enter' && navigate(`/demand-sheets/${r.id}`) } : {})}
                     >
                       <td className="px-5 py-3">
                         <p className="text-label text-fg">{r.departmentName}{r.supplementNo ? ` · Supplement ${r.supplementNo}` : ''}</p>
-                        <p className="text-caption text-fg-tertiary">DDO {r.ddoName}</p>
+                        <p className="text-caption text-fg-tertiary">DDO {r.ddoName}{r.allDepartments ? ' · on the one sheet for all departments' : ''}</p>
                       </td>
                       <td className="px-3 py-3">
                         <StatusTag entity="demandSheet" status={r.status} />

@@ -1,5 +1,6 @@
 // ST-41 Generate demand sheet (J-10 step 1): choose the cycle and departments → preview per
 // department (members, totals per head, warnings) → Generate. Already generated ones are skipped.
+// D-147: with one DDO for all departments, the same preview generates one sheet for every department.
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -30,6 +31,7 @@ export function GenerateDemandPage() {
   useEffect(() => setPicked(open.map((r) => r.departmentId)), [open]);
   const heads = HEAD_COLUMNS.filter((c) => (preview.data?.rows ?? []).some((r) => (r.heads[c.head] ?? 0) > 0));
   const chosen = open.filter((r) => picked.includes(r.departmentId));
+  const single = Boolean(preview.data?.singleSheet);
   const total = (h?: DemandHead) => chosen.reduce((s, r) => s + (h ? (r.heads[h] ?? 0) : r.total), 0);
 
   const gen = useMutation({
@@ -68,6 +70,7 @@ export function GenerateDemandPage() {
       <ViewState state={preview.isLoading || overview.isLoading ? 'loading' : preview.isError ? 'error' : 'ready'} layout="table" onRetry={() => void preview.refetch()}>
         {preview.data && (
           <div className="flex flex-col gap-5">
+            {single && open.length > 0 && <AlertV2 type={AlertV2Type.PRIMARY} subType={AlertV2SubType.SUBTLE} heading="One sheet for all departments" description="One DDO handles every department, so the departments below go on one demand sheet, listed department by department." />}
             {preview.data.insuranceMonth && <AlertV2 type={AlertV2Type.PRIMARY} subType={AlertV2SubType.SUBTLE} heading="Insurance month" description="This cycle collects the yearly insurance contribution (BR-008)." />}
             {!open.length && <AlertV2 type={AlertV2Type.SUCCESS} subType={AlertV2SubType.SUBTLE} heading={`Every department is generated for ${cycleLabel(cycle)}`} description="Open a sheet from the index to certify or post it." />}
             <section className="overflow-x-auto rounded-card border border-line bg-surface shadow-raised">
@@ -89,7 +92,7 @@ export function GenerateDemandPage() {
                   {preview.data.rows.map((r) => (
                     <tr key={r.departmentId} className={r.alreadyGenerated ? 'text-fg-tertiary' : 'text-body'}>
                       <td className="px-5 py-3">
-                        {!r.alreadyGenerated && (
+                        {!r.alreadyGenerated && !single && (
                           <>
                             {/* Blend's Checkbox takes no aria-label; a hidden <label for> names it for screen readers. */}
                             <label htmlFor={`gen-${r.departmentId}`} className="sr-only">
@@ -123,7 +126,7 @@ export function GenerateDemandPage() {
                   <tfoot>
                     <tr className="border-t-2 border-line bg-surface-subtle text-label text-fg">
                       <td className="px-5 py-3" />
-                      <td className="px-2 py-3">To generate · {chosen.length} departments</td>
+                      <td className="px-2 py-3">{single ? 'One sheet' : 'To generate'} · {chosen.length} departments</td>
                       <td className="tabular px-2 py-3 text-right">{chosen.reduce((s, r) => s + r.members, 0)}</td>
                       {heads.map((h) => (
                         <td key={h.head} className="px-2 py-3 text-right">
@@ -141,8 +144,8 @@ export function GenerateDemandPage() {
             {gen.error && <AlertV2 type={AlertV2Type.ERROR} subType={AlertV2SubType.SUBTLE} heading="Couldn't generate" description={isApiError(gen.error) ? gen.error.message : 'Try again.'} />}
             {open.length > 0 && (
               <div className="flex items-center justify-end gap-3">
-                <span className="text-caption text-fg-tertiary">{overview.data?.canGenerate === false ? 'Only the Accountant generates demand sheets.' : `${chosen.length} of ${open.length} selected`}</span>
-                <ButtonV2 text={`Generate ${chosen.length} sheet${chosen.length === 1 ? '' : 's'}`} disabled={!chosen.length || overview.data?.canGenerate === false} loading={gen.isPending} onClick={() => gen.mutate()} />
+                <span className="text-caption text-fg-tertiary">{overview.data?.canGenerate === false ? 'Only the Accountant generates demand sheets.' : single ? `${chosen.length} departments on one sheet` : `${chosen.length} of ${open.length} selected`}</span>
+                <ButtonV2 text={single ? 'Generate one sheet for all departments' : `Generate ${chosen.length} sheet${chosen.length === 1 ? '' : 's'}`} disabled={!chosen.length || overview.data?.canGenerate === false} loading={gen.isPending} onClick={() => gen.mutate()} />
               </div>
             )}
           </div>

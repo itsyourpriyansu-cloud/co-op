@@ -1,5 +1,6 @@
 # 08 · Data Model
 
+> Version 0.17 · 2026-11-23 · D-147: `DemandSheet.departmentId` may be `ALL` (one sheet for all departments, no department key); `DemandLine.departmentId?` (column `demand_lines.department_id`) records the member's department on that sheet.
 > Version 0.16 · 2026-11-21 · D-145: `SocietySettings.ddoMode` (`PER_DEPARTMENT` default / `SINGLE`) and `singleDdoUserId`, the DDO setup.
 > Version 0.15 · 2026-11-21 · D-142: `Department.ddoUserId` is the DDO login in charge (column `departments.ddo_user_id`); a department may have many DDO logins.
 > Version 0.14 · 2026-11-19 · D-132: `LoanApplicationForm.bankAccount` (`LoanBankAccount`: holderName, bankName, branch?, accountNo, ifsc), where the loan is paid.
@@ -122,6 +123,7 @@ Transfers also store `effectiveCycle` (YYYY-MM) = next demand cycle (BR-010).
 
 ### DemandLine
 `id, sheetId, memberId, designationSnapshot, totalDemand, recovered?, short?, excess?`
+D-147: `departmentId?`, the member's department for the cycle, set only on lines of the all-departments sheet (`DemandSheet.departmentId = 'ALL'`).
 
 ### DemandComponent
 `id, lineId, head: RRF | INSURANCE | CRD | SRDS | PENAL | INTEREST | PRINCIPAL, loanId?, loanType?, amount, allocated, unpaid, priorityRank`

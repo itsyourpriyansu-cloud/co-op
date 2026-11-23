@@ -19,6 +19,7 @@ import {
   type JournalLineInput,
   type LoanAction,
 } from '@tgs/domain';
+import { ALL_DEPARTMENTS } from '@tgs/types';
 import type { ConsoleRole, Cycle, DemandSheetStatus, Loan, ShareAccount, LoanActionInput, LoanDetail, Member, OtpChallenge, Role, SanctionPreview, SessionUser, StaffSignOff, SuretyRequest, SuretyRequests } from '@tgs/types';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fail } from '../../common/errors/app-error';
@@ -78,7 +79,10 @@ export class LoanWorkflowService {
    */
   async firstDueOptions(w: World, m: Member): Promise<Cycle[]> {
     const status = new Map<Cycle, DemandSheetStatus>();
-    for (const h of await this.app.collections.repo.allSheetHeads()) if (h.departmentId === m.departmentId && !h.supplementNo) status.set(h.cycle, h.status);
+    // D-147: the department's own month sheet, else the cycle's one sheet for all departments.
+    const heads = (await this.app.collections.repo.allSheetHeads()).filter((h) => !h.supplementNo);
+    for (const h of heads) if (h.departmentId === ALL_DEPARTMENTS && !heads.some((o) => o.cycle === h.cycle && o.departmentId === m.departmentId)) status.set(h.cycle, h.status);
+    for (const h of heads) if (h.departmentId === m.departmentId) status.set(h.cycle, h.status);
     return firstDeductionOptions({ today: w.today, sendByDays: w.settings.demandSendByDays, sheetStatus: (c) => status.get(c) });
   }
 

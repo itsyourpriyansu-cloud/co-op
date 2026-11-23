@@ -911,6 +911,8 @@ export interface DemandSheetRow {
   shortMembers: number;
   /** Next step for the signed-in user, if any (certify / send / post). */
   myAction?: string;
+  /** D-147: this row is one department's part of the all-departments sheet `id`. */
+  allDepartments?: boolean;
   /** P7b: deduction entry status, and the send-by date. */
   entryStatus?: DeductionEntryStatus;
   entrySource?: DeductionEntrySource;
@@ -957,11 +959,15 @@ export interface DemandPreview {
   cycle: Cycle;
   rows: DemandPreviewRow[];
   insuranceMonth: boolean;
+  /** D-147: one DDO for all departments, so Generate makes one sheet holding every department not yet generated. */
+  singleSheet?: boolean;
 }
 
 /** One member's line as shown on ST-42 / ST-43 / MB-10. */
 export interface DemandLineView {
   memberId: string;
+  /** D-147: on an all-departments sheet, the member's department (lines come grouped by it). */
+  departmentId?: string;
   generalNo: string;
   name: string;
   designation: string;
@@ -982,11 +988,25 @@ export interface DemandLineView {
   previousOutstanding?: Paise;
 }
 
+export interface DemandDepartmentPart {
+  departmentId: string;
+  departmentName: string;
+  ddoName: string;
+  ddoDesignation: string;
+  members: number;
+  heads: Partial<Record<DemandHead, Paise>>;
+  demand: Paise;
+  recovered: Paise;
+  short: Paise;
+}
+
 export interface DemandSheetDetail {
   sheet: Omit<DemandSheet, 'lines'>;
   department: Department | null;
   lines: DemandLineView[];
   totals: { heads: Partial<Record<DemandHead, Paise>>; demand: Paise; recovered: Paise; short: Paise; shortMembers: number };
+  /** D-147: an all-departments sheet, department by department in the order its lines come (subtotals). */
+  byDepartment?: DemandDepartmentPart[];
   stages: LoanStage[];
   actions: string[];
   waitingOn?: string;

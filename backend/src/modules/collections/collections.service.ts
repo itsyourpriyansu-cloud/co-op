@@ -31,6 +31,7 @@ import {
   type JournalLineInput,
   inDepartmentScope,
 } from '@tgs/domain';
+import { ALL_DEPARTMENTS } from '@tgs/types';
 import type {
   Cycle,
   DeductionEntryInput,
@@ -43,6 +44,7 @@ import type {
   DemandLineView,
   DemandPreview,
   DemandSheet,
+  DemandDepartmentPart,
   DemandSheetDetail,
   DemandSheetRow,
   DemandTopUpPreview,
@@ -114,6 +116,13 @@ function headTotals(components: DemandComponent[]): Partial<Record<DemandHead, n
   return t;
 }
 const signOff = (u: { id: string; name: string; role: string }, at: string, remarks?: string): StaffSignOff => ({ byId: u.id, byName: u.name, role: u.role, at, ...(remarks ? { remarks } : {}) });
+/** D-147: a department has its month's sheet when it has its own, or when the cycle has the one sheet for all departments. */
+const covered = (sheets: Array<Pick<SheetHead, 'departmentId' | 'supplementNo'>>, departmentId: string) => sheets.some((s) => !s.supplementNo && (s.departmentId === departmentId || s.departmentId === ALL_DEPARTMENTS));
+/** D-147: lines of the all-departments sheet: every department without its own month sheet, each line tagged with it. */
+const allDepartmentLines = (built: Map<string, DemandLine[]>, sheets: SheetHead[]): DemandLine[] => {
+  const own = new Set(sheets.filter((s) => !s.supplementNo && s.departmentId !== ALL_DEPARTMENTS).map((s) => s.departmentId));
+  return [...built].filter(([d]) => !own.has(d)).flatMap(([d, lines]) => lines.map((l) => ({ ...l, departmentId: d })));
+};
 
 /** What one request needs to label and scope rows, loaded once. */
 interface View {
@@ -162,11 +171,11 @@ export class CollectionsService {
 
   /** Member page: demand history and the department's generated cycles (BR-010 transfer timing). */
   async memberHistory(memberId: string): Promise<Array<{ cycle: Cycle; departmentId: string; demand: number; recovered?: number; sheetStatus: DemandSheet['status'] }>> {
-    return (await this.repo.linesOfMember(memberId)).map(({ sheet, line }) => ({ cycle: sheet.cycle, departmentId: sheet.departmentId, demand: line.totalDemand, ...(line.recovered !== undefined ? { recovered: line.recovered } : {}), sheetStatus: sheet.status })).reverse();
+    return (await this.repo.linesOfMember(memberId)).map(({ sheet, line }) => ({ cycle: sheet.cycle, departmentId: line.departmentId ?? sheet.departmentId, demand: line.totalDemand, ...(line.recovered !== undefined ? { recovered: line.recovered } : {}), sheetStatus: sheet.status })).reverse();
   }
 
   async departmentCycles(departmentId: string): Promise<Cycle[]> {
-    return (await this.repo.allSheetHeads()).filter((s) => s.departmentId === departmentId).map((s) => s.cycle);
+    return (await this.repo.allSheetHeads()).filter((s) => s.departmentId === departmentId || s.departmentId === ALL_DEPARTMENTS).map((s) => s.cycle);
   }
 
   // ---- read helpers ----
@@ -182,7 +191,23 @@ export class CollectionsService {
   }
 
   private deptName(v: View, id: string | undefined) {
+    if (id === ALL_DEPARTMENTS) return 'All departments';
     return (id && v.depts.get(id)?.name) || '';
+  }
+
+  /** D-147: DDO setup "One DDO for all departments" makes the month's demand one sheet. */
+  private async singleSheetMode(): Promise<boolean> {
+    return (await this.app.masters.settings()).ddoMode === 'SINGLE';
+  }
+
+  /** D-147: the all-departments sheet's "department": printed as All departments, addressed to the one DDO. */
+  private async allDepartments(): Promise<Department> {
+    const ddo = await this.app.departments.singleDdo();
+    return { id: ALL_DEPARTMENTS, code: 'ALL', name: 'All departments', kind: 'SECRETARY_DEPT', ddoName: ddo?.name ?? 'the DDO', ddoDesignation: 'DDO for all departments' };
+  }
+
+  private async sheetDepartment(departmentId: string): Promise<Department | undefined> {
+    return departmentId === ALL_DEPARTMENTS ? this.allDepartments() : this.app.departments.get(departmentId);
   }
 
   private lineView(v: View, line: DemandLine, posted: boolean, pay?: { minTakeHome: Paise; previous: Map<string, number> }): DemandLineView {
@@ -190,6 +215,7 @@ export class CollectionsService {
     const available = m && pay ? availableSalary(m.payProfile, pay.minTakeHome) : undefined;
     return {
       memberId: line.memberId,
+      ...(line.departmentId ? { departmentId: line.departmentId } : {}),
       generalNo: m?.generalNo ?? '',
       name: m?.name ?? line.memberId,
       designation: m?.designation ?? '',
@@ -248,29 +274,46 @@ export class CollectionsService {
     const sheets = await this.repo.sheetsForCycle(cycle);
     const depts = [...v.depts.values()].filter((d) => inDepartmentScope(user, d.id));
     const rows: DemandSheetRow[] = [];
+    // D-147: the one sheet for all departments (and its supplements) shows as one row per department,
+    // with that department's part of it; every row opens the same sheet.
+    const allSheets = sheets.filter((s) => s.departmentId === ALL_DEPARTMENTS).sort((a, b) => (a.supplementNo ?? 0) - (b.supplementNo ?? 0));
+    const allMain = allSheets.find((s) => !s.supplementNo);
+    const allFull = new Map<string, DemandSheet>();
+    for (const s of allSheets) allFull.set(s.id, (await this.repo.sheet(s.id))!);
+    const allDept = allMain ? await this.allDepartments() : undefined;
+    const canOpenAll = inDepartmentScope(user, ALL_DEPARTMENTS);
     // D-124: a supplementary sheet is its own row under the department's, with its own steps.
     const sheetRows = depts.flatMap((d) => {
       const own = sheets.filter((s) => s.departmentId === d.id);
       const main = own.find((s) => !s.supplementNo);
       const extra = own.filter((s) => s.supplementNo).sort((a, b) => a.supplementNo! - b.supplementNo!);
-      return [{ d, sh: main as SheetHead | undefined }, ...extra.map((sh) => ({ d, sh: sh as SheetHead | undefined }))];
+      const shared = !main && allMain ? allSheets.filter((s) => !s.supplementNo || allFull.get(s.id)!.lines.some((l) => l.departmentId === d.id)) : [];
+      return [
+        ...(shared.length ? [] : [{ d, sh: main as SheetHead | undefined }]),
+        ...shared.map((sh) => ({ d, sh: sh as SheetHead | undefined, part: true })),
+        ...extra.map((sh) => ({ d, sh: sh as SheetHead | undefined })),
+      ];
     });
-    for (const { d, sh } of sheetRows) {
-      const full = sh?.status === 'RECOVERY_POSTED' ? await this.repo.sheet(sh.id) : undefined;
-      const actions = sh ? await this.actionsFor(sh, user) : [];
+    for (const row of sheetRows) {
+      const { d, sh } = row;
+      const part = 'part' in row;
+      const lines = part ? allFull.get(sh!.id)!.lines.filter((l) => l.departmentId === d.id) : sh ? ((await this.repo.sheet(sh.id))?.lines ?? []) : [];
+      const posted = sh?.status === 'RECOVERY_POSTED';
+      const actions = sh && (!part || canOpenAll) ? await this.actionsFor(sh, user) : [];
       rows.push({
-        ...(sh ? { id: sh.id } : {}),
+        ...(sh && (!part || canOpenAll) ? { id: sh.id } : {}),
         ...(sh?.supplementNo ? { supplementNo: sh.supplementNo } : {}),
+        ...(part ? { allDepartments: true } : {}),
         cycle,
         departmentId: d.id,
         departmentName: d.name,
-        ddoName: d.ddoName ?? '',
+        ddoName: (part ? allDept?.ddoName : d.ddoName) ?? '',
         status: sh?.status ?? 'NOT_GENERATED',
-        members: sh ? ((full ?? (await this.repo.sheet(sh.id)))?.lines.length ?? 0) : 0,
-        demand: sh?.totalDemand ?? 0,
-        recovered: sh?.totalRecovered ?? 0,
-        short: full ? sum(full.lines.map((l) => Math.max(0, l.totalDemand - (l.recovered ?? 0)))) : 0,
-        shortMembers: full ? full.lines.filter((l) => (l.recovered ?? 0) < l.totalDemand).length : 0,
+        members: lines.length,
+        demand: part ? sum(lines.map((l) => l.totalDemand)) : (sh?.totalDemand ?? 0),
+        recovered: part ? sum(lines.map((l) => l.recovered ?? 0)) : (sh?.totalRecovered ?? 0),
+        short: posted ? sum(lines.map((l) => Math.max(0, l.totalDemand - (l.recovered ?? 0)))) : 0,
+        shortMembers: posted ? lines.filter((l) => (l.recovered ?? 0) < l.totalDemand).length : 0,
         ...(actions[0] ? { myAction: ACTION_TEXT[actions[0] as keyof typeof ACTION_TEXT] } : {}),
         ...(sh?.entry ? { entryStatus: sh.entry.status, entrySource: sh.entry.source } : {}),
         ...this.sendBy(sh, cycle, settings.demandSendByDays, v.today),
@@ -341,8 +384,9 @@ export class CollectionsService {
     const settings = await this.app.masters.settings();
     const rows = [];
     for (const d of [...v.depts.values()].filter((x) => !ids.length || ids.includes(x.id))) {
-      const sh = existing.find((s) => s.departmentId === d.id && !s.supplementNo);
-      const lines = sh ? ((await this.repo.sheet(sh.id))?.lines ?? []) : (built.get(d.id) ?? []);
+      // D-147: a department without its own sheet may be on the cycle's one sheet for all departments.
+      const sh = existing.find((s) => s.departmentId === d.id && !s.supplementNo) ?? existing.find((s) => s.departmentId === ALL_DEPARTMENTS && !s.supplementNo);
+      const lines = sh ? ((await this.repo.sheet(sh.id))?.lines ?? []).filter((l) => sh.departmentId !== ALL_DEPARTMENTS || l.departmentId === d.id) : (built.get(d.id) ?? []);
       const warnings: string[] = [];
       if (sh) warnings.push(`Already generated (${sh.status === 'GENERATED' ? 'not certified yet' : 'certified'}). It will be skipped.`);
       const noPay = lines.filter((l) => !(v.members.get(l.memberId)?.payProfile.grossSalary ?? 0)).length;
@@ -350,7 +394,7 @@ export class CollectionsService {
       if (!lines.length) warnings.push('No active members in this department for the cycle.');
       rows.push({ departmentId: d.id, departmentName: d.name, members: lines.length, heads: headTotals(lines.flatMap((l) => l.components)), total: sum(lines.map((l) => l.totalDemand)), alreadyGenerated: Boolean(sh), warnings });
     }
-    return { cycle, insuranceMonth: Number(cycle.slice(5, 7)) === settings.insurance.collectionMonth, rows };
+    return { cycle, insuranceMonth: Number(cycle.slice(5, 7)) === settings.insurance.collectionMonth, rows, ...(settings.ddoMode === 'SINGLE' ? { singleSheet: true } : {}) };
   }
 
   async generate(request: FastifyRequest, body: { cycle?: string; departmentIds?: string[] }): Promise<{ generated: string[] }> {
@@ -360,20 +404,28 @@ export class CollectionsService {
     const cycle = body.cycle ?? '';
     if (!(await this.generatableCycles()).includes(cycle)) fail('VALIDATION_ERROR', 'Choose the current or the next cycle.', { fieldErrors: { cycle: 'Choose the current or the next cycle' } });
     const [depts, existing, built, at] = await Promise.all([this.app.departments.all(), this.repo.sheetsForCycle(cycle), this.buildLines(cycle), businessNow(this.app)]);
-    const ids = body.departmentIds ?? [];
-    const targets = depts.filter((d) => (!ids.length || ids.includes(d.id)) && !existing.some((s) => s.departmentId === d.id && !s.supplementNo));
+    // D-147: one DDO for all departments → one sheet for every department not yet generated (chosen ids are ignored).
+    const single = await this.singleSheetMode();
+    const ids = single ? [] : (body.departmentIds ?? []);
+    const targets = depts.filter((d) => (!ids.length || ids.includes(d.id)) && !covered(existing, d.id));
     if (!targets.length) fail('VALIDATION_ERROR', 'Every chosen department already has a sheet for this cycle.', { fieldErrors: { departmentIds: 'Nothing left to generate' } });
-    const sheets: DemandSheet[] = targets.map((d) => {
-      const lines = built.get(d.id) ?? [];
-      const so = signOff(user, at);
-      return { id: `ds-${cycle}-${d.code.toLowerCase()}`, cycle, departmentId: d.id, status: 'GENERATED', lines, totalDemand: sum(lines.map((l) => l.totalDemand)), totalRecovered: 0, generated: so, events: [{ at, actorId: user.id, actorName: user.name, actorRole: user.role, action: 'generate', toStatus: 'GENERATED' }] };
-    });
+    const events = [{ at, actorId: user.id, actorName: user.name, actorRole: user.role, action: 'generate', toStatus: 'GENERATED' as const }];
+    const sheets: DemandSheet[] = single
+      ? [(() => {
+          const lines = allDepartmentLines(built, existing);
+          return { id: `ds-${cycle}-all`, cycle, departmentId: ALL_DEPARTMENTS, status: 'GENERATED' as const, lines, totalDemand: sum(lines.map((l) => l.totalDemand)), totalRecovered: 0, generated: signOff(user, at, `One sheet for ${targets.length} department${targets.length === 1 ? '' : 's'}`), events };
+        })()]
+      : targets.map((d) => {
+          const lines = built.get(d.id) ?? [];
+          const so = signOff(user, at);
+          return { id: `ds-${cycle}-${d.code.toLowerCase()}`, cycle, departmentId: d.id, status: 'GENERATED', lines, totalDemand: sum(lines.map((l) => l.totalDemand)), totalRecovered: 0, generated: so, events };
+        });
     await withTransaction(this.app.db, async (tx) => {
       for (const s of sheets) await this.repo.insertSheet(tx, s);
       // F-13: mark the surety recoveries these sheets now carry.
       const carried = new Set(sheets.flatMap((s) => s.lines.flatMap((l) => l.components.filter((c) => c.head === 'SURETY').map((c) => `${l.memberId}:${c.loanId}`))));
       for (const r of await this.repo.openRecoveries(undefined, tx)) if (!r.demandedCycle && carried.has(`${r.suretyId}:${r.loanId}`)) await this.repo.saveRecovery(tx, { ...r, demandedCycle: cycle });
-      await this.app.audit.record(request, { action: 'generate', entity: 'demandSheet', entityId: cycle, summary: `Generated ${formatCycle(cycle)} demand for ${targets.length} department${targets.length === 1 ? '' : 's'}` }, tx);
+      await this.app.audit.record(request, { action: 'generate', entity: 'demandSheet', entityId: cycle, summary: `Generated ${formatCycle(cycle)} demand for ${targets.length} department${targets.length === 1 ? '' : 's'}${single ? ' as one sheet for all departments' : ''}` }, tx);
     });
     return { generated: sheets.map((s) => s.id) };
   }
@@ -389,10 +441,10 @@ export class CollectionsService {
    * joined after the month's sheet was made owes the monthly heads only if the Admin set it so.
    */
   private async wantedLines(cycle: Cycle, departmentId: string, supplement: boolean, selfId?: string): Promise<DemandLine[]> {
-    const [built, v, settings] = await Promise.all([this.buildLines(cycle), this.view(), this.app.masters.settings()]);
-    const lines = built.get(departmentId) ?? [];
+    const [built, v, settings, sheets] = await Promise.all([this.buildLines(cycle), this.view(), this.app.masters.settings(), this.repo.sheetsForCycle(cycle)]);
+    const lines = departmentId === ALL_DEPARTMENTS ? allDepartmentLines(built, sheets) : (built.get(departmentId) ?? []);
     if (!supplement) return lines;
-    const [on, sheets] = await Promise.all([this.repo.memberIdsOnCycle(cycle, selfId), this.repo.sheetsForCycle(cycle)]);
+    const on = await this.repo.memberIdsOnCycle(cycle, selfId);
     const made = sheets.find((s) => s.departmentId === departmentId && !s.supplementNo)?.generated?.at.slice(0, 10);
     return lines
       .filter((l) => !on.has(l.memberId))
@@ -492,7 +544,7 @@ export class CollectionsService {
     const user = sessionOf(request);
     await this.requireAccountant(user, 'makes a supplementary sheet');
     const at = await businessNow(this.app);
-    const dept = (await this.app.departments.all()).find((d) => d.id === body.departmentId) ?? fail('NOT_FOUND', 'Department not found.');
+    const dept = (await this.sheetDepartment(body.departmentId)) ?? fail('NOT_FOUND', 'Department not found.');
     const sheet = await withTransaction(this.app.db, async (tx) => {
       const ctx = await this.supplementContext(body.cycle, body.departmentId);
       if (ctx.blocked) fail('INVALID_TRANSITION', ctx.blocked);
@@ -527,10 +579,28 @@ export class CollectionsService {
   private async detail(v: View, sh: DemandSheet, user: SessionUser): Promise<DemandSheetDetail> {
     const posted = sh.status === 'RECOVERY_POSTED';
     const [settings, previous] = await Promise.all([this.app.masters.settings(), this.repo.outstandingBefore(sh.lines.map((l) => l.memberId), sh.cycle)]);
-    const lines = sh.lines.map((l) => this.lineView(v, l, posted, { minTakeHome: settings.minTakeHomePay, previous })).sort((a, b) => a.generalNo.localeCompare(b.generalNo));
+    const all = sh.departmentId === ALL_DEPARTMENTS;
+    const byName = (id?: string) => this.deptName(v, id);
+    // D-147: an all-departments sheet lists its members department by department.
+    const lines = sh.lines.map((l) => this.lineView(v, l, posted, { minTakeHome: settings.minTakeHomePay, previous })).sort((a, b) => (all ? byName(a.departmentId).localeCompare(byName(b.departmentId)) : 0) || a.generalNo.localeCompare(b.generalNo));
     const actions = await this.actionsFor(sh, user);
     const { lines: _l, ...rest } = sh;
-    const dept = v.depts.get(sh.departmentId);
+    const dept = all ? await this.allDepartments() : v.depts.get(sh.departmentId);
+    const byDepartment: DemandDepartmentPart[] = [];
+    if (all)
+      for (const l of lines) {
+        let part = byDepartment.at(-1);
+        if (!part || part.departmentId !== l.departmentId) {
+          const d = v.depts.get(l.departmentId ?? '');
+          part = { departmentId: l.departmentId ?? '', departmentName: d?.name ?? '', ddoName: d?.ddoName ?? '', ddoDesignation: d?.ddoDesignation ?? '', members: 0, heads: {}, demand: 0, recovered: 0, short: 0 };
+          byDepartment.push(part);
+        }
+        part.members += 1;
+        for (const [h, amount] of Object.entries(l.heads) as Array<[DemandHead, number]>) part.heads[h] = (part.heads[h] ?? 0) + amount;
+        part.demand += l.totalDemand;
+        part.recovered += l.recovered ?? 0;
+        part.short += l.short ?? 0;
+      }
     const accountant = await this.accountantName();
     const demo = !actions.length && sh.status !== 'RECOVERY_POSTED' && (await this.app.permissions.has(user.role, 'demo.control'));
     return {
@@ -538,6 +608,7 @@ export class CollectionsService {
       department: dept ?? null,
       lines,
       totals: { heads: headTotals(sh.lines.flatMap((l) => l.components)), demand: sh.totalDemand, recovered: sh.totalRecovered, short: posted ? sum(lines.map((l) => l.short ?? 0)) : 0, shortMembers: posted ? lines.filter((l) => (l.short ?? 0) > 0).length : 0 },
+      ...(all ? { byDepartment } : {}),
       stages: this.stages(sh),
       actions,
       ...(sh.status !== 'RECOVERY_POSTED' ? { waitingOn: sh.status === 'SENT_TO_DDO' ? `${dept?.ddoName ?? 'the DDO'} (deduction) and ${accountant} (post recovery)` : accountant } : {}),
@@ -557,7 +628,7 @@ export class CollectionsService {
       const next = nextDeductionEntryStatus(sh.entry?.status, action, user.role)!;
       const from = sh.entry?.status ?? 'NONE';
       const so = signOff(user, at);
-      const dept = v.depts.get(sh.departmentId);
+      const dept = sh.departmentId === ALL_DEPARTMENTS ? { name: 'All departments' } : v.depts.get(sh.departmentId);
       const changes: Array<{ memberId: string; before?: number; after: number }> = [];
       if (action === 'saveEntry') {
         const deductions = body.deductions ?? {};
@@ -604,6 +675,10 @@ export class CollectionsService {
       await this.app.audit.record(request, { action, entity: 'demandSheet', entityId: sh.id, summary: `${user.name} ${what} · ${dept?.name ?? ''} ${formatCycle(sh.cycle)}`, ...(changes.length ? { before: Object.fromEntries(changes.map((c) => [c.memberId, c.before ?? null])), after: Object.fromEntries(changes.map((c) => [c.memberId, c.after])) } : {}) }, tx);
       return sh;
     });
+    // The other side of the deduction entry is told it is their turn (REQ-132).
+    const sheetName = `${saved.departmentId === ALL_DEPARTMENTS ? 'All departments' : (v.depts.get(saved.departmentId)?.name ?? '')} ${formatCycle(saved.cycle)}`;
+    if (action === 'submitEntry') await this.app.notifications.notifyStage('ACCOUNTANT', 'Deductions submitted', `${user.name} submitted the deductions for ${sheetName}. Review and post the recovery.`, `/demand-sheets/${saved.id}`);
+    if (action === 'rejectEntry') await this.app.notifications.notifyStage('DDO', 'Deductions sent back', `${sheetName}: ${body.reason!.trim()}`, `/demand-sheets/${saved.id}`, { departmentId: saved.departmentId });
     return this.detail(await this.view(), saved, user);
   }
 
@@ -644,14 +719,14 @@ export class CollectionsService {
       if (!next) fail('INVALID_TRANSITION', `This sheet is "${sh.status}". Refresh to see the latest.`);
       if (!opts.demo && !(await this.actionsFor(sh, user)).includes(action)) fail('FORBIDDEN', 'This step belongs to the Accountant.');
       const so = signOff(actor, at, input?.remarks?.trim() || undefined);
-      const dept = await this.app.departments.get(sh.departmentId);
+      const dept = await this.sheetDepartment(sh.departmentId);
       if (action === 'certify') {
         sh.certified = { ...so, remarks: so.remarks ?? 'Certified correct (BR-030).' };
         sh.certifiedBy = actor.id;
       }
       if (action === 'sendToDdo') {
         sh.sent = so;
-        const ddo = await this.app.departments.ddoLogin(sh.departmentId);
+        const ddo = sh.departmentId === ALL_DEPARTMENTS ? (await this.app.departments.singleDdo())?.id : await this.app.departments.ddoLogin(sh.departmentId);
         if (ddo) notes.push([ddo, 'demand.sent', { cycle: formatCycle(sh.cycle), department: dept?.name ?? '', members: sh.lines.length, amount: formatINR(sh.totalDemand) }, `/demand-sheets/${sh.id}`]);
         // G9 (D-121): each member is told what will be cut from the salary, before it is cut.
         for (const l of sh.lines) if (l.totalDemand > 0) notes.push([l.memberId, 'demand.memberNotice', { cycle: formatCycle(sh.cycle), amount: formatINR(l.totalDemand) }, '/payments']);
@@ -679,7 +754,8 @@ export class CollectionsService {
           const before = line.components.map((c) => ({ ...c }));
           line.components = allocateRecovery(line.components, amount).components;
           line.recovered = amount;
-          const { allocations, lines } = await this.applyAllocation(tx, line.memberId, sh.cycle, before, line.components, today, changed);
+          // Saved once after the loop: saving per line re-wrote every record touched so far (slow on a big sheet, D-147).
+          const { allocations, lines } = await this.applyAllocation(tx, line.memberId, sh.cycle, before, line.components, today, changed, 'SALARY', false);
           credit.push(...lines);
           await this.repo.saveLine(tx, sh.id, line);
           if (amount > 0) {
@@ -689,6 +765,7 @@ export class CollectionsService {
           }
           notes.push(amount < line.totalDemand ? [line.memberId, 'recovery.short', { recovered: formatINR(amount), demand: formatINR(line.totalDemand), cycle: formatCycle(sh.cycle) }, '/payments'] : [line.memberId, 'recovery.posted', { amount: formatINR(amount), cycle: formatCycle(sh.cycle) }, '/payments']);
         }
+        await this.saveChanged(tx, changed);
         sh.totalRecovered = sum(sh.lines.map((l) => l.recovered ?? 0));
         sh.posted = so;
         sh.entry = { ...(sh.entry ?? { source: 'PHYSICAL_SHEET' }), status: 'POSTED', approved: so };
@@ -704,6 +781,7 @@ export class CollectionsService {
       return sh;
     });
     for (const n of notes) await notifyMember(this.app, ...n);
+    await this.notifyRepaid(changed);
     await this.deliverNotices(request, notices);
     return saved;
   }
@@ -779,7 +857,7 @@ export class CollectionsService {
    * mark schedule rows, close repaid loans, credit CRD / SRDS and share capital. Returns the
    * receipt allocations and the ledger credit lines for them.
    */
-  private async applyAllocation(tx: Tx, memberId: string, cycle: Cycle, before: DemandComponent[], after: DemandComponent[], today: string, changed: Changed, via: 'SALARY' | 'COUNTER' = 'SALARY'): Promise<{ allocations: Receipt['allocations']; lines: JournalLineInput[] }> {
+  private async applyAllocation(tx: Tx, memberId: string, cycle: Cycle, before: DemandComponent[], after: DemandComponent[], today: string, changed: Changed, via: 'SALARY' | 'COUNTER' = 'SALARY', save = true): Promise<{ allocations: Receipt['allocations']; lines: JournalLineInput[] }> {
     const allocations: Receipt['allocations'] = [];
     const lines: JournalLineInput[] = [];
     const loanOf = async (id: string) => changed.loans.get(id) ?? (await this.app.loans.repo.lock(tx, id));
@@ -830,10 +908,23 @@ export class CollectionsService {
       }
       changed.loans.set(loan.id, loan);
     }
+    if (save) await this.saveChanged(tx, changed);
+    return { allocations, lines };
+  }
+
+  /** Writes every loan, deposit and share account an allocation changed. */
+  private async saveChanged(tx: Tx, changed: Changed): Promise<void> {
     for (const l of changed.loans.values()) await this.app.loans.repo.save(tx, l);
     for (const d of changed.deposits.values()) await this.app.deposits.saveInTx(tx, d);
     for (const s of changed.shares.values()) await this.repo.saveShare(tx, s);
-    return { allocations, lines };
+  }
+
+  /** D-146: a loan the last instalment closed (salary, counter or a verified payment) is announced after the save. */
+  private async notifyRepaid(changed: Changed): Promise<void> {
+    for (const l of changed.loans.values()) {
+      const e = l.events.at(-1);
+      if (l.status === 'CLOSED' && e?.action === 'close' && e.actorId === 'system') await notifyMember(this.app, l.memberId, 'loan.repaid', { loanNo: l.loanNo ?? l.applicationNo }, `/loan/${l.id}`);
+    }
   }
 
   // ---- dues (ST-45, MB-10) ----
@@ -1181,6 +1272,7 @@ export class CollectionsService {
     });
     // G9 (D-119): every rupee taken at the counter is confirmed to the member (fraud check).
     await notifyMember(this.app, r.memberId, 'receipt.issued', { receiptNo: r.receiptNo, amount: formatINR(r.amount), date: formatDisplayDate(r.date) }, '/payments');
+    await this.notifyRepaid(changed);
     return this.receiptDetail(await this.view(), r, user);
   }
 
@@ -1436,6 +1528,7 @@ export class CollectionsService {
       return { receipt, rep };
     });
     await notifyMember(this.app, rep.memberId, 'payment.verified', { amount: formatINR(rep.amount), reference: rep.reference, receiptNo: receipt.receiptNo }, '/payments');
+    await this.notifyRepaid(changed);
     return this.receiptDetail(await this.view(), receipt);
   }
 
