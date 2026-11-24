@@ -126,7 +126,7 @@ export function LoanFormPage() {
 
       <div className="grid gap-5 xl:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-5 pb-24 xl:col-span-2">
-          <FormSection title="1 · Member" columns={1}>
+          <FormSection title="1 · Member" description="Find the borrower by name or General No. Their pay profile and loans fill in from the record." columns={1}>
             {!member ? (
               <MemberSearch placeholder="Search by name or General No." onPick={setMember} />
             ) : (
@@ -156,7 +156,7 @@ export function LoanFormPage() {
 
           {member && c && (
             <>
-              <FormSection title="2 · Loan type" columns={1}>
+              <FormSection title="2 · Loan type" description="Pick the loan on the paper form. The society sets each rate and limit." columns={1}>
                 <div role="radiogroup" aria-label="Loan type" className="grid gap-3 sm:grid-cols-2">
                   {c.products.map((p) => (
                     <button
@@ -229,7 +229,7 @@ export function LoanFormPage() {
                 </FormSection>
               )}
 
-              <FormSection title="4 · Loan">
+              <FormSection title="4 · Loan" description="How much, over how many months, and what for. The instalment updates as you type.">
                 <div className="sm:col-span-2">
                   <MoneyField label="7a · Amount required" name="amount" value={amount} onChange={setAmount} errors={fe} hint={amount > 0 ? amountInWords(amount) : prod ? `Up to ${formatINR(prod.maxAmount)}` : undefined} />
                 </div>

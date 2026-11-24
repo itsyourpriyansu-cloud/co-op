@@ -11,10 +11,6 @@ import {
   CardV2,
   CardV2Variant,
   ProgressBarV2,
-  StatCardV2,
-  StatCardV2ArrowDirection,
-  StatCardV2ChangeType,
-  StatCardV2Variant,
   TagV2,
   TagV2Color,
   TagV2Size,
@@ -26,6 +22,7 @@ import { ROLE_LABELS, type DashboardSummary, type LoanStatus, type MembershipSta
 import { useAuth } from '@/app/auth';
 import { Money } from '@/components/Money';
 import { PageHeader } from '@/components/PageHeader';
+import { GlassStat, HeroCard } from '@/components/Hero';
 import { Panel } from '@/components/Panel';
 import { StatusTag } from '@/components/StatusTag';
 import { Illustration, ViewState } from '@/components/ViewState';
@@ -120,23 +117,12 @@ export function DashboardPage() {
         {s && (
           <div className="flex flex-col gap-6">
             {/* KPIs */}
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCardV2 title="Active members" value={s.activeMembers.toLocaleString('en-IN')} variant={StatCardV2Variant.NUMBER} titleIcon={<Users size={16} />} subtitle="Contributing this cycle" />
-              <StatCardV2 title="Loans outstanding" value={formatINRCompact(s.loanOutstanding)} variant={StatCardV2Variant.NUMBER} titleIcon={<HandCoins size={16} />} subtitle={`${s.activeLoans} active loans`} />
-              <StatCardV2 title="Deposits held" value={formatINRCompact(s.depositsHeld)} variant={StatCardV2Variant.NUMBER} titleIcon={<PiggyBank size={16} />} subtitle="FD, CRD, SRDS, Savings" />
-              <StatCardV2
-                title={`Collection · ${formatCycle(s.lastPostedCycle)}`}
-                value={pct(s.collectionRate)}
-                variant={StatCardV2Variant.NUMBER}
-                titleIcon={<Banknote size={16} />}
-                change={{
-                  value: `${Math.abs(delta * 100).toFixed(1)} pts`,
-                  changeType: delta >= 0 ? StatCardV2ChangeType.INCREASE : StatCardV2ChangeType.DECREASE,
-                  arrowDirection: delta >= 0 ? StatCardV2ArrowDirection.UP : StatCardV2ArrowDirection.DOWN,
-                }}
-                subtitle="vs previous cycle"
-              />
-            </div>
+            <HeroCard label="Society at a glance">
+              <GlassStat icon={Users} title="Active members" value={s.activeMembers.toLocaleString('en-IN')} subtitle="Contributing this cycle" />
+              <GlassStat icon={HandCoins} title="Loans outstanding" value={formatINRCompact(s.loanOutstanding)} subtitle={`${s.activeLoans} active loans`} />
+              <GlassStat icon={PiggyBank} title="Deposits held" value={formatINRCompact(s.depositsHeld)} subtitle="FD, CRD, SRDS, Savings" />
+              <GlassStat icon={Banknote} title={`Collection · ${formatCycle(s.lastPostedCycle)}`} value={pct(s.collectionRate)} change={{ text: `${Math.abs(delta * 100).toFixed(1)} pts`, up: delta >= 0 }} subtitle="vs previous cycle" />
+            </HeroCard>
 
             {/* Attention + collections */}
             <div className="grid gap-6 xl:grid-cols-3">

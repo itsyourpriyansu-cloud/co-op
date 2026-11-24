@@ -1,6 +1,6 @@
 # 18 · Design tokens and components (as built)
 
-> Version: 1.2 · Last updated: 2026-11-21 · Written from the code in `packages/design-tokens`, `apps/admin-console/src/components` and (until D-138) `apps/member-app/src/ui`. **The phone kit now follows `docs/25-mobile-design-system.md` (Astryx, D-138); this doc stays the source for the Admin Console.**
+> Version: 1.3 · Last updated: 2026-11-24 · **D-150: the console now wears the phone's Astryx navy and gold (see §7 note); the colour values below come from `packages/design-tokens/src/semantic.ts`.** Written from the code in `packages/design-tokens`, `apps/admin-console/src/components` and (until D-138) `apps/member-app/src/ui`. **The phone kit now follows `docs/25-mobile-design-system.md` (Astryx, D-138); this doc stays the source for the Admin Console.**
 > Design intent and visual rules live in `docs/12-design-system.md`. This doc describes what was actually built and how to use it.
 > The living version is the console's **Design System** page (`/design`, Super Admin only).
 
@@ -40,7 +40,7 @@ Screens use the role, never the scale step. For example, write `text.secondary` 
 
 ## 4. Typography
 
-Inter Variable is self-hosted. The optical-size axis gives the Display cut at large sizes. Console base text is 14/20; the app's base is 16/24.
+Figtree Variable is self-hosted (`@fontsource-variable/figtree`, D-150), the phone's family. Console base text is 14/20 on Blend's size steps; the phone's base is 16/24.
 
 | Role | Use |
 |---|---|
@@ -94,6 +94,7 @@ Blend V2 components are used as they are: `ButtonV2`, `TagV2`, `AlertV2`, `Table
 | `RuleCheckList` | Shows each eligibility or business-rule outcome with its `BR-` id, never a bare "invalid" |
 | `ViewState` | The ten-state contract (docs/19 §3) |
 | `PasswordInput` | Every password field: Blend `TextInputV2` with a Show / Hide eye (D-144) |
+| `HeroCard`, `GlassStat` | A page's top summary on the glass navy hero with frosted tiles, as on the phone (D-150) |
 
 D-144 also: the authenticator code uses Blend `OTPInputV2` (six boxes, edges in the tertiary text colour for 3:1+). A label–value row that may hold a long value is `flex flex-wrap justify-between` with no `text-right`, so the value drops under its label when it does not fit; every `<dd>` breaks long values (`index.css`). Steppers share the width equally and wrap titles.
 
@@ -128,3 +129,7 @@ Critical or serious findings fail the build. Fixes made because of this:
 Screens use **Tier 2 roles only**: semantic colours, text roles and spacing roles. Raw hex values or pixel sizes in a screen are a review failure.
 
 There is **no automated lint rule** for this yet. It is enforced by review. One deliberate exception: the printable FDR twin (`pages/deposits/FdrPage.tsx`) uses fixed ink colours, because it imitates the paper receipt in both themes.
+
+## 10. D-150: the phone's look on the console
+
+Colour, type, shape and motion come from the phone's Astryx tokens through `packages/design-tokens`: navy `primaryScale` (#003471 on step 500, Blend's fill step), `primaryScaleDark` for the dark theme (Blend writes link and tag text in step 400, so 300–400 are light navies there), `gold` (marks only; `text-gold-text` for words), `hero` (gradient, glow, glass), Figtree, radius control 12 / card 16, no card shadows, Astryx easing. The navigation rail is hero navy with a gold marker on the current page (`index.css`). Top summaries use `HeroCard` + `GlassStat`. `foundation.test.ts` checks every text pair for 4.5:1 in both themes. Rules: skill `tgs-mobile-ui`, section "Admin Console".

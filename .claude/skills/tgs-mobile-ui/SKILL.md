@@ -56,3 +56,13 @@ Dense data = rows with dividers inside one card, not a card per row. `Token` for
 ## Before you finish
 
 `cd apps/member-app && npx tsc --noEmit -p .` · `npx vitest run apps/member-app/src/theme.test.ts` · `npm run e2e:phone` (no test edits) · look at the screen at 360 and 412 px wide.
+
+## Admin Console (D-150): the same look, through `packages/design-tokens`
+
+The console follows this skill's colour, type, shape and motion rules, but keeps Blend components and Tailwind.
+- **One source:** `packages/design-tokens` (`brand.ts` navy `primaryScale` with #003471 on step 500, `gold`, `hero`; `semantic.ts` Astryx colours; `layout.ts` radius control 12 / card 16, cards with no shadow, Astryx motion). After an edit: `npm run tokens`, then `npx vitest run packages/design-tokens` (contrast test, both themes).
+- **No raw hex in console pages.** Classes only: `bg-brand`, `text-gold-text`, `bg-gold-muted`, `bg-gold` (marks only), status `*-fg/*-bg/*-border/*-solid`.
+- **Navigation rail:** dark hero navy with a gold marker on the current page (`index.css`, `nav[data-sidebar]`). Don't restyle nav items in components.
+- **Top summaries:** `HeroCard` + `GlassStat` (`components/Hero.tsx`), never a row of white stat cards.
+- **Sign-in:** the left panel stays light (user's ask, D-144); navy tiles with gold icons.
+- Check: `npx tsc -p apps/admin-console --noEmit`, `a11y-console.spec.ts` (light and dark), and look at 1440 and 1024.

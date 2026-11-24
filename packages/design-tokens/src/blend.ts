@@ -4,10 +4,10 @@
 import { brand } from './brand';
 import { foundation } from './foundation';
 
-export function createBlendFoundation() {
+export function createBlendFoundation(scheme: 'light' | 'dark' = 'light') {
   return {
     ...foundation,
-    colors: { ...foundation.colors, primary: brand.primaryScale },
+    colors: { ...foundation.colors, primary: scheme === 'dark' ? brand.primaryScaleDark : brand.primaryScale },
     font: {
       ...foundation.font,
       family: { display: brand.fontFamily.sans, body: brand.fontFamily.sans, heading: brand.fontFamily.sans, mono: brand.fontFamily.mono },

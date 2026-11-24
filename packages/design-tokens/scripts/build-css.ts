@@ -18,6 +18,7 @@ function colorVars(c: SemanticColors): string[] {
   for (const [k, v] of Object.entries(c.text)) out.push(`--tgs-text-${kebab(k)}: ${v};`);
   for (const [k, v] of Object.entries(c.border)) out.push(`--tgs-border-${kebab(k)}: ${v};`);
   for (const [k, v] of Object.entries(c.brand)) out.push(`--tgs-brand-${kebab(k)}: ${v};`);
+  for (const [k, v] of Object.entries(c.gold)) out.push(`--tgs-gold-${kebab(k)}: ${v};`);
   for (const [name, role] of Object.entries(c.status))
     for (const [k, v] of Object.entries(role)) out.push(`--tgs-status-${name}-${k}: ${v};`);
   for (const [k, v] of Object.entries(c.money)) out.push(`--tgs-money-${k}: ${v};`);
@@ -30,6 +31,7 @@ function staticVars(): string[] {
     `--tgs-font-sans: ${brand.fontFamily.sans};`,
     `--tgs-font-mono: ${brand.fontFamily.mono};`,
   ];
+  for (const [k, v] of Object.entries(brand.hero)) out.push(`--tgs-hero-${kebab(k)}: ${v};`);
   for (const [k, v] of Object.entries(radius)) out.push(`--tgs-radius-${kebab(k)}: ${v === 9999 ? '9999px' : `${v}px`};`);
   for (const [k, v] of Object.entries(elevation)) out.push(`--tgs-shadow-${kebab(k)}: ${v};`);
   for (const [k, v] of Object.entries(motion.duration)) out.push(`--tgs-duration-${k}: ${v}ms;`);
@@ -91,6 +93,10 @@ add('line', '--tgs-border-default');
 add('line-strong', '--tgs-border-strong');
 add('focus', '--tgs-border-focus');
 for (const k of Object.keys(c.brand)) add(k === 'solid' ? 'brand' : `brand-${kebab(k)}`, `--tgs-brand-${kebab(k)}`);
+add('brand-solid', '--tgs-brand-solid'); // also used by name (unread dot, selected chips)
+add('gold', '--tgs-gold-solid');
+add('gold-text', '--tgs-gold-text');
+add('gold-muted', '--tgs-gold-muted');
 for (const [name, role] of Object.entries(c.status)) for (const k of Object.keys(role)) add(`${name}-${k}`, `--tgs-status-${name}-${k}`);
 add('credit', '--tgs-money-credit');
 add('debit', '--tgs-money-debit');

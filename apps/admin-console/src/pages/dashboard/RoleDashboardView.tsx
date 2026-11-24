@@ -3,7 +3,8 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowRight, CalendarCheck, CircleCheck, FileSpreadsheet, HandCoins, Inbox, PiggyBank, ReceiptIndianRupee, UserPlus, type LucideIcon } from 'lucide-react';
-import { ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type, ProgressBarV2, StatCardV2, StatCardV2Variant } from '@juspay/blend-design-system';
+import { ButtonV2, ButtonV2Size, ButtonV2SubType, ButtonV2Type, ProgressBarV2 } from '@juspay/blend-design-system';
+import { GlassStat, HeroCard } from '@/components/Hero';
 import { formatCycle, formatDisplayDate, formatINR, formatINRCompact } from '@tgs/domain';
 import type { DashboardSummary, DemandSheetStatus, LoanStatus, MembershipStatus, DepositStatus, RoleDashboard } from '@tgs/types';
 import { Money } from '@/components/Money';
@@ -14,8 +15,6 @@ import { cn } from '@/lib/utils';
 
 const TILE_ICON: Record<string, LucideIcon> = { waiting: Inbox, sheets: FileSpreadsheet, reports: ReceiptIndianRupee, applied: HandCoins, amount: HandCoins, signed: CircleCheck, oldest: CalendarCheck, toPay: HandCoins, paid: CircleCheck, today: ReceiptIndianRupee, members: UserPlus, demand: FileSpreadsheet, rate: CircleCheck };
 const KIND_ICON: Record<string, LucideIcon> = { loan: HandCoins, membership: UserPlus, deposit: PiggyBank, demandSheet: FileSpreadsheet, paymentReport: ReceiptIndianRupee, receipt: ReceiptIndianRupee };
-const TONE_TEXT = { neutral: '', warning: 'text-warning-fg', danger: 'text-danger-fg', success: 'text-success-fg' } as const;
-
 const SUBTITLE: Record<RoleDashboard['variant'], string> = {
   ADMIN: '',
   ACCOUNTANT: 'Your queue, this month’s demand sheets and the latest applications.',
@@ -70,21 +69,11 @@ export function RoleDashboardView({ d, summary }: { d: RoleDashboard; summary?: 
     <div className="flex flex-col gap-6">
       <p className="-mt-2 text-body text-fg-secondary">{SUBTITLE[d.variant]}</p>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {d.tiles.map((t) => {
-          const Icon = TILE_ICON[t.key] ?? Inbox;
-          const card = <StatCardV2 title={t.label} value={tileValue(t)} variant={StatCardV2Variant.NUMBER} titleIcon={<Icon size={16} />} subtitle={t.sub ?? ' '} />;
-          return t.link ? (
-            <button key={t.key} type="button" onClick={() => navigate(t.link!)} className={cn('h-full rounded-card text-left transition hover:-translate-y-0.5 focus-visible:outline-2 [&>*]:h-full', t.tone && TONE_TEXT[t.tone])}>
-              {card}
-            </button>
-          ) : (
-            <div key={t.key} className="h-full [&>*]:h-full">
-              {card}
-            </div>
-          );
-        })}
-      </div>
+      <HeroCard label="Summary">
+        {d.tiles.map((t) => (
+          <GlassStat key={t.key} icon={TILE_ICON[t.key] ?? Inbox} title={t.label} value={tileValue(t)} {...(t.sub ? { subtitle: t.sub } : {})} {...(t.tone ? { tone: t.tone } : {})} {...(t.link ? { onClick: () => navigate(t.link!) } : {})} />
+        ))}
+      </HeroCard>
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">

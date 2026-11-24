@@ -82,7 +82,7 @@ export function DepositFormPage() {
       </div>
       <div className="grid gap-5 xl:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-5 pb-24 xl:col-span-2">
-          <FormSection title="1–4 · Depositor" columns={1}>
+          <FormSection title="1–4 · Depositor" description="Find the member making the deposit by name or General No." columns={1}>
             {!member ? (
               <MemberSearch placeholder="Search the member by name or General No." onPick={setMember} />
             ) : (
@@ -102,7 +102,7 @@ export function DepositFormPage() {
 
           {member && (
             <>
-              <FormSection title="5–8 · Deposit">
+              <FormSection title="5–8 · Deposit" description="How much, for how long, and when the interest is paid. The rate depends on the period.">
                 <div className="sm:col-span-2">
                   <MoneyField label="5 · Amount of deposit" name="principal" value={v.principal} onChange={(principal) => set({ principal })} errors={errors} hint={v.principal > 0 ? amountInWords(v.principal) : s ? `At least ${formatINR(s.fdMinAmount)}` : undefined} />
                 </div>
@@ -117,7 +117,7 @@ export function DepositFormPage() {
                 </div>
               </FormSection>
 
-              <FormSection title="Holders" columns={1}>
+              <FormSection title="Holders" description="The member alone, jointly with other members, or on behalf of a minor." columns={1}>
                 <Chips
                   label="Holding"
                   value={v.holding}
@@ -164,7 +164,7 @@ export function DepositFormPage() {
                 )}
               </FormSection>
 
-              <FormSection title="9 · Nominee">
+              <FormSection title="9 · Nominee" description="Who receives the deposit if the holder dies.">
                 <TextField label="Nominee name" name="nominee.name" value={v.nominee.name} onChange={(name) => set({ nominee: { ...v.nominee, name } })} errors={errors} />
                 <TextField label="Relationship" name="nominee.relation" value={v.nominee.relation} onChange={(relation) => set({ nominee: { ...v.nominee, relation: relation as FdRequestInput['nominee']['relation'] } })} errors={errors} />
               </FormSection>

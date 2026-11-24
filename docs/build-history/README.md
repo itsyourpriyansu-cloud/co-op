@@ -31,6 +31,7 @@ Every entry has the same sections: **Built** (screens by ID) · **Key files** ·
 | 22 | [Console fields, rows, steppers and sign-in panel (D-144)](21-console-fields-signin.md) | Built | 2026-11-21 |
 | 23 | [DDO setup: one DDO for all departments, or one per department (D-145)](22-ddo-setup.md) | Built, backend tests need `backend/.env` | 2026-11-21 |
 | 24 | [One demand sheet for all departments in single-DDO mode (D-147)](23-single-demand-sheet.md) | Built, backend tests pass | 2026-11-23 |
+| 25 | [Console on the phone's design system, dark navy rail (D-150)](24-console-astryx.md) | Built | 2026-11-24 |
 
 ## How to resume
 1. `npm install` (once) → `npm run demo` (mock API :4000 + console :5180; `npm run demo:prod` for the built console) → `npm run dev:web` for the phone preview on :8090 (or `npm run dev:app` for Expo Go). Port 5173 belongs to the user's other project: never use or kill it.

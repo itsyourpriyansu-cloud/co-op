@@ -29,6 +29,10 @@
   --color-brand-subtle-hover: var(--tgs-brand-subtle-hover);
   --color-brand-border: var(--tgs-brand-border);
   --color-brand-text: var(--tgs-brand-text);
+  --color-brand-solid: var(--tgs-brand-solid);
+  --color-gold: var(--tgs-gold-solid);
+  --color-gold-text: var(--tgs-gold-text);
+  --color-gold-muted: var(--tgs-gold-muted);
   --color-success-fg: var(--tgs-status-success-fg);
   --color-success-bg: var(--tgs-status-success-bg);
   --color-success-border: var(--tgs-status-success-border);
@@ -127,7 +131,7 @@
   --text-mono: var(--tgs-type-mono-size);
   --text-mono--line-height: var(--tgs-type-mono-line-height);
   --text-mono--font-weight: var(--tgs-type-mono-weight);
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
-  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-standard: cubic-bezier(0.24, 1, 0.4, 1);
+  --ease-enter: cubic-bezier(0.24, 1, 0.4, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 0.6, 0.6);
 }

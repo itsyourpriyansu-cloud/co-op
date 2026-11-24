@@ -97,7 +97,7 @@ export function NewReceiptPage() {
       </div>
       <div className="grid gap-5 xl:grid-cols-[1fr_400px]">
         <div className="flex flex-col gap-5">
-          <FormSection title="Member" columns={1}>
+          <FormSection title="Member" description="Find the member paying at the counter by name or General No." columns={1}>
             {member ? (
               <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-surface-subtle px-4 py-3">
                 <div>
@@ -116,7 +116,7 @@ export function NewReceiptPage() {
 
           {member && dues.data && (
             <>
-              <FormSection title="Payment" columns={1}>
+              <FormSection title="Payment" description="What the money is for, how much was received and how it was paid." columns={1}>
                 <div className="flex flex-col gap-2">
                   <p className="text-label text-fg">For</p>
                   <Chips

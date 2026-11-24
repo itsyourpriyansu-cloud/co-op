@@ -1,5 +1,5 @@
 // Space, shape, depth, motion and layout roles — all expressed as Blend foundation steps (numbers in px).
-import { breakpoints, shadows } from './foundation';
+import { breakpoints } from './foundation';
 
 /** 4-pt rhythm using Blend unit steps. */
 export const space = {
@@ -17,13 +17,13 @@ export const spacing = {
   gutter: { console: space[12], app: space[8] },
 } as const;
 
-/** Radii by role, matching Blend components: controls 10, cards 12, modals 16. */
+/** Radii by role, Astryx shape as on the phone (D-150): inner 8, controls 12, cards 16. */
 export const radius = {
   none: 0,
   xs: 4,
-  sm: 6,
-  control: 10,
-  card: 12,
+  sm: 8,
+  control: 12,
+  card: 16,
   sheet: 16,
   modal: 16,
   pill: 9999,
@@ -31,24 +31,27 @@ export const radius = {
 
 export const borderWidth = { hairline: 1, focus: 2, emphasis: 1.5 } as const;
 
-/** Elevation = Blend shadows. Native equivalents live in native.ts. */
+/**
+ * Elevation, Astryx rule as on the phone (D-150): cards separate by surface step + hairline border and
+ * cast no shadow; only floating things do (menus, drawers, the sticky save bar). Native: native.ts.
+ */
 export const elevation = {
   flat: 'none',
-  raised: shadows.xs,
-  card: shadows.sm,
-  hover: shadows.md,
-  dropdown: shadows.lg,
-  drawer: shadows.xl,
-  modal: shadows['2xl'],
+  raised: 'none',
+  card: 'none',
+  hover: '0px 1px 2px rgba(0,0,0,0.06)',
+  dropdown: '0px 4px 12px rgba(0,0,0,0.10)',
+  drawer: '0px 12px 32px rgba(0,0,0,0.15)',
+  modal: '0px 12px 32px rgba(0,0,0,0.15)',
 } as const;
 
+/** Astryx motion as on the phone (D-150): fast 130/175/230, medium 310/410/550, exit 175. */
 export const motion = {
-  duration: { instant: 80, fast: 150, base: 200, slow: 300, deliberate: 450 },
-  /** cubic-bezier values; Blend's sidebar uses (0.2, 0, 0, 1). */
+  duration: { instant: 130, fast: 175, base: 230, slow: 410, deliberate: 550 },
   easing: {
-    standard: 'cubic-bezier(0.2, 0, 0, 1)',
-    enter: 'cubic-bezier(0, 0, 0.2, 1)',
-    exit: 'cubic-bezier(0.4, 0, 1, 1)',
+    standard: 'cubic-bezier(0.24, 1, 0.4, 1)',
+    enter: 'cubic-bezier(0.24, 1, 0.4, 1)',
+    exit: 'cubic-bezier(0.3, 0, 0.6, 0.6)',
   },
 } as const;
 
