@@ -119,13 +119,13 @@ export function LoginPage() {
   return (
     <div className="flex min-h-full bg-canvas">
       {/* Brand panel */}
-      {/* D-144: a light panel in the console palette (brand blue with the status colours), not a dark slab. */}
+      {/* D-144, D-150: a light panel in the seal's navy and gold, not a dark slab; navy tiles with gold icons as on the phone. */}
       <aside className="tgs-login-panel relative hidden w-[44%] max-w-[560px] flex-col justify-between overflow-hidden border-r border-line bg-brand-subtle p-10 text-fg lg:flex">
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <div className="absolute -left-24 -top-24 size-80 rounded-full bg-brand/25 blur-3xl" />
-          <div className="absolute -right-20 top-1/3 size-72 rounded-full bg-approval-solid/20 blur-3xl" />
-          <div className="absolute -bottom-24 left-1/4 size-80 rounded-full bg-success-solid/15 blur-3xl" />
-          <div className="absolute bottom-1/4 -right-10 size-48 rounded-full bg-warning-solid/15 blur-3xl" />
+          <div className="absolute -right-20 top-1/3 size-72 rounded-full bg-gold/30 blur-3xl" />
+          <div className="absolute -bottom-24 left-1/4 size-80 rounded-full bg-brand/15 blur-3xl" />
+          <div className="absolute bottom-1/4 -right-10 size-48 rounded-full bg-gold/20 blur-3xl" />
         </div>
         <div className="relative flex items-center gap-3">
           <AppMark size={48} />
@@ -136,10 +136,10 @@ export function LoginPage() {
           <h1 className="mt-2 text-display">Every loan, deposit and deduction in one place.</h1>
           <p className="mt-4 max-w-md text-body-lg text-fg-secondary">Certify, review, sanction and disburse with a full audit trail, for every member of the society.</p>
           <ul className="mt-8 grid grid-cols-2 gap-3">
-            <Feature icon={HandCoins} tone="bg-brand text-on-brand" title="Loans" text="Apply, assess, sanction" />
-            <Feature icon={PiggyBank} tone="bg-success-solid text-on-brand" title="Deposits" text="FDs, FDRs, payouts" />
-            <Feature icon={CalendarCheck} tone="bg-warning-solid text-on-brand" title="Deductions" text="Monthly demand sheets" />
-            <Feature icon={BadgeCheck} tone="bg-approval-solid text-on-brand" title="Sign-offs" text="Secretary and President" />
+            <Feature icon={HandCoins} tone="tgs-hero" title="Loans" text="Apply, assess, sanction" />
+            <Feature icon={PiggyBank} tone="tgs-hero" title="Deposits" text="FDs, FDRs, payouts" />
+            <Feature icon={CalendarCheck} tone="tgs-hero" title="Deductions" text="Monthly demand sheets" />
+            <Feature icon={BadgeCheck} tone="tgs-hero" title="Sign-offs" text="Secretary and President" />
           </ul>
         </div>
         <p className="relative text-caption text-fg-tertiary">
@@ -303,7 +303,7 @@ function Feature({ icon: Icon, tone, title, text }: { icon: LucideIcon; tone: st
   return (
     <li className="flex items-center gap-3 rounded-card border border-line bg-surface/80 p-3 shadow-raised backdrop-blur">
       <span className={`flex size-10 shrink-0 items-center justify-center rounded-control ${tone}`}>
-        <Icon size={20} aria-hidden />
+        <Icon size={20} className="text-gold" aria-hidden />
       </span>
       <span className="min-w-0">
         <span className="block text-label text-fg">{title}</span>

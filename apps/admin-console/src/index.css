@@ -43,6 +43,105 @@
   }
 }
 
+/* D-150 navigation rail: the phone's hero navy (gradient lit by a gold glow) with on-navy text. The
+   text roles are redefined inside it, so our brand block and footer adapt by themselves; Blend's nav
+   items are reached by their data attributes. The current page carries the gold marker, as the phone
+   tab bar does. Focus turns gold so it shows on navy. */
+nav[data-sidebar='sidebar'] {
+  --tgs-text-primary: var(--tgs-hero-on);
+  --tgs-text-secondary: var(--tgs-hero-on-muted);
+  --tgs-text-tertiary: var(--tgs-hero-on-muted);
+  --tgs-border-focus: var(--tgs-gold-solid);
+  background: var(--tgs-hero-glow) -140px -140px / 360px 360px no-repeat, var(--tgs-hero-gradient) !important;
+  border-color: transparent !important;
+  color: var(--tgs-hero-on);
+}
+nav[data-sidebar='sidebar'] [data-element='sidebar-panel'] > div:first-child,
+nav[data-sidebar='sidebar'] footer {
+  background: transparent !important;
+  border-color: var(--tgs-hero-glass-border) !important;
+}
+nav[data-sidebar='sidebar'] [data-icon='sidebar-hamburger'],
+nav[data-sidebar='sidebar'] [data-element='sidebar-section'] > [role='button'] svg {
+  color: var(--tgs-hero-on-muted) !important;
+}
+nav[data-sidebar='sidebar'] button[data-element='sidebar-sub-section'] {
+  position: relative;
+  background: transparent !important;
+  color: var(--tgs-hero-on-muted) !important;
+  transition:
+    background-color var(--tgs-duration-fast) var(--tgs-ease-standard),
+    color var(--tgs-duration-fast) var(--tgs-ease-standard);
+}
+nav[data-sidebar='sidebar'] button[data-element='sidebar-sub-section']:hover {
+  background: var(--tgs-hero-glass) !important;
+  color: var(--tgs-hero-on) !important;
+}
+nav[data-sidebar='sidebar'] button[data-element='sidebar-sub-section'][data-status='selected'] {
+  background: var(--tgs-hero-glass-hover) !important;
+  box-shadow: var(--tgs-hero-glass-edge);
+  color: var(--tgs-hero-on) !important;
+  font-weight: 600;
+}
+nav[data-sidebar='sidebar'] button[data-element='sidebar-sub-section'][data-status='selected']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--tgs-gold-solid);
+}
+nav[data-sidebar='sidebar'] button[data-element='sidebar-sub-section'][data-status='selected'] svg {
+  stroke-width: 2.25;
+}
+nav[data-sidebar='sidebar'] button[data-element='sidebar-sub-section'] * {
+  color: inherit !important;
+}
+/* The signed-in user's initials: a glass chip with the gold ring (phone avatar ring). */
+nav[data-sidebar='sidebar'] footer > div > span:first-child {
+  background: var(--tgs-hero-glass-hover) !important;
+  color: var(--tgs-hero-on) !important;
+  box-shadow: 0 0 0 2px var(--tgs-hero-ring);
+}
+
+/* D-150 glass hero (phone D-139): a page's top summary sits on navy lit by a gold glow, in frosted tiles. */
+.tgs-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--tgs-hero-gradient);
+  color: var(--tgs-hero-on);
+  box-shadow: var(--tgs-shadow-dropdown);
+  --tgs-border-focus: var(--tgs-gold-solid);
+}
+.tgs-hero::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -160px;
+  right: -120px;
+  width: 420px;
+  height: 420px;
+  background: var(--tgs-hero-glow);
+  pointer-events: none;
+}
+.tgs-glass {
+  background: var(--tgs-hero-glass);
+  border: 1px solid var(--tgs-hero-glass-border);
+  box-shadow: var(--tgs-hero-glass-edge);
+}
+button.tgs-glass {
+  transition: background-color var(--tgs-duration-fast) var(--tgs-ease-standard);
+}
+button.tgs-glass:hover {
+  background: var(--tgs-hero-glass-hover);
+}
+.tgs-on-muted {
+  color: var(--tgs-hero-on-muted);
+}
+
 /* WCAG AA (D-064): Blend draws stat-card titles / subtitles and sidebar group labels in gray-400
    (2.6:1). Lift them to our secondary / tertiary text roles; layout and sizes stay Blend's. */
 [data-element='statcard-header'],

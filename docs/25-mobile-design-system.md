@@ -1,6 +1,7 @@
 # 25 · Mobile design system: Astryx + the TGSECCS seal
 
-> Version 1.1 (built U0–U5; U6 real phones open) · 2026-11-21 · §14 entry boxes and key–value rows (D-143) · Decision **D-138** (Accepted) · Owner: Envizon Studio
+> Version 1.2 (built U0–U5; U6 real phones open) · 2026-11-21 · §14 entry boxes and key–value rows (D-143) · Decision **D-138** (Accepted) · Owner: Envizon Studio
+> **D-150 (2026-11-24): the Admin Console follows this system too, through `packages/design-tokens` (navy scale, Astryx colours, gold, hero, Figtree); see `docs/18` §10 and the skill's "Admin Console" section.**
 > Rules for every new phone screen: the project skill `.claude/skills/tgs-mobile-ui`. As-built differences from the plan: §11.
 > Scope: **`apps/member-app` only** (member screens, joining, and the staff screens in the same app). The Admin Console and `packages/design-tokens` are **not touched** until the owner says "update the web apps" (phase W, §10).
 

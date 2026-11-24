@@ -172,7 +172,7 @@ export function MemberFormPage() {
             <DateInput label="Wedding anniversary" name="anniversaryDate" value={v.anniversaryDate ?? ''} onChange={(x) => set(x ? { anniversaryDate: x } : { anniversaryDate: undefined })} errors={errors} hint="Optional (greetings)" />
           </FormSection>
 
-          <FormSection title="2 · Address">
+          <FormSection title="2 · Address" description="Where the society can reach the member by post.">
             <p className="text-label text-fg sm:col-span-2">Present address</p>
             <AddressFields prefix="presentAddress" value={v.presentAddress} onChange={(a) => set({ presentAddress: a })} errors={errors} />
             <div className="sm:col-span-2">
@@ -233,7 +233,7 @@ export function MemberFormPage() {
             </div>
           </FormSection>
 
-          <FormSection title="4 · Nominee">
+          <FormSection title="4 · Nominee" description="Who the society pays if the member dies.">
             <TextField label="Nominee name" name="nominee.name" value={v.nominee.name} onChange={(x) => set({ nominee: { ...v.nominee, name: x } })} errors={errors} required />
             <SingleSelectV2 label="Relation" placeholder="Relation" items={[{ items: RELATIONS.map((r) => ({ label: r, value: r })) }]} selected={v.nominee.relation} onSelect={(x) => set({ nominee: { ...v.nominee, relation: x as MemberInput['nominee']['relation'] } })} />
           </FormSection>

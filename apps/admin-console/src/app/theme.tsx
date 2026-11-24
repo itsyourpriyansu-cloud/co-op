@@ -20,6 +20,8 @@ function initialMode(): Mode {
 
 /** Blend foundation = Blend's own theme + TGSECCSL brand deltas (packages/design-tokens/src/blend.ts). */
 const foundation = createBlendFoundation() as unknown as ThemeType;
+/** D-150: the dark theme gets the navy scale lightened for text on dark (brand.primaryScaleDark). */
+const foundationDark = createBlendFoundation('dark') as unknown as ThemeType;
 
 /** WCAG AA (D-064): Blend's subtle warning / success / error tag text (600 on 50 ≈ 3:1) → the 700 shades (≥ 5:1). */
 const warningTag = { text: { color: { subtle: { warning: '#CA3500', success: '#008236', error: '#C10007' } } } };
@@ -45,7 +47,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ModeContext.Provider value={value}>
-      <ThemeProvider foundationTokens={foundation} componentTokens={mode === 'dark' ? undefined : componentTokens} theme={mode === 'dark' ? Theme.DARK : Theme.LIGHT}>
+      <ThemeProvider foundationTokens={mode === 'dark' ? foundationDark : foundation} componentTokens={mode === 'dark' ? undefined : componentTokens} theme={mode === 'dark' ? Theme.DARK : Theme.LIGHT}>
         {children}
         <SnackbarV2 position={SnackbarV2Position.BOTTOM_RIGHT} />
       </ThemeProvider>

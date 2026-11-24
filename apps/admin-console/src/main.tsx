@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router/dom';
 import { isApiError } from '@tgs/api-client';
-// Inter variable with the optical-size axis (renders the Display cut at large sizes, docs/18 §4).
-import '@fontsource-variable/inter/opsz.css';
+// Figtree variable, the phone's family (D-150, docs/25).
+import '@fontsource-variable/figtree';
 import '@juspay/blend-design-system/style.css';
 import './index.css';
 import { AuthProvider } from './app/auth';
